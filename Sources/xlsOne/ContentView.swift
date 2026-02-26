@@ -10,6 +10,7 @@ struct ContentView: View {
     @State private var resizingStartWidth: CGFloat = 0
     @State private var isResizing: Bool = false
     @GestureState private var resizeDragDelta: CGFloat = 0
+    @State private var tabFrames: [Int: CGRect] = [:]
     
     private let rowHeaderWidth: CGFloat = 38
     private let colHeaderHeight: CGFloat = 24
@@ -71,37 +72,44 @@ struct ContentView: View {
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundColor(.secondary)
             
-            ScrollViewReader { proxy in
-                MarqueeScrollView {
-                    HStack(spacing: 6) {
-                        ForEach(0..<appState.sheetNames.count, id: \.self) { index in
-                            let isSelected = appState.selectedSheet == index
-                            Text(appState.sheetNames[index])
-                                .font(.system(size: 12, weight: .semibold))
-                                .lineLimit(1)
-                                .fixedSize(horizontal: true, vertical: false)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 4)
-                                .background(isSelected ? Color.accentColor.opacity(0.18) : Color.black.opacity(0.04))
-                                .clipShape(Capsule())
-                                .overlay(
-                                    Capsule()
-                                        .stroke(isSelected ? Color.accentColor.opacity(0.8) : Color.clear, lineWidth: 1)
-                                )
-                                .contentShape(Capsule())
-                                .onTapGesture {
-                                    appState.selectedSheet = index
-                                    Task { await appState.refreshMergeForSelectedSheet() }
-                                    withAnimation(.easeOut(duration: 0.2)) {
-                                        proxy.scrollTo(index, anchor: .center)
-                                    }
+            MarqueeScrollView(selectedFrame: tabFrames[appState.selectedSheet]) {
+                HStack(spacing: 6) {
+                    ForEach(0..<appState.sheetNames.count, id: \.self) { index in
+                        let isSelected = appState.selectedSheet == index
+                        Text(appState.sheetNames[index])
+                            .font(.system(size: 12, weight: .semibold))
+                            .lineLimit(1)
+                            .fixedSize(horizontal: true, vertical: false)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 4)
+                            .background(isSelected ? Color.accentColor.opacity(0.18) : Color.black.opacity(0.04))
+                            .clipShape(Capsule())
+                            .overlay(
+                                Capsule()
+                                    .stroke(isSelected ? Color.accentColor.opacity(0.8) : Color.clear, lineWidth: 1)
+                            )
+                            .contentShape(Capsule())
+                            .background(
+                                GeometryReader { geo in
+                                    Color.clear.preference(
+                                        key: TabFramePreferenceKey.self,
+                                        value: [index: geo.frame(in: .named("TabScrollSpace"))]
+                                    )
                                 }
-                                .id(index)
-                        }
+                            )
+                            .onTapGesture {
+                                appState.selectedSheet = index
+                                Task { await appState.refreshMergeForSelectedSheet() }
+                            }
+                            .id(index)
                     }
-                    .padding(.horizontal, 8)
                 }
-                .frame(height: 30)
+                .padding(.horizontal, 8)
+                .coordinateSpace(name: "TabScrollSpace")
+            }
+            .frame(height: 30)
+            .onPreferenceChange(TabFramePreferenceKey.self) { frames in
+                tabFrames = frames
             }
             
             Spacer()
@@ -522,19 +530,57 @@ final class HorizontalWheelScrollView: NSScrollView {
             : event.scrollingDeltaY
         if abs(delta) > 0 {
             let current = contentView.bounds.origin
-            let newX = max(0, current.x - delta * speedMultiplier)
+            let newX = clampedX(current.x - delta * speedMultiplier)
             contentView.scroll(to: NSPoint(x: newX, y: current.y))
             reflectScrolledClipView(contentView)
         } else {
             super.scrollWheel(with: event)
         }
     }
+    
+    private func clampedX(_ proposed: CGFloat) -> CGFloat {
+        let leftInset = contentInsets.left
+        let rightInset = contentInsets.right
+        let minX = -leftInset
+        let docWidth = documentView?.frame.width ?? 0
+        let viewWidth = contentView.bounds.width
+        let maxX = max(minX, docWidth - viewWidth + rightInset)
+        return min(maxX, max(minX, proposed))
+    }
+    
+    func clampScrollPosition() {
+        let current = contentView.bounds.origin
+        let newX = clampedX(current.x)
+        if abs(newX - current.x) > 0.5 {
+            contentView.scroll(to: NSPoint(x: newX, y: current.y))
+            reflectScrolledClipView(contentView)
+        }
+    }
+    
+    func scrollToMakeVisible(targetFrame: CGRect) {
+        let viewWidth = contentView.bounds.width
+        let leftInset = contentInsets.left
+        let rightInset = contentInsets.right
+        let minX = -leftInset
+        let docWidth = documentView?.frame.width ?? 0
+        let maxX = max(minX, docWidth - viewWidth + rightInset)
+        
+        let desiredCenter = targetFrame.midX - viewWidth / 2
+        let clamped = min(maxX, max(minX, desiredCenter))
+        let current = contentView.bounds.origin.x
+        if abs(clamped - current) > 1 {
+            contentView.scroll(to: NSPoint(x: clamped, y: contentView.bounds.origin.y))
+            reflectScrolledClipView(contentView)
+        }
+    }
 }
 
 struct MarqueeScrollView<Content: View>: NSViewRepresentable {
     let content: Content
+    let selectedFrame: CGRect?
     
-    init(@ViewBuilder content: () -> Content) {
+    init(selectedFrame: CGRect?, @ViewBuilder content: () -> Content) {
+        self.selectedFrame = selectedFrame
         self.content = content()
     }
     
@@ -577,6 +623,10 @@ struct MarqueeScrollView<Content: View>: NSViewRepresentable {
             hostingView.rootView = content
             updateDocumentSize(for: context)
         }
+        if let scrollView = nsView as? HorizontalWheelScrollView,
+           let frame = selectedFrame {
+            scrollView.scrollToMakeVisible(targetFrame: frame)
+        }
     }
     
     private func updateDocumentSize(for context: Context) {
@@ -584,14 +634,21 @@ struct MarqueeScrollView<Content: View>: NSViewRepresentable {
               let container = context.coordinator.container else { return }
         let size = hostingView.fittingSize
         container.frame = NSRect(origin: .zero, size: size)
-        if let scrollView = container.enclosingScrollView {
-            scrollView.contentView.scroll(to: .zero)
-            scrollView.reflectScrolledClipView(scrollView.contentView)
+        if let scrollView = container.enclosingScrollView as? HorizontalWheelScrollView {
+            scrollView.clampScrollPosition()
         }
     }
     
     final class Coordinator {
         var container: NSView?
         var hostingView: NSHostingView<Content>?
+    }
+}
+
+struct TabFramePreferenceKey: PreferenceKey {
+    static var defaultValue: [Int: CGRect] = [:]
+    
+    static func reduce(value: inout [Int: CGRect], nextValue: () -> [Int: CGRect]) {
+        value.merge(nextValue()) { $1 }
     }
 }
