@@ -1,0 +1,33 @@
+{
+  "name": "xlsOneCore",
+  "platforms": {"macOS": "12.0"},
+  "products": [
+    {
+      "name": "xlsOneCore",
+      "type": "library",
+      "targets": ["xlsOneCore"]
+    },
+    {
+      "name": "xlsone-cli",
+      "type": "executable",
+      "targets": ["xlsOneCLI"]
+    }
+  ],
+  "dependencies": {
+    "python3": {
+      "version": "3.11+"
+    }
+  },
+  "targets": {
+    "xlsOneCore": {
+      "type": "custom",
+      "src": "Sources/xlsOneCore",
+      "python": true
+    },
+    "xlsOneCLI": {
+      "type": "custom",
+      "src": "Sources/xlsOneCLI",
+      "python": true
+    }
+  }
+}
