@@ -1,0 +1,2447 @@
+{
+  "sheets": {
+    "汇总结果": {
+      "statistics": {
+        "totalFiles": 13,
+        "totalCells": 110,
+        "numericCells": 7,
+        "textCells": 27,
+        "codeCells": 3,
+        "emptyCells": 73
+      },
+      "cells": [
+        [
+          {
+            "position": {
+              "row": 0,
+              "column": 0,
+              "a1Notation": "1"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          },
+          {
+            "position": {
+              "row": 0,
+              "column": 1,
+              "a1Notation": "A1"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          },
+          {
+            "position": {
+              "row": 0,
+              "column": 2,
+              "a1Notation": "B1"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          },
+          {
+            "position": {
+              "row": 0,
+              "column": 3,
+              "a1Notation": "C1"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          },
+          {
+            "position": {
+              "row": 0,
+              "column": 4,
+              "a1Notation": "D1"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          }
+        ],
+        [
+          {
+            "position": {
+              "row": 1,
+              "column": 0,
+              "a1Notation": "2"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          },
+          {
+            "position": {
+              "row": 1,
+              "column": 1,
+              "a1Notation": "A2"
+            },
+            "resultType": "textMajority",
+            "resultValue": "乡镇报表主体信息表",
+            "numericValue": null,
+            "sourceValues": [
+              "乡镇报表主体信息表",
+              "乡镇报表主体信息表",
+              "乡镇报表主体信息表",
+              "乡镇报表主体信息表",
+              "乡镇报表主体信息表",
+              "乡镇报表主体信息表",
+              "乡镇报表主体信息表",
+              "乡镇报表主体信息表",
+              "乡镇报表主体信息表",
+              "乡镇报表主体信息表",
+              "乡镇报表主体信息表",
+              "乡镇报表主体信息表",
+              "乡镇报表主体信息表"
+            ],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": true,
+              "hasCode": false,
+              "hasEmpty": false
+            }
+          },
+          {
+            "position": {
+              "row": 1,
+              "column": 2,
+              "a1Notation": "B2"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          },
+          {
+            "position": {
+              "row": 1,
+              "column": 3,
+              "a1Notation": "C2"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          },
+          {
+            "position": {
+              "row": 1,
+              "column": 4,
+              "a1Notation": "D2"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          }
+        ],
+        [
+          {
+            "position": {
+              "row": 2,
+              "column": 0,
+              "a1Notation": "3"
+            },
+            "resultType": "codePlaceholder",
+            "resultValue": "BADFDEEABFA24994011330082511816400",
+            "numericValue": null,
+            "sourceValues": [
+              "378124BA23790FDEE0634706280A0BFA",
+              "378124BA21500FDEE0634706280A0BFA",
+              "378124BA21970FDEE0634706280A0BFA",
+              "378124BA21C50FDEE0634706280A0BFA",
+              "378124BA22800FDEE0634706280A0BFA",
+              "378124BA220F0FDEE0634706280A0BFA",
+              "378124BA23E80FDEE0634706280A0BFA",
+              "378124BA22300FDEE0634706280A0BFA",
+              "378124BA22830FDEE0634706280A0BFA",
+              "378124BA23DB0FDEE0634706280A0BFA",
+              "378124BA237E0FDEE0634706280A0BFA",
+              "378124BA232D0FDEE0634706280A0BFA",
+              "378124BA246D0FDEE0634706280A0BFA"
+            ],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": true,
+              "hasEmpty": false
+            }
+          },
+          {
+            "position": {
+              "row": 2,
+              "column": 1,
+              "a1Notation": "A3"
+            },
+            "resultType": "codePlaceholder",
+            "resultValue": "CCAAEBEADA25340833358825118164416",
+            "numericValue": null,
+            "sourceValues": [
+              "37822CC13A9DAE6BE0634706280ADA32",
+              "37822CC13A93AE6BE0634706280ADA32",
+              "37822CC13A92AE6BE0634706280ADA32",
+              "37822CC13A91AE6BE0634706280ADA32",
+              "37822CC13A8BAE6BE0634706280ADA32",
+              "37822CC13A8DAE6BE0634706280ADA32",
+              "37822CC13A9AAE6BE0634706280ADA32",
+              "37822CC13A90AE6BE0634706280ADA32",
+              "37822CC13A8AAE6BE0634706280ADA32",
+              "37822CC13A9BAE6BE0634706280ADA32",
+              "37822CC13A9CAE6BE0634706280ADA32",
+              "37822CC13A94AE6BE0634706280ADA32",
+              "37822CC13A98AE6BE0634706280ADA32"
+            ],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": true,
+              "hasEmpty": false
+            }
+          },
+          {
+            "position": {
+              "row": 2,
+              "column": 2,
+              "a1Notation": "B3"
+            },
+            "resultType": "codePlaceholder",
+            "resultValue": "CCAAEBEADA25340833358825118164416",
+            "numericValue": null,
+            "sourceValues": [
+              "37822CC13A9DAE6BE0634706280ADA32",
+              "37822CC13A93AE6BE0634706280ADA32",
+              "37822CC13A92AE6BE0634706280ADA32",
+              "37822CC13A91AE6BE0634706280ADA32",
+              "37822CC13A8BAE6BE0634706280ADA32",
+              "37822CC13A8DAE6BE0634706280ADA32",
+              "37822CC13A9AAE6BE0634706280ADA32",
+              "37822CC13A90AE6BE0634706280ADA32",
+              "37822CC13A8AAE6BE0634706280ADA32",
+              "37822CC13A9BAE6BE0634706280ADA32",
+              "37822CC13A9CAE6BE0634706280ADA32",
+              "37822CC13A94AE6BE0634706280ADA32",
+              "37822CC13A98AE6BE0634706280ADA32"
+            ],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": true,
+              "hasEmpty": false
+            }
+          },
+          {
+            "position": {
+              "row": 2,
+              "column": 3,
+              "a1Notation": "C3"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          },
+          {
+            "position": {
+              "row": 2,
+              "column": 4,
+              "a1Notation": "D3"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          }
+        ],
+        [
+          {
+            "position": {
+              "row": 3,
+              "column": 0,
+              "a1Notation": "4"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          },
+          {
+            "position": {
+              "row": 3,
+              "column": 1,
+              "a1Notation": "A4"
+            },
+            "resultType": "textMajority",
+            "resultValue": "财政区划代码：",
+            "numericValue": null,
+            "sourceValues": [
+              "财政区划代码：",
+              "财政区划代码：",
+              "财政区划代码：",
+              "财政区划代码：",
+              "财政区划代码：",
+              "财政区划代码：",
+              "财政区划代码：",
+              "财政区划代码：",
+              "财政区划代码：",
+              "财政区划代码：",
+              "财政区划代码：",
+              "财政区划代码：",
+              "财政区划代码："
+            ],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": true,
+              "hasCode": false,
+              "hasEmpty": false
+            }
+          },
+          {
+            "position": {
+              "row": 3,
+              "column": 2,
+              "a1Notation": "B4"
+            },
+            "resultType": "numericSum",
+            "resultValue": "4303312000.0",
+            "numericValue": 4303312000.0,
+            "sourceValues": [
+              "331024000",
+              "331024000",
+              "331024000",
+              "331024000",
+              "331024000",
+              "331024000",
+              "331024000",
+              "331024000",
+              "331024000",
+              "331024000",
+              "331024000",
+              "331024000",
+              "331024000"
+            ],
+            "conflictMarkers": {
+              "hasNumeric": true,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": false
+            }
+          },
+          {
+            "position": {
+              "row": 3,
+              "column": 3,
+              "a1Notation": "C4"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          },
+          {
+            "position": {
+              "row": 3,
+              "column": 4,
+              "a1Notation": "D4"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          }
+        ],
+        [
+          {
+            "position": {
+              "row": 4,
+              "column": 0,
+              "a1Notation": "5"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          },
+          {
+            "position": {
+              "row": 4,
+              "column": 1,
+              "a1Notation": "A5"
+            },
+            "resultType": "textMajority",
+            "resultValue": "财政区划名称：",
+            "numericValue": null,
+            "sourceValues": [
+              "财政区划名称：",
+              "财政区划名称：",
+              "财政区划名称：",
+              "财政区划名称：",
+              "财政区划名称：",
+              "财政区划名称：",
+              "财政区划名称：",
+              "财政区划名称：",
+              "财政区划名称：",
+              "财政区划名称：",
+              "财政区划名称：",
+              "财政区划名称：",
+              "财政区划名称："
+            ],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": true,
+              "hasCode": false,
+              "hasEmpty": false
+            }
+          },
+          {
+            "position": {
+              "row": 4,
+              "column": 2,
+              "a1Notation": "B5"
+            },
+            "resultType": "textMajority",
+            "resultValue": "仙居县",
+            "numericValue": null,
+            "sourceValues": [
+              "仙居县",
+              "仙居县",
+              "仙居县",
+              "仙居县",
+              "仙居县",
+              "仙居县",
+              "仙居县",
+              "仙居县",
+              "仙居县",
+              "仙居县",
+              "仙居县",
+              "仙居县",
+              "仙居县"
+            ],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": true,
+              "hasCode": false,
+              "hasEmpty": false
+            }
+          },
+          {
+            "position": {
+              "row": 4,
+              "column": 3,
+              "a1Notation": "C5"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          },
+          {
+            "position": {
+              "row": 4,
+              "column": 4,
+              "a1Notation": "D5"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          }
+        ],
+        [
+          {
+            "position": {
+              "row": 5,
+              "column": 0,
+              "a1Notation": "6"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          },
+          {
+            "position": {
+              "row": 5,
+              "column": 1,
+              "a1Notation": "A6"
+            },
+            "resultType": "textMajority",
+            "resultValue": "报表期间：",
+            "numericValue": null,
+            "sourceValues": [
+              "报表期间：",
+              "报表期间：",
+              "报表期间：",
+              "报表期间：",
+              "报表期间：",
+              "报表期间：",
+              "报表期间：",
+              "报表期间：",
+              "报表期间：",
+              "报表期间：",
+              "报表期间：",
+              "报表期间：",
+              "报表期间："
+            ],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": true,
+              "hasCode": false,
+              "hasEmpty": false
+            }
+          },
+          {
+            "position": {
+              "row": 5,
+              "column": 2,
+              "a1Notation": "B6"
+            },
+            "resultType": "numericSum",
+            "resultValue": "26312.0",
+            "numericValue": 26312.0,
+            "sourceValues": [
+              "2024",
+              "2024",
+              "2024",
+              "2024",
+              "2024",
+              "2024",
+              "2024",
+              "2024",
+              "2024",
+              "2024",
+              "2024",
+              "2024",
+              "2024"
+            ],
+            "conflictMarkers": {
+              "hasNumeric": true,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": false
+            }
+          },
+          {
+            "position": {
+              "row": 5,
+              "column": 3,
+              "a1Notation": "C6"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          },
+          {
+            "position": {
+              "row": 5,
+              "column": 4,
+              "a1Notation": "D6"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          }
+        ],
+        [
+          {
+            "position": {
+              "row": 6,
+              "column": 0,
+              "a1Notation": "7"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          },
+          {
+            "position": {
+              "row": 6,
+              "column": 1,
+              "a1Notation": "A7"
+            },
+            "resultType": "textMajority",
+            "resultValue": "报送主体编码：",
+            "numericValue": null,
+            "sourceValues": [
+              "报送主体编码：",
+              "报送主体编码：",
+              "报送主体编码：",
+              "报送主体编码：",
+              "报送主体编码：",
+              "报送主体编码：",
+              "报送主体编码：",
+              "报送主体编码：",
+              "报送主体编码：",
+              "报送主体编码：",
+              "报送主体编码：",
+              "报送主体编码：",
+              "报送主体编码："
+            ],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": true,
+              "hasCode": false,
+              "hasEmpty": false
+            }
+          },
+          {
+            "position": {
+              "row": 6,
+              "column": 2,
+              "a1Notation": "B7"
+            },
+            "resultType": "numericSum",
+            "resultValue": "4303313337.0",
+            "numericValue": 4303313337.0,
+            "sourceValues": [
+              "331024105",
+              "331024200",
+              "331024102",
+              "331024107",
+              "331024104",
+              "331024202",
+              "331024103",
+              "331024002",
+              "331024101",
+              "331024106",
+              "331024001",
+              "331024201",
+              "331024003"
+            ],
+            "conflictMarkers": {
+              "hasNumeric": true,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": false
+            }
+          },
+          {
+            "position": {
+              "row": 6,
+              "column": 3,
+              "a1Notation": "C7"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          },
+          {
+            "position": {
+              "row": 6,
+              "column": 4,
+              "a1Notation": "D7"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          }
+        ],
+        [
+          {
+            "position": {
+              "row": 7,
+              "column": 0,
+              "a1Notation": "8"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          },
+          {
+            "position": {
+              "row": 7,
+              "column": 1,
+              "a1Notation": "A8"
+            },
+            "resultType": "textMajority",
+            "resultValue": "报送主体类型：",
+            "numericValue": null,
+            "sourceValues": [
+              "报送主体类型：",
+              "报送主体类型：",
+              "报送主体类型：",
+              "报送主体类型：",
+              "报送主体类型：",
+              "报送主体类型：",
+              "报送主体类型：",
+              "报送主体类型：",
+              "报送主体类型：",
+              "报送主体类型：",
+              "报送主体类型：",
+              "报送主体类型：",
+              "报送主体类型："
+            ],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": true,
+              "hasCode": false,
+              "hasEmpty": false
+            }
+          },
+          {
+            "position": {
+              "row": 7,
+              "column": 2,
+              "a1Notation": "B8"
+            },
+            "resultType": "textMajority",
+            "resultValue": "基层财政区划",
+            "numericValue": null,
+            "sourceValues": [
+              "基层财政区划",
+              "基层财政区划",
+              "基层财政区划",
+              "基层财政区划",
+              "基层财政区划",
+              "基层财政区划",
+              "基层财政区划",
+              "基层财政区划",
+              "基层财政区划",
+              "基层财政区划",
+              "基层财政区划",
+              "基层财政区划",
+              "基层财政区划"
+            ],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": true,
+              "hasCode": false,
+              "hasEmpty": false
+            }
+          },
+          {
+            "position": {
+              "row": 7,
+              "column": 3,
+              "a1Notation": "C8"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          },
+          {
+            "position": {
+              "row": 7,
+              "column": 4,
+              "a1Notation": "D8"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          }
+        ],
+        [
+          {
+            "position": {
+              "row": 8,
+              "column": 0,
+              "a1Notation": "9"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          },
+          {
+            "position": {
+              "row": 8,
+              "column": 1,
+              "a1Notation": "A9"
+            },
+            "resultType": "textMajority",
+            "resultValue": "报送主体名称：",
+            "numericValue": null,
+            "sourceValues": [
+              "报送主体名称：",
+              "报送主体名称：",
+              "报送主体名称：",
+              "报送主体名称：",
+              "报送主体名称：",
+              "报送主体名称：",
+              "报送主体名称：",
+              "报送主体名称：",
+              "报送主体名称：",
+              "报送主体名称：",
+              "报送主体名称：",
+              "报送主体名称：",
+              "报送主体名称："
+            ],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": true,
+              "hasCode": false,
+              "hasEmpty": false
+            }
+          },
+          {
+            "position": {
+              "row": 8,
+              "column": 2,
+              "a1Notation": "B9"
+            },
+            "resultType": "textMajority",
+            "resultValue": "仙居县官路镇人民政府",
+            "numericValue": null,
+            "sourceValues": [
+              "仙居县官路镇人民政府",
+              "仙居县安岭乡人民政府",
+              "仙居县埠头镇人民政府",
+              "仙居县朱溪镇人民政府",
+              "仙居县田市镇人民政府",
+              "仙居县湫山乡人民政府",
+              "仙居县白塔镇人民政府",
+              "仙居县人民政府南峰街道办事处",
+              "仙居县横溪镇人民政府",
+              "仙居县下各镇人民政府",
+              "仙居县人民政府福应街道办事处",
+              "仙居县溪港乡人民政府",
+              "仙居县人民政府安洲街道办事处"
+            ],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": true,
+              "hasCode": false,
+              "hasEmpty": false
+            }
+          },
+          {
+            "position": {
+              "row": 8,
+              "column": 3,
+              "a1Notation": "C9"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          },
+          {
+            "position": {
+              "row": 8,
+              "column": 4,
+              "a1Notation": "D9"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          }
+        ],
+        [
+          {
+            "position": {
+              "row": 9,
+              "column": 0,
+              "a1Notation": "10"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          },
+          {
+            "position": {
+              "row": 9,
+              "column": 1,
+              "a1Notation": "A10"
+            },
+            "resultType": "textMajority",
+            "resultValue": "乡镇政府名称：",
+            "numericValue": null,
+            "sourceValues": [
+              "乡镇政府名称：",
+              "乡镇政府名称：",
+              "乡镇政府名称：",
+              "乡镇政府名称：",
+              "乡镇政府名称：",
+              "乡镇政府名称：",
+              "乡镇政府名称：",
+              "乡镇政府名称：",
+              "乡镇政府名称：",
+              "乡镇政府名称：",
+              "乡镇政府名称：",
+              "乡镇政府名称：",
+              "乡镇政府名称："
+            ],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": true,
+              "hasCode": false,
+              "hasEmpty": false
+            }
+          },
+          {
+            "position": {
+              "row": 9,
+              "column": 2,
+              "a1Notation": "B10"
+            },
+            "resultType": "textMajority",
+            "resultValue": "仙居县官路镇人民政府",
+            "numericValue": null,
+            "sourceValues": [
+              "仙居县官路镇人民政府",
+              "仙居县安岭乡人民政府",
+              "仙居县埠头镇人民政府",
+              "仙居县朱溪镇人民政府",
+              "仙居县田市镇人民政府",
+              "仙居县湫山乡人民政府",
+              "仙居县白塔镇人民政府",
+              "仙居县人民政府南峰街道办事处",
+              "仙居县横溪镇人民政府",
+              "仙居县下各镇人民政府",
+              "仙居县人民政府福应街道办事处",
+              "仙居县溪港乡人民政府",
+              "仙居县人民政府安洲街道办事处"
+            ],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": true,
+              "hasCode": false,
+              "hasEmpty": false
+            }
+          },
+          {
+            "position": {
+              "row": 9,
+              "column": 3,
+              "a1Notation": "C10"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          },
+          {
+            "position": {
+              "row": 9,
+              "column": 4,
+              "a1Notation": "D10"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          }
+        ],
+        [
+          {
+            "position": {
+              "row": 10,
+              "column": 0,
+              "a1Notation": "11"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          },
+          {
+            "position": {
+              "row": 10,
+              "column": 1,
+              "a1Notation": "A11"
+            },
+            "resultType": "textMajority",
+            "resultValue": "填报人：",
+            "numericValue": null,
+            "sourceValues": [
+              "填报人：",
+              "填报人：",
+              "填报人：",
+              "填报人：",
+              "填报人：",
+              "填报人：",
+              "填报人：",
+              "填报人：",
+              "填报人：",
+              "填报人：",
+              "填报人：",
+              "填报人：",
+              "填报人："
+            ],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": true,
+              "hasCode": false,
+              "hasEmpty": false
+            }
+          },
+          {
+            "position": {
+              "row": 10,
+              "column": 2,
+              "a1Notation": "B11"
+            },
+            "resultType": "textMajority",
+            "resultValue": "崔慧敏",
+            "numericValue": null,
+            "sourceValues": [
+              "崔慧敏",
+              "蒋英飞",
+              "周笑晴",
+              "李玲玲",
+              "阎祎胤",
+              "郑宇沁",
+              "吴雄建",
+              "许丹叶",
+              "汪晏如",
+              "彭霞霞",
+              "陈丽冰、方江涛",
+              "肖杰轮",
+              "赵巧巧"
+            ],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": true,
+              "hasCode": false,
+              "hasEmpty": false
+            }
+          },
+          {
+            "position": {
+              "row": 10,
+              "column": 3,
+              "a1Notation": "C11"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          },
+          {
+            "position": {
+              "row": 10,
+              "column": 4,
+              "a1Notation": "D11"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          }
+        ],
+        [
+          {
+            "position": {
+              "row": 11,
+              "column": 0,
+              "a1Notation": "12"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          },
+          {
+            "position": {
+              "row": 11,
+              "column": 1,
+              "a1Notation": "A12"
+            },
+            "resultType": "textMajority",
+            "resultValue": "电话号码：",
+            "numericValue": null,
+            "sourceValues": [
+              "电话号码：",
+              "电话号码：",
+              "电话号码：",
+              "电话号码：",
+              "电话号码：",
+              "电话号码：",
+              "电话号码：",
+              "电话号码：",
+              "电话号码：",
+              "电话号码：",
+              "电话号码：",
+              "电话号码：",
+              "电话号码："
+            ],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": true,
+              "hasCode": false,
+              "hasEmpty": false
+            }
+          },
+          {
+            "position": {
+              "row": 11,
+              "column": 2,
+              "a1Notation": "B12"
+            },
+            "resultType": "numericSum",
+            "resultValue": "164097976648.0",
+            "numericValue": 164097976648.0,
+            "sourceValues": [
+              "0576-87600397",
+              "13736263516",
+              "87099001",
+              "13073891895",
+              "15988906062",
+              "15988973937",
+              "87012006",
+              "0576-87712222",
+              "15867631028",
+              "057687651086",
+              "87788333",
+              "17816117514",
+              "13676642270"
+            ],
+            "conflictMarkers": {
+              "hasNumeric": true,
+              "hasText": true,
+              "hasCode": false,
+              "hasEmpty": false
+            }
+          },
+          {
+            "position": {
+              "row": 11,
+              "column": 3,
+              "a1Notation": "C12"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          },
+          {
+            "position": {
+              "row": 11,
+              "column": 4,
+              "a1Notation": "D12"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          }
+        ],
+        [
+          {
+            "position": {
+              "row": 12,
+              "column": 0,
+              "a1Notation": "13"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          },
+          {
+            "position": {
+              "row": 12,
+              "column": 1,
+              "a1Notation": "A13"
+            },
+            "resultType": "textMajority",
+            "resultValue": "邮政编码：",
+            "numericValue": null,
+            "sourceValues": [
+              "邮政编码：",
+              "邮政编码：",
+              "邮政编码：",
+              "邮政编码：",
+              "邮政编码：",
+              "邮政编码：",
+              "邮政编码：",
+              "邮政编码：",
+              "邮政编码：",
+              "邮政编码：",
+              "邮政编码：",
+              "邮政编码：",
+              "邮政编码："
+            ],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": true,
+              "hasCode": false,
+              "hasEmpty": false
+            }
+          },
+          {
+            "position": {
+              "row": 12,
+              "column": 2,
+              "a1Notation": "B13"
+            },
+            "resultType": "numericSum",
+            "resultValue": "4124992.0",
+            "numericValue": 4124992.0,
+            "sourceValues": [
+              "317309",
+              "317300",
+              "317300",
+              "317327",
+              "317318",
+              "317312",
+              "317300",
+              "317300",
+              "317312",
+              "317300",
+              "317300",
+              "317314",
+              "317300"
+            ],
+            "conflictMarkers": {
+              "hasNumeric": true,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": false
+            }
+          },
+          {
+            "position": {
+              "row": 12,
+              "column": 3,
+              "a1Notation": "C13"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          },
+          {
+            "position": {
+              "row": 12,
+              "column": 4,
+              "a1Notation": "D13"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          }
+        ],
+        [
+          {
+            "position": {
+              "row": 13,
+              "column": 0,
+              "a1Notation": "14"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          },
+          {
+            "position": {
+              "row": 13,
+              "column": 1,
+              "a1Notation": "A14"
+            },
+            "resultType": "textMajority",
+            "resultValue": "报送日期：",
+            "numericValue": null,
+            "sourceValues": [
+              "报送日期：",
+              "报送日期：",
+              "报送日期：",
+              "报送日期：",
+              "报送日期：",
+              "报送日期：",
+              "报送日期：",
+              "报送日期：",
+              "报送日期：",
+              "报送日期：",
+              "报送日期：",
+              "报送日期：",
+              "报送日期："
+            ],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": true,
+              "hasCode": false,
+              "hasEmpty": false
+            }
+          },
+          {
+            "position": {
+              "row": 13,
+              "column": 2,
+              "a1Notation": "B14"
+            },
+            "resultType": "textMajority",
+            "resultValue": "2025-06-18 00:00:00",
+            "numericValue": null,
+            "sourceValues": [
+              "2025-06-18 00:00:00",
+              "2025-06-18 00:00:00",
+              "2025-06-19 00:00:00",
+              "2025-06-19 00:00:00",
+              "2025-06-19 00:00:00",
+              "2025-06-19 00:00:00",
+              "2025-06-18 00:00:00",
+              "2025-06-18 00:00:00",
+              "2025-06-18 00:00:00",
+              "2025-06-18 00:00:00",
+              "2025-06-19 00:00:00",
+              "2025-06-18 00:00:00"
+            ],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": true,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          },
+          {
+            "position": {
+              "row": 13,
+              "column": 3,
+              "a1Notation": "C14"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          },
+          {
+            "position": {
+              "row": 13,
+              "column": 4,
+              "a1Notation": "D14"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          }
+        ],
+        [
+          {
+            "position": {
+              "row": 14,
+              "column": 0,
+              "a1Notation": "15"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          },
+          {
+            "position": {
+              "row": 14,
+              "column": 1,
+              "a1Notation": "A15"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          },
+          {
+            "position": {
+              "row": 14,
+              "column": 2,
+              "a1Notation": "B15"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          },
+          {
+            "position": {
+              "row": 14,
+              "column": 3,
+              "a1Notation": "C15"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          },
+          {
+            "position": {
+              "row": 14,
+              "column": 4,
+              "a1Notation": "D15"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          }
+        ],
+        [
+          {
+            "position": {
+              "row": 15,
+              "column": 0,
+              "a1Notation": "16"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          },
+          {
+            "position": {
+              "row": 15,
+              "column": 1,
+              "a1Notation": "A16"
+            },
+            "resultType": "textMajority",
+            "resultValue": "上级报送主体编码：",
+            "numericValue": null,
+            "sourceValues": [
+              "上级报送主体编码：",
+              "上级报送主体编码：",
+              "上级报送主体编码：",
+              "上级报送主体编码：",
+              "上级报送主体编码：",
+              "上级报送主体编码：",
+              "上级报送主体编码：",
+              "上级报送主体编码：",
+              "上级报送主体编码：",
+              "上级报送主体编码：",
+              "上级报送主体编码：",
+              "上级报送主体编码：",
+              "上级报送主体编码："
+            ],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": true,
+              "hasCode": false,
+              "hasEmpty": false
+            }
+          },
+          {
+            "position": {
+              "row": 15,
+              "column": 2,
+              "a1Notation": "B16"
+            },
+            "resultType": "numericSum",
+            "resultValue": "4303312000.0",
+            "numericValue": 4303312000.0,
+            "sourceValues": [
+              "331024000.0",
+              "331024000.0",
+              "331024000.0",
+              "331024000.0",
+              "331024000.0",
+              "331024000.0",
+              "331024000.0",
+              "331024000.0",
+              "331024000.0",
+              "331024000.0",
+              "331024000.0",
+              "331024000.0",
+              "331024000.0"
+            ],
+            "conflictMarkers": {
+              "hasNumeric": true,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": false
+            }
+          },
+          {
+            "position": {
+              "row": 15,
+              "column": 3,
+              "a1Notation": "C16"
+            },
+            "resultType": "textMajority",
+            "resultValue": "财政机构负责人：",
+            "numericValue": null,
+            "sourceValues": [
+              "财政机构负责人：",
+              "财政机构负责人：",
+              "财政机构负责人：",
+              "财政机构负责人：",
+              "财政机构负责人：",
+              "财政机构负责人：",
+              "财政机构负责人：",
+              "财政机构负责人：",
+              "财政机构负责人：",
+              "财政机构负责人：",
+              "财政机构负责人：",
+              "财政机构负责人：",
+              "财政机构负责人："
+            ],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": true,
+              "hasCode": false,
+              "hasEmpty": false
+            }
+          },
+          {
+            "position": {
+              "row": 15,
+              "column": 4,
+              "a1Notation": "D16"
+            },
+            "resultType": "textMajority",
+            "resultValue": "杨杰",
+            "numericValue": null,
+            "sourceValues": [
+              "杨杰",
+              "徐雄健",
+              "张培成",
+              "应江平",
+              "泮伟敏",
+              "项义",
+              "张维维",
+              "吴鑫",
+              "卢胜龙",
+              "王鹏翔",
+              "张飞勇",
+              "应晓媚",
+              "罗波"
+            ],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": true,
+              "hasCode": false,
+              "hasEmpty": false
+            }
+          }
+        ],
+        [
+          {
+            "position": {
+              "row": 16,
+              "column": 0,
+              "a1Notation": "17"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          },
+          {
+            "position": {
+              "row": 16,
+              "column": 1,
+              "a1Notation": "A17"
+            },
+            "resultType": "textMajority",
+            "resultValue": "行政区划代码：",
+            "numericValue": null,
+            "sourceValues": [
+              "行政区划代码：",
+              "行政区划代码：",
+              "行政区划代码：",
+              "行政区划代码：",
+              "行政区划代码：",
+              "行政区划代码：",
+              "行政区划代码：",
+              "行政区划代码：",
+              "行政区划代码：",
+              "行政区划代码：",
+              "行政区划代码：",
+              "行政区划代码：",
+              "行政区划代码："
+            ],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": true,
+              "hasCode": false,
+              "hasEmpty": false
+            }
+          },
+          {
+            "position": {
+              "row": 16,
+              "column": 2,
+              "a1Notation": "B17"
+            },
+            "resultType": "numericSum",
+            "resultValue": "4303313337.0",
+            "numericValue": 4303313337.0,
+            "sourceValues": [
+              "331024105.0",
+              "331024200.0",
+              "331024102.0",
+              "331024107.0",
+              "331024104.0",
+              "331024202.0",
+              "331024103.0",
+              "331024002.0",
+              "331024101.0",
+              "331024106.0",
+              "331024001.0",
+              "331024201.0",
+              "331024003.0"
+            ],
+            "conflictMarkers": {
+              "hasNumeric": true,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": false
+            }
+          },
+          {
+            "position": {
+              "row": 16,
+              "column": 3,
+              "a1Notation": "C17"
+            },
+            "resultType": "textMajority",
+            "resultValue": "行政区划名称：",
+            "numericValue": null,
+            "sourceValues": [
+              "行政区划名称：",
+              "行政区划名称：",
+              "行政区划名称：",
+              "行政区划名称：",
+              "行政区划名称：",
+              "行政区划名称：",
+              "行政区划名称：",
+              "行政区划名称：",
+              "行政区划名称：",
+              "行政区划名称：",
+              "行政区划名称：",
+              "行政区划名称：",
+              "行政区划名称："
+            ],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": true,
+              "hasCode": false,
+              "hasEmpty": false
+            }
+          },
+          {
+            "position": {
+              "row": 16,
+              "column": 4,
+              "a1Notation": "D17"
+            },
+            "resultType": "textMajority",
+            "resultValue": "仙居县官路镇人民政府",
+            "numericValue": null,
+            "sourceValues": [
+              "仙居县官路镇人民政府",
+              "仙居县安岭乡人民政府",
+              "仙居县埠头镇人民政府",
+              "仙居县朱溪镇人民政府",
+              "仙居县田市镇人民政府",
+              "仙居县湫山乡人民政府",
+              "仙居县白塔镇人民政府",
+              "仙居县人民政府南峰街道办事处",
+              "仙居县横溪镇人民政府",
+              "仙居县下各镇人民政府",
+              "仙居县人民政府福应街道办事处",
+              "仙居县溪港乡人民政府",
+              "仙居县人民政府安洲街道办事处"
+            ],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": true,
+              "hasCode": false,
+              "hasEmpty": false
+            }
+          }
+        ],
+        [
+          {
+            "position": {
+              "row": 17,
+              "column": 0,
+              "a1Notation": "18"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          },
+          {
+            "position": {
+              "row": 17,
+              "column": 1,
+              "a1Notation": "A18"
+            },
+            "resultType": "textMajority",
+            "resultValue": "机构地址：",
+            "numericValue": null,
+            "sourceValues": [
+              "机构地址：",
+              "机构地址：",
+              "机构地址：",
+              "机构地址：",
+              "机构地址：",
+              "机构地址：",
+              "机构地址：",
+              "机构地址：",
+              "机构地址：",
+              "机构地址：",
+              "机构地址：",
+              "机构地址：",
+              "机构地址："
+            ],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": true,
+              "hasCode": false,
+              "hasEmpty": false
+            }
+          },
+          {
+            "position": {
+              "row": 17,
+              "column": 2,
+              "a1Notation": "B18"
+            },
+            "resultType": "textMajority",
+            "resultValue": "仙居县官路镇石井村镇前路22号",
+            "numericValue": null,
+            "sourceValues": [
+              "仙居县官路镇石井村镇前路22号",
+              "仙居县安岭乡新表门村新屋1号",
+              "埠头镇育才路207号",
+              "浙江省仙居县朱溪镇朱一村",
+              "田市镇田市上街村田李路2号",
+              "仙居县湫山乡溪口张村",
+              "浙江省仙居县白塔镇神仙居大道1号",
+              "仙居县南峰街道办事处南兴街188号",
+              "浙江省仙居县横溪镇东西大街555号",
+              "仙居县下各镇穿镇路382号",
+              "仙居县福应街道解放街82号",
+              "浙江省仙居县溪港乡麻车坑村仙永路1号",
+              "光明西路168号"
+            ],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": true,
+              "hasCode": false,
+              "hasEmpty": false
+            }
+          },
+          {
+            "position": {
+              "row": 17,
+              "column": 3,
+              "a1Notation": "C18"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          },
+          {
+            "position": {
+              "row": 17,
+              "column": 4,
+              "a1Notation": "D18"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          }
+        ],
+        [
+          {
+            "position": {
+              "row": 18,
+              "column": 0,
+              "a1Notation": "19"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          },
+          {
+            "position": {
+              "row": 18,
+              "column": 1,
+              "a1Notation": "A19"
+            },
+            "resultType": "textMajority",
+            "resultValue": "说明：",
+            "numericValue": null,
+            "sourceValues": [
+              "说明：",
+              "说明：",
+              "说明：",
+              "说明：",
+              "说明：",
+              "说明：",
+              "说明：",
+              "说明：",
+              "说明：",
+              "说明：",
+              "说明：",
+              "说明：",
+              "说明："
+            ],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": true,
+              "hasCode": false,
+              "hasEmpty": false
+            }
+          },
+          {
+            "position": {
+              "row": 18,
+              "column": 2,
+              "a1Notation": "B19"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          },
+          {
+            "position": {
+              "row": 18,
+              "column": 3,
+              "a1Notation": "C19"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          },
+          {
+            "position": {
+              "row": 18,
+              "column": 4,
+              "a1Notation": "D19"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          }
+        ],
+        [
+          {
+            "position": {
+              "row": 19,
+              "column": 0,
+              "a1Notation": "20"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          },
+          {
+            "position": {
+              "row": 19,
+              "column": 1,
+              "a1Notation": "A20"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          },
+          {
+            "position": {
+              "row": 19,
+              "column": 2,
+              "a1Notation": "B20"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          },
+          {
+            "position": {
+              "row": 19,
+              "column": 3,
+              "a1Notation": "C20"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          },
+          {
+            "position": {
+              "row": 19,
+              "column": 4,
+              "a1Notation": "D20"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          }
+        ],
+        [
+          {
+            "position": {
+              "row": 20,
+              "column": 0,
+              "a1Notation": "21"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          },
+          {
+            "position": {
+              "row": 20,
+              "column": 1,
+              "a1Notation": "A21"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          },
+          {
+            "position": {
+              "row": 20,
+              "column": 2,
+              "a1Notation": "B21"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          },
+          {
+            "position": {
+              "row": 20,
+              "column": 3,
+              "a1Notation": "C21"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          },
+          {
+            "position": {
+              "row": 20,
+              "column": 4,
+              "a1Notation": "D21"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          }
+        ],
+        [
+          {
+            "position": {
+              "row": 21,
+              "column": 0,
+              "a1Notation": "22"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          },
+          {
+            "position": {
+              "row": 21,
+              "column": 1,
+              "a1Notation": "A22"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          },
+          {
+            "position": {
+              "row": 21,
+              "column": 2,
+              "a1Notation": "B22"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          },
+          {
+            "position": {
+              "row": 21,
+              "column": 3,
+              "a1Notation": "C22"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          },
+          {
+            "position": {
+              "row": 21,
+              "column": 4,
+              "a1Notation": "D22"
+            },
+            "resultType": "empty",
+            "resultValue": null,
+            "numericValue": null,
+            "sourceValues": [],
+            "conflictMarkers": {
+              "hasNumeric": false,
+              "hasText": false,
+              "hasCode": false,
+              "hasEmpty": true
+            }
+          }
+        ]
+      ]
+    }
+  }
+}
