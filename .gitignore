@@ -12,3 +12,9 @@ __pycache__/
 
 # Logs
 *.log
+
+# Sample data
+/仙居县/
+/merged_result.xlsx
+/merged_result.json
+/all_sheets_merged.json
