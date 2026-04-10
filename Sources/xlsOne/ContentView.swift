@@ -39,53 +39,86 @@ struct ContentView: View {
     // MARK: - 子视图
 
     private var toolbar: some View {
-        HStack(spacing: 16) {
-            Button("打开") {
-                viewModel.showOpenFileDialog()
-            }
-            .buttonStyle(.borderedProminent)
+        HStack(spacing: 12) {
+            // 左侧按钮组
+            HStack(spacing: 8) {
+                Button {
+                    viewModel.showOpenFileDialog()
+                } label: {
+                    Label("打开", systemImage: "folder")
+                }
+                .buttonStyle(.borderedProminent)
 
-            Button("导出") {
-                viewModel.exportResult()
+                Button {
+                    viewModel.exportResult()
+                } label: {
+                    Label("导出", systemImage: "square.and.arrow.up")
+                }
+                .buttonStyle(.bordered)
+                .disabled(viewModel.mergedResult == nil)
             }
-            .buttonStyle(.bordered)
-            .disabled(viewModel.mergedResult == nil)
+
+            Divider()
+                .frame(height: 20)
+
+            // 中间按钮组（文件操作）
+            HStack(spacing: 8) {
+                Button {
+                    viewModel.reloadFiles()
+                } label: {
+                    Label("重载", systemImage: "arrow.clockwise")
+                }
+                .buttonStyle(.bordered)
+                .disabled(viewModel.files.isEmpty)
+                .help("重新加载所有文件 (⌘R)")
+
+                Button {
+                    viewModel.closeAllFiles()
+                } label: {
+                    Label("清空", systemImage: "trash")
+                }
+                .buttonStyle(.bordered)
+                .disabled(viewModel.files.isEmpty)
+                .help("关闭所有文件 (⌘⇧W)")
+            }
 
             Spacer()
 
-            // 文件计数
+            // 右侧文件计数
             if !viewModel.files.isEmpty {
-                Text("\(viewModel.files.count) 个文件")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                HStack(spacing: 4) {
+                    Image(systemName: "doc.text")
+                        .font(.caption)
+                    Text("\(viewModel.files.count) 个文件")
+                        .font(.caption)
+                }
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(Color(NSColor.controlBackgroundColor))
+                .cornerRadius(4)
             }
-
-            Button("设置") {
-                // 设置功能待实现
-            }
-            .buttonStyle(.borderless)
         }
         .padding()
+        .background(Color(NSColor.windowBackgroundColor))
     }
 
     private var sheetSelector: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                Text("工作表:")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-
+            HStack(spacing: 4) {
                 ForEach(viewModel.availableSheets, id: \.self) { sheetName in
-                    Button(sheetName) {
+                    SheetTabButton(
+                        title: sheetName,
+                        isSelected: viewModel.currentSheet == sheetName
+                    ) {
                         viewModel.switchToSheet(sheetName)
                     }
-                    .buttonStyle(SheetButtonStyle(isSelected: viewModel.currentSheet == sheetName))
                 }
             }
             .padding(.horizontal)
-            .padding(.vertical, 8)
+            .padding(.vertical, 6)
         }
-        .background(Color(NSColor.controlBackgroundColor))
+        .background(Color(NSColor.windowBackgroundColor))
     }
 
     private var loadingView: some View {
@@ -97,25 +130,28 @@ struct ContentView: View {
                 .padding(.top)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(NSColor.controlBackgroundColor))
     }
 
     private var emptyView: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 20) {
             Image(systemName: "doc.text.magnifyingglass")
-                .font(.system(size: 48))
+                .font(.system(size: 64))
                 .foregroundStyle(.secondary)
 
             Text("拖拽 Excel 文件到此处")
-                .font(.title3)
+                .font(.title2)
+                .fontWeight(.medium)
 
             Text("或使用 ⌘O 打开文件")
-                .font(.caption)
+                .font(.subheadline)
                 .foregroundStyle(.secondary)
 
             Button("打开文件") {
                 viewModel.showOpenFileDialog()
             }
             .buttonStyle(.borderedProminent)
+            .controlSize(.large)
             .padding(.top)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -124,10 +160,15 @@ struct ContentView: View {
 
     private var noDataView: some View {
         VStack {
+            Image(systemName: "exclamationmark.triangle")
+                .font(.system(size: 48))
+                .foregroundStyle(.secondary)
             Text("无法读取数据")
                 .foregroundStyle(.secondary)
+                .padding(.top)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(NSColor.controlBackgroundColor))
     }
 
     private func spreadsheetView(result: MergedResult) -> some View {
@@ -136,7 +177,8 @@ struct ContentView: View {
             HStack {
                 Text("工作表: \(result.sheetName)")
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .fontWeight(.medium)
+                    .foregroundStyle(.primary)
 
                 Spacer()
 
@@ -145,68 +187,93 @@ struct ContentView: View {
                     .foregroundStyle(.secondary)
             }
             .padding(.horizontal)
-            .padding(.vertical, 8)
+            .padding(.vertical, 6)
+            .background(Color(NSColor.windowBackgroundColor))
+
+            Divider()
 
             // 表格
-            SpreadsheetGridView(rows: result.rows)
+            ExcelGridView(rows: result.rows)
         }
     }
 }
 
-// MARK: - 工作表按钮样式
+// MARK: - 工作表标签按钮
 
-struct SheetButtonStyle: ButtonStyle {
+struct SheetTabButton: View {
+    let title: String
     let isSelected: Bool
+    let action: () -> Void
 
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .background(isSelected ? Color.accentColor : Color(NSColor.controlBackgroundColor))
-            .foregroundStyle(isSelected ? .white : .primary)
-            .cornerRadius(4)
-            .overlay(
-                RoundedRectangle(cornerRadius: 4)
-                    .stroke(isSelected ? Color.accentColor : Color.gray.opacity(0.3), lineWidth: 1)
-            )
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .font(.system(size: 12))
+                .fontWeight(isSelected ? .semibold : .regular)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(isSelected ? Color.white : Color.clear)
+                .foregroundStyle(isSelected ? .primary : .secondary)
+                .cornerRadius(4)
+                .overlay(
+                    Group {
+                        if isSelected {
+                            RoundedRectangle(cornerRadius: 4)
+                                .stroke(Color.gray.opacity(0.3), lineWidth: 0.5)
+                                .shadow(color: .black.opacity(0.05), radius: 1, x: 0, y: 1)
+                        }
+                    }
+                )
+        }
+        .buttonStyle(.plain)
     }
 }
 
-// MARK: - 电子表格网格视图
+// MARK: - Excel 风格网格视图
 
-struct SpreadsheetGridView: View {
+struct ExcelGridView: View {
     let rows: [[MergedCell]]
     @State private var selectedCell: (row: Int, col: Int)?
     @State private var showDetailSheet = false
+
+    private var maxCols: Int {
+        rows.map { $0.count }.max() ?? 0
+    }
 
     var body: some View {
         GeometryReader { geometry in
             ScrollView([.horizontal, .vertical]) {
                 VStack(alignment: .leading, spacing: 0) {
+                    // 列头
+                    columnHeaderRow
+
+                    // 数据行
                     ForEach(Array(rows.enumerated()), id: \.offset) { rowIdx, row in
                         HStack(spacing: 0) {
                             // 行号
-                            Text("\(rowIdx + 1)")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .frame(width: 40, height: 28)
-                                .background(Color(NSColor.controlBackgroundColor))
-                                .border(Color.gray.opacity(0.2), width: 0.5)
+                            rowNumberView(rowIdx: rowIdx)
 
                             // 单元格
                             ForEach(Array(row.enumerated()), id: \.offset) { colIdx, cell in
-                                CellView(cell: cell, isSelected: selectedCell?.row == rowIdx && selectedCell?.col == colIdx)
-                                    .onTapGesture {
-                                        selectedCell = (rowIdx, colIdx)
-                                        if !cell.sourceValues.isEmpty {
-                                            showDetailSheet = true
-                                        }
+                                ExcelCellView(
+                                    cell: cell,
+                                    isSelected: selectedCell?.row == rowIdx && selectedCell?.col == colIdx
+                                )
+                                .onTapGesture {
+                                    selectedCell = (rowIdx, colIdx)
+                                    if !cell.sourceValues.isEmpty {
+                                        showDetailSheet = true
                                     }
+                                }
+                            }
+
+                            // 填充剩余的空单元格
+                            ForEach(row.count..<maxCols, id: \.self) { _ in
+                                ExcelCellView(cell: MergedCell(type: .single("")), isSelected: false)
                             }
                         }
                     }
                 }
-                .padding(1)
             }
         }
         .sheet(isPresented: $showDetailSheet) {
@@ -221,9 +288,48 @@ struct SpreadsheetGridView: View {
         }
     }
 
+    private var columnHeaderRow: some View {
+        HStack(spacing: 0) {
+            // 左上角空白（行号和列头的交叉处）
+            Rectangle()
+                .fill(Color(NSColor.controlBackgroundColor))
+                .frame(width: 40, height: 24)
+                .overlay(
+                    Rectangle()
+                        .stroke(Color.gray.opacity(0.3), lineWidth: 0.5)
+                )
+
+            // 列头 A, B, C...
+            ForEach(0..<maxCols, id: \.self) { colIdx in
+                Text(columnLetters(colIdx))
+                    .font(.system(size: 11))
+                    .fontWeight(.medium)
+                    .foregroundStyle(.secondary)
+                    .frame(width: 100, height: 24)
+                    .background(Color(NSColor.controlBackgroundColor))
+                    .overlay(
+                        Rectangle()
+                            .stroke(Color.gray.opacity(0.3), lineWidth: 0.5)
+                    )
+            }
+        }
+    }
+
+    private func rowNumberView(rowIdx: Int) -> some View {
+        Text("\(rowIdx + 1)")
+            .font(.system(size: 11))
+            .fontWeight(.medium)
+            .foregroundStyle(.secondary)
+            .frame(width: 40, height: 24)
+            .background(Color(NSColor.controlBackgroundColor))
+            .overlay(
+                Rectangle()
+                    .stroke(Color.gray.opacity(0.3), lineWidth: 0.5)
+            )
+    }
+
     private func cellReference(row: Int, col: Int) -> String {
-        let colLetters = columnLetters(col)
-        return "\(colLetters)\(row + 1)"
+        "\(columnLetters(col))\(row + 1)"
     }
 
     private func columnLetters(_ col: Int) -> String {
@@ -237,20 +343,40 @@ struct SpreadsheetGridView: View {
     }
 }
 
-// MARK: - 单元格视图
+// MARK: - Excel 单元格视图
 
-struct CellView: View {
+struct ExcelCellView: View {
     let cell: MergedCell
+    let sourceValues: [String: String]
     let isSelected: Bool
+
+    init(cell: MergedCell, isSelected: Bool) {
+        self.cell = cell
+        self.sourceValues = cell.sourceValues
+        self.isSelected = isSelected
+    }
 
     var body: some View {
         Text(cell.displayValue)
-            .font(.system(size: 12, design: .monospaced))
-            .frame(width: 100, height: 28, alignment: alignment)
+            .font(.system(size: 12))
+            .lineLimit(1)
+            .truncationMode(.tail)
+            .frame(width: 100, height: 24, alignment: alignment)
             .padding(.horizontal, 4)
             .background(backgroundColor)
             .foregroundStyle(foregroundStyle)
-            .border(isSelected ? Color.accentColor : Color.gray.opacity(0.2), width: isSelected ? 2 : 0.5)
+            .overlay(
+                Rectangle()
+                    .stroke(Color.gray.opacity(0.2), lineWidth: 0.5)
+            )
+            .overlay(
+                Group {
+                    if isSelected {
+                        Rectangle()
+                            .stroke(Color.accentColor, lineWidth: 2)
+                    }
+                }
+            )
     }
 
     private var alignment: Alignment {
@@ -264,13 +390,13 @@ struct CellView: View {
 
     private var backgroundColor: Color {
         if isSelected {
-            return Color.accentColor.opacity(0.1)
+            return Color.accentColor.opacity(0.15)
         }
         switch cell.type {
         case .sum:
             return Color.blue.opacity(0.05)
         case .mixed:
-            return Color.gray.opacity(0.05)
+            return Color.yellow.opacity(0.08)
         default:
             return Color.white
         }
@@ -279,7 +405,9 @@ struct CellView: View {
     private var foregroundStyle: some ShapeStyle {
         switch cell.type {
         case .mixed:
-            return Color.secondary
+            return Color.orange
+        case .sum:
+            return Color.blue
         default:
             return Color.primary
         }
@@ -343,7 +471,7 @@ struct CellDetailView: View {
             }
         }
         .padding()
-        .frame(width: 400, height: 500)
+        .frame(width: 450, height: 500)
     }
 }
 
@@ -357,7 +485,7 @@ struct CellTypeBadge: View {
             .font(.caption)
             .padding(.horizontal, 8)
             .padding(.vertical, 2)
-            .background(badgeColor.opacity(0.2))
+            .background(badgeColor.opacity(0.15))
             .foregroundStyle(badgeColor)
             .cornerRadius(4)
     }

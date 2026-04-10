@@ -107,14 +107,34 @@ public struct SimpleMerger {
         )
     }
 
-    /// 获取所有可用的工作表名称
+    /// 获取所有可用的工作表名称，保留原始顺序（以第一个文件的顺序为准）
     public func availableSheetNames(from files: [ExcelFile]) -> [String] {
-        var names: Set<String> = []
+        guard !files.isEmpty else { return [] }
+
+        // 收集所有文件名
+        var allNames: Set<String> = []
         for file in files {
             for sheet in file.sheets {
-                names.insert(sheet.name)
+                allNames.insert(sheet.name)
             }
         }
-        return Array(names).sorted()
+
+        // 以第一个文件的顺序为准，其他文件的sheet按字母顺序添加到末尾
+        var orderedNames: [String] = []
+        var seenNames: Set<String> = []
+
+        // 首先按第一个文件的顺序添加
+        for sheet in files[0].sheets {
+            if allNames.contains(sheet.name) && !seenNames.contains(sheet.name) {
+                orderedNames.append(sheet.name)
+                seenNames.insert(sheet.name)
+            }
+        }
+
+        // 然后添加其他文件中独有的sheet（按字母顺序）
+        let remainingNames = allNames.subtracting(seenNames).sorted()
+        orderedNames.append(contentsOf: remainingNames)
+
+        return orderedNames
     }
 }
