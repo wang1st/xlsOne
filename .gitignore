@@ -1,0 +1,21 @@
+# Swift build
+.build/
+*.xcodeproj
+*.xcworkspace
+
+# macOS
+.DS_Store
+*.swp
+*.swo
+*~
+
+# IDE
+.idea/
+.vscode/
+
+# Output files
+output_*.html
+*.csv
+
+# Test files
+test_*.swift
