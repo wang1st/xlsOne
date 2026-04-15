@@ -29,7 +29,13 @@ final class SimpleMergerTests: XCTestCase {
             (filename: "file3", cell: CellData(value: "201"))
         ]
 
-        let merged = MergedCell.from(cells: cells)
+        let merged = MergedCell.from(
+            cells: cells,
+            leftCells: [],
+            neighborContext: NeighborContext(numericTendency: 0, labelTendency: 0),
+            row: 1,
+            col: 1
+        )
 
         XCTAssertEqual(merged.type, .label)
         XCTAssertEqual(merged.displayValue, "201")
@@ -43,7 +49,13 @@ final class SimpleMergerTests: XCTestCase {
             (filename: "file3", cell: CellData(value: "1500"))
         ]
 
-        let merged = MergedCell.from(cells: cells)
+        let merged = MergedCell.from(
+            cells: cells,
+            leftCells: [],
+            neighborContext: NeighborContext(numericTendency: 0, labelTendency: 0),
+            row: 1,
+            col: 1
+        )
 
         if case .sum(let total) = merged.type {
             XCTAssertEqual(total, 4500)
@@ -54,21 +66,66 @@ final class SimpleMergerTests: XCTestCase {
     }
 
     func testMergedCellMixedType() {
-        // 值不同且包含非数字 → 混合类型
+        // 9位区域编码，长度一致且有公共前缀 → 标签型（编码不可累加）
         let cells = [
-            (filename: "file1", cell: CellData(value: "201")),
-            (filename: "file2", cell: CellData(value: "301")),
-            (filename: "file3", cell: CellData(value: "201"))
+            (filename: "file1", cell: CellData(value: "331024001")),
+            (filename: "file2", cell: CellData(value: "331024002")),
+            (filename: "file3", cell: CellData(value: "331024003"))
         ]
 
-        let merged = MergedCell.from(cells: cells)
+        let merged = MergedCell.from(
+            cells: cells,
+            leftCells: [],
+            neighborContext: NeighborContext(numericTendency: 0, labelTendency: 0),
+            row: 1,
+            col: 1
+        )
 
-        if case .mixed(let count) = merged.type {
-            XCTAssertEqual(count, 2)  // 两个不同的值：201, 301
-        } else {
-            XCTFail("Expected mixed type, got \(merged.type)")
-        }
-        XCTAssertEqual(merged.displayValue, "2条")
+        // 9位编码，长度一致且有公共前缀 → 标签
+        XCTAssertEqual(merged.type, .label)
+        XCTAssertEqual(merged.displayValue, "33102400_")
+    }
+
+    func testMergedCellMaKeywordWithEqualLengthIntegersAreLabels() {
+        // 左邻含"码"字（如"验证码"），当前格是统一长度整数 → 标签（编码）
+        let cells = [
+            (filename: "file1", cell: CellData(value: "123456")),
+            (filename: "file2", cell: CellData(value: "654321")),
+            (filename: "file3", cell: CellData(value: "111111"))
+        ]
+
+        let merged = MergedCell.from(
+            cells: cells,
+            leftCells: [(filename: "file1", cell: CellData(value: "验证码"))],
+            neighborContext: NeighborContext(numericTendency: 0, labelTendency: 0),
+            row: 1,
+            col: 1
+        )
+
+        XCTAssertEqual(merged.type, .label)
+        // 无公共前缀，标准长度=6，显示 6 个下划线
+        XCTAssertEqual(merged.displayValue, "______")
+    }
+
+    func testMergedCellHaoKeywordWithEqualLengthIntegersAreLabels() {
+        // 左邻含"号"字（如"身份证号"、"学号"），当前格是统一长度整数 → 标签（编码）
+        let cells = [
+            (filename: "file1", cell: CellData(value: "331024199001011111")),
+            (filename: "file2", cell: CellData(value: "331024198502022222")),
+            (filename: "file3", cell: CellData(value: "331024200003033333"))
+        ]
+
+        let merged = MergedCell.from(
+            cells: cells,
+            leftCells: [(filename: "file1", cell: CellData(value: "身份证号"))],
+            neighborContext: NeighborContext(numericTendency: 0, labelTendency: 0),
+            row: 1,
+            col: 1
+        )
+
+        XCTAssertEqual(merged.type, .label)
+        // 公共前缀 "331024"，标准长度=18，剩余 12 个下划线
+        XCTAssertEqual(merged.displayValue, "331024____________")
     }
 
     func testMergedCellSingleType() {
@@ -77,7 +134,13 @@ final class SimpleMergerTests: XCTestCase {
             (filename: "file1", cell: CellData(value: "hello"))
         ]
 
-        let merged = MergedCell.from(cells: cells)
+        let merged = MergedCell.from(
+            cells: cells,
+            leftCells: [],
+            neighborContext: NeighborContext(numericTendency: 0, labelTendency: 0),
+            row: 1,
+            col: 1
+        )
 
         if case .single(let value) = merged.type {
             XCTAssertEqual(value, "hello")
@@ -95,7 +158,13 @@ final class SimpleMergerTests: XCTestCase {
             (filename: "file3", cell: CellData(value: "2000"))
         ]
 
-        let merged = MergedCell.from(cells: cells)
+        let merged = MergedCell.from(
+            cells: cells,
+            leftCells: [],
+            neighborContext: NeighborContext(numericTendency: 0, labelTendency: 0),
+            row: 1,
+            col: 1
+        )
 
         // 空值应该被忽略，只剩下两个数值
         if case .sum(let total) = merged.type {
@@ -170,5 +239,54 @@ final class SimpleMergerTests: XCTestCase {
 
         // 只有 file1 有 Sheet1
         XCTAssertEqual(result.sourceFiles.count, 1)
+    }
+
+    /// 验证空行保留：所有文件同一值的标签，最终位置与原始位置一致
+    func testMergePreservesEmptyRowAlignment() {
+        // 模拟解析后保留空行的结构：row0 表头，row1 空行，row2 数据
+        let sheet1 = SheetData(
+            name: "Sheet1",
+            rows: [
+                [CellData(value: "科目编码"), CellData(value: "科目名称")],
+                [], // 空行
+                [CellData(value: "201"), CellData(value: "一般公共服务")]
+            ]
+        )
+
+        let sheet2 = SheetData(
+            name: "Sheet1",
+            rows: [
+                [CellData(value: "科目编码"), CellData(value: "科目名称")],
+                [], // 空行
+                [CellData(value: "201"), CellData(value: "一般公共服务")]
+            ]
+        )
+
+        let file1 = ExcelFile(filename: "file1.xlsx", filepath: "/tmp/file1.xlsx", sheets: [sheet1])
+        let file2 = ExcelFile(filename: "file2.xlsx", filepath: "/tmp/file2.xlsx", sheets: [sheet2])
+
+        let merger = SimpleMerger()
+        let result = merger.merge(files: [file1, file2], sheetName: "Sheet1")
+
+        // 应该有 3 行
+        XCTAssertEqual(result.rows.count, 3)
+
+        // 第 0 行：表头标签
+        XCTAssertEqual(result.rows[0][0].type, .label)
+        XCTAssertEqual(result.rows[0][0].displayValue, "科目编码")
+
+        // 第 1 行：空行（保留位置）
+        // 由于所有文件在该行都是空值，合并后应为标签但显示值为空
+        XCTAssertEqual(result.rows[1].count, 2)
+        XCTAssertEqual(result.rows[1][0].type, .label)
+        XCTAssertEqual(result.rows[1][0].displayValue, "")
+        XCTAssertEqual(result.rows[1][1].type, .label)
+        XCTAssertEqual(result.rows[1][1].displayValue, "")
+
+        // 第 2 行：数据标签
+        XCTAssertEqual(result.rows[2][0].type, .label)
+        XCTAssertEqual(result.rows[2][0].displayValue, "201")
+        XCTAssertEqual(result.rows[2][1].type, .label)
+        XCTAssertEqual(result.rows[2][1].displayValue, "一般公共服务")
     }
 }
