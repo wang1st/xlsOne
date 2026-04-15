@@ -31,6 +31,10 @@ public struct ExcelParser {
         // 解析共享字符串（如果有的话）
         let sharedStrings = try? xlsxFile.parseSharedStrings()
 
+        // 解析样式（用于日期格式识别）
+        var stylesParser = ExcelStylesParser()
+        try? stylesParser.parseStyles(from: path)
+
         // 获取工作簿信息和关系映射
         let workbooks = try xlsxFile.parseWorkbooks()
         let relationships = try parseWorkbookRelationships(from: path)
@@ -60,7 +64,6 @@ public struct ExcelParser {
 
         // 解析工作表路径
         let worksheetPaths = try xlsxFile.parseWorksheetPaths()
-        print("DEBUG: worksheetPaths = \(worksheetPaths)")
 
         for sheetPath in worksheetPaths {
             guard let worksheet = try? xlsxFile.parseWorksheet(at: sheetPath) else { continue }
@@ -68,20 +71,37 @@ public struct ExcelParser {
             // 获取工作表名称 - 通过路径查找
             let name = sheetNameByPath[sheetPath] ?? extractSheetNameFromPath(sheetPath)
 
-            // 解析行数据
+            // 解析行数据（使用 row.reference 对齐实际行号）
             var rows: [[CellData]] = []
 
             for row in worksheet.data?.rows ?? [] {
+                let rowIndex = Int(row.reference) - 1 // 0-based
+
+                // 确保 rows 数组长度足够
+                while rows.count <= rowIndex {
+                    rows.append([])
+                }
+
                 var rowData: [CellData] = []
 
                 for cell in row.cells {
-                    let value = extractValue(from: cell, sharedStrings: sharedStrings)
-                    rowData.append(CellData(value: value))
+                    let targetCol = columnIndex(from: cell.reference.column.value) // 0-based
+                    // 填充缺失的列（处理合并单元格或空列导致的缺失）
+                    while rowData.count < targetCol {
+                        rowData.append(CellData(value: ""))
+                    }
+                    let cellData = extractCellData(from: cell, sharedStrings: sharedStrings, stylesParser: stylesParser)
+                    rowData.append(cellData)
                 }
 
-                // 只添加非空行
-                if !rowData.isEmpty {
-                    rows.append(rowData)
+                rows[rowIndex] = rowData
+            }
+
+            // 统一所有行的列数，用空单元格补齐
+            let maxCols = rows.map { $0.count }.max() ?? 0
+            for i in 0..<rows.count {
+                while rows[i].count < maxCols {
+                    rows[i].append(CellData(value: ""))
                 }
             }
 
@@ -241,30 +261,128 @@ public struct ExcelParser {
         return files
     }
 
-    /// 从单元格提取值
-    private func extractValue(from cell: Cell, sharedStrings: SharedStrings?) -> String {
-        // 优先使用字符串值
-        if let sharedStrings = sharedStrings {
-            if let stringValue = cell.stringValue(sharedStrings) {
-                return stringValue
+    /// 将 Excel 列引用转换为 0-based 列索引
+    private func columnIndex(from reference: String) -> Int {
+        var result = 0
+        for char in reference.uppercased() {
+            guard let scalar = char.unicodeScalars.first else { continue }
+            let value = Int(scalar.value) - Int(Character("A").unicodeScalars.first!.value) + 1
+            result = result * 26 + value
+        }
+        return result - 1 // 0-based
+    }
+
+    /// 解析合并单元格引用，如 "A4:B4" → (startRow: 3, startCol: 0, endRow: 3, endCol: 1)
+    private func parseMergeCellReference(_ reference: String) -> (startRow: Int, startCol: Int, endRow: Int, endCol: Int)? {
+        let parts = reference.split(separator: ":")
+        guard parts.count == 2 else { return nil }
+
+        guard let start = parseCellCoordinate(String(parts[0])),
+              let end = parseCellCoordinate(String(parts[1])) else { return nil }
+
+        return (startRow: start.row, startCol: start.col, endRow: end.row, endCol: end.col)
+    }
+
+    /// 解析单元格坐标，如 "A4" → (row: 3, col: 0)
+    private func parseCellCoordinate(_ coordinate: String) -> (row: Int, col: Int)? {
+        let chars = Array(coordinate)
+        var colStr = ""
+        var rowStr = ""
+
+        for char in chars {
+            if char.isLetter {
+                colStr.append(String(char).uppercased())
+            } else if char.isNumber {
+                rowStr.append(char)
             }
         }
 
-        // 检查是否是数值
-        if let numericValue = cell.numericValue {
-            // 保留原始格式，不自动转换
-            return String(numericValue)
+        guard !colStr.isEmpty, !rowStr.isEmpty,
+              let row = Int(rowStr), row > 0 else { return nil }
+
+        let col = columnIndex(from: colStr) // 0-based
+        return (row: row - 1, col: col)
+    }
+
+    /// 从单元格提取完整数据（包含值和格式信息）
+    private func extractCellData(from cell: Cell, sharedStrings: SharedStrings?, stylesParser: ExcelStylesParser?) -> CellData {
+        let styleIndex = cell.styleIndex
+        let rawValue = cell.value
+        let isDate = stylesParser?.isDateFormat(styleIndex: styleIndex) ?? false
+        let formatCode = stylesParser?.getFormatCode(styleIndex: styleIndex)
+
+        // 如果是共享字符串类型
+        if cell.type == .sharedString, let sharedStrings = sharedStrings {
+            if let stringValue = cell.stringValue(sharedStrings) {
+                return CellData(
+                    value: stringValue,
+                    rawValue: rawValue,
+                    numericValue: nil,
+                    formatCode: formatCode,
+                    isDate: false
+                )
+            }
         }
 
-        // 检查日期
-        if let dateValue = cell.dateValue {
-            let formatter = DateFormatter()
-            formatter.dateStyle = .short
-            return formatter.string(from: dateValue)
+        // 如果是数值类型（包括日期和普通数字）
+        if cell.type == .number || cell.type == nil {
+            if let numericValue = cell.numericValue {
+                // 检查是否是日期格式
+                if isDate, let dateString = stylesParser?.formatDate(numericValue, styleIndex: styleIndex) {
+                    return CellData(
+                        value: dateString,
+                        rawValue: rawValue,
+                        numericValue: numericValue,
+                        formatCode: formatCode,
+                        isDate: true
+                    )
+                }
+                // 不是日期，优先使用 Excel 原始存储值作为显示文本
+                // 避免 Double 转 String 产生的 .0 后缀（如 331024000 -> 331024000.0）
+                var displayValue: String
+                if let rawValue = rawValue, !rawValue.isEmpty {
+                    // 科学计数法需要重新格式化（如 3.31024105E8 -> 331024105）
+                    let isScientific = rawValue.range(of: "[eE][+-]?\\d+", options: .regularExpression) != nil
+                    if isScientific {
+                        displayValue = String(format: "%.0f", numericValue)
+                    } else {
+                        displayValue = rawValue
+                    }
+                } else {
+                    displayValue = String(numericValue)
+                }
+
+                // 根据格式码修正显示：纯整数格式（不含小数点、货币、百分比）去掉无意义的 .0 后缀
+                if let formatCode = formatCode {
+                    let isIntegerFormat = !formatCode.contains(".") &&
+                                          !formatCode.contains("¥") &&
+                                          !formatCode.contains("\\¥") &&
+                                          !formatCode.contains("[$¥]") &&
+                                          !formatCode.contains("$") &&
+                                          !formatCode.contains("%")
+                    if isIntegerFormat && displayValue.hasSuffix(".0") {
+                        displayValue = String(displayValue.dropLast(2))
+                    }
+                }
+                return CellData(
+                    value: displayValue,
+                    rawValue: rawValue,
+                    numericValue: numericValue,
+                    formatCode: formatCode,
+                    isDate: false
+                )
+            }
         }
 
-        // 返回原始值
-        return cell.value ?? ""
+        // 其他情况返回原始值或inline字符串
+        let displayValue = cell.value ?? cell.inlineString?.text ?? ""
+        return CellData(
+            value: displayValue,
+            rawValue: rawValue,
+            numericValue: nil,
+            formatCode: formatCode,
+            isDate: false
+        )
     }
 
     /// 获取所有工作表名称（从多个文件中合并）

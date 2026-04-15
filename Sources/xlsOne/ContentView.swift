@@ -56,6 +56,13 @@ struct ContentView: View {
                 }
                 .buttonStyle(.bordered)
                 .disabled(viewModel.mergedResult == nil)
+
+                Button {
+                    viewModel.showSchemaManagerWindow()
+                } label: {
+                    Label("Schema", systemImage: "doc.text.magnifyingglass")
+                }
+                .buttonStyle(.bordered)
             }
 
             Divider()
@@ -193,7 +200,57 @@ struct ContentView: View {
             Divider()
 
             // 表格
-            ExcelGridView(rows: result.rows)
+            ExcelGridView(
+                rows: result.rows,
+                onApplyOverride: { row, col, type in
+                    viewModel.applyCellOverride(row: row, col: col, type: type)
+                },
+                onApplyBulkOverride: { positions, type in
+                    viewModel.applyBulkOverride(positions: positions, type: type)
+                }
+            )
+
+            // 批量操作提示
+            if !viewModel.userOverrides.isEmpty {
+                HStack {
+                    Text("已应用 \(viewModel.userOverrides.count) 个修正")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    Spacer()
+
+                    Button("保存为 Schema...") {
+                        viewModel.showSaveSchemaDialog = true
+                    }
+                    .font(.caption)
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
+
+                    Button("清除") {
+                        viewModel.clearOverrides()
+                    }
+                    .font(.caption)
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }
+                .padding(.horizontal)
+                .padding(.vertical, 6)
+                .background(Color(NSColor.controlBackgroundColor))
+            }
+        }
+        .sheet(isPresented: $viewModel.showSchemaManager) {
+            SchemaManagerView()
+        }
+        .alert("保存 Schema", isPresented: $viewModel.showSaveSchemaDialog) {
+            TextField("Schema 名称", text: $viewModel.newSchemaName)
+            Button("取消", role: .cancel) {}
+            Button("保存") {
+                Task {
+                    try? await viewModel.saveCurrentAsSchema(name: viewModel.newSchemaName)
+                }
+            }
+        } message: {
+            Text("为此文件类型保存当前的修正配置")
         }
     }
 }
@@ -233,12 +290,17 @@ struct SheetTabButton: View {
 
 struct ExcelGridView: View {
     let rows: [[MergedCell]]
-    @State private var selectedCell: (row: Int, col: Int)?
+    @State private var selectedCells: Set<CellPosition> = []
+    @State private var lastSelectedCell: CellPosition?
     @State private var showDetailSheet = false
+    @State private var showBulkEditSheet = false
 
     private var maxCols: Int {
         rows.map { $0.count }.max() ?? 0
     }
+
+    var onApplyOverride: ((Int, Int, CellOverrideType) -> Void)?
+    var onApplyBulkOverride: (([CellPosition], CellOverrideType) -> Void)?
 
     var body: some View {
         GeometryReader { geometry in
@@ -255,21 +317,22 @@ struct ExcelGridView: View {
 
                             // 单元格
                             ForEach(Array(row.enumerated()), id: \.offset) { colIdx, cell in
+                                let position = CellPosition(row: rowIdx, col: colIdx)
                                 ExcelCellView(
                                     cell: cell,
-                                    isSelected: selectedCell?.row == rowIdx && selectedCell?.col == colIdx
+                                    isSelected: selectedCells.contains(position)
                                 )
                                 .onTapGesture {
-                                    selectedCell = (rowIdx, colIdx)
-                                    if !cell.sourceValues.isEmpty {
-                                        showDetailSheet = true
-                                    }
+                                    handleCellTap(position: position, cell: cell)
                                 }
                             }
 
                             // 填充剩余的空单元格
                             ForEach(row.count..<maxCols, id: \.self) { _ in
-                                ExcelCellView(cell: MergedCell(type: .single("")), isSelected: false)
+                                ExcelCellView(
+                                    cell: MergedCell(type: .single("")),
+                                    isSelected: false
+                                )
                             }
                         }
                     }
@@ -277,15 +340,77 @@ struct ExcelGridView: View {
             }
         }
         .sheet(isPresented: $showDetailSheet) {
-            if let selected = selectedCell,
+            if let selected = lastSelectedCell,
                selected.row < rows.count,
                selected.col < rows[selected.row].count {
                 CellDetailView(
                     cell: rows[selected.row][selected.col],
-                    cellReference: cellReference(row: selected.row, col: selected.col)
+                    cellReference: cellReference(row: selected.row, col: selected.col),
+                    rowIndex: selected.row,
+                    colIndex: selected.col,
+                    onApplyOverride: { type in
+                        onApplyOverride?(selected.row, selected.col, type)
+                    }
                 )
             }
         }
+        .sheet(isPresented: $showBulkEditSheet) {
+            BulkEditView(
+                selectedCount: selectedCells.count,
+                onApply: { type in
+                    onApplyBulkOverride?(Array(selectedCells), type)
+                    selectedCells.removeAll()
+                }
+            )
+        }
+    }
+
+    private func handleCellTap(position: CellPosition, cell: MergedCell) {
+        let isCommandPressed = NSApp.currentEvent?.modifierFlags.contains(.command) ?? false
+        let isShiftPressed = NSApp.currentEvent?.modifierFlags.contains(.shift) ?? false
+
+        if isShiftPressed, let last = lastSelectedCell {
+            // Shift+点击：范围选择
+            selectRange(from: last, to: position)
+        } else if isCommandPressed {
+            // Cmd+点击：添加/移除选择
+            if selectedCells.contains(position) {
+                selectedCells.remove(position)
+            } else {
+                selectedCells.insert(position)
+            }
+            lastSelectedCell = position
+        } else {
+            // 普通点击：单选，如果已有选择则打开批量编辑
+            if selectedCells.isEmpty || selectedCells.count == 1 {
+                selectedCells = [position]
+                lastSelectedCell = position
+                if !cell.sourceValues.isEmpty {
+                    showDetailSheet = true
+                }
+            } else if selectedCells.contains(position) {
+                // 点击已选中的单元格，打开批量编辑
+                showBulkEditSheet = true
+            } else {
+                // 点击其他位置，清空并单选
+                selectedCells = [position]
+                lastSelectedCell = position
+            }
+        }
+    }
+
+    private func selectRange(from: CellPosition, to: CellPosition) {
+        let minRow = min(from.row, to.row)
+        let maxRow = max(from.row, to.row)
+        let minCol = min(from.col, to.col)
+        let maxCol = max(from.col, to.col)
+
+        for row in minRow...maxRow {
+            for col in minCol...maxCol {
+                selectedCells.insert(CellPosition(row: row, col: col))
+            }
+        }
+        lastSelectedCell = to
     }
 
     private var columnHeaderRow: some View {
@@ -326,6 +451,7 @@ struct ExcelGridView: View {
                 Rectangle()
                     .stroke(Color.gray.opacity(0.3), lineWidth: 0.5)
             )
+            .contentShape(Rectangle())
     }
 
     private func cellReference(row: Int, col: Int) -> String {
@@ -340,6 +466,79 @@ struct ExcelGridView: View {
             num = num / 26 - 1
         } while num >= 0
         return result
+    }
+}
+
+// MARK: - 批量编辑视图
+
+struct BulkEditView: View {
+    let selectedCount: Int
+    let onApply: (CellOverrideType) -> Void
+    @Environment(\.dismiss) private var dismiss
+    @State private var selectedType: CellOverrideType = .sum
+
+    var body: some View {
+        VStack(spacing: 20) {
+            HStack {
+                Text("批量修正")
+                    .font(.headline)
+
+                Spacer()
+
+                Button("取消") {
+                    dismiss()
+                }
+            }
+
+            Divider()
+
+            VStack(spacing: 12) {
+                Text("已选择 \(selectedCount) 个单元格")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+
+                Text("选择要应用的类型:")
+                    .font(.subheadline)
+            }
+
+            Picker("类型", selection: $selectedType) {
+                ForEach(CellOverrideType.allCases, id: \.self) { type in
+                    Text(type.displayName).tag(type)
+                }
+            }
+            .pickerStyle(.segmented)
+            .frame(width: 250)
+
+            VStack(alignment: .leading, spacing: 8) {
+                ForEach(CellOverrideType.allCases, id: \.self) { type in
+                    HStack {
+                        Text("• \(type.displayName)")
+                            .fontWeight(.medium)
+                        Text("-\(type.description)")
+                            .foregroundStyle(.secondary)
+                    }
+                    .font(.caption)
+                }
+            }
+
+            Spacer()
+
+            HStack {
+                Button("取消") {
+                    dismiss()
+                }
+                .keyboardShortcut(.escape)
+
+                Button("应用") {
+                    onApply(selectedType)
+                    dismiss()
+                }
+                .keyboardShortcut(.return)
+                .buttonStyle(.borderedProminent)
+            }
+        }
+        .padding()
+        .frame(width: 350, height: 320)
     }
 }
 
@@ -419,13 +618,25 @@ struct ExcelCellView: View {
 struct CellDetailView: View {
     let cell: MergedCell
     let cellReference: String
+    let rowIndex: Int
+    let colIndex: Int
+    var onApplyOverride: ((CellOverrideType) -> Void)?
+
     @Environment(\.dismiss) private var dismiss
+    @State private var selectedOverride: CellOverrideType?
+    @State private var showSavedConfirmation = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 Text("单元格 \(cellReference)")
                     .font(.headline)
+
+                if cell.isOverridden {
+                    Image(systemName: "pencil.circle.fill")
+                        .foregroundStyle(.orange)
+                        .help("用户已修正")
+                }
 
                 Spacer()
 
@@ -438,17 +649,82 @@ struct CellDetailView: View {
 
             // 显示聚合信息
             HStack {
-                Text("显示值:")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("显示值:")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
 
-                Text(cell.displayValue)
-                    .font(.title3)
-                    .fontWeight(.semibold)
+                    Text(cell.displayValue)
+                        .font(.title3)
+                        .fontWeight(.semibold)
+                }
 
                 Spacer()
 
-                CellTypeBadge(type: cell.type)
+                VStack(alignment: .trailing, spacing: 4) {
+                    CellTypeBadge(type: cell.type)
+
+                    if cell.isOverridden {
+                        Text("用户修正")
+                            .font(.caption2)
+                            .foregroundStyle(.orange)
+                    }
+                }
+            }
+
+            Divider()
+
+            // 类型修正区域
+            VStack(alignment: .leading, spacing: 12) {
+                Text("修正识别类型")
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+
+                Text("如果自动识别不正确，可以手动指定单元格类型:")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                Picker("类型", selection: $selectedOverride) {
+                    Text("自动识别").tag(nil as CellOverrideType?)
+
+                    ForEach(CellOverrideType.allCases, id: \.self) { type in
+                        HStack {
+                            Text(type.displayName)
+                            Spacer()
+                            Text(type.description)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        .tag(type as CellOverrideType?)
+                    }
+                }
+                .pickerStyle(.radioGroup)
+
+                HStack {
+                    Spacer()
+
+                    Button("应用修正") {
+                        if let type = selectedOverride {
+                            onApplyOverride?(type)
+                            showSavedConfirmation = true
+                        }
+                    }
+                    .disabled(selectedOverride == nil)
+                    .buttonStyle(.borderedProminent)
+                }
+
+                if showSavedConfirmation {
+                    HStack {
+                        Spacer()
+
+                        Label("修正已应用", systemImage: "checkmark.circle.fill")
+                            .font(.caption)
+                            .foregroundStyle(.green)
+
+                        Spacer()
+                    }
+                    .padding(.vertical, 4)
+                }
             }
 
             Divider()
@@ -471,7 +747,7 @@ struct CellDetailView: View {
             }
         }
         .padding()
-        .frame(width: 450, height: 500)
+        .frame(width: 500, height: 600)
     }
 }
 

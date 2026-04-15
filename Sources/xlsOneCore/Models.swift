@@ -1,13 +1,40 @@
 import Foundation
 
+/// 单元格位置（用于多选）
+public struct CellPosition: Hashable, Equatable, Sendable {
+    public let row: Int
+    public let col: Int
+
+    public init(row: Int, col: Int) {
+        self.row = row
+        self.col = col
+    }
+}
+
 /// 表示一个单元格的数据
 public struct CellData: Equatable, Sendable {
     public let value: String
     public let rawValue: String?
+    /// 原始数值（仅当单元格是数字类型时有值）
+    public let numericValue: Double?
+    /// Excel 数字格式码（如 "#,##0.00", "yyyy-MM-dd"）
+    public let formatCode: String?
+    /// 是否是日期格式
+    public let isDate: Bool
 
-    public init(value: String, rawValue: String? = nil) {
+    public init(
+        value: String,
+        rawValue: String? = nil,
+        numericValue: Double? = nil,
+        formatCode: String? = nil,
+        isDate: Bool = false
+    ) {
         self.value = value.trimmingCharacters(in: .whitespacesAndNewlines)
         self.rawValue = rawValue
+        self.formatCode = formatCode
+        self.isDate = isDate
+        // 如果没有提供 numericValue，自动解析
+        self.numericValue = numericValue ?? Self.parseNumber(self.value)
     }
 
     /// 判断是否可能是数值（金额）
@@ -18,8 +45,8 @@ public struct CellData: Equatable, Sendable {
 
     /// 解析数值（支持千分位和欧式格式）
     /// 返回 nil 如果值看起来像科目代码（3位纯数字）
-    public var numericValue: Double? {
-        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+    private static func parseNumber(_ text: String) -> Double? {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
 
         // 排除纯3位数字（如201、301等科目代码）
         // 但保留有千分位、小数点或超过3位的数字
@@ -28,26 +55,24 @@ public struct CellData: Equatable, Sendable {
             return nil
         }
 
-        return Self.parseNumber(trimmed)
+        return Self.parseNumberInternal(trimmed)
     }
 
-    private static func parseNumber(_ text: String) -> Double? {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-
+    private static func parseNumberInternal(_ text: String) -> Double? {
         // 如果为空，返回 nil
-        if trimmed.isEmpty {
+        if text.isEmpty {
             return nil
         }
 
         // 处理负数（括号格式）
-        var workingText = trimmed
+        var workingText = text
         var isNegative = false
 
-        if trimmed.hasPrefix("(") && trimmed.hasSuffix(")") {
-            workingText = String(trimmed.dropFirst().dropLast())
+        if text.hasPrefix("(") && text.hasSuffix(")") {
+            workingText = String(text.dropFirst().dropLast())
             isNegative = true
-        } else if trimmed.hasPrefix("-") {
-            workingText = String(trimmed.dropFirst())
+        } else if text.hasPrefix("-") {
+            workingText = String(text.dropFirst())
             isNegative = true
         }
 
@@ -105,22 +130,28 @@ public struct MergedCell: Equatable, Sendable {
     public let displayValue: String
     public let sourceValues: [String: String]  // 文件名 -> 原始值
 
-    public init(type: CellType, sourceValues: [String: String] = [:]) {
+    /// 是否是用户覆盖的类型
+    public let isOverridden: Bool
+
+    /// Excel 原始格式码（用于输出时复刻格式）
+    public let formatCode: String?
+
+    public init(
+        type: CellType,
+        sourceValues: [String: String] = [:],
+        isOverridden: Bool = false,
+        formatCode: String? = nil
+    ) {
         self.type = type
         self.sourceValues = sourceValues
+        self.isOverridden = isOverridden
+        self.formatCode = formatCode
 
         switch type {
         case .label:
-            self.displayValue = sourceValues.values.first ?? ""
+            self.displayValue = Self.computeLabelDisplayValue(sourceValues: sourceValues)
         case .sum(let total):
-            // 格式化数值，保留两位小数，移除末尾的0
-            if total == floor(total) {
-                self.displayValue = String(format: "%.0f", total)
-            } else {
-                self.displayValue = String(format: "%.2f", total)
-                    .replacingOccurrences(of: "\\.00$", with: "", options: .regularExpression)
-                    .replacingOccurrences(of: "(\\d)0+$", with: "$1", options: .regularExpression)
-            }
+            self.displayValue = MergedCell.formatNumber(total, formatCode: formatCode)
         case .mixed(let count):
             self.displayValue = "\(count)条"
         case .single(let value):
@@ -128,46 +159,539 @@ public struct MergedCell: Equatable, Sendable {
         }
     }
 
-    /// 从多个单元格创建聚合单元格
-    public static func from(cells: [(filename: String, cell: CellData?)]) -> MergedCell {
-        // 过滤掉空值
+    /// 完整初始化器（用于自定义显示值）
+    public init(
+        type: CellType,
+        displayValue: String,
+        sourceValues: [String: String],
+        isOverridden: Bool = false,
+        formatCode: String? = nil
+    ) {
+        self.type = type
+        self.displayValue = displayValue
+        self.sourceValues = sourceValues
+        self.isOverridden = isOverridden
+        self.formatCode = formatCode
+    }
+
+    /// 从多个单元格创建聚合单元格 - 多因子动态判定系统
+    /// 核心公式: f(自身格式40%, 垂直穿透一致性30%, 左邻列语义20%, 上下文邻居10%)
+    public static func from(
+        cells: [(filename: String, cell: CellData?)],
+        leftCells: [(filename: String, cell: CellData?)] = [],
+        neighborContext: NeighborContext,
+        row: Int,
+        col: Int
+    ) -> MergedCell {
+        // 过滤空值
         let validCells = cells.compactMap { tuple -> (String, CellData)? in
             guard let cell = tuple.cell, !cell.value.isEmpty else { return nil }
             return (tuple.filename, cell)
         }
 
+        // 提取 formatCode（取第一个非空单元格的格式）
+        let formatCode = cells.compactMap { $0.cell?.formatCode }.first
+
         // 如果只有一个文件，直接显示
         if validCells.count == 1, let (_, cell) = validCells.first {
             return MergedCell(
                 type: .single(cell.value),
-                sourceValues: [validCells[0].0: cell.value]
+                sourceValues: [validCells[0].0: cell.value],
+                formatCode: formatCode
             )
         }
 
-        // 如果所有值都相同
-        let allValues = validCells.map { $0.1.value }
-        if Set(allValues).count == 1 {
-            let sourceMap = Dictionary(uniqueKeysWithValues: validCells.map { ($0.0, $0.1.value) })
-            return MergedCell(type: .label, sourceValues: sourceMap)
-        }
-
-        // 检查是否都是数值且不同
-        let numericValues = validCells.compactMap { tuple -> (String, Double)? in
-            guard let num = tuple.1.numericValue else { return nil }
-            return (tuple.0, num)
-        }
-
-        // 如果都是数值，求和
-        if numericValues.count == validCells.count {
-            let total = numericValues.map { $0.1 }.reduce(0, +)
-            let sourceMap = Dictionary(uniqueKeysWithValues: validCells.map { ($0.0, $0.1.value) })
-            return MergedCell(type: .sum(total), sourceValues: sourceMap)
-        }
-
-        // 混合类型，显示条数
-        let uniqueValues = Set(allValues)
         let sourceMap = Dictionary(uniqueKeysWithValues: validCells.map { ($0.0, $0.1.value) })
-        return MergedCell(type: .mixed(uniqueValues.count), sourceValues: sourceMap)
+
+        // 第一行强制表头
+        if row == 0 {
+            return MergedCell(type: .label, sourceValues: sourceMap, formatCode: formatCode)
+        }
+
+        // 第一列特殊处理（无左邻列）
+        if col == 0 {
+            return determineFirstColumn(
+                validCells: validCells,
+                sourceMap: sourceMap,
+                formatCode: formatCode
+            )
+        }
+
+        // 自身格式
+        let selfFP = FormatProfile.fingerprint(for: validCells.first?.1)
+
+        // 垂直穿透分析
+        let sampledCells = sampleFiles(from: cells).map { $0.cell }
+        let verticalProfile = FormatProfile(cells: sampledCells)
+
+        // 左邻列分析
+        let leftValidCells = leftCells.compactMap { tuple -> CellData? in
+            guard let cell = tuple.cell, !cell.value.isEmpty else { return nil }
+            return cell
+        }
+        let leftCell = leftValidCells.first  // 取第一个非空左邻单元格
+
+        // 多因子评分
+        var amountScore = 0.0
+        var labelScore = 0.0
+
+        // 1. 自身格式 (40%)
+        let selfWeight = 0.4
+        switch selfFP {
+        case .strongNumeric:
+            amountScore += 1.0 * selfWeight
+        case .integerWide:
+            amountScore += 0.8 * selfWeight
+        case .integerCode:
+            amountScore += 0.2 * selfWeight
+            labelScore += 0.3 * selfWeight
+        case .chineseText:
+            labelScore += 1.0 * selfWeight
+        case .alphaText:
+            labelScore += 0.8 * selfWeight
+        case .date:
+            labelScore += 1.0 * selfWeight
+        case .dashMarker, .empty:
+            break
+        case .mixed:
+            labelScore += 0.2 * selfWeight
+        }
+
+        // 2. 垂直穿透一致性 (30%)
+        let vertWeight = 0.3
+        if let dominant = verticalProfile.dominantFingerprint {
+            switch dominant {
+            case .strongNumeric:
+                if verticalProfile.dominantRatio >= 0.8 {
+                    amountScore += 1.0 * vertWeight
+                } else {
+                    amountScore += verticalProfile.dominantRatio * vertWeight
+                }
+            case .integerWide:
+                amountScore += 0.7 * vertWeight * verticalProfile.dominantRatio
+            case .integerCode:
+                labelScore += 0.6 * vertWeight * verticalProfile.dominantRatio
+            case .chineseText, .alphaText, .date:
+                labelScore += 1.0 * vertWeight * verticalProfile.dominantRatio
+            case .dashMarker, .empty, .mixed:
+                break
+            }
+        }
+
+        // 3. 左邻列语义 (20%)
+        if let left = leftCell {
+            let leftScore = analyzeLeftNeighbor(left)
+            amountScore += leftScore.numeric * 0.2
+            labelScore += leftScore.label * 0.2
+        }
+
+        // 4. 上下文邻居 (10%)
+        amountScore += neighborContext.numericTendency * 0.1
+        labelScore += neighborContext.labelTendency * 0.1
+
+        // 特殊覆盖：左邻含"合计/总计" + 自身可解析为数字 → 强制求和
+        if let left = leftCell {
+            let leftText = left.value.lowercased()
+            let isSummary = ["合计", "总计", "小计", "sum", "total"].contains { leftText.contains($0) }
+            if isSummary && selfFP.isNumeric {
+                let total = validCells.compactMap { $0.1.numericValue }.reduce(0, +)
+                return MergedCell(type: .sum(total), sourceValues: sourceMap, formatCode: formatCode)
+            }
+        }
+
+        // 判定
+        if amountScore > 0.5 {
+            let accumulable = checkAccumulable(
+                selfFP: selfFP,
+                leftCell: leftCell,
+                verticalProfile: verticalProfile,
+                validCells: validCells
+            )
+            if accumulable {
+                let total = validCells.compactMap { $0.1.numericValue }.reduce(0, +)
+                return MergedCell(type: .sum(total), sourceValues: sourceMap, formatCode: formatCode)
+            } else {
+                return MergedCell(type: .label, sourceValues: sourceMap, formatCode: formatCode)
+            }
+        } else if labelScore > 0.5 {
+            return MergedCell(type: .label, sourceValues: sourceMap, formatCode: formatCode)
+        } else {
+            // 边界情况：都是数值但分数不够高
+            if selfFP.isNumeric {
+                let accumulable = checkAccumulable(
+                    selfFP: selfFP,
+                    leftCell: leftCell,
+                    verticalProfile: verticalProfile,
+                    validCells: validCells
+                )
+                if accumulable {
+                    let total = validCells.compactMap { $0.1.numericValue }.reduce(0, +)
+                    return MergedCell(type: .sum(total), sourceValues: sourceMap, formatCode: formatCode)
+                }
+            }
+            return MergedCell(type: .label, sourceValues: sourceMap, formatCode: formatCode)
+        }
+    }
+
+    /// 第一列判定（无左邻列）
+    private static func determineFirstColumn(
+        validCells: [(String, CellData)],
+        sourceMap: [String: String],
+        formatCode: String?
+    ) -> MergedCell {
+        let sampled = sampleFiles(from: validCells).map { $0.1 }
+        let profile = FormatProfile(cells: sampled)
+
+        if let dominant = profile.dominantFingerprint {
+            switch dominant {
+            case .chineseText, .alphaText, .date:
+                return MergedCell(type: .label, sourceValues: sourceMap, formatCode: formatCode)
+            case .integerCode:
+                return MergedCell(type: .label, sourceValues: sourceMap, formatCode: formatCode)
+            case .strongNumeric, .integerWide:
+                if profile.dominantRatio >= 0.8 {
+                    let total = validCells.compactMap { $0.1.numericValue }.reduce(0, +)
+                    return MergedCell(type: .sum(total), sourceValues: sourceMap, formatCode: formatCode)
+                }
+            default:
+                break
+            }
+        }
+        return MergedCell(type: .label, sourceValues: sourceMap, formatCode: formatCode)
+    }
+
+    // MARK: - 国际化语义模式
+
+    /// 左邻列语义模式（支持中/英/多语言）
+    private enum NeighborSemanticPatterns {
+        /// 金额/数值型模式（当前格应求和）
+        static let amountPatterns: [String] = [
+            // 中文
+            "合计", "总计", "小计", "金额", "数额", "额度",
+            "数量", "单价", "总价", "价格", "数值", "预算",
+            "收入", "支出", "成本", "费用", "利润", "执行",
+            "决算", "款", "税金",
+            "人数", "人口", "户数", "家数", "个数", "人员",
+            "编制", "职工",
+            // English
+            "sum", "total", "subtotal", "amount", "quantity", "qty",
+            "price", "unit price", "total price", "value", "budget",
+            "revenue", "income", "expense", "cost", "fee", "profit",
+            "tax", "fund",
+            "population", "headcount", "staff"
+        ]
+
+        /// 编码/标识型模式（当前格应为标签，不可累加）
+        static let codePatterns: [String] = [
+            // 中文 - 核心编码词
+            "代码", "编码", "编号", "序号", "号码", "证号",
+            "区划", "邮编", "邮政编码", "身份证", "电话", "传真",
+            "期间", "年月", "年份", "日期", "时间",
+            // 中文 - 常见"X号"扩展（学号、工号、账号、卡号、单号、票号等）
+            "学号", "工号", "账号", "户号", "卡号", "单号", "订单号",
+            "票号", "发票号", "批号", "书号", "卷号", "册号", "期号",
+            "版号", "件号", "条码", "档案号", "准考证号", "资格证号",
+            "许可证号", "机号", "箱号", "包号", "袋号",
+            // English
+            "code", "number", "no.", "no ", " id", "index", "serial",
+            "zip", "zipcode", "postal code", "phone", "tel", "fax",
+            "period", "date", "time", "year", "month"
+        ]
+
+        /// 名称/描述型模式（当前格应为标签）
+        static let labelPatterns: [String] = [
+            // 中文
+            "名称", "名字", "描述", "说明", "备注", "标题",
+            "内容", "详情", "类型", "性质", "状态",
+            // English
+            "name", "desc", "description", "title", "remark", "note",
+            "type", "kind", "status", "content", "detail"
+        ]
+
+        static func matchesAny(_ text: String, patterns: [String]) -> Bool {
+            // 清洗常见末尾标点
+            var cleaned = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            let trailingPunctuations = CharacterSet(charactersIn: "：:：、。．;；/／-—")
+            while let last = cleaned.last,
+                  String(last).rangeOfCharacter(from: trailingPunctuations) != nil {
+                cleaned.removeLast()
+            }
+            let lowercased = cleaned.lowercased()
+            for pattern in patterns {
+                if lowercased.contains(pattern.lowercased()) {
+                    return true
+                }
+            }
+            return false
+        }
+    }
+
+    /// 分析左邻列语义
+    private static func analyzeLeftNeighbor(_ leftCell: CellData) -> (numeric: Double, label: Double) {
+        let text = leftCell.value.trimmingCharacters(in: .whitespacesAndNewlines)
+        let fp = FormatProfile.fingerprint(for: leftCell)
+
+        // 金额/数值标签
+        if NeighborSemanticPatterns.matchesAny(text, patterns: NeighborSemanticPatterns.amountPatterns) {
+            return (0.8, 0)
+        }
+
+        // 编码标签
+        if NeighborSemanticPatterns.matchesAny(text, patterns: NeighborSemanticPatterns.codePatterns) {
+            return (0, 0.6)
+        }
+
+        // 名称/描述标签
+        if NeighborSemanticPatterns.matchesAny(text, patterns: NeighborSemanticPatterns.labelPatterns) {
+            return (0, 0.5)
+        }
+
+        // 左邻是统一长度整数编码 → 当前格可能是名称（但权重要低，避免误判金额列）
+        if fp == .integerCode {
+            return (0, 0.1)
+        }
+
+        // 左邻是强数值 → 当前格也可能数值（同语义组延续）
+        if fp == .strongNumeric || fp == .integerWide {
+            return (0.2, 0)
+        }
+
+        return (0, 0)
+    }
+
+    /// 检查数值可累加性
+    private static func checkAccumulable(
+        selfFP: FormatFingerprint,
+        leftCell: CellData?,
+        verticalProfile: FormatProfile,
+        validCells: [(String, CellData)]
+    ) -> Bool {
+        let numericValues = validCells.compactMap { $0.1.numericValue }
+        guard !numericValues.isEmpty else { return false }
+
+        let allIntegers = numericValues.allSatisfy { $0 == floor($0) }
+        let uniqueValues = Set(numericValues)
+        let allUnique = uniqueValues.count == numericValues.count
+        let values = validCells.map { $0.1.value }
+        let valueCounts = values.reduce(into: [:]) { $0[$1, default: 0] += 1 }
+        let dominantRatio = Double(valueCounts.values.max() ?? 0) / Double(validCells.count)
+
+        // 左邻含编码/标识关键词 → 明确不可累加（否决权，优先级最高）
+        if let left = leftCell {
+            let leftText = left.value.trimmingCharacters(in: .whitespacesAndNewlines)
+            if NeighborSemanticPatterns.matchesAny(leftText, patterns: NeighborSemanticPatterns.codePatterns) {
+                return false
+            }
+        }
+
+        // 增强：左邻标签含"码"/"号"字 + 当前是统一长度整数 → 编码，不可累加
+        if let left = leftCell {
+            let leftText = left.value.trimmingCharacters(in: .whitespacesAndNewlines)
+            if leftText.contains("码") || leftText.contains("号") {
+                let lengths = Set(validCells.map { $0.1.value.count })
+                if allIntegers, lengths.count == 1, validCells.count > 1 {
+                    return false
+                }
+            }
+        }
+
+        // 1. 编码特征检查：纯整数 + 长度一致 + 有公共前缀 + 在已知编码长度列表中
+        let codeLengths = [3, 6, 9, 11, 12, 15, 18]
+        if allIntegers && validCells.count > 1 {
+            let lengths = Set(values.map { $0.count })
+            if lengths.count == 1, let length = lengths.first,
+               codeLengths.contains(length) {
+                let prefix = longestCommonPrefix(values)
+                // 公共前缀长度占标准长度比例 >= 50% 视为编码序列
+                if prefix.count * 2 >= length {
+                    return false
+                }
+            }
+        }
+
+        // 2. 强数值格式（带小数）→ 可累加
+        if selfFP == .strongNumeric { return true }
+
+        // 3. 左邻含金额/数量关键词 → 可累加
+        if let left = leftCell {
+            let leftText = left.value.trimmingCharacters(in: .whitespacesAndNewlines)
+            if NeighborSemanticPatterns.matchesAny(leftText, patterns: NeighborSemanticPatterns.amountPatterns) {
+                return true
+            }
+        }
+
+        // 4. 垂直穿透强数值 → 可累加
+        if let dominant = verticalProfile.dominantFingerprint,
+           dominant == .strongNumeric && verticalProfile.dominantRatio >= 0.7 {
+            return true
+        }
+
+        // 5. 纯整数且各不相同 → 统计量（人数/人口/金额），可累加
+        if allIntegers && allUnique {
+            return true
+        }
+
+        // 6. 值域差异大 → 可累加
+        if let min = numericValues.min(), let max = numericValues.max(), min > 0 {
+            if max / min > 100 { return true }
+        }
+
+        // 7. 数值重复的处理
+        if !allUnique {
+            // 统一格式的编码（95%一致）→ 标签
+            if selfFP == .integerCode && dominantRatio >= 0.95 {
+                return false
+            }
+            // 普通整数重复 → 可累加（如各乡镇都填1的计数项）
+            if selfFP == .strongNumeric || selfFP == .integerWide {
+                return true
+            }
+            if selfFP == .integerCode {
+                return false
+            }
+        }
+
+        // 默认：保守策略
+        return false
+    }
+
+    /// 计算标签类型的智能显示值
+    /// 显示公共前缀 + 后续差异部分用下划线填充
+    /// 后续长度由75%阈值主导长度决定，无主导则取平均长度
+    private static func computeLabelDisplayValue(
+        sourceValues: [String: String]
+    ) -> String {
+        let values = Array(sourceValues.values)
+        guard values.count > 1 else {
+            return values.first ?? ""
+        }
+
+        // 所有值完全相同 → 直接显示
+        let uniqueValues = Set(values)
+        if uniqueValues.count == 1 {
+            return values.first ?? ""
+        }
+
+        let prefix = longestCommonPrefix(values)
+        let prefixLength = prefix.count
+
+        // 计算标准总长度
+        let lengths = values.map { $0.count }
+        let standardLength = resolveStandardLength(lengths, totalCount: values.count)
+
+        let underscoreCount = max(0, standardLength - prefixLength)
+        let underscores = String(repeating: "_", count: underscoreCount)
+
+        return prefix + underscores
+    }
+
+    /// 根据长度分布解析标准长度
+    /// 优先找占比 >= 75% 的主导长度，否则取平均值（四舍五入）
+    private static func resolveStandardLength(
+        _ lengths: [Int],
+        totalCount: Int
+    ) -> Int {
+        let threshold = 0.75
+        var frequency: [Int: Int] = [:]
+        for length in lengths {
+            frequency[length, default: 0] += 1
+        }
+
+        // 找满足阈值的最长长度（优先较长的更保守）
+        let qualified = frequency.filter { Double($0.value) / Double(totalCount) >= threshold }
+        if let dominant = qualified.max(by: { $0.key < $1.key })?.key {
+            return dominant
+        }
+
+        // 无主导长度 → 平均值四舍五入
+        let avg = Double(lengths.reduce(0, +)) / Double(lengths.count)
+        return Int(avg.rounded())
+    }
+
+    /// 最长公共前缀
+    private static func longestCommonPrefix(_ strings: [String]) -> String {
+        guard let first = strings.first, !first.isEmpty else { return "" }
+        var prefix = first
+        for str in strings.dropFirst() {
+            while !str.hasPrefix(prefix) {
+                prefix.removeLast()
+                if prefix.isEmpty { return "" }
+            }
+        }
+        return prefix
+    }
+
+    /// 最长公共后缀
+    private static func longestCommonSuffix(_ strings: [String]) -> String {
+        guard let first = strings.first, !first.isEmpty else { return "" }
+        var suffix = first
+        for str in strings.dropFirst() {
+            while !str.hasSuffix(suffix) {
+                suffix.removeFirst()
+                if suffix.isEmpty { return "" }
+            }
+        }
+        return suffix
+    }
+
+    /// 格式化数值（复刻Excel格式）
+    static func formatNumber(_ value: Double, formatCode: String?) -> String {
+        // 如果有原始格式码，尽量复刻
+        if let formatCode = formatCode {
+            // 货币格式
+            if formatCode.contains("¥") || formatCode.contains("\\¥") || formatCode.contains("[$¥]") {
+                return String(format: "¥%.2f", value)
+            }
+            if formatCode.contains("$") && !formatCode.contains("[$-") {
+                return String(format: "$%.2f", value)
+            }
+            // 千分位
+            if formatCode.contains("#,##0") {
+                let formatter = NumberFormatter()
+                formatter.numberStyle = .decimal
+                formatter.minimumFractionDigits = 0
+                formatter.maximumFractionDigits = 2
+                return formatter.string(from: NSNumber(value: value)) ?? String(value)
+            }
+            // 百分比
+            if formatCode.contains("%") {
+                return String(format: "%.2f%%", value * 100)
+            }
+            // 保留2位小数
+            if formatCode.contains(".00") {
+                return String(format: "%.2f", value)
+            }
+            // 保留1位小数
+            if formatCode.contains(".0") && !formatCode.contains(".00") {
+                return String(format: "%.1f", value)
+            }
+        }
+
+        // 默认：整数显示整数，否则保留2位并去尾0
+        if value == floor(value) {
+            return String(format: "%.0f", value)
+        } else {
+            return String(format: "%.2f", value)
+                .replacingOccurrences(of: "\\.00$", with: "", options: .regularExpression)
+                .replacingOccurrences(of: "(\\d)0+$", with: "$1", options: .regularExpression)
+        }
+    }
+
+    /// 便捷创建器（用于 SmartMerger）
+    static func create(
+        type: CellType,
+        displayValue: String,
+        sourceValues: [String: String],
+        isOverridden: Bool,
+        formatCode: String? = nil
+    ) -> MergedCell {
+        return MergedCell(
+            type: type,
+            displayValue: displayValue,
+            sourceValues: sourceValues,
+            isOverridden: isOverridden,
+            formatCode: formatCode
+        )
     }
 }
 

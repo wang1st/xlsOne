@@ -20,7 +20,13 @@ final class XianjuCountyMergeTests: XCTestCase {
             (filename: "埠头镇.xlsx", cell: CellData(value: "201"))
         ]
 
-        let merged = MergedCell.from(cells: cells)
+        let merged = MergedCell.from(
+            cells: cells,
+            leftCells: [],
+            neighborContext: NeighborContext(numericTendency: 0, labelTendency: 0),
+            row: 1,
+            col: 1
+        )
 
         // 所有值相同 → 标签型
         XCTAssertEqual(merged.type, .label)
@@ -28,7 +34,7 @@ final class XianjuCountyMergeTests: XCTestCase {
     }
 
     func testXianjuCountyReport_DColumn_AmountsAreSummed() {
-        // 模拟D2单元格：金额列，不同值
+        // 模拟D2单元格：金额列，不同值（带小数 = strongNumeric）
         let cells = [
             (filename: "官路镇.xlsx", cell: CellData(value: "1500.50")),
             (filename: "湫山乡.xlsx", cell: CellData(value: "2000.00")),
@@ -37,35 +43,46 @@ final class XianjuCountyMergeTests: XCTestCase {
             (filename: "埠头镇.xlsx", cell: CellData(value: "2,000"))
         ]
 
-        let merged = MergedCell.from(cells: cells)
+        let merged = MergedCell.from(
+            cells: cells,
+            leftCells: [],
+            neighborContext: NeighborContext(numericTendency: 0, labelTendency: 0),
+            row: 1,
+            col: 3
+        )
 
-        // 值不同且都是数值 → 求和
-        XCTAssertEqual(merged.type, .sum(8551))
+        // 带小数的数值属于 strongNumeric，直接求和
+        if case .sum(let total) = merged.type {
+            XCTAssertEqual(total, 8551, accuracy: 0.01)
+        } else {
+            XCTFail("Expected sum type, got \(merged.type)")
+        }
         XCTAssertEqual(merged.displayValue, "8551")
     }
 
-    // MARK: - 场景2: 不同科目代码
-    /// 文件1的B2="201"
-    /// 文件2的B2="301"
-    /// 结果：显示"2条"（因为值不同且都是编码）
+    // MARK: - 场景2: 不同区域编码
+    /// 不同文件的区域编码不同（如 331024001 vs 331024002）
+    /// 结果：显示标签（编码不可累加）
 
-    func testXianjuCounty_DifferentCodes_ShowMixed() {
+    func testXianjuCounty_DifferentRegionCodes_ShowLabels() {
         let cells = [
-            (filename: "官路镇.xlsx", cell: CellData(value: "201")),
-            (filename: "湫山乡.xlsx", cell: CellData(value: "301")),
-            (filename: "白塔镇.xlsx", cell: CellData(value: "201")),
-            (filename: "溪港乡.xlsx", cell: CellData(value: "301"))
+            (filename: "官路镇.xlsx", cell: CellData(value: "331024001")),
+            (filename: "湫山乡.xlsx", cell: CellData(value: "331024002")),
+            (filename: "白塔镇.xlsx", cell: CellData(value: "331024003")),
+            (filename: "溪港乡.xlsx", cell: CellData(value: "331024004"))
         ]
 
-        let merged = MergedCell.from(cells: cells)
+        let merged = MergedCell.from(
+            cells: cells,
+            leftCells: [],
+            neighborContext: NeighborContext(numericTendency: 0, labelTendency: 0),
+            row: 1,
+            col: 1
+        )
 
-        // 值不同且都是编码 → 混合类型
-        if case .mixed(let count) = merged.type {
-            XCTAssertEqual(count, 2)  // 两个不同值：201, 301
-        } else {
-            XCTFail("Expected mixed type, got \(merged.type)")
-        }
-        XCTAssertEqual(merged.displayValue, "2条")
+        // 9位区域编码，长度一致且有公共前缀 → 标签型
+        XCTAssertEqual(merged.type, .label)
+        XCTAssertEqual(merged.displayValue, "33102400_")
     }
 
     // MARK: - 场景3: 金额汇总
@@ -81,9 +98,19 @@ final class XianjuCountyMergeTests: XCTestCase {
             (filename: "乡镇3.xlsx", cell: CellData(value: "1500"))
         ]
 
-        let merged = MergedCell.from(cells: cells)
+        let merged = MergedCell.from(
+            cells: cells,
+            leftCells: [],
+            neighborContext: NeighborContext(numericTendency: 0, labelTendency: 0),
+            row: 1,
+            col: 3
+        )
 
-        XCTAssertEqual(merged.type, .sum(4500))
+        if case .sum(let total) = merged.type {
+            XCTAssertEqual(total, 4500)
+        } else {
+            XCTFail("Expected sum type, got \(merged.type)")
+        }
         XCTAssertEqual(merged.displayValue, "4500")
     }
 
@@ -102,14 +129,20 @@ final class XianjuCountyMergeTests: XCTestCase {
     }
 
     func testXianjuCounty_ThousandSeparator_MixedSum() {
-        // 混合格式求和
+        // 混合格式求和（带小数 = strongNumeric）
         let cells = [
             (filename: "乡镇1.xlsx", cell: CellData(value: "1,000.50")),
             (filename: "乡镇2.xlsx", cell: CellData(value: "2.000,50")),
             (filename: "乡镇3.xlsx", cell: CellData(value: "500.00"))
         ]
 
-        let merged = MergedCell.from(cells: cells)
+        let merged = MergedCell.from(
+            cells: cells,
+            leftCells: [],
+            neighborContext: NeighborContext(numericTendency: 0, labelTendency: 0),
+            row: 1,
+            col: 3
+        )
 
         // 1000.50 + 2000.50 + 500 = 3501
         if case .sum(let total) = merged.type {
@@ -170,11 +203,20 @@ final class XianjuCountyMergeTests: XCTestCase {
         XCTAssertEqual(result.rows[1][1].type, .label)
         XCTAssertEqual(result.rows[1][1].displayValue, "一般公共服务")
 
-        // 验证金额列 - 值不同且是数值，应该是求和
-        XCTAssertEqual(result.rows[1][2].type, .sum(2500))
+        // 验证金额列 - 值不同且是数值，左邻是"一般公共服务"（含"名称"关键词增强数值倾向的抵消较弱）
+        // 实际：1000/1500 是 integerWide + 垂直穿透一致性高 → sum
+        if case .sum(let total) = result.rows[1][2].type {
+            XCTAssertEqual(total, 2500)
+        } else {
+            XCTFail("Expected sum type for amount column, got \(result.rows[1][2].type)")
+        }
         XCTAssertEqual(result.rows[1][2].displayValue, "2500")
 
-        XCTAssertEqual(result.rows[2][2].type, .sum(4500))
+        if case .sum(let total) = result.rows[2][2].type {
+            XCTAssertEqual(total, 4500)
+        } else {
+            XCTFail("Expected sum type for amount column, got \(result.rows[2][2].type)")
+        }
         XCTAssertEqual(result.rows[2][2].displayValue, "4500")
     }
 
@@ -187,7 +229,13 @@ final class XianjuCountyMergeTests: XCTestCase {
             (filename: "白塔镇.xlsx", cell: CellData(value: "1200"))
         ]
 
-        let merged = MergedCell.from(cells: cells)
+        let merged = MergedCell.from(
+            cells: cells,
+            leftCells: [],
+            neighborContext: NeighborContext(numericTendency: 0, labelTendency: 0),
+            row: 1,
+            col: 3
+        )
 
         // 验证来源值映射
         XCTAssertEqual(merged.sourceValues["官路镇.xlsx"], "1500")
@@ -195,6 +243,11 @@ final class XianjuCountyMergeTests: XCTestCase {
         XCTAssertEqual(merged.sourceValues["白塔镇.xlsx"], "1200")
 
         // 验证显示值
+        if case .sum(let total) = merged.type {
+            XCTAssertEqual(total, 4700)
+        } else {
+            XCTFail("Expected sum type, got \(merged.type)")
+        }
         XCTAssertEqual(merged.displayValue, "4700")
     }
 }

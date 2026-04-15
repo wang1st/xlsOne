@@ -42,6 +42,13 @@ struct XlsOneApp: App {
                     viewModel.reset()
                 }
                 .keyboardShortcut("t", modifiers: .command)
+
+                Divider()
+
+                Button("清除所有修正") {
+                    viewModel.clearOverrides()
+                }
+                .disabled(viewModel.userOverrides.isEmpty)
             }
         }
     }
@@ -156,14 +163,113 @@ class AppViewModel: ObservableObject {
         updateMergedResult()
     }
 
+    /// 当前用户自定义的单元格覆盖
+    @Published var userOverrides: [CellTypeOverride] = []
+
+    /// 是否显示 Schema 管理器
+    @Published var showSchemaManager = false
+
+    /// 是否显示保存 Schema 对话框
+    @Published var showSaveSchemaDialog = false
+
+    /// 新 Schema 名称
+    @Published var newSchemaName = ""
+
+    /// 当前匹配的 Schema
+    @Published var matchedSchema: MergeSchema?
+
+    private let smartMerger = SmartMerger()
+
     /// 更新合并结果
     private func updateMergedResult() {
-        guard let sheetName = currentSheet else {
-            mergedResult = nil
-            return
+        Task {
+            guard let sheetName = currentSheet else {
+                await MainActor.run {
+                    mergedResult = nil
+                }
+                return
+            }
+
+            // 使用 SmartMerger 合并（会自动匹配 Schema）
+            let result = await smartMerger.merge(files: files, sheetName: sheetName)
+
+            // 应用用户临时覆盖（纯计算，无需 await）
+            let finalResult = smartMerger.applyOverrides(to: result, overrides: userOverrides)
+
+            // 获取当前应用的 Schema
+            let schema = await smartMerger.appliedSchema
+
+            await MainActor.run {
+                mergedResult = finalResult
+                matchedSchema = schema
+            }
+        }
+    }
+
+    /// 应用单元格类型覆盖
+    func applyCellOverride(row: Int, col: Int, type: CellOverrideType) {
+        // 移除已存在的同一位置覆盖
+        userOverrides.removeAll { $0.rowIndex == row && $0.colIndex == col }
+
+        // 添加新覆盖
+        let override = CellTypeOverride(
+            rowIndex: row,
+            colIndex: col,
+            cellType: type,
+            userNote: nil
+        )
+        userOverrides.append(override)
+
+        // 更新显示
+        updateMergedResult()
+    }
+
+    /// 批量应用类型覆盖
+    func applyBulkOverride(positions: [CellPosition], type: CellOverrideType) {
+        // 移除这些位置的所有现有覆盖
+        for pos in positions {
+            userOverrides.removeAll { $0.rowIndex == pos.row && $0.colIndex == pos.col }
         }
 
-        mergedResult = merger.merge(files: files, sheetName: sheetName)
+        // 为每个位置添加覆盖
+        for pos in positions {
+            let override = CellTypeOverride(
+                rowIndex: pos.row,
+                colIndex: pos.col,
+                cellType: type,
+                userNote: nil
+            )
+            userOverrides.append(override)
+        }
+
+        // 更新显示
+        updateMergedResult()
+    }
+
+    /// 保存当前覆盖为 Schema
+    func saveCurrentAsSchema(name: String) async throws {
+        guard !files.isEmpty else { return }
+
+        let fingerprint = FingerprintGenerator.generate(from: files[0])
+        _ = try await smartMerger.createSchema(
+            name: name,
+            fingerprint: fingerprint,
+            overrides: userOverrides
+        )
+
+        // 清空临时覆盖（已保存）
+        userOverrides.removeAll()
+    }
+
+    /// 清除所有用户覆盖
+    func clearOverrides() {
+        userOverrides.removeAll()
+        updateMergedResult()
+    }
+
+    /// 显示 Schema 管理器
+    func showSchemaManagerWindow() {
+        showSchemaManager = true
     }
 
     /// 导出当前结果
