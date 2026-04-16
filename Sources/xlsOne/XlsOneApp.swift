@@ -166,6 +166,9 @@ class AppViewModel: ObservableObject {
     /// 当前用户自定义的单元格覆盖
     @Published var userOverrides: [CellTypeOverride] = []
 
+    /// 覆盖操作历史（用于撤销）
+    private var overrideHistory: [OverrideOperation] = []
+
     /// 是否显示 Schema 管理器
     @Published var showSchemaManager = false
 
@@ -208,6 +211,10 @@ class AppViewModel: ObservableObject {
 
     /// 应用单元格类型覆盖
     func applyCellOverride(row: Int, col: Int, type: CellOverrideType) {
+        // 记录历史（用于撤销）
+        let position = CellPosition(row: row, col: col)
+        overrideHistory.append(.single(position))
+
         // 移除已存在的同一位置覆盖
         userOverrides.removeAll { $0.rowIndex == row && $0.colIndex == col }
 
@@ -226,6 +233,11 @@ class AppViewModel: ObservableObject {
 
     /// 批量应用类型覆盖
     func applyBulkOverride(positions: [CellPosition], type: CellOverrideType) {
+        guard !positions.isEmpty else { return }
+
+        // 记录历史（用于撤销）
+        overrideHistory.append(.batch(positions))
+
         // 移除这些位置的所有现有覆盖
         for pos in positions {
             userOverrides.removeAll { $0.rowIndex == pos.row && $0.colIndex == pos.col }
@@ -264,7 +276,29 @@ class AppViewModel: ObservableObject {
     /// 清除所有用户覆盖
     func clearOverrides() {
         userOverrides.removeAll()
+        overrideHistory.removeAll()
         updateMergedResult()
+    }
+
+    /// 撤销上一步覆盖操作
+    func undoLastOverride() {
+        guard let lastOperation = overrideHistory.popLast() else { return }
+
+        switch lastOperation {
+        case .single(let position):
+            removeOverride(for: position)
+        case .batch(let positions):
+            for pos in positions {
+                removeOverride(for: pos)
+            }
+        }
+
+        updateMergedResult()
+    }
+
+    /// 移除指定位置的覆盖
+    private func removeOverride(for position: CellPosition) {
+        userOverrides.removeAll { $0.rowIndex == position.row && $0.colIndex == position.col }
     }
 
     /// 显示 Schema 管理器
@@ -290,4 +324,11 @@ class AppViewModel: ObservableObject {
             }
         }
     }
+}
+
+// MARK: - 覆盖操作历史
+
+private enum OverrideOperation {
+    case single(CellPosition)
+    case batch([CellPosition])
 }
