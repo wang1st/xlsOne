@@ -219,6 +219,14 @@ struct ContentView: View {
 
                     Spacer()
 
+                    Button("撤销上一步") {
+                        viewModel.undoLastOverride()
+                    }
+                    .font(.caption)
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .keyboardShortcut("z", modifiers: .command)
+
                     Button("保存为 Schema...") {
                         viewModel.showSaveSchemaDialog = true
                     }
@@ -286,6 +294,13 @@ struct SheetTabButton: View {
     }
 }
 
+private struct ScrollOffsetPreferenceKey: PreferenceKey {
+    static var defaultValue: CGPoint = .zero
+    static func reduce(value: inout CGPoint, nextValue: () -> CGPoint) {
+        value = nextValue()
+    }
+}
+
 // MARK: - Excel 风格网格视图
 
 struct ExcelGridView: View {
@@ -294,6 +309,11 @@ struct ExcelGridView: View {
     @State private var lastSelectedCell: CellPosition?
     @State private var showDetailSheet = false
     @State private var showBulkEditSheet = false
+    @State private var columnWidths: [Int: CGFloat] = [:]
+    @State private var rowNumberColumnWidth: CGFloat = 40
+    @State private var dragStartWidth: CGFloat = 0
+    @State private var draggingColIndex: Int? = nil
+    @State private var scrollOffset: CGPoint = .zero
 
     private var maxCols: Int {
         rows.map { $0.count }.max() ?? 0
@@ -303,40 +323,96 @@ struct ExcelGridView: View {
     var onApplyBulkOverride: (([CellPosition], CellOverrideType) -> Void)?
 
     var body: some View {
-        GeometryReader { geometry in
-            ScrollView([.horizontal, .vertical]) {
-                VStack(alignment: .leading, spacing: 0) {
-                    // 列头
-                    columnHeaderRow
+        ZStack(alignment: .bottom) {
+            GeometryReader { geometry in
+                ZStack(alignment: .topLeading) {
+                    // 主滚动区域（包含完整内容）
+                    ScrollView([.horizontal, .vertical]) {
+                        VStack(alignment: .leading, spacing: 0) {
+                            // 表头行（不含左上角，左上角作为固定覆盖层）
+                            HStack(spacing: 0) {
+                                Spacer().frame(width: rowNumberColumnWidth)
+                                columnHeaders
+                            }
 
-                    // 数据行
-                    ForEach(Array(rows.enumerated()), id: \.offset) { rowIdx, row in
-                        HStack(spacing: 0) {
-                            // 行号
-                            rowNumberView(rowIdx: rowIdx)
+                            // 数据行（不含行号，行号作为固定覆盖层）
+                            ForEach(Array(rows.enumerated()), id: \.offset) { rowIdx, row in
+                                HStack(spacing: 0) {
+                                    Spacer().frame(width: rowNumberColumnWidth)
 
-                            // 单元格
-                            ForEach(Array(row.enumerated()), id: \.offset) { colIdx, cell in
-                                let position = CellPosition(row: rowIdx, col: colIdx)
-                                ExcelCellView(
-                                    cell: cell,
-                                    isSelected: selectedCells.contains(position)
-                                )
-                                .onTapGesture {
-                                    handleCellTap(position: position, cell: cell)
+                                    HStack(spacing: 0) {
+                                        ForEach(Array(row.enumerated()), id: \.offset) { colIdx, cell in
+                                            let position = CellPosition(row: rowIdx, col: colIdx)
+                                            cellView(for: cell, at: position, colIdx: colIdx)
+                                        }
+
+                                        ForEach(row.count..<maxCols, id: \.self) { colIdx in
+                                            let position = CellPosition(row: rowIdx, col: colIdx)
+                                            cellView(for: MergedCell(type: .single("")), at: position, colIdx: colIdx)
+                                        }
+                                    }
                                 }
                             }
-
-                            // 填充剩余的空单元格
-                            ForEach(row.count..<maxCols, id: \.self) { _ in
-                                ExcelCellView(
-                                    cell: MergedCell(type: .single("")),
-                                    isSelected: false
+                        }
+                        .background(
+                            GeometryReader { proxy in
+                                Color.clear.preference(
+                                    key: ScrollOffsetPreferenceKey.self,
+                                    value: CGPoint(
+                                        x: max(0, -proxy.frame(in: .named("gridContainer")).minX),
+                                        y: max(0, -proxy.frame(in: .named("gridContainer")).minY)
+                                    )
                                 )
                             }
-                        }
+                        )
                     }
+
+                    // 固定左上角
+                    topLeftCorner
+                        .frame(width: rowNumberColumnWidth, height: 24)
+                        .background(Color(NSColor.controlBackgroundColor))
+
+                    // 固定表头行
+                    columnHeaders
+                        .offset(x: -scrollOffset.x)
+                        .frame(width: max(0, geometry.size.width - rowNumberColumnWidth), height: 24, alignment: .leading)
+                        .clipped()
+                        .background(Color(NSColor.controlBackgroundColor))
+                        .offset(x: rowNumberColumnWidth)
+
+                    // 固定行号列
+                    rowNumbersColumn
+                        .offset(y: -scrollOffset.y)
+                        .frame(width: rowNumberColumnWidth, height: max(0, geometry.size.height - 24), alignment: .top)
+                        .clipped()
+                        .background(Color(NSColor.controlBackgroundColor))
+                        .offset(y: 24)
                 }
+                .coordinateSpace(name: "gridContainer")
+                .onPreferenceChange(ScrollOffsetPreferenceKey.self) { offset in
+                    scrollOffset = offset
+                }
+            }
+            .onAppear {
+                initializeColumnWidths()
+            }
+            .onChange(of: rows) { _ in
+                initializeColumnWidths()
+            }
+
+            if selectedCells.count > 1 {
+                SelectionToolbar(
+                    selectedCount: selectedCells.count,
+                    onApply: { type in
+                        onApplyBulkOverride?(Array(selectedCells), type)
+                        selectedCells.removeAll()
+                    },
+                    onCancel: {
+                        selectedCells.removeAll()
+                    }
+                )
+                .padding(.bottom, 12)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
         .sheet(isPresented: $showDetailSheet) {
@@ -354,14 +430,91 @@ struct ExcelGridView: View {
                 )
             }
         }
-        .sheet(isPresented: $showBulkEditSheet) {
-            BulkEditView(
-                selectedCount: selectedCells.count,
-                onApply: { type in
-                    onApplyBulkOverride?(Array(selectedCells), type)
-                    selectedCells.removeAll()
+        .background(EscapeKeyMonitorView {
+            selectedCells.removeAll()
+        })
+    }
+
+    private func cellView(for cell: MergedCell, at position: CellPosition, colIdx: Int) -> some View {
+        ExcelCellView(
+            cell: cell,
+            isSelected: selectedCells.contains(position),
+            width: columnWidths[colIdx] ?? 100
+        )
+        .onTapGesture {
+            handleCellTap(position: position, cell: cell)
+        }
+        .contextMenu {
+            cellContextMenu(for: position)
+        }
+    }
+
+    private func initializeColumnWidths() {
+        let padding: CGFloat = 16
+        let minWidth: CGFloat = 60
+        let maxWidth: CGFloat = 300
+        let font = NSFont.systemFont(ofSize: 12)
+        let attributes: [NSAttributedString.Key: Any] = [.font: font]
+
+        var newWidths: [Int: CGFloat] = [:]
+        let totalRows = rows.count
+
+        // 计算行号列宽
+        let digits = max(1, String(totalRows).count)
+        let rowNumberText = String(repeating: "8", count: digits)
+        let rowNumberWidth = (rowNumberText as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: 11)]).width + 16
+        rowNumberColumnWidth = max(40, rowNumberWidth)
+
+        for colIdx in 0..<maxCols {
+            var widest: CGFloat = minWidth
+
+            // 优先检查表头（第一行）
+            if let firstRow = rows.first, colIdx < firstRow.count {
+                let text = firstRow[colIdx].displayValue
+                let width = (text as NSString).size(withAttributes: attributes).width + padding
+                widest = max(widest, width)
+            }
+
+            // 采样数据行（最多50行，均匀分布）
+            if totalRows > 1 {
+                let step = max(1, totalRows / 50)
+                var sampled = 0
+                for rowIdx in stride(from: 1, to: totalRows, by: step) {
+                    guard rowIdx < rows.count, colIdx < rows[rowIdx].count else { continue }
+                    let text = rows[rowIdx][colIdx].displayValue
+                    let width = (text as NSString).size(withAttributes: attributes).width + padding
+                    widest = max(widest, width)
+                    sampled += 1
+                    if sampled >= 50 { break }
                 }
-            )
+            }
+
+            newWidths[colIdx] = min(maxWidth, widest)
+        }
+
+        columnWidths = newWidths
+    }
+
+    @ViewBuilder
+    private func cellContextMenu(for position: CellPosition) -> some View {
+        Menu("修正为") {
+            Button("标签") {
+                onApplyOverride?(position.row, position.col, .label)
+                selectedCells.remove(position)
+            }
+            Button("求和") {
+                onApplyOverride?(position.row, position.col, .sum)
+                selectedCells.remove(position)
+            }
+            Button("混合") {
+                onApplyOverride?(position.row, position.col, .mixed)
+                selectedCells.remove(position)
+            }
+        }
+
+        Button("查看来源详情") {
+            lastSelectedCell = position
+            showDetailSheet = true
         }
     }
 
@@ -413,29 +566,87 @@ struct ExcelGridView: View {
         lastSelectedCell = to
     }
 
-    private var columnHeaderRow: some View {
-        HStack(spacing: 0) {
-            // 左上角空白（行号和列头的交叉处）
-            Rectangle()
-                .fill(Color(NSColor.controlBackgroundColor))
-                .frame(width: 40, height: 24)
-                .overlay(
-                    Rectangle()
-                        .stroke(Color.gray.opacity(0.3), lineWidth: 0.5)
-                )
+    private var topLeftCorner: some View {
+        Rectangle()
+            .fill(Color(NSColor.controlBackgroundColor))
+            .frame(width: rowNumberColumnWidth, height: 24)
+            .overlay(
+                Rectangle()
+                    .stroke(Color.gray.opacity(0.4), lineWidth: 0.5)
+            )
+            .contextMenu {
+                Button("复制") {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString("", forType: .string)
+                }
+            }
+    }
 
+    private var rowNumbersColumn: some View {
+        VStack(spacing: 0) {
+            ForEach(0..<rows.count, id: \.self) { rowIdx in
+                rowNumberView(rowIdx: rowIdx)
+            }
+        }
+    }
+
+    private var columnHeaders: some View {
+        HStack(spacing: 0) {
             // 列头 A, B, C...
             ForEach(0..<maxCols, id: \.self) { colIdx in
-                Text(columnLetters(colIdx))
-                    .font(.system(size: 11))
-                    .fontWeight(.medium)
-                    .foregroundStyle(.secondary)
-                    .frame(width: 100, height: 24)
-                    .background(Color(NSColor.controlBackgroundColor))
-                    .overlay(
-                        Rectangle()
-                            .stroke(Color.gray.opacity(0.3), lineWidth: 0.5)
-                    )
+                ZStack(alignment: .trailing) {
+                    Text(columnLetters(colIdx))
+                        .font(.system(size: 11))
+                        .fontWeight(.medium)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .frame(width: columnWidths[colIdx] ?? 100, height: 24, alignment: .center)
+                        .padding(.horizontal, 4)
+                        .background(Color(NSColor.controlBackgroundColor))
+                        .overlay(
+                            Rectangle()
+                                .stroke(Color.gray.opacity(0.4), lineWidth: 0.5)
+                        )
+                        .contextMenu {
+                            Button("复制列标") {
+                                NSPasteboard.general.clearContents()
+                                NSPasteboard.general.setString(columnLetters(colIdx), forType: .string)
+                            }
+                        }
+
+                    // 拖拽手柄
+                    Rectangle()
+                        .fill(Color.clear)
+                        .frame(width: 4)
+                        .contentShape(Rectangle())
+                        .onHover { isHovered in
+                            if isHovered {
+                                NSCursor.resizeLeftRight.set()
+                            } else if draggingColIndex == nil {
+                                NSCursor.arrow.set()
+                            }
+                        }
+                        .gesture(
+                            DragGesture(minimumDistance: 1)
+                                .onChanged { value in
+                                    if draggingColIndex == nil {
+                                        draggingColIndex = colIdx
+                                        dragStartWidth = columnWidths[colIdx] ?? 100
+                                    }
+                                    if draggingColIndex == colIdx {
+                                        columnWidths[colIdx] = max(40, dragStartWidth + value.translation.width)
+                                    }
+                                }
+                                .onEnded { _ in
+                                    let wasDragging = draggingColIndex != nil
+                                    draggingColIndex = nil
+                                    if wasDragging {
+                                        NSCursor.arrow.set()
+                                    }
+                                }
+                        )
+                }
             }
         }
     }
@@ -445,13 +656,19 @@ struct ExcelGridView: View {
             .font(.system(size: 11))
             .fontWeight(.medium)
             .foregroundStyle(.secondary)
-            .frame(width: 40, height: 24)
+            .frame(width: rowNumberColumnWidth, height: 24)
             .background(Color(NSColor.controlBackgroundColor))
             .overlay(
                 Rectangle()
-                    .stroke(Color.gray.opacity(0.3), lineWidth: 0.5)
+                    .stroke(Color.gray.opacity(0.4), lineWidth: 0.5)
             )
             .contentShape(Rectangle())
+            .contextMenu {
+                Button("复制行号") {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString("\(rowIdx + 1)", forType: .string)
+                }
+            }
     }
 
     private func cellReference(row: Int, col: Int) -> String {
@@ -542,17 +759,120 @@ struct BulkEditView: View {
     }
 }
 
+// MARK: - 多选悬浮工具栏
+
+struct SelectionToolbar: View {
+    let selectedCount: Int
+    let onApply: (CellOverrideType) -> Void
+    let onCancel: () -> Void
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Text("已选 \(selectedCount) 个")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            Divider()
+                .frame(height: 16)
+
+            HStack(spacing: 8) {
+                Button("标签") {
+                    onApply(.label)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
+
+                Button("求和") {
+                    onApply(.sum)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
+
+                Button("混合") {
+                    onApply(.mixed)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
+            }
+
+            Divider()
+                .frame(height: 16)
+
+            Button {
+                onCancel()
+            } label: {
+                Image(systemName: "xmark")
+            }
+            .buttonStyle(.borderless)
+            .controlSize(.small)
+            .keyboardShortcut(.escape)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color(NSColor.controlBackgroundColor))
+                .shadow(color: .black.opacity(0.15), radius: 4, x: 0, y: 2)
+        )
+    }
+}
+
+// MARK: - Esc 键监听
+
+struct EscapeKeyMonitorView: NSViewRepresentable {
+    let onEscape: () -> Void
+
+    func makeNSView(context: Context) -> NSView {
+        let view = KeyMonitorView()
+        view.onEscape = onEscape
+        return view
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        guard let view = nsView as? KeyMonitorView else { return }
+        view.onEscape = onEscape
+    }
+}
+
+private class KeyMonitorView: NSView {
+    var onEscape: (() -> Void)?
+    private var monitor: Any?
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        if monitor == nil, window != nil {
+            monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+                if event.keyCode == 53 {
+                    self?.onEscape?()
+                    return nil
+                }
+                return event
+            }
+        }
+    }
+
+    override func removeFromSuperview() {
+        if let monitor = monitor {
+            NSEvent.removeMonitor(monitor)
+            self.monitor = nil
+        }
+        super.removeFromSuperview()
+    }
+}
+
 // MARK: - Excel 单元格视图
 
 struct ExcelCellView: View {
     let cell: MergedCell
     let sourceValues: [String: String]
     let isSelected: Bool
+    let width: CGFloat
 
-    init(cell: MergedCell, isSelected: Bool) {
+    init(cell: MergedCell, isSelected: Bool, width: CGFloat = 100) {
         self.cell = cell
         self.sourceValues = cell.sourceValues
         self.isSelected = isSelected
+        self.width = width
     }
 
     var body: some View {
@@ -560,13 +880,13 @@ struct ExcelCellView: View {
             .font(.system(size: 12))
             .lineLimit(1)
             .truncationMode(.tail)
-            .frame(width: 100, height: 24, alignment: alignment)
+            .frame(width: width, height: 24, alignment: alignment)
             .padding(.horizontal, 4)
             .background(backgroundColor)
             .foregroundStyle(foregroundStyle)
             .overlay(
                 Rectangle()
-                    .stroke(Color.gray.opacity(0.2), lineWidth: 0.5)
+                    .stroke(Color.gray.opacity(0.4), lineWidth: 0.5)
             )
             .overlay(
                 Group {
