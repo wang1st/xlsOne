@@ -6,8 +6,7 @@ let package = Package(
     platforms: [.macOS(.v12)],
     products: [
         .library(name: "xlsOneCore", targets: ["xlsOneCore"]),
-        .executable(name: "xlsOne", targets: ["xlsOne"]),
-        .executable(name: "xlsOneCLI", targets: ["xlsOneCLI"])
+        .executable(name: "xlsOne", targets: ["xlsOne"])
     ],
     dependencies: [
         .package(url: "https://github.com/CoreOffice/CoreXLSX.git", from: "0.14.1")
@@ -19,10 +18,6 @@ let package = Package(
         ),
         .executableTarget(
             name: "xlsOne",
-            dependencies: ["xlsOneCore"]
-        ),
-        .executableTarget(
-            name: "xlsOneCLI",
             dependencies: ["xlsOneCore"]
         ),
         .testTarget(

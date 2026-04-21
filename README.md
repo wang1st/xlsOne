@@ -20,8 +20,7 @@ xlsOneCore/
 ├── Models.swift           # 数据模型（CellData, MergedCell, SheetData, ExcelFile, MergedResult）
 ├── ExcelParser.swift      # Excel 解析（基于 CoreXLSX）
 ├── SimpleMerger.swift     # 合并引擎（核心逻辑）
-├── ExcelExporter.swift    # 导出功能（CSV, HTML）
-└── CLI.swift              # 命令行测试工具
+└── ExcelExporter.swift    # 导出功能（CSV, HTML）
 
 xlsOne/
 ├── XlsOneApp.swift        # 应用入口（SwiftUI）
@@ -40,9 +39,9 @@ swift build -c release
 .build/release/xlsOne
 ```
 
-### 运行CLI测试（验证仙居县文件）
+### 构建并打开 macOS app
 ```bash
-.build/release/xlsOneCLI
+./run-app.sh
 ```
 
 ### 运行测试
