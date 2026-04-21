@@ -305,14 +305,16 @@ private struct ScrollOffsetPreferenceKey: PreferenceKey {
 
 struct ExcelGridView: View {
     let rows: [[MergedCell]]
+    var initialColumnWidths: [Int: CGFloat] = [:]
+    var layoutObserver: GridLayoutObserver? = nil
+
     @State private var selectedCells: Set<CellPosition> = []
     @State private var lastSelectedCell: CellPosition?
     @State private var showDetailSheet = false
     @State private var showBulkEditSheet = false
     @State private var columnWidths: [Int: CGFloat] = [:]
-    @State private var rowNumberColumnWidth: CGFloat = 40
-    @State private var dragStartWidth: CGFloat = 0
-    @State private var draggingColIndex: Int? = nil
+    @State private var rowNumberColumnWidth: CGFloat = GridMetrics.rowNumberMinimumWidth
+    @State private var columnResizeController = ColumnResizeController()
     @State private var scrollOffset: CGPoint = .zero
 
     private var maxCols: Int {
@@ -326,71 +328,92 @@ struct ExcelGridView: View {
         ZStack(alignment: .bottom) {
             GeometryReader { geometry in
                 ZStack(alignment: .topLeading) {
-                    // 主滚动区域（包含完整内容）
                     ScrollView([.horizontal, .vertical]) {
-                        VStack(alignment: .leading, spacing: 0) {
-                            // 表头行（不含左上角，左上角作为固定覆盖层）
-                            HStack(spacing: 0) {
-                                Spacer().frame(width: rowNumberColumnWidth)
-                                columnHeaders
-                            }
+                        HStack(alignment: .top, spacing: 0) {
+                            VStack(alignment: .leading, spacing: 0) {
+                                Color.clear
+                                    .frame(height: GridMetrics.headerHeight)
 
-                            // 数据行（不含行号，行号作为固定覆盖层）
-                            ForEach(Array(rows.enumerated()), id: \.offset) { rowIdx, row in
-                                HStack(spacing: 0) {
-                                    Spacer().frame(width: rowNumberColumnWidth)
-
+                                ForEach(Array(rows.enumerated()), id: \.offset) { rowIdx, row in
                                     HStack(spacing: 0) {
-                                        ForEach(Array(row.enumerated()), id: \.offset) { colIdx, cell in
-                                            let position = CellPosition(row: rowIdx, col: colIdx)
-                                            cellView(for: cell, at: position, colIdx: colIdx)
-                                        }
+                                        Color.clear.frame(width: rowNumberColumnWidth)
 
-                                        ForEach(row.count..<maxCols, id: \.self) { colIdx in
-                                            let position = CellPosition(row: rowIdx, col: colIdx)
-                                            cellView(for: MergedCell(type: .single("")), at: position, colIdx: colIdx)
+                                        HStack(spacing: 0) {
+                                            ForEach(Array(row.enumerated()), id: \.offset) { colIdx, cell in
+                                                let position = CellPosition(row: rowIdx, col: colIdx)
+                                                cellView(for: cell, at: position, colIdx: colIdx)
+                                            }
+
+                                            ForEach(row.count..<maxCols, id: \.self) { colIdx in
+                                                let position = CellPosition(row: rowIdx, col: colIdx)
+                                                cellView(for: MergedCell(type: .single("")), at: position, colIdx: colIdx)
+                                            }
                                         }
                                     }
+                                    .frame(height: GridMetrics.rowHeight)
                                 }
                             }
+                            Spacer(minLength: 0)
                         }
+                        .frame(
+                            minWidth: geometry.size.width,
+                            minHeight: geometry.size.height,
+                            alignment: .topLeading
+                        )
                         .background(
                             GeometryReader { proxy in
                                 Color.clear.preference(
                                     key: ScrollOffsetPreferenceKey.self,
                                     value: CGPoint(
-                                        x: max(0, -proxy.frame(in: .named("gridContainer")).minX),
-                                        y: max(0, -proxy.frame(in: .named("gridContainer")).minY)
+                                        x: max(0, -proxy.frame(in: .named(GridMetrics.coordinateSpaceName)).minX),
+                                        y: max(0, -proxy.frame(in: .named(GridMetrics.coordinateSpaceName)).minY)
                                     )
                                 )
                             }
                         )
                     }
 
-                    // 固定左上角
                     topLeftCorner
-                        .frame(width: rowNumberColumnWidth, height: 24)
+                        .frame(width: rowNumberColumnWidth, height: GridMetrics.headerHeight)
                         .background(Color(NSColor.controlBackgroundColor))
 
-                    // 固定表头行
                     columnHeaders
                         .offset(x: -scrollOffset.x)
-                        .frame(width: max(0, geometry.size.width - rowNumberColumnWidth), height: 24, alignment: .leading)
+                        .frame(
+                            width: max(0, geometry.size.width - rowNumberColumnWidth),
+                            height: GridMetrics.headerHeight,
+                            alignment: .leading
+                        )
                         .clipped()
                         .background(Color(NSColor.controlBackgroundColor))
+                        .overlay(alignment: .bottom) {
+                            gridHorizontalSeparator
+                        }
                         .offset(x: rowNumberColumnWidth)
 
-                    // 固定行号列
                     rowNumbersColumn
                         .offset(y: -scrollOffset.y)
-                        .frame(width: rowNumberColumnWidth, height: max(0, geometry.size.height - 24), alignment: .top)
+                        .frame(
+                            width: rowNumberColumnWidth,
+                            height: max(0, geometry.size.height - GridMetrics.headerHeight),
+                            alignment: .top
+                        )
                         .clipped()
                         .background(Color(NSColor.controlBackgroundColor))
-                        .offset(y: 24)
+                        .overlay(alignment: .top) {
+                            gridHorizontalSeparator
+                        }
+                        .overlay(alignment: .trailing) {
+                            gridVerticalSeparator
+                        }
+                        .offset(y: GridMetrics.headerHeight)
                 }
-                .coordinateSpace(name: "gridContainer")
+                .coordinateSpace(name: GridMetrics.coordinateSpaceName)
                 .onPreferenceChange(ScrollOffsetPreferenceKey.self) { offset in
                     scrollOffset = offset
+                }
+                .onPreferenceChange(GridFramePreferenceKey.self) { frames in
+                    layoutObserver?.onFramesChange(frames)
                 }
             }
             .onAppear {
@@ -439,7 +462,8 @@ struct ExcelGridView: View {
         ExcelCellView(
             cell: cell,
             isSelected: selectedCells.contains(position),
-            width: columnWidths[colIdx] ?? 100
+            width: contentWidth(for: colIdx),
+            probe: layoutObserver.map { _ in .body(position) }
         )
         .onTapGesture {
             handleCellTap(position: position, cell: cell)
@@ -450,49 +474,9 @@ struct ExcelGridView: View {
     }
 
     private func initializeColumnWidths() {
-        let padding: CGFloat = 16
-        let minWidth: CGFloat = 60
-        let maxWidth: CGFloat = 300
-        let font = NSFont.systemFont(ofSize: 12)
-        let attributes: [NSAttributedString.Key: Any] = [.font: font]
-
-        var newWidths: [Int: CGFloat] = [:]
-        let totalRows = rows.count
-
-        // 计算行号列宽
-        let digits = max(1, String(totalRows).count)
-        let rowNumberText = String(repeating: "8", count: digits)
-        let rowNumberWidth = (rowNumberText as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: 11)]).width + 16
-        rowNumberColumnWidth = max(40, rowNumberWidth)
-
-        for colIdx in 0..<maxCols {
-            var widest: CGFloat = minWidth
-
-            // 优先检查表头（第一行）
-            if let firstRow = rows.first, colIdx < firstRow.count {
-                let text = firstRow[colIdx].displayValue
-                let width = (text as NSString).size(withAttributes: attributes).width + padding
-                widest = max(widest, width)
-            }
-
-            // 采样数据行（最多50行，均匀分布）
-            if totalRows > 1 {
-                let step = max(1, totalRows / 50)
-                var sampled = 0
-                for rowIdx in stride(from: 1, to: totalRows, by: step) {
-                    guard rowIdx < rows.count, colIdx < rows[rowIdx].count else { continue }
-                    let text = rows[rowIdx][colIdx].displayValue
-                    let width = (text as NSString).size(withAttributes: attributes).width + padding
-                    widest = max(widest, width)
-                    sampled += 1
-                    if sampled >= 50 { break }
-                }
-            }
-
-            newWidths[colIdx] = min(maxWidth, widest)
-        }
-
-        columnWidths = newWidths
+        rowNumberColumnWidth = ColumnWidthCalculator.rowNumberWidth(totalRows: rows.count)
+        let calculatedWidths = ColumnWidthCalculator.defaultWidths(for: rows)
+        columnWidths = calculatedWidths.merging(initialColumnWidths) { _, override in override }
     }
 
     @ViewBuilder
@@ -569,11 +553,17 @@ struct ExcelGridView: View {
     private var topLeftCorner: some View {
         Rectangle()
             .fill(Color(NSColor.controlBackgroundColor))
-            .frame(width: rowNumberColumnWidth, height: 24)
+            .frame(width: rowNumberColumnWidth, height: GridMetrics.headerHeight)
             .overlay(
                 Rectangle()
-                    .stroke(Color.gray.opacity(0.4), lineWidth: 0.5)
+                    .stroke(gridLineColor, lineWidth: GridMetrics.gridLineWidth)
             )
+            .overlay(alignment: .bottom) {
+                gridHorizontalSeparator
+            }
+            .overlay(alignment: .trailing) {
+                gridVerticalSeparator
+            }
             .contextMenu {
                 Button("复制") {
                     NSPasteboard.general.clearContents()
@@ -592,22 +582,13 @@ struct ExcelGridView: View {
 
     private var columnHeaders: some View {
         HStack(spacing: 0) {
-            // 列头 A, B, C...
             ForEach(0..<maxCols, id: \.self) { colIdx in
                 ZStack(alignment: .trailing) {
-                    Text(columnLetters(colIdx))
-                        .font(.system(size: 11))
-                        .fontWeight(.medium)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                        .frame(width: columnWidths[colIdx] ?? 100, height: 24, alignment: .center)
-                        .padding(.horizontal, 4)
-                        .background(Color(NSColor.controlBackgroundColor))
-                        .overlay(
-                            Rectangle()
-                                .stroke(Color.gray.opacity(0.4), lineWidth: 0.5)
-                        )
+                    GridHeaderCell(
+                        title: columnLetters(colIdx),
+                        contentWidth: contentWidth(for: colIdx),
+                        probe: layoutObserver.map { _ in .header(colIdx) }
+                    )
                         .contextMenu {
                             Button("复制列标") {
                                 NSPasteboard.general.clearContents()
@@ -615,40 +596,20 @@ struct ExcelGridView: View {
                             }
                         }
 
-                    // 拖拽手柄
-                    Rectangle()
-                        .fill(Color.clear)
-                        .frame(width: 4)
-                        .contentShape(Rectangle())
-                        .onHover { isHovered in
-                            if isHovered {
-                                NSCursor.resizeLeftRight.set()
-                            } else if draggingColIndex == nil {
-                                NSCursor.arrow.set()
-                            }
-                        }
-                        .gesture(
-                            DragGesture(minimumDistance: 1)
-                                .onChanged { value in
-                                    if draggingColIndex == nil {
-                                        draggingColIndex = colIdx
-                                        dragStartWidth = columnWidths[colIdx] ?? 100
-                                    }
-                                    if draggingColIndex == colIdx {
-                                        columnWidths[colIdx] = max(40, dragStartWidth + value.translation.width)
-                                    }
-                                }
-                                .onEnded { _ in
-                                    let wasDragging = draggingColIndex != nil
-                                    draggingColIndex = nil
-                                    if wasDragging {
-                                        NSCursor.arrow.set()
-                                    }
-                                }
-                        )
+                    ColumnResizeHandle(
+                        isDragging: columnResizeController.draggingColumn == colIdx,
+                        height: GridMetrics.headerHeight
+                    )
                 }
             }
         }
+        .overlay(
+            HeaderDividerCursorOverlay(
+                renderedColumnWidths: renderedColumnWidths,
+                onDragChanged: handleResizeChanged,
+                onDragEnded: handleResizeEnded
+            )
+        )
     }
 
     private func rowNumberView(rowIdx: Int) -> some View {
@@ -656,12 +617,13 @@ struct ExcelGridView: View {
             .font(.system(size: 11))
             .fontWeight(.medium)
             .foregroundStyle(.secondary)
-            .frame(width: rowNumberColumnWidth, height: 24)
+            .frame(width: rowNumberColumnWidth, height: GridMetrics.rowHeight)
             .background(Color(NSColor.controlBackgroundColor))
             .overlay(
                 Rectangle()
-                    .stroke(Color.gray.opacity(0.4), lineWidth: 0.5)
+                    .stroke(gridLineColor, lineWidth: GridMetrics.gridLineWidth)
             )
+            .overlay(rowHeaderProbe(rowIdx: rowIdx))
             .contentShape(Rectangle())
             .contextMenu {
                 Button("复制行号") {
@@ -683,6 +645,58 @@ struct ExcelGridView: View {
             num = num / 26 - 1
         } while num >= 0
         return result
+    }
+
+    private func contentWidth(for colIdx: Int) -> CGFloat {
+        columnWidths[colIdx] ?? GridMetrics.defaultContentWidth
+    }
+
+    private var renderedColumnWidths: [CGFloat] {
+        (0..<maxCols).map { colIdx in
+            GridMetrics.renderedWidth(forContentWidth: contentWidth(for: colIdx))
+        }
+    }
+
+    private func handleResizeChanged(_ colIdx: Int, _ translation: CGFloat) {
+        if columnResizeController.draggingColumn == nil {
+            columnResizeController.beginResize(column: colIdx, width: contentWidth(for: colIdx))
+        }
+
+        guard columnResizeController.draggingColumn == colIdx else { return }
+        columnWidths[colIdx] = columnResizeController.updatedWidth(translation: translation)
+    }
+
+    private func handleResizeEnded(_ colIdx: Int) {
+        guard columnResizeController.draggingColumn == colIdx else { return }
+        columnResizeController.endResize()
+    }
+
+    private var gridLineColor: Color {
+        Color.gray.opacity(0.4)
+    }
+
+    private var gridHorizontalSeparator: some View {
+        Rectangle()
+            .fill(gridLineColor)
+            .frame(height: GridMetrics.gridLineWidth)
+    }
+
+    private var gridVerticalSeparator: some View {
+        Rectangle()
+            .fill(gridLineColor)
+            .frame(width: GridMetrics.gridLineWidth)
+    }
+
+    @ViewBuilder
+    private func rowHeaderProbe(rowIdx: Int) -> some View {
+        if layoutObserver != nil {
+            GeometryReader { proxy in
+                Color.clear.preference(
+                    key: GridFramePreferenceKey.self,
+                    value: [.rowHeader(rowIdx): proxy.frame(in: .named(GridMetrics.coordinateSpaceName))]
+                )
+            }
+        }
     }
 }
 
@@ -867,69 +881,28 @@ struct ExcelCellView: View {
     let sourceValues: [String: String]
     let isSelected: Bool
     let width: CGFloat
+    let probe: GridFrameProbe?
 
-    init(cell: MergedCell, isSelected: Bool, width: CGFloat = 100) {
+    init(
+        cell: MergedCell,
+        isSelected: Bool,
+        width: CGFloat = GridMetrics.defaultContentWidth,
+        probe: GridFrameProbe? = nil
+    ) {
         self.cell = cell
         self.sourceValues = cell.sourceValues
         self.isSelected = isSelected
         self.width = width
+        self.probe = probe
     }
 
     var body: some View {
-        Text(cell.displayValue)
-            .font(.system(size: 12))
-            .lineLimit(1)
-            .truncationMode(.tail)
-            .frame(width: width, height: 24, alignment: alignment)
-            .padding(.horizontal, 4)
-            .background(backgroundColor)
-            .foregroundStyle(foregroundStyle)
-            .overlay(
-                Rectangle()
-                    .stroke(Color.gray.opacity(0.4), lineWidth: 0.5)
-            )
-            .overlay(
-                Group {
-                    if isSelected {
-                        Rectangle()
-                            .stroke(Color.accentColor, lineWidth: 2)
-                    }
-                }
-            )
-    }
-
-    private var alignment: Alignment {
-        switch cell.type {
-        case .sum:
-            return .trailing
-        default:
-            return .leading
-        }
-    }
-
-    private var backgroundColor: Color {
-        if isSelected {
-            return Color.accentColor.opacity(0.15)
-        }
-        switch cell.type {
-        case .sum:
-            return Color.blue.opacity(0.05)
-        case .mixed:
-            return Color.yellow.opacity(0.08)
-        default:
-            return Color.white
-        }
-    }
-
-    private var foregroundStyle: some ShapeStyle {
-        switch cell.type {
-        case .mixed:
-            return Color.orange
-        case .sum:
-            return Color.blue
-        default:
-            return Color.primary
-        }
+        GridBodyCell(
+            cell: cell,
+            isSelected: isSelected,
+            contentWidth: width,
+            probe: probe
+        )
     }
 }
 
