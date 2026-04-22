@@ -44,119 +44,103 @@ struct ContentView: View {
 
     private var toolbar: some View {
         let presentation = viewModel.toolbarPresentation
+        let hasWorkspace = !viewModel.selectedFilePaths.isEmpty
 
-        return HStack(spacing: 12) {
-            HStack(spacing: 8) {
-                if presentation.importIsProminent {
-                    Button {
-                        viewModel.showOpenFileDialog()
-                    } label: {
-                        Label(presentation.importTitle, systemImage: "folder.badge.plus")
-                    }
-                    .buttonStyle(.borderedProminent)
-                } else {
-                    Button {
-                        viewModel.showOpenFileDialog()
-                    } label: {
-                        Label(presentation.importTitle, systemImage: "folder.badge.plus")
-                    }
-                    .buttonStyle(.bordered)
-                }
-
-                Button {
-                    viewModel.showAddFileDialog()
-                } label: {
-                    Label("追加文件", systemImage: "plus")
-                }
-                .buttonStyle(.bordered)
-                .disabled(!presentation.appendEnabled)
-
+        return HStack(spacing: 10) {
+            toolbarPrimaryButton(
+                title: hasWorkspace ? "替换" : "导入",
+                systemImage: "folder.badge.plus",
+                prominent: presentation.importIsProminent,
+                help: hasWorkspace ? "替换当前批次中的文件" : "导入参与汇总的 Excel 文件"
+            ) {
+                viewModel.showOpenFileDialog()
             }
 
-            Divider()
-                .frame(height: 20)
+            HStack(spacing: 2) {
+                if hasWorkspace {
+                    toolbarUtilityButton(title: "追加", systemImage: "plus", help: "向当前批次追加文件") {
+                        viewModel.showAddFileDialog()
+                    }
+                    .disabled(!presentation.appendEnabled)
+                }
 
-            HStack(spacing: 8) {
-                Button {
+                toolbarUtilityButton(title: "规则", systemImage: "books.vertical", help: "查看或管理类型规则") {
                     viewModel.showSchemaManagerWindow()
-                } label: {
-                    Label("规则库", systemImage: "books.vertical")
                 }
-                .buttonStyle(.bordered)
 
-                Button {
-                    viewModel.reloadFiles()
-                } label: {
-                    Label("重新校验", systemImage: "arrow.clockwise")
-                }
-                .buttonStyle(.bordered)
-                .disabled(viewModel.selectedFilePaths.isEmpty)
-            }
+                if hasWorkspace {
+                    toolbarStripDivider
 
-            Divider()
-                .frame(height: 20)
-
-            HStack(spacing: 8) {
-                if presentation.exportIsProminent {
-                    Button {
-                        viewModel.exportResult()
-                    } label: {
-                        Label("导出汇总", systemImage: "square.and.arrow.up")
+                    toolbarUtilityButton(title: "校验", systemImage: "arrow.clockwise", help: "重新比较当前文件的工作表结构") {
+                        viewModel.reloadFiles()
                     }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(!viewModel.canExport)
-                } else {
-                    Button {
-                        viewModel.exportResult()
-                    } label: {
-                        Label("导出汇总", systemImage: "square.and.arrow.up")
-                    }
-                    .buttonStyle(.bordered)
-                    .disabled(!viewModel.canExport)
-                }
+                    .disabled(viewModel.selectedFilePaths.isEmpty)
 
-                Button {
-                    viewModel.closeAllFiles()
-                } label: {
-                    Label("新建批次", systemImage: "plus.circle")
+                    toolbarUtilityButton(title: "清空", systemImage: "xmark", help: "清空当前工作区，不影响原始 Excel 文件") {
+                        viewModel.closeAllFiles()
+                    }
+                    .disabled(viewModel.selectedFilePaths.isEmpty)
                 }
-                .buttonStyle(.bordered)
-                .disabled(viewModel.selectedFilePaths.isEmpty)
-                .help("仅清空当前工作区，不影响原始 Excel 文件")
             }
+            .padding(4)
+            .background(Color(NSColor.controlBackgroundColor))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(Color.secondary.opacity(0.12), lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
             Spacer()
 
-            HStack(spacing: 8) {
-                statPill(title: "已选", value: "\(viewModel.selectedFilePaths.count)")
-                statPill(title: "参与", value: "\(viewModel.participatingFileCount)")
-                if viewModel.blockedFileCount > 0 {
-                    statPill(title: "阻断", value: "\(viewModel.blockedFileCount)", tint: .red)
+            if hasWorkspace {
+                toolbarPrimaryButton(
+                    title: "导出 XLSX",
+                    systemImage: "square.and.arrow.up",
+                    prominent: presentation.exportIsProminent,
+                    help: viewModel.canExport ? "导出同构汇总 Excel" : "当前没有可导出的汇总结果"
+                ) {
+                    viewModel.exportResult()
                 }
-                if viewModel.warningFileCount > 0 {
-                    statPill(title: "警告", value: "\(viewModel.warningFileCount)", tint: .orange)
-                }
-                if let skippedSheetCount = viewModel.validationReport?.skippedSheetCount, skippedSheetCount > 0 {
-                    statPill(title: "跳过sheet", value: "\(skippedSheetCount)", tint: .orange)
-                }
+                .disabled(!viewModel.canExport)
             }
         }
-        .padding()
+        .padding(.horizontal)
+        .padding(.vertical, 10)
         .background(Color(NSColor.windowBackgroundColor))
     }
 
-    private func statPill(title: String, value: String, tint: Color = .secondary) -> some View {
-        HStack(spacing: 4) {
-            Text(title)
-            Text(value)
-                .fontWeight(.semibold)
+    private var toolbarStripDivider: some View {
+        Rectangle()
+            .fill(Color.secondary.opacity(0.10))
+            .frame(width: 1, height: 18)
+            .padding(.horizontal, 2)
+    }
+
+    private func toolbarPrimaryButton(
+        title: String,
+        systemImage: String,
+        prominent: Bool,
+        help: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Label(title, systemImage: systemImage)
         }
-        .font(.caption)
-        .padding(.horizontal, 8)
-        .padding(.vertical, 5)
-        .background(tint.opacity(0.12))
-        .foregroundStyle(tint)
-        .clipShape(Capsule())
+        .buttonStyle(WorkspaceChromePrimaryButtonStyle(prominent: prominent))
+        .help(help)
+    }
+
+    private func toolbarUtilityButton(
+        title: String,
+        systemImage: String,
+        help: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Label(title, systemImage: systemImage)
+        }
+        .buttonStyle(WorkspaceChromeUtilityButtonStyle())
+        .help(help)
     }
 
     private var emptyView: some View {
@@ -489,33 +473,85 @@ struct WorkbookStatusStrip: View {
     let report: WorkbookValidationReport
 
     var body: some View {
-        HStack(spacing: 16) {
-            statusColumn(title: "参与文件", value: "\(report.includedFiles.count)")
-            statusColumn(title: "当前工作表", value: viewModel.selectedSheetName ?? "-")
-            statusColumn(title: "结构状态", value: viewModel.selectedSheetStructureStatus)
-            statusColumn(title: "Schema", value: viewModel.matchedSchema?.name ?? "未命中")
-            statusColumn(title: "人工修正", value: "\(viewModel.correctionCount)")
-            statusColumn(title: "异常队列", value: "\(viewModel.allAnomalies.count)")
-            if report.skippedSheetCount > 0 {
-                statusColumn(title: "跳过工作表", value: "\(report.skippedSheetCount)")
+        HStack(spacing: 12) {
+            Text(summaryText)
+                .font(.subheadline)
+                .fontWeight(.medium)
+
+            Spacer(minLength: 16)
+
+            if let selectedSheetName = viewModel.selectedSheetName {
+                statusPill(
+                    text: selectedSheetName,
+                    systemImage: selectedSheetIcon,
+                    tint: .secondary
+                )
             }
 
-            Spacer()
+            statusPill(
+                text: viewModel.selectedSheetStructureStatus,
+                systemImage: selectedStatusIcon,
+                tint: selectedStatusTint
+            )
+
+            if viewModel.correctionCount > 0 {
+                statusPill(text: "已修正 \(viewModel.correctionCount)", systemImage: "slider.horizontal.3", tint: .orange)
+            }
+
+            if viewModel.matchedSchema != nil {
+                statusPill(text: "已命中规则库", systemImage: "books.vertical", tint: .blue)
+            }
         }
         .padding(.horizontal)
-        .padding(.vertical, 10)
+        .padding(.vertical, 12)
         .background(Color(NSColor.windowBackgroundColor))
     }
 
-    private func statusColumn(title: String, value: String) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(value)
-                .font(.subheadline)
-                .fontWeight(.medium)
-            Text(title)
-                .font(.caption)
-                .foregroundStyle(.secondary)
+    private var summaryText: String {
+        WorkspaceDiagnostics.workspaceSummary(report: report)
+    }
+
+    private var selectedSheetIcon: String {
+        switch viewModel.selectedSheetSelection {
+        case .mergeable:
+            return "tablecells"
+        case .skipped:
+            return "exclamationmark.circle"
+        case .none:
+            return "tablecells"
         }
+    }
+
+    private var selectedStatusIcon: String {
+        switch viewModel.selectedSheetSelection {
+        case .mergeable:
+            return "checkmark.circle"
+        case .skipped:
+            return "slash.circle"
+        case .none:
+            return "circle"
+        }
+    }
+
+    private var selectedStatusTint: Color {
+        switch viewModel.selectedSheetSelection {
+        case .mergeable:
+            return .accentColor
+        case .skipped:
+            return .orange
+        case .none:
+            return .secondary
+        }
+    }
+
+    private func statusPill(text: String, systemImage: String, tint: Color) -> some View {
+        Label(text, systemImage: systemImage)
+            .font(.caption)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(tint.opacity(0.10))
+            .foregroundStyle(tint)
+            .clipShape(Capsule())
     }
 }
 
@@ -526,32 +562,16 @@ struct SheetCapsuleStrip: View {
     let onSelectSheet: (SheetOverviewItem) -> Void
 
     var body: some View {
-        VStack(spacing: 0) {
-            HStack(alignment: .firstTextBaseline) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("工作表")
-                        .font(.headline)
-                    Text("滚动鼠标可横向浏览全部工作表。")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+        HorizontalWheelScrollView {
+            HStack(spacing: 6) {
+                ForEach(items) { item in
+                    capsuleButton(for: item)
                 }
-                Spacer()
             }
             .padding(.horizontal)
-            .padding(.top, 12)
-            .padding(.bottom, 8)
-
-            HorizontalWheelScrollView {
-                HStack(spacing: 8) {
-                    ForEach(items) { item in
-                        capsuleButton(for: item)
-                    }
-                }
-                .padding(.horizontal)
-                .padding(.bottom, 12)
-            }
-            .frame(height: 54)
+            .padding(.vertical, 8)
         }
+        .frame(height: 48)
         .background(Color(NSColor.windowBackgroundColor))
     }
 
@@ -559,92 +579,87 @@ struct SheetCapsuleStrip: View {
         Button {
             onSelectSheet(item)
         } label: {
-            HStack(spacing: 8) {
-                Image(systemName: leadingIcon(for: item))
-                    .font(.caption)
-                    .foregroundStyle(capsuleForeground(for: item))
-                Text(item.sheetName)
-                    .font(.system(size: 13, weight: capsuleWeight(for: item)))
-                    .foregroundStyle(capsuleForeground(for: item))
-                    .lineLimit(1)
-                if item.anomalyCount > 0 {
-                    Text("\(item.anomalyCount)")
-                        .font(.caption2)
-                        .fontWeight(.semibold)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(Capsule().fill(Color.orange.opacity(isSelected(item) && item.status == .mergeable ? 0.18 : 0.12)))
-                        .foregroundStyle(isSelected(item) && item.status == .mergeable ? Color.accentColor : Color.orange)
-                }
+            HStack(spacing: 6) {
                 if item.status == .skipped {
-                    Text("已跳过")
-                        .font(.caption2)
-                        .fontWeight(.medium)
-                        .foregroundStyle(.orange)
+                    Circle()
+                        .fill(Color.orange.opacity(isSelected(item) ? 0.9 : 0.7))
+                        .frame(width: 5, height: 5)
                 }
+                Text(item.sheetName)
+                    .font(.system(size: 13, weight: tabWeight(for: item)))
+                    .foregroundStyle(tabForeground(for: item))
+                    .lineLimit(1)
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 7)
             .background(
-                Capsule()
-                    .fill(capsuleBackground(for: item))
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(tabBackground(for: item))
             )
             .overlay(
-                Capsule()
-                    .stroke(capsuleBorder(for: item), lineWidth: 1)
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .stroke(tabBorder(for: item), lineWidth: 1)
             )
+            .overlay(alignment: .bottom) {
+                RoundedRectangle(cornerRadius: 2, style: .continuous)
+                    .fill(tabIndicator(for: item))
+                    .frame(height: 2)
+                    .padding(.horizontal, 10)
+                    .padding(.bottom, 4)
+            }
         }
         .buttonStyle(.plain)
         .help(tooltip(for: item))
     }
 
-    private func leadingIcon(for item: SheetOverviewItem) -> String {
-        switch item.status {
-        case .mergeable:
-            return isSelected(item) ? "eye.fill" : "tablecells.fill"
-        case .skipped:
-            return isSelected(item) ? "exclamationmark.circle.fill" : "exclamationmark.circle"
-        }
-    }
-
-    private func capsuleWeight(for item: SheetOverviewItem) -> Font.Weight {
+    private func tabWeight(for item: SheetOverviewItem) -> Font.Weight {
         if isSelected(item) {
             return .semibold
         }
         return .regular
     }
 
-    private func capsuleForeground(for item: SheetOverviewItem) -> Color {
+    private func tabForeground(for item: SheetOverviewItem) -> Color {
         switch item.status {
         case .mergeable:
             return isSelected(item) ? .accentColor : .primary
         case .skipped:
-            return .orange
+            return isSelected(item) ? .orange : .secondary
         }
     }
 
-    private func capsuleBackground(for item: SheetOverviewItem) -> Color {
+    private func tabBackground(for item: SheetOverviewItem) -> Color {
         switch item.status {
         case .mergeable:
-            return isSelected(item) ? Color.accentColor.opacity(0.10) : Color(NSColor.controlBackgroundColor)
+            return isSelected(item) ? Color.white : Color(NSColor.controlBackgroundColor)
         case .skipped:
-            return isSelected(item) ? Color.orange.opacity(0.12) : Color.orange.opacity(0.06)
+            return isSelected(item) ? Color.orange.opacity(0.08) : Color(NSColor.controlBackgroundColor)
         }
     }
 
-    private func capsuleBorder(for item: SheetOverviewItem) -> Color {
+    private func tabBorder(for item: SheetOverviewItem) -> Color {
         switch item.status {
         case .mergeable:
-            return isSelected(item) ? Color.accentColor.opacity(0.35) : Color.secondary.opacity(0.12)
+            return isSelected(item) ? Color.accentColor.opacity(0.22) : Color.secondary.opacity(0.10)
         case .skipped:
-            return Color.orange.opacity(isSelected(item) ? 0.45 : 0.25)
+            return Color.orange.opacity(isSelected(item) ? 0.22 : 0.10)
+        }
+    }
+
+    private func tabIndicator(for item: SheetOverviewItem) -> Color {
+        guard isSelected(item) else { return .clear }
+        switch item.status {
+        case .mergeable:
+            return Color.accentColor.opacity(0.85)
+        case .skipped:
+            return Color.orange.opacity(0.85)
         }
     }
 
     private func tooltip(for item: SheetOverviewItem) -> String {
         switch item.status {
         case .mergeable:
-            return "\(item.sheetName)\n参与文件: \(item.participatingFileCount)/\(item.totalFileCount)\n有效尺寸: \(item.effectiveRowCount) x \(item.effectiveColumnCount)\n异常数: \(item.anomalyCount)"
+            return "\(item.sheetName)\n参与文件: \(item.participatingFileCount)/\(item.totalFileCount)\n有效尺寸: \(item.effectiveRowCount) x \(item.effectiveColumnCount)"
         case .skipped:
             if let consensus = WorkspaceDiagnostics.buildSkippedSheetConsensus(report: report, sheetName: item.sheetName) {
                 return [
@@ -670,37 +685,118 @@ struct SheetCapsuleStrip: View {
     }
 }
 
+private struct WorkspaceChromePrimaryButtonStyle: ButtonStyle {
+    let prominent: Bool
+
+    func makeBody(configuration: Configuration) -> some View {
+        WorkspaceChromePrimaryButton(configuration: configuration, prominent: prominent)
+    }
+}
+
+private struct WorkspaceChromePrimaryButton: View {
+    let configuration: WorkspaceChromePrimaryButtonStyle.Configuration
+    let prominent: Bool
+
+    @Environment(\.isEnabled) private var isEnabled
+
+    var body: some View {
+        configuration.label
+            .font(.system(size: 13, weight: .semibold))
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .foregroundStyle(foregroundColor)
+            .background(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(backgroundColor)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .stroke(borderColor, lineWidth: 1)
+            )
+            .shadow(color: shadowColor, radius: 8, y: 1)
+            .scaleEffect(configuration.isPressed ? 0.985 : 1)
+            .opacity(isEnabled ? 1 : 0.48)
+            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+    }
+
+    private var foregroundColor: Color {
+        prominent && isEnabled ? .white : .primary
+    }
+
+    private var backgroundColor: Color {
+        if prominent {
+            let opacity = configuration.isPressed ? 0.82 : 0.94
+            return Color.accentColor.opacity(isEnabled ? opacity : 0.18)
+        }
+        return Color.white.opacity(configuration.isPressed ? 0.88 : 0.96)
+    }
+
+    private var borderColor: Color {
+        if prominent {
+            return Color.accentColor.opacity(isEnabled ? 0.18 : 0.10)
+        }
+        return Color.secondary.opacity(0.14)
+    }
+
+    private var shadowColor: Color {
+        guard prominent, isEnabled, !configuration.isPressed else { return .clear }
+        return Color.black.opacity(0.08)
+    }
+}
+
+private struct WorkspaceChromeUtilityButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        WorkspaceChromeUtilityButton(configuration: configuration)
+    }
+}
+
+private struct WorkspaceChromeUtilityButton: View {
+    let configuration: WorkspaceChromeUtilityButtonStyle.Configuration
+
+    @Environment(\.isEnabled) private var isEnabled
+
+    var body: some View {
+        configuration.label
+            .font(.system(size: 13, weight: .medium))
+            .padding(.horizontal, 10)
+            .padding(.vertical, 7)
+            .foregroundStyle(isEnabled ? Color.primary : Color.secondary)
+            .background(
+                RoundedRectangle(cornerRadius: 9, style: .continuous)
+                    .fill(backgroundColor)
+            )
+            .opacity(isEnabled ? 1 : 0.5)
+            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+    }
+
+    private var backgroundColor: Color {
+        guard isEnabled else { return .clear }
+        return configuration.isPressed ? Color.secondary.opacity(0.10) : .clear
+    }
+}
+
 struct SkippedSheetConsensusCard: View {
     let consensus: SkippedSheetConsensus
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 8) {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .foregroundStyle(.orange)
-                Text("\(consensus.sheetName) 未参与合并")
+                Text("结构分组")
                     .font(.subheadline)
                     .fontWeight(.semibold)
-                Text("总体比较结果")
-                    .font(.caption)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background(Color.orange.opacity(0.12))
-                    .foregroundStyle(.orange)
-                    .clipShape(Capsule())
                 Spacer()
+                Text("\(consensus.comparedFileCount) 个文件")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Text("\(consensus.groupCount) 组")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
-            Text(consensus.summary)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-
-            HStack(spacing: 12) {
-                consensusMetric(title: "参与比较", value: "\(consensus.comparedFileCount) 个文件")
-                consensusMetric(title: "结构分组", value: "\(consensus.groupCount) 组")
-                if let dominant = consensus.dominantGroupDescription {
-                    consensusMetric(title: "最多文件结构", value: dominant)
-                }
+            if let dominant = consensus.dominantGroupDescription {
+                Text("主结构：\(dominant)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             VStack(alignment: .leading, spacing: 8) {
@@ -710,14 +806,11 @@ struct SkippedSheetConsensusCard: View {
                             Text(group.title)
                                 .font(.caption)
                                 .fontWeight(.semibold)
-                            Text(group.detail)
+                            Text("\(group.detail) · \(group.fileCount) 个文件")
                                 .font(.caption)
                                 .foregroundStyle(group.isDominant ? .primary : .secondary)
-                            Text("\(group.fileCount) 个文件")
-                                .font(.caption)
-                                .foregroundStyle(group.isDominant ? .orange : .secondary)
                             if group.isDominant {
-                                Text("最多")
+                                Text("主")
                                     .font(.caption2)
                                     .padding(.horizontal, 6)
                                     .padding(.vertical, 2)
@@ -731,6 +824,7 @@ struct SkippedSheetConsensusCard: View {
                         Text(group.filenames.joined(separator: "、"))
                             .font(.caption)
                             .foregroundStyle(.secondary)
+                            .lineLimit(2)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     .padding(10)
@@ -740,19 +834,12 @@ struct SkippedSheetConsensusCard: View {
             }
         }
         .padding(12)
-        .background(Color.orange.opacity(0.05))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-    }
-
-    private func consensusMetric(title: String, value: String) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(value)
-                .font(.caption)
-                .fontWeight(.medium)
-            Text(title)
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-        }
+        .background(Color(NSColor.windowBackgroundColor))
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(Color.orange.opacity(0.18), lineWidth: 1)
+        )
     }
 }
 
@@ -767,11 +854,16 @@ struct SkippedSheetWorkspaceView: View {
                         .font(.system(size: 28, weight: .medium))
                         .foregroundStyle(.orange)
 
-                    Text("\(consensus.sheetName) 已跳过")
+                    Text(consensus.sheetName)
                         .font(.title3)
                         .fontWeight(.semibold)
 
-                    Text("这个工作表没有在当前文件集合中形成统一的有效尺寸，因此本次不进入汇总表格，也不提供检查台编辑。")
+                    Text("未参与本次汇总")
+                        .font(.callout)
+                        .fontWeight(.medium)
+                        .foregroundStyle(.orange)
+
+                    Text(consensus.summary)
                         .font(.callout)
                         .multilineTextAlignment(.center)
                         .foregroundStyle(.secondary)
@@ -782,7 +874,7 @@ struct SkippedSheetWorkspaceView: View {
                 SkippedSheetConsensusCard(consensus: consensus)
                     .frame(maxWidth: 860)
 
-                Text("如果需要合并这个工作表，请先让参与文件在该 sheet 的有效行列范围保持一致，再重新校验。")
+                Text("统一该 sheet 的有效行列范围后，可重新纳入合并。")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: 720)
@@ -1457,117 +1549,127 @@ struct InspectionSidebar: View {
     @EnvironmentObject var viewModel: AppViewModel
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("检查台")
-                        .font(.headline)
-                    Text("快捷键: `1/2/3` 修正类型, `J/K` 跳转异常")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                if let cell = viewModel.selectedMergedCell,
+                   let reference = viewModel.selectedCellReference {
+                    cellDetailCard(cell: cell, reference: reference)
+                    sourceList(for: cell)
+                } else {
+                    placeholderCard("选择单元格后查看来源与修正。")
                 }
-                Spacer()
             }
             .padding()
+        }
+        .background(Color(NSColor.controlBackgroundColor))
+    }
+
+    private func cellDetailCard(cell: MergedCell, reference: String) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(reference)
+                        .font(.title3)
+                        .fontWeight(.semibold)
+                    Text(cell.displayValue.isEmpty ? "空值" : cell.displayValue)
+                        .font(.body.monospaced())
+                }
+                Spacer()
+                VStack(alignment: .trailing, spacing: 6) {
+                    CellTypeBadge(type: cell.type)
+                    if cell.isOverridden {
+                        Text("已修正")
+                            .font(.caption2)
+                            .foregroundStyle(.orange)
+                    }
+                }
+            }
+
+            HStack(spacing: 8) {
+                confidenceBadge(value: cell.decision.confidence)
+                if cell.decision.isSuspicious {
+                    labelChip("需复核", tint: .orange)
+                }
+                labelChip("自动: \(cell.decision.autoDetectedType.displayName)", tint: .blue)
+            }
+
+            if let decisionSummary = WorkspaceDiagnostics.decisionSummary(for: cell) {
+                Text(decisionSummary)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+            }
 
             Divider()
 
-            ScrollView {
-                VStack(alignment: .leading, spacing: 18) {
-                    cellSummarySection
-                    sourceSection
-                    anomalySection
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 8) {
+                    Button("标签") {
+                        if let selectedCell = viewModel.selectedCell {
+                            viewModel.applyCellOverride(row: selectedCell.row, col: selectedCell.col, type: .label)
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
+
+                    Button("求和") {
+                        if let selectedCell = viewModel.selectedCell {
+                            viewModel.applyCellOverride(row: selectedCell.row, col: selectedCell.col, type: .sum)
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
+
+                    Button("混合") {
+                        if let selectedCell = viewModel.selectedCell {
+                            viewModel.applyCellOverride(row: selectedCell.row, col: selectedCell.col, type: .mixed)
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
                 }
-                .padding()
+
+                Text("1/2/3 修正 · J/K 跳转")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
             }
-            .background(Color(NSColor.controlBackgroundColor))
         }
+        .padding()
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
-    private var cellSummarySection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("当前单元格")
-                .font(.subheadline)
-                .fontWeight(.semibold)
-
-            if let cell = viewModel.selectedMergedCell,
-               let reference = viewModel.selectedCellReference {
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack(alignment: .top) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(reference)
-                                .font(.title3)
-                                .fontWeight(.semibold)
-                            Text(cell.displayValue.isEmpty ? "空值" : cell.displayValue)
-                                .font(.body.monospaced())
-                        }
-                        Spacer()
-                        VStack(alignment: .trailing, spacing: 6) {
-                            CellTypeBadge(type: cell.type)
-                            if cell.isOverridden {
-                                Text("已修正")
-                                    .font(.caption2)
-                                    .foregroundStyle(.orange)
-                            }
-                        }
-                    }
-
-                    HStack(spacing: 8) {
-                        confidenceBadge(value: cell.decision.confidence)
-                        if cell.decision.isSuspicious {
-                            labelChip("需复核", tint: .orange)
-                        }
-                        labelChip("自动判定 \(cell.decision.autoDetectedType.displayName)", tint: .blue)
-                    }
-
-                    Text("判定依据")
+    private func sourceList(for cell: MergedCell) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            if !cell.sources.isEmpty {
+                HStack {
+                    Text("\(cell.sources.count) 个来源")
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                    Spacer()
+                }
 
-                    VStack(alignment: .leading, spacing: 6) {
-                        ForEach(cell.decision.decisionReasons, id: \.self) { reason in
-                            Text(reason)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 8) {
+                    ForEach(Array(cell.sources.enumerated()), id: \.offset) { _, source in
+                        HStack(alignment: .top, spacing: 10) {
+                            SourceStateBadge(state: source.state)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(source.filename)
+                                    .font(.caption)
+                                    .fontWeight(.medium)
+                                Text(sourceDisplayValue(source))
+                                    .font(.system(.caption, design: .monospaced))
+                                    .foregroundStyle(source.state == .value ? .primary : .secondary)
+                            }
+                            Spacer()
                         }
-                    }
-
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("快速修正")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        HStack(spacing: 8) {
-                            Button("标签") {
-                                if let selectedCell = viewModel.selectedCell {
-                                    viewModel.applyCellOverride(row: selectedCell.row, col: selectedCell.col, type: .label)
-                                }
-                            }
-                            .buttonStyle(.borderedProminent)
-                            .controlSize(.small)
-
-                            Button("求和") {
-                                if let selectedCell = viewModel.selectedCell {
-                                    viewModel.applyCellOverride(row: selectedCell.row, col: selectedCell.col, type: .sum)
-                                }
-                            }
-                            .buttonStyle(.borderedProminent)
-                            .controlSize(.small)
-
-                            Button("混合") {
-                                if let selectedCell = viewModel.selectedCell {
-                                    viewModel.applyCellOverride(row: selectedCell.row, col: selectedCell.col, type: .mixed)
-                                }
-                            }
-                            .buttonStyle(.borderedProminent)
-                            .controlSize(.small)
-                        }
+                        .padding()
+                        .background(Color.white)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
                     }
                 }
-                .padding()
-                .background(Color.white)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
             } else {
-                placeholderCard("选择一个单元格后，可在这里查看来源、判定依据和快速修正入口。")
+                placeholderCard("当前单元格没有可显示的来源。")
             }
         }
     }
@@ -1588,7 +1690,7 @@ struct InspectionSidebar: View {
 
     private var sourceSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("来源明细")
+            Text("来源")
                 .font(.subheadline)
                 .fontWeight(.semibold)
 
@@ -1613,7 +1715,7 @@ struct InspectionSidebar: View {
                     }
                 }
             } else {
-                placeholderCard("来源明细会按导入顺序展示，并区分真实值、空值和缺失单元格。")
+                placeholderCard("这里会显示该单元格在各文件中的来源。")
             }
         }
     }
@@ -1626,34 +1728,6 @@ struct InspectionSidebar: View {
             return "空值"
         case .missing:
             return "缺失单元格"
-        }
-    }
-
-    private var anomalySection: some View {
-        let anomalies = viewModel.allAnomalies
-        return VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("异常队列")
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                Spacer()
-                Text("\(anomalies.count) 条")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            if anomalies.isEmpty {
-                placeholderCard("当前没有需要人工关注的异常单元格。")
-            } else {
-                AnomalyQueueList(
-                    items: anomalies,
-                    currentSheet: viewModel.currentSheet,
-                    selectedCell: viewModel.selectedCell
-                ) { item in
-                    viewModel.switchToSheet(item.sheetName)
-                    viewModel.selectCell(item.position)
-                }
-            }
         }
     }
 
@@ -1700,51 +1774,6 @@ struct SourceStateBadge: View {
             return .orange
         case .missing:
             return .secondary
-        }
-    }
-}
-
-struct AnomalyQueueList: View {
-    let items: [CellAnomalyItem]
-    let currentSheet: String?
-    let selectedCell: CellPosition?
-    let onSelect: (CellAnomalyItem) -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            SwiftUI.ForEach(Array(items.enumerated()), id: \.element.id) { _, item in
-                Button {
-                    onSelect(item)
-                } label: {
-                    HStack(alignment: .top) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("\(item.sheetName) · \(item.cellReference)")
-                                .font(.caption)
-                                .fontWeight(.medium)
-                                .foregroundStyle(.primary)
-                            Text(item.summary)
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                            if !item.displayValue.isEmpty {
-                                Text(item.displayValue)
-                                    .font(.system(.caption2, design: .monospaced))
-                                    .foregroundStyle(.secondary)
-                                    .lineLimit(1)
-                            }
-                        }
-                        Spacer()
-                        if currentSheet == item.sheetName && selectedCell == item.position {
-                            Image(systemName: "arrow.right.circle.fill")
-                                .foregroundStyle(Color.accentColor)
-                        }
-                    }
-                    .padding()
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                }
-                .buttonStyle(.plain)
-            }
         }
     }
 }

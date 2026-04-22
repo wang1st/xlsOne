@@ -316,6 +316,59 @@ final class WorkspaceDiagnosticsTests: XCTestCase {
         XCTAssertEqual(consensus?.groups.last?.detail, "未包含该工作表")
     }
 
+    func testWorkspaceSummaryUsesCompactReadyStateCopy() {
+        let report = WorkbookValidationReport(
+            readiness: .ready,
+            templateFile: nil,
+            files: [
+                FileValidationReport(
+                    filename: "a.xlsx",
+                    filepath: "/tmp/a.xlsx",
+                    status: .included,
+                    isTemplate: false,
+                    issues: [],
+                    sheetReports: []
+                ),
+                FileValidationReport(
+                    filename: "b.xlsx",
+                    filepath: "/tmp/b.xlsx",
+                    status: .included,
+                    isTemplate: false,
+                    issues: [],
+                    sheetReports: []
+                )
+            ],
+            commonSheetNames: ["Sheet1", "Sheet2", "Sheet3"],
+            skippedSheetNames: ["Sheet4"],
+            skippedSheetIssues: []
+        )
+
+        let summary = WorkspaceDiagnostics.workspaceSummary(report: report)
+
+        XCTAssertEqual(summary, "2 个文件参与 · 3 张可合并 · 1 张跳过")
+    }
+
+    func testDecisionSummaryUsesMostDecisiveReason() {
+        let cell = MergedCell(
+            type: .label,
+            displayValue: "331024001",
+            sources: [],
+            decision: MergedCellDecision(
+                autoDetectedType: .label,
+                confidence: 0.67,
+                decisionReasons: [
+                    "自身格式指纹: 整数编码",
+                    "综合得分偏向标签"
+                ],
+                isSuspicious: true
+            )
+        )
+
+        let summary = WorkspaceDiagnostics.decisionSummary(for: cell)
+
+        XCTAssertEqual(summary, "综合得分偏向标签")
+    }
+
     func testExportNamingPrefersLongestSharedPhraseAcrossFilenames() {
         let exportName = ExportNaming.suggestedWorkbookName(
             from: [
