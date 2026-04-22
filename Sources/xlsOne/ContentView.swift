@@ -6,245 +6,24 @@ struct ContentView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // 工具栏
             toolbar
-
             Divider()
 
-            // 工作表选择器
-            if !viewModel.availableSheets.isEmpty {
-                sheetSelector
-                Divider()
-            }
-
-            // 主内容区
-            if viewModel.isLoading {
-                loadingView
-            } else if let result = viewModel.mergedResult {
-                spreadsheetView(result: result)
-            } else if viewModel.files.isEmpty {
+            switch viewModel.workspacePhase {
+            case .idle:
                 emptyView
-            } else {
-                noDataView
+            case .validating:
+                loadingView
+            case .blocked:
+                blockedView
+            case .ready:
+                readyWorkspace
             }
         }
         .alert("错误", isPresented: $viewModel.showError) {
             Button("确定", role: .cancel) {}
         } message: {
             Text(viewModel.errorMessage ?? "未知错误")
-        }
-        .onDrop(of: [.fileURL], delegate: DropDelegateView(viewModel: viewModel))
-    }
-
-    // MARK: - 子视图
-
-    private var toolbar: some View {
-        HStack(spacing: 12) {
-            // 左侧按钮组
-            HStack(spacing: 8) {
-                Button {
-                    viewModel.showOpenFileDialog()
-                } label: {
-                    Label("打开", systemImage: "folder")
-                }
-                .buttonStyle(.borderedProminent)
-
-                Button {
-                    viewModel.exportResult()
-                } label: {
-                    Label("导出", systemImage: "square.and.arrow.up")
-                }
-                .buttonStyle(.bordered)
-                .disabled(viewModel.mergedResult == nil)
-
-                Button {
-                    viewModel.showSchemaManagerWindow()
-                } label: {
-                    Label("Schema", systemImage: "doc.text.magnifyingglass")
-                }
-                .buttonStyle(.bordered)
-            }
-
-            Divider()
-                .frame(height: 20)
-
-            // 中间按钮组（文件操作）
-            HStack(spacing: 8) {
-                Button {
-                    viewModel.reloadFiles()
-                } label: {
-                    Label("重载", systemImage: "arrow.clockwise")
-                }
-                .buttonStyle(.bordered)
-                .disabled(viewModel.files.isEmpty)
-                .help("重新加载所有文件 (⌘R)")
-
-                Button {
-                    viewModel.closeAllFiles()
-                } label: {
-                    Label("清空", systemImage: "trash")
-                }
-                .buttonStyle(.bordered)
-                .disabled(viewModel.files.isEmpty)
-                .help("关闭所有文件 (⌘⇧W)")
-            }
-
-            Spacer()
-
-            // 右侧文件计数
-            if !viewModel.files.isEmpty {
-                HStack(spacing: 4) {
-                    Image(systemName: "doc.text")
-                        .font(.caption)
-                    Text("\(viewModel.files.count) 个文件")
-                        .font(.caption)
-                }
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(Color(NSColor.controlBackgroundColor))
-                .cornerRadius(4)
-            }
-        }
-        .padding()
-        .background(Color(NSColor.windowBackgroundColor))
-    }
-
-    private var sheetSelector: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 4) {
-                ForEach(viewModel.availableSheets, id: \.self) { sheetName in
-                    SheetTabButton(
-                        title: sheetName,
-                        isSelected: viewModel.currentSheet == sheetName
-                    ) {
-                        viewModel.switchToSheet(sheetName)
-                    }
-                }
-            }
-            .padding(.horizontal)
-            .padding(.vertical, 6)
-        }
-        .background(Color(NSColor.windowBackgroundColor))
-    }
-
-    private var loadingView: some View {
-        VStack {
-            ProgressView()
-                .scaleEffect(1.5)
-            Text("正在加载...")
-                .foregroundStyle(.secondary)
-                .padding(.top)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(NSColor.controlBackgroundColor))
-    }
-
-    private var emptyView: some View {
-        VStack(spacing: 20) {
-            Image(systemName: "doc.text.magnifyingglass")
-                .font(.system(size: 64))
-                .foregroundStyle(.secondary)
-
-            Text("拖拽 Excel 文件到此处")
-                .font(.title2)
-                .fontWeight(.medium)
-
-            Text("或使用 ⌘O 打开文件")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-
-            Button("打开文件") {
-                viewModel.showOpenFileDialog()
-            }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
-            .padding(.top)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(NSColor.controlBackgroundColor))
-    }
-
-    private var noDataView: some View {
-        VStack {
-            Image(systemName: "exclamationmark.triangle")
-                .font(.system(size: 48))
-                .foregroundStyle(.secondary)
-            Text("无法读取数据")
-                .foregroundStyle(.secondary)
-                .padding(.top)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(NSColor.controlBackgroundColor))
-    }
-
-    private func spreadsheetView(result: MergedResult) -> some View {
-        VStack(spacing: 0) {
-            // 表头信息
-            HStack {
-                Text("工作表: \(result.sheetName)")
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundStyle(.primary)
-
-                Spacer()
-
-                Text("来源: \(result.sourceFiles.count) 个文件")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            .padding(.horizontal)
-            .padding(.vertical, 6)
-            .background(Color(NSColor.windowBackgroundColor))
-
-            Divider()
-
-            // 表格
-            ExcelGridView(
-                rows: result.rows,
-                onApplyOverride: { row, col, type in
-                    viewModel.applyCellOverride(row: row, col: col, type: type)
-                },
-                onApplyBulkOverride: { positions, type in
-                    viewModel.applyBulkOverride(positions: positions, type: type)
-                }
-            )
-
-            // 批量操作提示
-            if !viewModel.userOverrides.isEmpty {
-                HStack {
-                    Text("已应用 \(viewModel.userOverrides.count) 个修正")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-
-                    Spacer()
-
-                    Button("撤销上一步") {
-                        viewModel.undoLastOverride()
-                    }
-                    .font(.caption)
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-                    .keyboardShortcut("z", modifiers: .command)
-
-                    Button("保存为 Schema...") {
-                        viewModel.showSaveSchemaDialog = true
-                    }
-                    .font(.caption)
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.small)
-
-                    Button("清除") {
-                        viewModel.clearOverrides()
-                    }
-                    .font(.caption)
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-                }
-                .padding(.horizontal)
-                .padding(.vertical, 6)
-                .background(Color(NSColor.controlBackgroundColor))
-            }
         }
         .sheet(isPresented: $viewModel.showSchemaManager) {
             SchemaManagerView()
@@ -258,39 +37,840 @@ struct ContentView: View {
                 }
             }
         } message: {
-            Text("为此文件类型保存当前的修正配置")
+            Text("将当前类型修正保存为后续可复用的 Schema")
+        }
+        .onDrop(of: [.fileURL], delegate: DropDelegateView(viewModel: viewModel))
+    }
+
+    private var toolbar: some View {
+        let presentation = viewModel.toolbarPresentation
+
+        return HStack(spacing: 12) {
+            HStack(spacing: 8) {
+                if presentation.importIsProminent {
+                    Button {
+                        viewModel.showOpenFileDialog()
+                    } label: {
+                        Label(presentation.importTitle, systemImage: "folder.badge.plus")
+                    }
+                    .buttonStyle(.borderedProminent)
+                } else {
+                    Button {
+                        viewModel.showOpenFileDialog()
+                    } label: {
+                        Label(presentation.importTitle, systemImage: "folder.badge.plus")
+                    }
+                    .buttonStyle(.bordered)
+                }
+
+                Button {
+                    viewModel.showAddFileDialog()
+                } label: {
+                    Label("追加文件", systemImage: "plus")
+                }
+                .buttonStyle(.bordered)
+                .disabled(!presentation.appendEnabled)
+
+            }
+
+            Divider()
+                .frame(height: 20)
+
+            HStack(spacing: 8) {
+                Button {
+                    viewModel.showSchemaManagerWindow()
+                } label: {
+                    Label("规则库", systemImage: "books.vertical")
+                }
+                .buttonStyle(.bordered)
+
+                Button {
+                    viewModel.reloadFiles()
+                } label: {
+                    Label("重新校验", systemImage: "arrow.clockwise")
+                }
+                .buttonStyle(.bordered)
+                .disabled(viewModel.selectedFilePaths.isEmpty)
+            }
+
+            Divider()
+                .frame(height: 20)
+
+            HStack(spacing: 8) {
+                if presentation.exportIsProminent {
+                    Button {
+                        viewModel.exportResult()
+                    } label: {
+                        Label("导出汇总", systemImage: "square.and.arrow.up")
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(!viewModel.canExport)
+                } else {
+                    Button {
+                        viewModel.exportResult()
+                    } label: {
+                        Label("导出汇总", systemImage: "square.and.arrow.up")
+                    }
+                    .buttonStyle(.bordered)
+                    .disabled(!viewModel.canExport)
+                }
+
+                Button {
+                    viewModel.closeAllFiles()
+                } label: {
+                    Label("新建批次", systemImage: "plus.circle")
+                }
+                .buttonStyle(.bordered)
+                .disabled(viewModel.selectedFilePaths.isEmpty)
+                .help("仅清空当前工作区，不影响原始 Excel 文件")
+            }
+
+            Spacer()
+
+            HStack(spacing: 8) {
+                statPill(title: "已选", value: "\(viewModel.selectedFilePaths.count)")
+                statPill(title: "参与", value: "\(viewModel.participatingFileCount)")
+                if viewModel.blockedFileCount > 0 {
+                    statPill(title: "阻断", value: "\(viewModel.blockedFileCount)", tint: .red)
+                }
+                if viewModel.warningFileCount > 0 {
+                    statPill(title: "警告", value: "\(viewModel.warningFileCount)", tint: .orange)
+                }
+                if let skippedSheetCount = viewModel.validationReport?.skippedSheetCount, skippedSheetCount > 0 {
+                    statPill(title: "跳过sheet", value: "\(skippedSheetCount)", tint: .orange)
+                }
+            }
+        }
+        .padding()
+        .background(Color(NSColor.windowBackgroundColor))
+    }
+
+    private func statPill(title: String, value: String, tint: Color = .secondary) -> some View {
+        HStack(spacing: 4) {
+            Text(title)
+            Text(value)
+                .fontWeight(.semibold)
+        }
+        .font(.caption)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 5)
+        .background(tint.opacity(0.12))
+        .foregroundStyle(tint)
+        .clipShape(Capsule())
+    }
+
+    private var emptyView: some View {
+        VStack(spacing: 20) {
+            Image(systemName: "tablecells.badge.ellipsis")
+                .font(.system(size: 68))
+                .foregroundStyle(.secondary)
+
+            Text("快速合并同构 Excel")
+                .font(.title2)
+                .fontWeight(.semibold)
+
+            Text("将多个结构一致的 Excel 汇总成同构结果文件。\n系统会先做结构校验，再进入可穿透、可修正的检查工作台。")
+                .multilineTextAlignment(.center)
+                .foregroundStyle(.secondary)
+
+            HStack(spacing: 12) {
+                Button(viewModel.toolbarPresentation.importTitle) {
+                    viewModel.showOpenFileDialog()
+                }
+                .buttonStyle(.borderedProminent)
+            }
+            .padding(.top, 4)
+
+            Text("也可以直接拖拽 Excel 文件到窗口。")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(NSColor.controlBackgroundColor))
+    }
+
+    private var loadingView: some View {
+        VStack(spacing: 16) {
+            ProgressView()
+                .scaleEffect(1.4)
+            Text("正在校验工作簿结构并准备汇总工作台…")
+                .foregroundStyle(.secondary)
+            Text("已选 \(viewModel.selectedFilePaths.count) 个文件")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(NSColor.controlBackgroundColor))
+    }
+
+    private var blockedView: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                HStack(alignment: .top, spacing: 12) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.orange)
+                        .font(.title2)
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("没有可参与汇总的同构工作表")
+                            .font(.title3)
+                            .fontWeight(.semibold)
+                        Text("系统已忽略尾部空白行列后重试校验，但当前仍没有任何 sheet 能在所有文件间对齐。")
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                if let report = viewModel.validationReport {
+                    validationSummary(report)
+                    if report.skippedSheetCount > 0 {
+                        skippedSheetList(report)
+                    }
+                    fileParticipationList(report.files)
+                }
+            }
+            .padding(24)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .background(Color(NSColor.controlBackgroundColor))
+    }
+
+    private func validationSummary(_ report: WorkbookValidationReport) -> some View {
+        HStack(spacing: 12) {
+            statCard(title: "参与文件", value: "\(report.includedFiles.count)", tint: .green)
+            statCard(title: "阻断文件", value: "\(report.blockedFiles.count)", tint: .red)
+            statCard(title: "警告文件", value: "\(report.warningFiles.count)", tint: .orange)
+            if report.skippedSheetCount > 0 {
+                statCard(title: "跳过工作表", value: "\(report.skippedSheetCount)", tint: .orange)
+            }
+        }
+    }
+
+    private func statCard(title: String, value: String, tint: Color) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Text(value)
+                .font(.title3)
+                .fontWeight(.semibold)
+                .foregroundStyle(tint)
+        }
+        .padding()
+        .frame(maxWidth: 140, alignment: .leading)
+        .background(tint.opacity(0.1))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
+    private func fileParticipationList(_ reports: [FileValidationReport]) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("文件参与情况")
+                .font(.headline)
+
+            ForEach(reports, id: \.filepath) { report in
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack(spacing: 10) {
+                        statusDot(for: report.status)
+                        Text(report.filename)
+                            .fontWeight(.medium)
+                        Spacer()
+                        Text(report.statusLabel)
+                            .font(.caption)
+                            .foregroundStyle(report.statusColor)
+                    }
+
+                    if !report.issues.isEmpty {
+                        VStack(alignment: .leading, spacing: 6) {
+                            ForEach(report.issues) { issue in
+                                Text(issue.message)
+                                    .font(.caption)
+                                    .foregroundStyle(issue.severity == .blocking ? .red : .orange)
+                            }
+                        }
+                    }
+                }
+                .padding()
+                .background(Color.white)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(report.statusColor.opacity(0.2), lineWidth: 1)
+                )
+            }
+        }
+    }
+
+    private func skippedSheetList(_ report: WorkbookValidationReport) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("已跳过的工作表")
+                .font(.headline)
+
+            ForEach(report.skippedSheetNames, id: \.self) { sheetName in
+                if let consensus = WorkspaceDiagnostics.buildSkippedSheetConsensus(report: report, sheetName: sheetName) {
+                    SkippedSheetConsensusCard(consensus: consensus)
+                } else {
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundStyle(.orange)
+                            Text(sheetName)
+                                .fontWeight(.medium)
+                            Spacer()
+                            Text("不参与合并")
+                                .font(.caption)
+                                .foregroundStyle(.orange)
+                        }
+
+                        ForEach(report.skippedSheetIssues.filter { $0.sheetName == sheetName }) { issue in
+                            Text(issue.message)
+                                .font(.caption)
+                                .foregroundStyle(.orange)
+                        }
+                    }
+                    .padding()
+                    .background(Color.orange.opacity(0.08))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+            }
+        }
+    }
+
+    private func statusDot(for status: FileValidationStatus) -> some View {
+        Circle()
+            .fill(statusColor(for: status))
+            .frame(width: 8, height: 8)
+    }
+
+    private func statusColor(for status: FileValidationStatus) -> Color {
+        switch status {
+        case .included:
+            return .green
+        case .warning:
+            return .orange
+        case .blocked:
+            return .red
+        }
+    }
+
+    private var readyWorkspace: some View {
+        VStack(spacing: 0) {
+            if let report = viewModel.validationReport {
+                WorkbookStatusStrip(report: report)
+                    .environmentObject(viewModel)
+                Divider()
+                SheetCapsuleStrip(
+                    items: viewModel.sheetOverviewItems,
+                    report: report,
+                    selection: viewModel.selectedSheetSelection
+                ) { item in
+                    switch item.status {
+                    case .mergeable:
+                        viewModel.switchToSheet(item.sheetName)
+                    case .skipped:
+                        viewModel.switchToSkippedSheet(item.sheetName)
+                    }
+                }
+                Divider()
+            }
+
+            if let consensus = viewModel.selectedSkippedSheetConsensus {
+                skippedSheetWorkspace(consensus: consensus)
+            } else if let result = viewModel.mergedResult {
+                mergeableSheetWorkspace(result: result)
+            } else {
+                VStack(spacing: 12) {
+                    Image(systemName: "tablecells")
+                        .font(.largeTitle)
+                        .foregroundStyle(.secondary)
+                    Text("当前没有可显示的汇总结果")
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color(NSColor.controlBackgroundColor))
+            }
+
+            if viewModel.correctionCount > 0 {
+                Divider()
+                correctionBar
+            }
+        }
+    }
+
+    private func mergeableSheetWorkspace(result: MergedResult) -> some View {
+        HStack(spacing: 0) {
+            ExcelGridView(
+                rows: result.rows,
+                selectedCell: Binding(
+                    get: { viewModel.selectedCell },
+                    set: { viewModel.selectCell($0) }
+                ),
+                anomalyPositions: Set(viewModel.anomalyQueue.map(\.position)),
+                onApplyOverride: { row, col, type in
+                    viewModel.applyCellOverride(row: row, col: col, type: type)
+                },
+                onApplyBulkOverride: { positions, type in
+                    viewModel.applyBulkOverride(positions: positions, type: type)
+                },
+                onJumpNextAnomaly: {
+                    viewModel.jumpToNextAnomaly()
+                },
+                onJumpPreviousAnomaly: {
+                    viewModel.jumpToPreviousAnomaly()
+                }
+            )
+
+            Divider()
+
+            InspectionSidebar()
+                .environmentObject(viewModel)
+                .frame(width: 360)
+        }
+    }
+
+    private func skippedSheetWorkspace(consensus: SkippedSheetConsensus) -> some View {
+        SkippedSheetWorkspaceView(consensus: consensus)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color(NSColor.controlBackgroundColor))
+    }
+
+    private var correctionBar: some View {
+        HStack {
+            Text("已应用 \(viewModel.correctionCount) 个类型修正")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            Spacer()
+
+            Button("撤销上一步") {
+                viewModel.undoLastOverride()
+            }
+            .font(.caption)
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+
+            Button("保存为 Schema…") {
+                viewModel.showSaveSchemaDialog = true
+            }
+            .font(.caption)
+            .buttonStyle(.borderedProminent)
+            .controlSize(.small)
+
+            Button("清除全部修正") {
+                viewModel.clearOverrides()
+            }
+            .font(.caption)
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 8)
+        .background(Color(NSColor.controlBackgroundColor))
+    }
+}
+
+private extension FileValidationReport {
+    var statusColor: Color {
+        switch status {
+        case .included: return .green
+        case .warning: return .orange
+        case .blocked: return .red
+        }
+    }
+
+    var statusLabel: String {
+        switch status {
+        case .included: return "参与合并"
+        case .warning: return "已跳过"
+        case .blocked: return "阻断"
         }
     }
 }
 
-// MARK: - 工作表标签按钮
-
-struct SheetTabButton: View {
-    let title: String
-    let isSelected: Bool
-    let action: () -> Void
+struct WorkbookStatusStrip: View {
+    @EnvironmentObject var viewModel: AppViewModel
+    let report: WorkbookValidationReport
 
     var body: some View {
-        Button(action: action) {
+        HStack(spacing: 16) {
+            statusColumn(title: "参与文件", value: "\(report.includedFiles.count)")
+            statusColumn(title: "当前工作表", value: viewModel.selectedSheetName ?? "-")
+            statusColumn(title: "结构状态", value: viewModel.selectedSheetStructureStatus)
+            statusColumn(title: "Schema", value: viewModel.matchedSchema?.name ?? "未命中")
+            statusColumn(title: "人工修正", value: "\(viewModel.correctionCount)")
+            statusColumn(title: "异常队列", value: "\(viewModel.allAnomalies.count)")
+            if report.skippedSheetCount > 0 {
+                statusColumn(title: "跳过工作表", value: "\(report.skippedSheetCount)")
+            }
+
+            Spacer()
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 10)
+        .background(Color(NSColor.windowBackgroundColor))
+    }
+
+    private func statusColumn(title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(value)
+                .font(.subheadline)
+                .fontWeight(.medium)
             Text(title)
-                .font(.system(size: 12))
-                .fontWeight(isSelected ? .semibold : .regular)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(isSelected ? Color.white : Color.clear)
-                .foregroundStyle(isSelected ? .primary : .secondary)
-                .cornerRadius(4)
-                .overlay(
-                    Group {
-                        if isSelected {
-                            RoundedRectangle(cornerRadius: 4)
-                                .stroke(Color.gray.opacity(0.3), lineWidth: 0.5)
-                                .shadow(color: .black.opacity(0.05), radius: 1, x: 0, y: 1)
-                        }
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+}
+
+struct SheetCapsuleStrip: View {
+    let items: [SheetOverviewItem]
+    let report: WorkbookValidationReport
+    let selection: WorkspaceSheetSelection?
+    let onSelectSheet: (SheetOverviewItem) -> Void
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("工作表")
+                        .font(.headline)
+                    Text("滚动鼠标可横向浏览全部工作表。")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+            }
+            .padding(.horizontal)
+            .padding(.top, 12)
+            .padding(.bottom, 8)
+
+            HorizontalWheelScrollView {
+                HStack(spacing: 8) {
+                    ForEach(items) { item in
+                        capsuleButton(for: item)
                     }
-                )
+                }
+                .padding(.horizontal)
+                .padding(.bottom, 12)
+            }
+            .frame(height: 54)
+        }
+        .background(Color(NSColor.windowBackgroundColor))
+    }
+
+    private func capsuleButton(for item: SheetOverviewItem) -> some View {
+        Button {
+            onSelectSheet(item)
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: leadingIcon(for: item))
+                    .font(.caption)
+                    .foregroundStyle(capsuleForeground(for: item))
+                Text(item.sheetName)
+                    .font(.system(size: 13, weight: capsuleWeight(for: item)))
+                    .foregroundStyle(capsuleForeground(for: item))
+                    .lineLimit(1)
+                if item.anomalyCount > 0 {
+                    Text("\(item.anomalyCount)")
+                        .font(.caption2)
+                        .fontWeight(.semibold)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Capsule().fill(Color.orange.opacity(isSelected(item) && item.status == .mergeable ? 0.18 : 0.12)))
+                        .foregroundStyle(isSelected(item) && item.status == .mergeable ? Color.accentColor : Color.orange)
+                }
+                if item.status == .skipped {
+                    Text("已跳过")
+                        .font(.caption2)
+                        .fontWeight(.medium)
+                        .foregroundStyle(.orange)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(
+                Capsule()
+                    .fill(capsuleBackground(for: item))
+            )
+            .overlay(
+                Capsule()
+                    .stroke(capsuleBorder(for: item), lineWidth: 1)
+            )
         }
         .buttonStyle(.plain)
+        .help(tooltip(for: item))
+    }
+
+    private func leadingIcon(for item: SheetOverviewItem) -> String {
+        switch item.status {
+        case .mergeable:
+            return isSelected(item) ? "eye.fill" : "tablecells.fill"
+        case .skipped:
+            return isSelected(item) ? "exclamationmark.circle.fill" : "exclamationmark.circle"
+        }
+    }
+
+    private func capsuleWeight(for item: SheetOverviewItem) -> Font.Weight {
+        if isSelected(item) {
+            return .semibold
+        }
+        return .regular
+    }
+
+    private func capsuleForeground(for item: SheetOverviewItem) -> Color {
+        switch item.status {
+        case .mergeable:
+            return isSelected(item) ? .accentColor : .primary
+        case .skipped:
+            return .orange
+        }
+    }
+
+    private func capsuleBackground(for item: SheetOverviewItem) -> Color {
+        switch item.status {
+        case .mergeable:
+            return isSelected(item) ? Color.accentColor.opacity(0.10) : Color(NSColor.controlBackgroundColor)
+        case .skipped:
+            return isSelected(item) ? Color.orange.opacity(0.12) : Color.orange.opacity(0.06)
+        }
+    }
+
+    private func capsuleBorder(for item: SheetOverviewItem) -> Color {
+        switch item.status {
+        case .mergeable:
+            return isSelected(item) ? Color.accentColor.opacity(0.35) : Color.secondary.opacity(0.12)
+        case .skipped:
+            return Color.orange.opacity(isSelected(item) ? 0.45 : 0.25)
+        }
+    }
+
+    private func tooltip(for item: SheetOverviewItem) -> String {
+        switch item.status {
+        case .mergeable:
+            return "\(item.sheetName)\n参与文件: \(item.participatingFileCount)/\(item.totalFileCount)\n有效尺寸: \(item.effectiveRowCount) x \(item.effectiveColumnCount)\n异常数: \(item.anomalyCount)"
+        case .skipped:
+            if let consensus = WorkspaceDiagnostics.buildSkippedSheetConsensus(report: report, sheetName: item.sheetName) {
+                return [
+                    item.sheetName,
+                    consensus.summary,
+                    "识别到 \(consensus.groupCount) 个结构分组"
+                ].joined(separator: "\n")
+            }
+            let detail = item.detailMessages.joined(separator: "\n")
+            return ([item.sheetName, item.reasonSummary, detail].compactMap { $0 }.joined(separator: "\n"))
+        }
+    }
+
+    private func isSelected(_ item: SheetOverviewItem) -> Bool {
+        switch (selection, item.status) {
+        case (.mergeable(let sheetName), .mergeable):
+            return sheetName == item.sheetName
+        case (.skipped(let sheetName), .skipped):
+            return sheetName == item.sheetName
+        default:
+            return false
+        }
+    }
+}
+
+struct SkippedSheetConsensusCard: View {
+    let consensus: SkippedSheetConsensus
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundStyle(.orange)
+                Text("\(consensus.sheetName) 未参与合并")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                Text("总体比较结果")
+                    .font(.caption)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Color.orange.opacity(0.12))
+                    .foregroundStyle(.orange)
+                    .clipShape(Capsule())
+                Spacer()
+            }
+
+            Text(consensus.summary)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            HStack(spacing: 12) {
+                consensusMetric(title: "参与比较", value: "\(consensus.comparedFileCount) 个文件")
+                consensusMetric(title: "结构分组", value: "\(consensus.groupCount) 组")
+                if let dominant = consensus.dominantGroupDescription {
+                    consensusMetric(title: "最多文件结构", value: dominant)
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                ForEach(consensus.groups) { group in
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack(spacing: 8) {
+                            Text(group.title)
+                                .font(.caption)
+                                .fontWeight(.semibold)
+                            Text(group.detail)
+                                .font(.caption)
+                                .foregroundStyle(group.isDominant ? .primary : .secondary)
+                            Text("\(group.fileCount) 个文件")
+                                .font(.caption)
+                                .foregroundStyle(group.isDominant ? .orange : .secondary)
+                            if group.isDominant {
+                                Text("最多")
+                                    .font(.caption2)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(Color.orange.opacity(0.12))
+                                    .foregroundStyle(.orange)
+                                    .clipShape(Capsule())
+                            }
+                            Spacer()
+                        }
+
+                        Text(group.filenames.joined(separator: "、"))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .padding(10)
+                    .background(group.isDominant ? Color.orange.opacity(0.08) : Color(NSColor.controlBackgroundColor))
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                }
+            }
+        }
+        .padding(12)
+        .background(Color.orange.opacity(0.05))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
+    private func consensusMetric(title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(value)
+                .font(.caption)
+                .fontWeight(.medium)
+            Text(title)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
+    }
+}
+
+struct SkippedSheetWorkspaceView: View {
+    let consensus: SkippedSheetConsensus
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 24) {
+                VStack(spacing: 10) {
+                    Image(systemName: "square.stack.3d.up.slash")
+                        .font(.system(size: 28, weight: .medium))
+                        .foregroundStyle(.orange)
+
+                    Text("\(consensus.sheetName) 已跳过")
+                        .font(.title3)
+                        .fontWeight(.semibold)
+
+                    Text("这个工作表没有在当前文件集合中形成统一的有效尺寸，因此本次不进入汇总表格，也不提供检查台编辑。")
+                        .font(.callout)
+                        .multilineTextAlignment(.center)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: 560)
+                }
+                .padding(.top, 28)
+
+                SkippedSheetConsensusCard(consensus: consensus)
+                    .frame(maxWidth: 860)
+
+                Text("如果需要合并这个工作表，请先让参与文件在该 sheet 的有效行列范围保持一致，再重新校验。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: 720)
+                    .multilineTextAlignment(.center)
+                    .padding(.bottom, 32)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 24)
+        }
+    }
+}
+
+struct HorizontalWheelScrollView<Content: View>: NSViewRepresentable {
+    let content: Content
+
+    init(@ViewBuilder content: () -> Content) {
+        self.content = content()
+    }
+
+    func makeNSView(context: Context) -> HorizontalWheelScrollContainer<Content> {
+        HorizontalWheelScrollContainer(rootView: content)
+    }
+
+    func updateNSView(_ nsView: HorizontalWheelScrollContainer<Content>, context: Context) {
+        nsView.update(rootView: content)
+    }
+}
+
+final class HorizontalWheelScrollContainer<Content: View>: NSScrollView {
+    private let hostingView: NSHostingView<Content>
+
+    init(rootView: Content) {
+        self.hostingView = NSHostingView(rootView: rootView)
+        super.init(frame: .zero)
+        drawsBackground = false
+        borderType = .noBorder
+        hasVerticalScroller = false
+        hasHorizontalScroller = false
+        autohidesScrollers = true
+        scrollerStyle = .overlay
+        documentView = hostingView
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override func layout() {
+        super.layout()
+        updateDocumentFrame()
+    }
+
+    override func scrollWheel(with event: NSEvent) {
+        let shouldMapVerticalDelta = abs(event.scrollingDeltaY) > abs(event.scrollingDeltaX)
+        guard shouldMapVerticalDelta else {
+            super.scrollWheel(with: event)
+            return
+        }
+
+        let delta = event.hasPreciseScrollingDeltas ? event.scrollingDeltaY : event.scrollingDeltaY * 12
+        scrollHorizontally(by: delta)
+    }
+
+    func update(rootView: Content) {
+        hostingView.rootView = rootView
+        hostingView.layoutSubtreeIfNeeded()
+        updateDocumentFrame()
+    }
+
+    private func updateDocumentFrame() {
+        let fittingSize = hostingView.fittingSize
+        let viewportSize = contentView.bounds.size
+        hostingView.frame = NSRect(
+            x: 0,
+            y: 0,
+            width: max(fittingSize.width, viewportSize.width),
+            height: max(fittingSize.height, viewportSize.height)
+        )
+    }
+
+    private func scrollHorizontally(by delta: CGFloat) {
+        guard let documentView else { return }
+        let maxOffset = max(0, documentView.frame.width - contentView.bounds.width)
+        var targetOrigin = contentView.bounds.origin
+        targetOrigin.x = min(max(targetOrigin.x - delta, 0), maxOffset)
+        contentView.setBoundsOrigin(targetOrigin)
+        reflectScrolledClipView(contentView)
     }
 }
 
@@ -301,28 +881,49 @@ private struct ScrollOffsetPreferenceKey: PreferenceKey {
     }
 }
 
-// MARK: - Excel 风格网格视图
-
 struct ExcelGridView: View {
     let rows: [[MergedCell]]
+    @Binding var selectedCell: CellPosition?
+    let anomalyPositions: Set<CellPosition>
     var initialColumnWidths: [Int: CGFloat] = [:]
     var layoutObserver: GridLayoutObserver? = nil
+    var onApplyOverride: ((Int, Int, CellOverrideType) -> Void)?
+    var onApplyBulkOverride: (([CellPosition], CellOverrideType) -> Void)?
+    var onJumpNextAnomaly: (() -> Void)?
+    var onJumpPreviousAnomaly: (() -> Void)?
 
     @State private var selectedCells: Set<CellPosition> = []
     @State private var lastSelectedCell: CellPosition?
-    @State private var showDetailSheet = false
-    @State private var showBulkEditSheet = false
     @State private var columnWidths: [Int: CGFloat] = [:]
     @State private var rowNumberColumnWidth: CGFloat = GridMetrics.rowNumberMinimumWidth
     @State private var columnResizeController = ColumnResizeController()
     @State private var scrollOffset: CGPoint = .zero
 
+    init(
+        rows: [[MergedCell]],
+        selectedCell: Binding<CellPosition?> = .constant(nil),
+        anomalyPositions: Set<CellPosition> = [],
+        initialColumnWidths: [Int: CGFloat] = [:],
+        layoutObserver: GridLayoutObserver? = nil,
+        onApplyOverride: ((Int, Int, CellOverrideType) -> Void)? = nil,
+        onApplyBulkOverride: (([CellPosition], CellOverrideType) -> Void)? = nil,
+        onJumpNextAnomaly: (() -> Void)? = nil,
+        onJumpPreviousAnomaly: (() -> Void)? = nil
+    ) {
+        self.rows = rows
+        self._selectedCell = selectedCell
+        self.anomalyPositions = anomalyPositions
+        self.initialColumnWidths = initialColumnWidths
+        self.layoutObserver = layoutObserver
+        self.onApplyOverride = onApplyOverride
+        self.onApplyBulkOverride = onApplyBulkOverride
+        self.onJumpNextAnomaly = onJumpNextAnomaly
+        self.onJumpPreviousAnomaly = onJumpPreviousAnomaly
+    }
+
     private var maxCols: Int {
         rows.map { $0.count }.max() ?? 0
     }
-
-    var onApplyOverride: ((Int, Int, CellOverrideType) -> Void)?
-    var onApplyBulkOverride: (([CellPosition], CellOverrideType) -> Void)?
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -342,11 +943,6 @@ struct ExcelGridView: View {
                                             ForEach(Array(row.enumerated()), id: \.offset) { colIdx, cell in
                                                 let position = CellPosition(row: rowIdx, col: colIdx)
                                                 cellView(for: cell, at: position, colIdx: colIdx)
-                                            }
-
-                                            ForEach(row.count..<maxCols, id: \.self) { colIdx in
-                                                let position = CellPosition(row: rowIdx, col: colIdx)
-                                                cellView(for: MergedCell(type: .single("")), at: position, colIdx: colIdx)
                                             }
                                         }
                                     }
@@ -418,9 +1014,14 @@ struct ExcelGridView: View {
             }
             .onAppear {
                 initializeColumnWidths()
+                synchronizeExternalSelection()
             }
             .onChange(of: rows) { _ in
                 initializeColumnWidths()
+                synchronizeExternalSelection()
+            }
+            .onChange(of: selectedCell) { _ in
+                synchronizeExternalSelection()
             }
 
             if selectedCells.count > 1 {
@@ -428,48 +1029,84 @@ struct ExcelGridView: View {
                     selectedCount: selectedCells.count,
                     onApply: { type in
                         onApplyBulkOverride?(Array(selectedCells), type)
-                        selectedCells.removeAll()
+                        selectedCells = []
                     },
                     onCancel: {
-                        selectedCells.removeAll()
+                        selectedCells = []
+                        synchronizeExternalSelection()
                     }
                 )
                 .padding(.bottom, 12)
                 .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
-        .sheet(isPresented: $showDetailSheet) {
-            if let selected = lastSelectedCell,
-               selected.row < rows.count,
-               selected.col < rows[selected.row].count {
-                CellDetailView(
-                    cell: rows[selected.row][selected.col],
-                    cellReference: cellReference(row: selected.row, col: selected.col),
-                    rowIndex: selected.row,
-                    colIndex: selected.col,
-                    onApplyOverride: { type in
-                        onApplyOverride?(selected.row, selected.col, type)
-                    }
-                )
+        .background(
+            HotkeyMonitorView { key in
+                handleHotkey(key)
             }
+        )
+    }
+
+    private func synchronizeExternalSelection() {
+        guard let selectedCell else { return }
+        if selectedCells.count <= 1 {
+            selectedCells = [selectedCell]
+            lastSelectedCell = selectedCell
         }
-        .background(EscapeKeyMonitorView {
-            selectedCells.removeAll()
-        })
+    }
+
+    private func handleHotkey(_ key: String) {
+        switch key.lowercased() {
+        case "1":
+            applyQuickOverride(.label)
+        case "2":
+            applyQuickOverride(.sum)
+        case "3":
+            applyQuickOverride(.mixed)
+        case "j":
+            onJumpNextAnomaly?()
+        case "k":
+            onJumpPreviousAnomaly?()
+        default:
+            break
+        }
+    }
+
+    private func applyQuickOverride(_ type: CellOverrideType) {
+        if selectedCells.count > 1 {
+            onApplyBulkOverride?(Array(selectedCells), type)
+            selectedCells = []
+        } else if let selectedCell {
+            onApplyOverride?(selectedCell.row, selectedCell.col, type)
+        }
     }
 
     private func cellView(for cell: MergedCell, at position: CellPosition, colIdx: Int) -> some View {
         ExcelCellView(
             cell: cell,
             isSelected: selectedCells.contains(position),
+            isInSelectedRow: selectedCell?.row == position.row,
+            isInSelectedColumn: selectedCell?.col == position.col,
+            showsAnomalyMarker: anomalyPositions.contains(position),
             width: contentWidth(for: colIdx),
             probe: layoutObserver.map { _ in .body(position) }
         )
+        .contentShape(Rectangle())
         .onTapGesture {
-            handleCellTap(position: position, cell: cell)
+            handleCellTap(position: position)
         }
         .contextMenu {
-            cellContextMenu(for: position)
+            Menu("修正为") {
+                Button("标签") {
+                    onApplyOverride?(position.row, position.col, .label)
+                }
+                Button("求和") {
+                    onApplyOverride?(position.row, position.col, .sum)
+                }
+                Button("混合") {
+                    onApplyOverride?(position.row, position.col, .mixed)
+                }
+            }
         }
     }
 
@@ -479,60 +1116,26 @@ struct ExcelGridView: View {
         columnWidths = calculatedWidths.merging(initialColumnWidths) { _, override in override }
     }
 
-    @ViewBuilder
-    private func cellContextMenu(for position: CellPosition) -> some View {
-        Menu("修正为") {
-            Button("标签") {
-                onApplyOverride?(position.row, position.col, .label)
-                selectedCells.remove(position)
-            }
-            Button("求和") {
-                onApplyOverride?(position.row, position.col, .sum)
-                selectedCells.remove(position)
-            }
-            Button("混合") {
-                onApplyOverride?(position.row, position.col, .mixed)
-                selectedCells.remove(position)
-            }
-        }
-
-        Button("查看来源详情") {
-            lastSelectedCell = position
-            showDetailSheet = true
-        }
-    }
-
-    private func handleCellTap(position: CellPosition, cell: MergedCell) {
+    private func handleCellTap(position: CellPosition) {
         let isCommandPressed = NSApp.currentEvent?.modifierFlags.contains(.command) ?? false
         let isShiftPressed = NSApp.currentEvent?.modifierFlags.contains(.shift) ?? false
 
-        if isShiftPressed, let last = lastSelectedCell {
-            // Shift+点击：范围选择
-            selectRange(from: last, to: position)
+        if isShiftPressed, let lastSelectedCell {
+            selectRange(from: lastSelectedCell, to: position)
         } else if isCommandPressed {
-            // Cmd+点击：添加/移除选择
             if selectedCells.contains(position) {
                 selectedCells.remove(position)
             } else {
                 selectedCells.insert(position)
             }
             lastSelectedCell = position
-        } else {
-            // 普通点击：单选，如果已有选择则打开批量编辑
-            if selectedCells.isEmpty || selectedCells.count == 1 {
-                selectedCells = [position]
-                lastSelectedCell = position
-                if !cell.sourceValues.isEmpty {
-                    showDetailSheet = true
-                }
-            } else if selectedCells.contains(position) {
-                // 点击已选中的单元格，打开批量编辑
-                showBulkEditSheet = true
-            } else {
-                // 点击其他位置，清空并单选
-                selectedCells = [position]
-                lastSelectedCell = position
+            if selectedCells.count == 1 {
+                selectedCell = position
             }
+        } else {
+            selectedCells = [position]
+            selectedCell = position
+            lastSelectedCell = position
         }
     }
 
@@ -542,18 +1145,20 @@ struct ExcelGridView: View {
         let minCol = min(from.col, to.col)
         let maxCol = max(from.col, to.col)
 
+        var range: Set<CellPosition> = []
         for row in minRow...maxRow {
             for col in minCol...maxCol {
-                selectedCells.insert(CellPosition(row: row, col: col))
+                range.insert(CellPosition(row: row, col: col))
             }
         }
+        selectedCells = range
+        selectedCell = to
         lastSelectedCell = to
     }
 
     private var topLeftCorner: some View {
         Rectangle()
             .fill(Color(NSColor.controlBackgroundColor))
-            .frame(width: rowNumberColumnWidth, height: GridMetrics.headerHeight)
             .overlay(
                 Rectangle()
                     .stroke(gridLineColor, lineWidth: GridMetrics.gridLineWidth)
@@ -564,18 +1169,21 @@ struct ExcelGridView: View {
             .overlay(alignment: .trailing) {
                 gridVerticalSeparator
             }
-            .contextMenu {
-                Button("复制") {
-                    NSPasteboard.general.clearContents()
-                    NSPasteboard.general.setString("", forType: .string)
-                }
-            }
     }
 
     private var rowNumbersColumn: some View {
         VStack(spacing: 0) {
             ForEach(0..<rows.count, id: \.self) { rowIdx in
-                rowNumberView(rowIdx: rowIdx)
+                Text("\(rowIdx + 1)")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(selectedCell?.row == rowIdx ? Color.accentColor : .secondary)
+                    .frame(width: rowNumberColumnWidth, height: GridMetrics.rowHeight)
+                    .background(selectedCell?.row == rowIdx ? Color.accentColor.opacity(0.08) : Color(NSColor.controlBackgroundColor))
+                    .overlay(
+                        Rectangle()
+                            .stroke(gridLineColor, lineWidth: GridMetrics.gridLineWidth)
+                    )
+                    .overlay(rowHeaderProbe(rowIdx: rowIdx))
             }
         }
     }
@@ -585,16 +1193,11 @@ struct ExcelGridView: View {
             ForEach(0..<maxCols, id: \.self) { colIdx in
                 ZStack(alignment: .trailing) {
                     GridHeaderCell(
-                        title: columnLetters(colIdx),
+                        title: WorkspaceDiagnostics.columnLetters(colIdx),
                         contentWidth: contentWidth(for: colIdx),
                         probe: layoutObserver.map { _ in .header(colIdx) }
                     )
-                        .contextMenu {
-                            Button("复制列标") {
-                                NSPasteboard.general.clearContents()
-                                NSPasteboard.general.setString(columnLetters(colIdx), forType: .string)
-                            }
-                        }
+                    .background(selectedCell?.col == colIdx ? Color.accentColor.opacity(0.08) : Color(NSColor.controlBackgroundColor))
 
                     ColumnResizeHandle(
                         isDragging: columnResizeController.draggingColumn == colIdx,
@@ -610,41 +1213,6 @@ struct ExcelGridView: View {
                 onDragEnded: handleResizeEnded
             )
         )
-    }
-
-    private func rowNumberView(rowIdx: Int) -> some View {
-        Text("\(rowIdx + 1)")
-            .font(.system(size: 11))
-            .fontWeight(.medium)
-            .foregroundStyle(.secondary)
-            .frame(width: rowNumberColumnWidth, height: GridMetrics.rowHeight)
-            .background(Color(NSColor.controlBackgroundColor))
-            .overlay(
-                Rectangle()
-                    .stroke(gridLineColor, lineWidth: GridMetrics.gridLineWidth)
-            )
-            .overlay(rowHeaderProbe(rowIdx: rowIdx))
-            .contentShape(Rectangle())
-            .contextMenu {
-                Button("复制行号") {
-                    NSPasteboard.general.clearContents()
-                    NSPasteboard.general.setString("\(rowIdx + 1)", forType: .string)
-                }
-            }
-    }
-
-    private func cellReference(row: Int, col: Int) -> String {
-        "\(columnLetters(col))\(row + 1)"
-    }
-
-    private func columnLetters(_ col: Int) -> String {
-        var result = ""
-        var num = col
-        repeat {
-            result = String(UnicodeScalar(65 + (num % 26))!) + result
-            num = num / 26 - 1
-        } while num >= 0
-        return result
     }
 
     private func contentWidth(for colIdx: Int) -> CGFloat {
@@ -672,7 +1240,7 @@ struct ExcelGridView: View {
     }
 
     private var gridLineColor: Color {
-        Color.gray.opacity(0.4)
+        Color.gray.opacity(0.35)
     }
 
     private var gridHorizontalSeparator: some View {
@@ -700,81 +1268,6 @@ struct ExcelGridView: View {
     }
 }
 
-// MARK: - 批量编辑视图
-
-struct BulkEditView: View {
-    let selectedCount: Int
-    let onApply: (CellOverrideType) -> Void
-    @Environment(\.dismiss) private var dismiss
-    @State private var selectedType: CellOverrideType = .sum
-
-    var body: some View {
-        VStack(spacing: 20) {
-            HStack {
-                Text("批量修正")
-                    .font(.headline)
-
-                Spacer()
-
-                Button("取消") {
-                    dismiss()
-                }
-            }
-
-            Divider()
-
-            VStack(spacing: 12) {
-                Text("已选择 \(selectedCount) 个单元格")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-
-                Text("选择要应用的类型:")
-                    .font(.subheadline)
-            }
-
-            Picker("类型", selection: $selectedType) {
-                ForEach(CellOverrideType.allCases, id: \.self) { type in
-                    Text(type.displayName).tag(type)
-                }
-            }
-            .pickerStyle(.segmented)
-            .frame(width: 250)
-
-            VStack(alignment: .leading, spacing: 8) {
-                ForEach(CellOverrideType.allCases, id: \.self) { type in
-                    HStack {
-                        Text("• \(type.displayName)")
-                            .fontWeight(.medium)
-                        Text("-\(type.description)")
-                            .foregroundStyle(.secondary)
-                    }
-                    .font(.caption)
-                }
-            }
-
-            Spacer()
-
-            HStack {
-                Button("取消") {
-                    dismiss()
-                }
-                .keyboardShortcut(.escape)
-
-                Button("应用") {
-                    onApply(selectedType)
-                    dismiss()
-                }
-                .keyboardShortcut(.return)
-                .buttonStyle(.borderedProminent)
-            }
-        }
-        .padding()
-        .frame(width: 350, height: 320)
-    }
-}
-
-// MARK: - 多选悬浮工具栏
-
 struct SelectionToolbar: View {
     let selectedCount: Int
     let onApply: (CellOverrideType) -> Void
@@ -789,25 +1282,17 @@ struct SelectionToolbar: View {
             Divider()
                 .frame(height: 16)
 
-            HStack(spacing: 8) {
-                Button("标签") {
-                    onApply(.label)
-                }
+            Button("标签") { onApply(.label) }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.small)
 
-                Button("求和") {
-                    onApply(.sum)
-                }
+            Button("求和") { onApply(.sum) }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.small)
 
-                Button("混合") {
-                    onApply(.mixed)
-                }
+            Button("混合") { onApply(.mixed) }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.small)
-            }
 
             Divider()
                 .frame(height: 16)
@@ -819,54 +1304,57 @@ struct SelectionToolbar: View {
             }
             .buttonStyle(.borderless)
             .controlSize(.small)
-            .keyboardShortcut(.escape)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
         .background(
-            RoundedRectangle(cornerRadius: 8)
+            RoundedRectangle(cornerRadius: 10)
                 .fill(Color(NSColor.controlBackgroundColor))
-                .shadow(color: .black.opacity(0.15), radius: 4, x: 0, y: 2)
+                .shadow(color: .black.opacity(0.12), radius: 5, x: 0, y: 2)
         )
     }
 }
 
-// MARK: - Esc 键监听
-
-struct EscapeKeyMonitorView: NSViewRepresentable {
-    let onEscape: () -> Void
+struct HotkeyMonitorView: NSViewRepresentable {
+    let onKeyDown: (String) -> Void
 
     func makeNSView(context: Context) -> NSView {
         let view = KeyMonitorView()
-        view.onEscape = onEscape
+        view.onKeyDown = onKeyDown
         return view
     }
 
     func updateNSView(_ nsView: NSView, context: Context) {
         guard let view = nsView as? KeyMonitorView else { return }
-        view.onEscape = onEscape
+        view.onKeyDown = onKeyDown
     }
 }
 
 private class KeyMonitorView: NSView {
-    var onEscape: (() -> Void)?
+    var onKeyDown: ((String) -> Void)?
     private var monitor: Any?
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
         if monitor == nil, window != nil {
             monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+                guard let characters = event.charactersIgnoringModifiers else {
+                    return event
+                }
+
                 if event.keyCode == 53 {
-                    self?.onEscape?()
+                    self?.onKeyDown?("escape")
                     return nil
                 }
+
+                self?.onKeyDown?(characters)
                 return event
             }
         }
     }
 
     override func removeFromSuperview() {
-        if let monitor = monitor {
+        if let monitor {
             NSEvent.removeMonitor(monitor)
             self.monitor = nil
         }
@@ -874,202 +1362,404 @@ private class KeyMonitorView: NSView {
     }
 }
 
-// MARK: - Excel 单元格视图
-
 struct ExcelCellView: View {
     let cell: MergedCell
-    let sourceValues: [String: String]
     let isSelected: Bool
+    let isInSelectedRow: Bool
+    let isInSelectedColumn: Bool
+    let showsAnomalyMarker: Bool
     let width: CGFloat
     let probe: GridFrameProbe?
 
-    init(
-        cell: MergedCell,
-        isSelected: Bool,
-        width: CGFloat = GridMetrics.defaultContentWidth,
-        probe: GridFrameProbe? = nil
-    ) {
-        self.cell = cell
-        self.sourceValues = cell.sourceValues
-        self.isSelected = isSelected
-        self.width = width
-        self.probe = probe
+    var body: some View {
+        GridColumnFrame(
+            contentWidth: width,
+            height: GridMetrics.rowHeight,
+            alignment: alignment,
+            probe: probe
+        ) {
+            Text(cell.displayValue)
+                .font(.system(size: 12))
+                .lineLimit(1)
+                .truncationMode(.tail)
+        }
+        .background(backgroundColor)
+        .foregroundStyle(foregroundColor)
+        .overlay(
+            Rectangle()
+                .stroke(Color.gray.opacity(0.35), lineWidth: 0.5)
+        )
+        .overlay(alignment: .topTrailing) {
+            if showsAnomalyMarker {
+                Circle()
+                    .fill(Color.orange)
+                    .frame(width: 6, height: 6)
+                    .padding(4)
+            }
+        }
+        .overlay(alignment: .bottomTrailing) {
+            if cell.isOverridden {
+                Image(systemName: "pencil.circle.fill")
+                    .font(.caption2)
+                    .foregroundStyle(.orange)
+                    .padding(3)
+            }
+        }
+        .overlay(
+            Group {
+                if isSelected {
+                    Rectangle()
+                        .stroke(Color.accentColor, lineWidth: 2)
+                }
+            }
+        )
     }
 
-    var body: some View {
-        GridBodyCell(
-            cell: cell,
-            isSelected: isSelected,
-            contentWidth: width,
-            probe: probe
-        )
+    private var alignment: Alignment {
+        switch cell.type {
+        case .sum:
+            return .trailing
+        default:
+            return .leading
+        }
+    }
+
+    private var backgroundColor: Color {
+        if isSelected {
+            return Color.accentColor.opacity(0.16)
+        }
+        if isInSelectedRow || isInSelectedColumn {
+            return Color.accentColor.opacity(0.05)
+        }
+        switch cell.type {
+        case .sum:
+            return Color.blue.opacity(0.05)
+        case .mixed:
+            return Color.orange.opacity(0.08)
+        default:
+            return .white
+        }
+    }
+
+    private var foregroundColor: Color {
+        switch cell.type {
+        case .mixed:
+            return .orange
+        case .sum:
+            return .blue
+        default:
+            return .primary
+        }
     }
 }
 
-// MARK: - 单元格详情视图
-
-struct CellDetailView: View {
-    let cell: MergedCell
-    let cellReference: String
-    let rowIndex: Int
-    let colIndex: Int
-    var onApplyOverride: ((CellOverrideType) -> Void)?
-
-    @Environment(\.dismiss) private var dismiss
-    @State private var selectedOverride: CellOverrideType?
-    @State private var showSavedConfirmation = false
+struct InspectionSidebar: View {
+    @EnvironmentObject var viewModel: AppViewModel
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                Text("单元格 \(cellReference)")
-                    .font(.headline)
-
-                if cell.isOverridden {
-                    Image(systemName: "pencil.circle.fill")
-                        .foregroundStyle(.orange)
-                        .help("用户已修正")
-                }
-
-                Spacer()
-
-                Button("关闭") {
-                    dismiss()
-                }
-            }
-
-            Divider()
-
-            // 显示聚合信息
+        VStack(alignment: .leading, spacing: 0) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("显示值:")
-                        .font(.subheadline)
+                    Text("检查台")
+                        .font(.headline)
+                    Text("快捷键: `1/2/3` 修正类型, `J/K` 跳转异常")
+                        .font(.caption)
                         .foregroundStyle(.secondary)
-
-                    Text(cell.displayValue)
-                        .font(.title3)
-                        .fontWeight(.semibold)
                 }
-
                 Spacer()
-
-                VStack(alignment: .trailing, spacing: 4) {
-                    CellTypeBadge(type: cell.type)
-
-                    if cell.isOverridden {
-                        Text("用户修正")
-                            .font(.caption2)
-                            .foregroundStyle(.orange)
-                    }
-                }
             }
+            .padding()
 
             Divider()
 
-            // 类型修正区域
-            VStack(alignment: .leading, spacing: 12) {
-                Text("修正识别类型")
-                    .font(.subheadline)
-                    .fontWeight(.medium)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    cellSummarySection
+                    sourceSection
+                    anomalySection
+                }
+                .padding()
+            }
+            .background(Color(NSColor.controlBackgroundColor))
+        }
+    }
 
-                Text("如果自动识别不正确，可以手动指定单元格类型:")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+    private var cellSummarySection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("当前单元格")
+                .font(.subheadline)
+                .fontWeight(.semibold)
 
-                Picker("类型", selection: $selectedOverride) {
-                    Text("自动识别").tag(nil as CellOverrideType?)
+            if let cell = viewModel.selectedMergedCell,
+               let reference = viewModel.selectedCellReference {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack(alignment: .top) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(reference)
+                                .font(.title3)
+                                .fontWeight(.semibold)
+                            Text(cell.displayValue.isEmpty ? "空值" : cell.displayValue)
+                                .font(.body.monospaced())
+                        }
+                        Spacer()
+                        VStack(alignment: .trailing, spacing: 6) {
+                            CellTypeBadge(type: cell.type)
+                            if cell.isOverridden {
+                                Text("已修正")
+                                    .font(.caption2)
+                                    .foregroundStyle(.orange)
+                            }
+                        }
+                    }
 
-                    ForEach(CellOverrideType.allCases, id: \.self) { type in
-                        HStack {
-                            Text(type.displayName)
-                            Spacer()
-                            Text(type.description)
+                    HStack(spacing: 8) {
+                        confidenceBadge(value: cell.decision.confidence)
+                        if cell.decision.isSuspicious {
+                            labelChip("需复核", tint: .orange)
+                        }
+                        labelChip("自动判定 \(cell.decision.autoDetectedType.displayName)", tint: .blue)
+                    }
+
+                    Text("判定依据")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        ForEach(cell.decision.decisionReasons, id: \.self) { reason in
+                            Text(reason)
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
-                        .tag(type as CellOverrideType?)
                     }
-                }
-                .pickerStyle(.radioGroup)
 
-                HStack {
-                    Spacer()
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("快速修正")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        HStack(spacing: 8) {
+                            Button("标签") {
+                                if let selectedCell = viewModel.selectedCell {
+                                    viewModel.applyCellOverride(row: selectedCell.row, col: selectedCell.col, type: .label)
+                                }
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .controlSize(.small)
 
-                    Button("应用修正") {
-                        if let type = selectedOverride {
-                            onApplyOverride?(type)
-                            showSavedConfirmation = true
+                            Button("求和") {
+                                if let selectedCell = viewModel.selectedCell {
+                                    viewModel.applyCellOverride(row: selectedCell.row, col: selectedCell.col, type: .sum)
+                                }
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .controlSize(.small)
+
+                            Button("混合") {
+                                if let selectedCell = viewModel.selectedCell {
+                                    viewModel.applyCellOverride(row: selectedCell.row, col: selectedCell.col, type: .mixed)
+                                }
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .controlSize(.small)
                         }
                     }
-                    .disabled(selectedOverride == nil)
-                    .buttonStyle(.borderedProminent)
                 }
+                .padding()
+                .background(Color.white)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            } else {
+                placeholderCard("选择一个单元格后，可在这里查看来源、判定依据和快速修正入口。")
+            }
+        }
+    }
 
-                if showSavedConfirmation {
-                    HStack {
-                        Spacer()
+    private func confidenceBadge(value: Double) -> some View {
+        labelChip("置信度 \(Int((value * 100).rounded()))%", tint: value >= 0.72 ? .green : .orange)
+    }
 
-                        Label("修正已应用", systemImage: "checkmark.circle.fill")
-                            .font(.caption)
-                            .foregroundStyle(.green)
+    private func labelChip(_ text: String, tint: Color) -> some View {
+        Text(text)
+            .font(.caption)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(tint.opacity(0.14))
+            .foregroundStyle(tint)
+            .clipShape(Capsule())
+    }
 
-                        Spacer()
+    private var sourceSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("来源明细")
+                .font(.subheadline)
+                .fontWeight(.semibold)
+
+            if let cell = viewModel.selectedMergedCell {
+                VStack(alignment: .leading, spacing: 8) {
+                    ForEach(Array(cell.sources.enumerated()), id: \.offset) { _, source in
+                        HStack(alignment: .top, spacing: 10) {
+                            SourceStateBadge(state: source.state)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(source.filename)
+                                    .font(.caption)
+                                    .fontWeight(.medium)
+                                Text(sourceDisplayValue(source))
+                                    .font(.system(.caption, design: .monospaced))
+                                    .foregroundStyle(source.state == .value ? .primary : .secondary)
+                            }
+                            Spacer()
+                        }
+                        .padding()
+                        .background(Color.white)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
                     }
-                    .padding(.vertical, 4)
                 }
+            } else {
+                placeholderCard("来源明细会按导入顺序展示，并区分真实值、空值和缺失单元格。")
+            }
+        }
+    }
+
+    private func sourceDisplayValue(_ source: CellSourceEntry) -> String {
+        switch source.state {
+        case .value:
+            return source.value
+        case .empty:
+            return "空值"
+        case .missing:
+            return "缺失单元格"
+        }
+    }
+
+    private var anomalySection: some View {
+        let anomalies = viewModel.allAnomalies
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("异常队列")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                Spacer()
+                Text("\(anomalies.count) 条")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
-            Divider()
-
-            // 来源详情
-            Text("来源详情 (\(cell.sourceValues.count) 个文件)")
-                .font(.subheadline)
-
-            List(Array(cell.sourceValues.sorted(by: { $0.key < $1.key }).enumerated()), id: \.offset) { _, item in
-                HStack {
-                    Text(item.key)
-                        .font(.caption)
-                        .lineLimit(1)
-
-                    Spacer()
-
-                    Text(item.value)
-                        .font(.system(.body, design: .monospaced))
+            if anomalies.isEmpty {
+                placeholderCard("当前没有需要人工关注的异常单元格。")
+            } else {
+                AnomalyQueueList(
+                    items: anomalies,
+                    currentSheet: viewModel.currentSheet,
+                    selectedCell: viewModel.selectedCell
+                ) { item in
+                    viewModel.switchToSheet(item.sheetName)
+                    viewModel.selectCell(item.position)
                 }
             }
         }
-        .padding()
-        .frame(width: 500, height: 600)
+    }
+
+    private func placeholderCard(_ text: String) -> some View {
+        Text(text)
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .padding()
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.white)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 }
 
-// MARK: - 单元格类型标签
+struct SourceStateBadge: View {
+    let state: CellSourceState
+
+    var body: some View {
+        Text(title)
+            .font(.caption2)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(color.opacity(0.14))
+            .foregroundStyle(color)
+            .clipShape(Capsule())
+    }
+
+    private var title: String {
+        switch state {
+        case .value:
+            return "值"
+        case .empty:
+            return "空"
+        case .missing:
+            return "缺"
+        }
+    }
+
+    private var color: Color {
+        switch state {
+        case .value:
+            return .green
+        case .empty:
+            return .orange
+        case .missing:
+            return .secondary
+        }
+    }
+}
+
+struct AnomalyQueueList: View {
+    let items: [CellAnomalyItem]
+    let currentSheet: String?
+    let selectedCell: CellPosition?
+    let onSelect: (CellAnomalyItem) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            SwiftUI.ForEach(Array(items.enumerated()), id: \.element.id) { _, item in
+                Button {
+                    onSelect(item)
+                } label: {
+                    HStack(alignment: .top) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("\(item.sheetName) · \(item.cellReference)")
+                                .font(.caption)
+                                .fontWeight(.medium)
+                                .foregroundStyle(.primary)
+                            Text(item.summary)
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                            if !item.displayValue.isEmpty {
+                                Text(item.displayValue)
+                                    .font(.system(.caption2, design: .monospaced))
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(1)
+                            }
+                        }
+                        Spacer()
+                        if currentSheet == item.sheetName && selectedCell == item.position {
+                            Image(systemName: "arrow.right.circle.fill")
+                                .foregroundStyle(Color.accentColor)
+                        }
+                    }
+                    .padding()
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+}
 
 struct CellTypeBadge: View {
     let type: MergedCell.CellType
 
     var body: some View {
-        Text(badgeText)
+        Text(type.displayName)
             .font(.caption)
             .padding(.horizontal, 8)
-            .padding(.vertical, 2)
-            .background(badgeColor.opacity(0.15))
+            .padding(.vertical, 4)
+            .background(badgeColor.opacity(0.14))
             .foregroundStyle(badgeColor)
-            .cornerRadius(4)
-    }
-
-    private var badgeText: String {
-        switch type {
-        case .label:
-            return "标签"
-        case .sum:
-            return "求和"
-        case .mixed:
-            return "混合"
-        case .single:
-            return "单值"
-        }
+            .clipShape(Capsule())
     }
 
     private var badgeColor: Color {
@@ -1086,7 +1776,20 @@ struct CellTypeBadge: View {
     }
 }
 
-// MARK: - 拖拽支持
+private extension MergedCell.CellType {
+    var displayName: String {
+        switch self {
+        case .label:
+            return "标签"
+        case .sum:
+            return "求和"
+        case .mixed:
+            return "混合"
+        case .single:
+            return "单值"
+        }
+    }
+}
 
 struct DropDelegateView: DropDelegate {
     @ObservedObject var viewModel: AppViewModel
@@ -1095,17 +1798,15 @@ struct DropDelegateView: DropDelegate {
         let items = info.itemProviders(for: [.fileURL])
 
         for item in items {
-            item.loadItem(forTypeIdentifier: "public.file-url", options: nil) { data, error in
+            item.loadItem(forTypeIdentifier: "public.file-url", options: nil) { data, _ in
                 guard let data = data as? Data,
                       let url = URL(dataRepresentation: data, relativeTo: nil) else { return }
 
-                let path = url.path
                 let ext = url.pathExtension.lowercased()
+                guard ext == "xlsx" || ext == "xls" else { return }
 
-                if ext == "xlsx" || ext == "xls" {
-                    DispatchQueue.main.async {
-                        viewModel.loadFiles(at: [path], append: true)
-                    }
+                DispatchQueue.main.async {
+                    viewModel.loadFiles(at: [url.path], append: true)
                 }
             }
         }
@@ -1114,6 +1815,6 @@ struct DropDelegateView: DropDelegate {
     }
 
     func validateDrop(info: DropInfo) -> Bool {
-        return info.hasItemsConforming(to: [.fileURL])
+        info.hasItemsConforming(to: [.fileURL])
     }
 }

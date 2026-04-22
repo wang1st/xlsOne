@@ -8,11 +8,11 @@ public struct SimpleMerger {
 
     /// 合并多个文件的指定工作表
     public func merge(files: [ExcelFile], sheetName: String) -> MergedResult {
-        var sheetDataList: [(filename: String, sheet: SheetData)] = []
+        var sheetDataList: [(filename: String, filepath: String, sheet: SheetData)] = []
 
         for file in files {
             if let sheet = file.sheets.first(where: { $0.name == sheetName }) {
-                sheetDataList.append((filename: file.filename, sheet: sheet))
+                sheetDataList.append((filename: file.filename, filepath: file.filepath, sheet: sheet))
             }
         }
 
@@ -30,18 +30,18 @@ public struct SimpleMerger {
 
             for colIdx in 0..<maxCols {
                 // 收集当前位置的所有单元格
-                var cellData: [(filename: String, cell: CellData?)] = []
-                for (filename, sheet) in sheetDataList {
+                var cellData: [CellMergeInput] = []
+                for (filename, filepath, sheet) in sheetDataList {
                     let cell = sheet.cellAt(row: rowIdx, col: colIdx)
-                    cellData.append((filename: filename, cell: cell))
+                    cellData.append(CellMergeInput(filename: filename, filepath: filepath, cell: cell))
                 }
 
                 // 收集左邻列的所有单元格
-                var leftCellData: [(filename: String, cell: CellData?)] = []
+                var leftCellData: [CellMergeInput] = []
                 if colIdx > 0 {
-                    for (filename, sheet) in sheetDataList {
+                    for (filename, filepath, sheet) in sheetDataList {
                         let cell = sheet.cellAt(row: rowIdx, col: colIdx - 1)
-                        leftCellData.append((filename: filename, cell: cell))
+                        leftCellData.append(CellMergeInput(filename: filename, filepath: filepath, cell: cell))
                     }
                 }
 
@@ -74,11 +74,11 @@ public struct SimpleMerger {
 
     /// 合并所有文件的第一个工作表
     public func mergeFirstSheets(from files: [ExcelFile]) -> MergedResult {
-        var sheetDataList: [(filename: String, sheet: SheetData)] = []
+        var sheetDataList: [(filename: String, filepath: String, sheet: SheetData)] = []
 
         for file in files {
             if let firstSheet = file.sheets.first {
-                sheetDataList.append((filename: file.filename, sheet: firstSheet))
+                sheetDataList.append((filename: file.filename, filepath: file.filepath, sheet: firstSheet))
             }
         }
 
@@ -96,17 +96,17 @@ public struct SimpleMerger {
             var mergedRow: [MergedCell] = []
 
             for colIdx in 0..<maxCols {
-                var cellData: [(filename: String, cell: CellData?)] = []
-                for (filename, sheet) in sheetDataList {
+                var cellData: [CellMergeInput] = []
+                for (filename, filepath, sheet) in sheetDataList {
                     let cell = sheet.cellAt(row: rowIdx, col: colIdx)
-                    cellData.append((filename: filename, cell: cell))
+                    cellData.append(CellMergeInput(filename: filename, filepath: filepath, cell: cell))
                 }
 
-                var leftCellData: [(filename: String, cell: CellData?)] = []
+                var leftCellData: [CellMergeInput] = []
                 if colIdx > 0 {
-                    for (filename, sheet) in sheetDataList {
+                    for (filename, filepath, sheet) in sheetDataList {
                         let cell = sheet.cellAt(row: rowIdx, col: colIdx - 1)
-                        leftCellData.append((filename: filename, cell: cell))
+                        leftCellData.append(CellMergeInput(filename: filename, filepath: filepath, cell: cell))
                     }
                 }
 
@@ -166,7 +166,7 @@ public struct SimpleMerger {
     // MARK: - 邻居上下文
 
     private func buildNeighborContext(
-        sheetDataList: [(filename: String, sheet: SheetData)],
+        sheetDataList: [(filename: String, filepath: String, sheet: SheetData)],
         rowIdx: Int,
         colIdx: Int
     ) -> NeighborContext {
@@ -183,7 +183,7 @@ public struct SimpleMerger {
             let weight = 1.0 / Double(offset)
 
             var rowCells: [CellData?] = []
-            for (_, sheet) in sheetDataList {
+            for (_, _, sheet) in sheetDataList {
                 rowCells.append(sheet.cellAt(row: targetRow, col: colIdx))
             }
 
@@ -204,7 +204,7 @@ public struct SimpleMerger {
             let weight = 1.0 / Double(offset)
 
             var rowCells: [CellData?] = []
-            for (_, sheet) in sheetDataList {
+            for (_, _, sheet) in sheetDataList {
                 rowCells.append(sheet.cellAt(row: targetRow, col: colIdx))
             }
 
