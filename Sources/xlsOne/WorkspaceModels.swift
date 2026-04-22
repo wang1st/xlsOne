@@ -86,6 +86,31 @@ struct SkippedSheetConsensus: Hashable {
 }
 
 enum WorkspaceDiagnostics {
+    static func workspaceSummary(report: WorkbookValidationReport) -> String {
+        var segments: [String] = [
+            "\(report.includedFiles.count) 个文件参与",
+            "\(report.commonSheetNames.count) 张可合并"
+        ]
+
+        if report.skippedSheetCount > 0 {
+            segments.append("\(report.skippedSheetCount) 张跳过")
+        }
+
+        return segments.joined(separator: " · ")
+    }
+
+    static func decisionSummary(for cell: MergedCell) -> String? {
+        let reasons = cell.decision.decisionReasons
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+
+        guard let decisiveReason = reasons.last else {
+            return nil
+        }
+
+        return decisiveReason
+    }
+
     static func buildAnomalyQueue(for result: MergedResult) -> [CellAnomalyItem] {
         var items: [CellAnomalyItem] = []
 
@@ -254,9 +279,9 @@ enum WorkspaceDiagnostics {
 
         let summary: String
         if groups.contains(where: { if case .missing = $0.kind { return true } else { return false } }) {
-            summary = "该工作表在当前文件集合中未形成统一结构，且部分文件缺少该工作表，因此本次整体跳过。"
+            summary = "结构未达成一致，且部分文件缺少该工作表，已从本次汇总中排除。"
         } else {
-            summary = "该工作表在当前文件集合中未形成统一结构，因此本次整体跳过。"
+            summary = "有效尺寸未达成一致，已从本次汇总中排除。"
         }
 
         return SkippedSheetConsensus(
