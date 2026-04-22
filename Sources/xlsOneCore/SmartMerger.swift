@@ -123,6 +123,11 @@ public actor SmartMerger {
         var modifiedRows = result.rows
 
         for override in overrides {
+            if let overrideSheetName = override.sheetName,
+               overrideSheetName != result.sheetName {
+                continue
+            }
+
             let row = override.rowIndex
             let col = override.colIndex
 
@@ -138,13 +143,17 @@ public actor SmartMerger {
             let newDisplayValue: String
             switch newType {
             case .label:
-                newDisplayValue = originalCell.sourceValues.values.first ?? ""
+                newDisplayValue = originalCell.sources.first(where: { $0.state == .value })?.value ?? ""
             case .sum:
                 // 重新计算总和
-                let sum = Self.calculateSum(from: originalCell.sourceValues)
+                let sum = Self.calculateSum(from: originalCell.sources)
                 newDisplayValue = MergedCell.formatNumber(sum, formatCode: originalCell.formatCode)
             case .mixed:
-                let uniqueCount = Set(originalCell.sourceValues.values).count
+                let uniqueCount = Set(
+                    originalCell.sources
+                        .filter { $0.state == .value }
+                        .map(\.value)
+                ).count
                 newDisplayValue = "\(uniqueCount)条"
             case .single(let value):
                 newDisplayValue = value
@@ -153,9 +162,10 @@ public actor SmartMerger {
             let newCell = MergedCell.create(
                 type: newType,
                 displayValue: newDisplayValue,
-                sourceValues: originalCell.sourceValues,
+                sources: originalCell.sources,
                 isOverridden: true,
-                formatCode: originalCell.formatCode
+                formatCode: originalCell.formatCode,
+                decision: originalCell.decision
             )
 
             modifiedRows[row][col] = newCell
@@ -224,9 +234,10 @@ public actor SmartMerger {
 
     // MARK: - 静态工具方法（nonisolated）
 
-    private nonisolated static func calculateSum(from sourceValues: [String: String]) -> Double {
+    private nonisolated static func calculateSum(from sources: [CellSourceEntry]) -> Double {
         var total = 0.0
-        for (_, value) in sourceValues {
+        for source in sources where source.state == .value {
+            let value = source.value
             // 移除千分位逗号，尝试解析数值
             let cleaned = value.replacingOccurrences(of: ",", with: "")
             if let num = Double(cleaned) {

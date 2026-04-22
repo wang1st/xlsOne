@@ -14,34 +14,31 @@ struct XlsOneApp: App {
         }
         .commands {
             CommandMenu("文件") {
-                Button("打开文件...") {
+                Button("\(viewModel.toolbarPresentation.importTitle)...") {
                     viewModel.showOpenFileDialog()
                 }
                 .keyboardShortcut("o", modifiers: .command)
 
-                Button("添加文件...") {
+                Button("追加文件...") {
                     viewModel.showAddFileDialog()
                 }
                 .keyboardShortcut("o", modifiers: [.command, .shift])
+                .disabled(!viewModel.toolbarPresentation.appendEnabled)
 
                 Divider()
 
-                Button("关闭全部") {
+                Button("新建批次") {
                     viewModel.closeAllFiles()
                 }
                 .keyboardShortcut("w", modifiers: [.command, .shift])
             }
 
             CommandMenu("编辑") {
-                Button("重载") {
+                Button("重新校验") {
                     viewModel.reloadFiles()
                 }
                 .keyboardShortcut("r", modifiers: .command)
-
-                Button("重置") {
-                    viewModel.reset()
-                }
-                .keyboardShortcut("t", modifiers: .command)
+                .disabled(viewModel.selectedFilePaths.isEmpty)
 
                 Divider()
 
@@ -58,15 +55,23 @@ struct XlsOneApp: App {
 @MainActor
 class AppViewModel: ObservableObject {
     @Published var files: [ExcelFile] = []
-    @Published var currentSheet: String?
+    @Published var selectedFilePaths: [String] = []
     @Published var availableSheets: [String] = []
     @Published var mergedResult: MergedResult?
+    @Published var validationReport: WorkbookValidationReport?
+    @Published var workspacePhase: WorkspacePhase = .idle
+    @Published var selectedCell: CellPosition?
+    @Published var anomalyQueue: [CellAnomalyItem] = []
+    @Published var allAnomalies: [CellAnomalyItem] = []
     @Published var isLoading = false
     @Published var errorMessage: String?
     @Published var showError = false
+    @Published var selectedSheetSelection: WorkspaceSheetSelection?
 
     private let parser = ExcelParser()
-    private let merger = SimpleMerger()
+    private let validator = WorkbookValidator()
+    private let smartMerger = SmartMerger()
+    private var mergedResultsBySheet: [String: MergedResult] = [:]
 
     /// 显示打开文件对话框
     func showOpenFileDialog() {
@@ -104,52 +109,33 @@ class AppViewModel: ObservableObject {
 
     /// 加载文件
     func loadFiles(at paths: [String], append: Bool) {
-        isLoading = true
-
-        Task {
-            do {
-                let newFiles = try await parser.parseFiles(at: paths)
-
-                if append {
-                    files.append(contentsOf: newFiles)
-                } else {
-                    files = newFiles
-                }
-
-                // 更新可用工作表
-                availableSheets = merger.availableSheetNames(from: files)
-
-                // 如果当前工作表不在列表中，选择第一个
-                if let current = currentSheet, availableSheets.contains(current) {
-                    // 保持当前选择
-                } else {
-                    currentSheet = availableSheets.first
-                }
-
-                // 重新合并
-                updateMergedResult()
-
-            } catch {
-                errorMessage = error.localizedDescription
-                showError = true
-            }
-
-            isLoading = false
-        }
+        selectedFilePaths = append
+            ? Self.deduplicatedPaths(selectedFilePaths + paths)
+            : Self.deduplicatedPaths(paths)
+        revalidateSelection()
     }
 
     /// 关闭所有文件
     func closeAllFiles() {
         files.removeAll()
+        selectedFilePaths.removeAll()
         availableSheets.removeAll()
-        currentSheet = nil
         mergedResult = nil
+        validationReport = nil
+        workspacePhase = .idle
+        mergedResultsBySheet.removeAll()
+        selectedCell = nil
+        anomalyQueue.removeAll()
+        allAnomalies.removeAll()
+        matchedSchema = nil
+        userOverrides.removeAll()
+        overrideHistory.removeAll()
+        selectedSheetSelection = nil
     }
 
     /// 重新加载文件
     func reloadFiles() {
-        let paths = files.map { $0.filepath }
-        loadFiles(at: paths, append: false)
+        revalidateSelection()
     }
 
     /// 重置
@@ -159,8 +145,16 @@ class AppViewModel: ObservableObject {
 
     /// 切换工作表
     func switchToSheet(_ sheetName: String) {
-        currentSheet = sheetName
-        updateMergedResult()
+        selectedSheetSelection = .mergeable(sheetName)
+        syncSelectedSheetPresentation()
+        refreshSelectionAndAnomalies()
+    }
+
+    /// 切换到跳过的工作表
+    func switchToSkippedSheet(_ sheetName: String) {
+        selectedSheetSelection = .skipped(sheetName)
+        syncSelectedSheetPresentation()
+        refreshSelectionAndAnomalies()
     }
 
     /// 当前用户自定义的单元格覆盖
@@ -181,45 +175,170 @@ class AppViewModel: ObservableObject {
     /// 当前匹配的 Schema
     @Published var matchedSchema: MergeSchema?
 
-    private let smartMerger = SmartMerger()
+    var canExport: Bool {
+        workspacePhase == .ready &&
+        validationReport?.readiness == .ready &&
+        !files.isEmpty &&
+        !mergedResultsBySheet.isEmpty
+    }
+
+    var correctionCount: Int {
+        userOverrides.count
+    }
+
+    var participatingFileCount: Int {
+        validationReport?.includedFiles.count ?? 0
+    }
+
+    var blockedFileCount: Int {
+        validationReport?.blockedFiles.count ?? 0
+    }
+
+    var warningFileCount: Int {
+        validationReport?.warningFiles.count ?? 0
+    }
+
+    var sheetOverviewItems: [SheetOverviewItem] {
+        guard let validationReport else { return [] }
+        return WorkspaceDiagnostics.buildSheetOverview(
+            report: validationReport,
+            anomalyItems: allAnomalies
+        )
+    }
+
+    var toolbarPresentation: ToolbarPresentation {
+        WorkspaceToolbar.buildPresentation(
+            selectedFileCount: selectedFilePaths.count,
+            canExport: canExport
+        )
+    }
+
+    var selectedCellReference: String? {
+        guard let selectedCell else { return nil }
+        return WorkspaceDiagnostics.cellReference(row: selectedCell.row, col: selectedCell.col)
+    }
+
+    var currentSheet: String? {
+        guard case .mergeable(let sheetName)? = selectedSheetSelection else { return nil }
+        return sheetName
+    }
+
+    var selectedSheetName: String? {
+        selectedSheetSelection?.sheetName
+    }
+
+    var selectedSheetStructureStatus: String {
+        switch selectedSheetSelection {
+        case .mergeable:
+            return "可合并"
+        case .skipped:
+            return "已跳过"
+        case .none:
+            return validationReport?.readiness == .ready ? "可合并" : "-"
+        }
+    }
+
+    var selectedSkippedSheetConsensus: SkippedSheetConsensus? {
+        guard case .skipped(let sheetName)? = selectedSheetSelection,
+              let validationReport else {
+            return nil
+        }
+        return WorkspaceDiagnostics.buildSkippedSheetConsensus(
+            report: validationReport,
+            sheetName: sheetName
+        )
+    }
+
+    var selectedMergedCell: MergedCell? {
+        guard let selectedCell,
+              let result = mergedResult,
+              selectedCell.row < result.rows.count,
+              selectedCell.col < result.rows[selectedCell.row].count else {
+            return nil
+        }
+        return result.rows[selectedCell.row][selectedCell.col]
+    }
 
     /// 更新合并结果
-    private func updateMergedResult() {
+    private func revalidateSelection() {
+        guard !selectedFilePaths.isEmpty else {
+            closeAllFiles()
+            return
+        }
+
+        isLoading = true
+        workspacePhase = .validating
+
         Task {
-            guard let sheetName = currentSheet else {
+            let batch = await parser.parseFilesWithDiagnostics(at: selectedFilePaths)
+            let outcome = validator.validate(files: batch.files, parseFailures: batch.failures)
+
+            await MainActor.run {
+                validationReport = outcome.report
+                files = outcome.mergeableFiles
+                availableSheets = outcome.report.commonSheetNames
+                isLoading = false
+            }
+
+            guard outcome.report.readiness == .ready, !outcome.mergeableFiles.isEmpty else {
                 await MainActor.run {
+                    workspacePhase = .blocked
+                    selectedSheetSelection = nil
                     mergedResult = nil
+                    mergedResultsBySheet.removeAll()
+                    selectedCell = nil
+                    anomalyQueue.removeAll()
+                    allAnomalies.removeAll()
+                    matchedSchema = nil
                 }
                 return
             }
 
-            // 使用 SmartMerger 合并（会自动匹配 Schema）
-            let result = await smartMerger.merge(files: files, sheetName: sheetName)
-
-            // 应用用户临时覆盖（纯计算，无需 await）
-            let finalResult = smartMerger.applyOverrides(to: result, overrides: userOverrides)
-
-            // 获取当前应用的 Schema
-            let schema = await smartMerger.appliedSchema
-
             await MainActor.run {
-                mergedResult = finalResult
-                matchedSchema = schema
+                workspacePhase = .ready
+                selectedSheetSelection = normalizedSelectedSheetSelection(report: outcome.report)
             }
+            await refreshWorkspaceResults()
+        }
+    }
+
+    private func refreshWorkspaceResults() async {
+        guard workspacePhase == .ready, !files.isEmpty else { return }
+
+        var resultsBySheet: [String: MergedResult] = [:]
+        for sheetName in availableSheets {
+            let result = await smartMerger.merge(files: files, sheetName: sheetName)
+            let finalResult = smartMerger.applyOverrides(to: result, overrides: userOverrides)
+            resultsBySheet[sheetName] = finalResult
+        }
+
+        let schema = await smartMerger.appliedSchema
+
+        await MainActor.run {
+            mergedResultsBySheet = resultsBySheet
+            syncSelectedSheetPresentation()
+            matchedSchema = schema
+            refreshSelectionAndAnomalies()
         }
     }
 
     /// 应用单元格类型覆盖
     func applyCellOverride(row: Int, col: Int, type: CellOverrideType) {
+        guard let currentSheet else { return }
         // 记录历史（用于撤销）
         let position = CellPosition(row: row, col: col)
-        overrideHistory.append(.single(position))
+        overrideHistory.append(.single(sheetName: currentSheet, position: position))
 
         // 移除已存在的同一位置覆盖
-        userOverrides.removeAll { $0.rowIndex == row && $0.colIndex == col }
+        userOverrides.removeAll {
+            $0.sheetName == currentSheet &&
+            $0.rowIndex == row &&
+            $0.colIndex == col
+        }
 
         // 添加新覆盖
         let override = CellTypeOverride(
+            sheetName: currentSheet,
             rowIndex: row,
             colIndex: col,
             cellType: type,
@@ -228,24 +347,31 @@ class AppViewModel: ObservableObject {
         userOverrides.append(override)
 
         // 更新显示
-        updateMergedResult()
+        Task {
+            await refreshWorkspaceResults()
+        }
     }
 
     /// 批量应用类型覆盖
     func applyBulkOverride(positions: [CellPosition], type: CellOverrideType) {
-        guard !positions.isEmpty else { return }
+        guard let currentSheet, !positions.isEmpty else { return }
 
         // 记录历史（用于撤销）
-        overrideHistory.append(.batch(positions))
+        overrideHistory.append(.batch(sheetName: currentSheet, positions: positions))
 
         // 移除这些位置的所有现有覆盖
         for pos in positions {
-            userOverrides.removeAll { $0.rowIndex == pos.row && $0.colIndex == pos.col }
+            userOverrides.removeAll {
+                $0.sheetName == currentSheet &&
+                $0.rowIndex == pos.row &&
+                $0.colIndex == pos.col
+            }
         }
 
         // 为每个位置添加覆盖
         for pos in positions {
             let override = CellTypeOverride(
+                sheetName: currentSheet,
                 rowIndex: pos.row,
                 colIndex: pos.col,
                 cellType: type,
@@ -255,12 +381,14 @@ class AppViewModel: ObservableObject {
         }
 
         // 更新显示
-        updateMergedResult()
+        Task {
+            await refreshWorkspaceResults()
+        }
     }
 
     /// 保存当前覆盖为 Schema
     func saveCurrentAsSchema(name: String) async throws {
-        guard !files.isEmpty else { return }
+        guard workspacePhase == .ready, !files.isEmpty else { return }
 
         let fingerprint = FingerprintGenerator.generate(from: files[0])
         _ = try await smartMerger.createSchema(
@@ -271,13 +399,17 @@ class AppViewModel: ObservableObject {
 
         // 清空临时覆盖（已保存）
         userOverrides.removeAll()
+        overrideHistory.removeAll()
+        await refreshWorkspaceResults()
     }
 
     /// 清除所有用户覆盖
     func clearOverrides() {
         userOverrides.removeAll()
         overrideHistory.removeAll()
-        updateMergedResult()
+        Task {
+            await refreshWorkspaceResults()
+        }
     }
 
     /// 撤销上一步覆盖操作
@@ -285,20 +417,26 @@ class AppViewModel: ObservableObject {
         guard let lastOperation = overrideHistory.popLast() else { return }
 
         switch lastOperation {
-        case .single(let position):
-            removeOverride(for: position)
-        case .batch(let positions):
+        case .single(let sheetName, let position):
+            removeOverride(for: position, sheetName: sheetName)
+        case .batch(let sheetName, let positions):
             for pos in positions {
-                removeOverride(for: pos)
+                removeOverride(for: pos, sheetName: sheetName)
             }
         }
 
-        updateMergedResult()
+        Task {
+            await refreshWorkspaceResults()
+        }
     }
 
     /// 移除指定位置的覆盖
-    private func removeOverride(for position: CellPosition) {
-        userOverrides.removeAll { $0.rowIndex == position.row && $0.colIndex == position.col }
+    private func removeOverride(for position: CellPosition, sheetName: String) {
+        userOverrides.removeAll {
+            $0.sheetName == sheetName &&
+            $0.rowIndex == position.row &&
+            $0.colIndex == position.col
+        }
     }
 
     /// 显示 Schema 管理器
@@ -306,29 +444,157 @@ class AppViewModel: ObservableObject {
         showSchemaManager = true
     }
 
+    func selectCell(_ position: CellPosition?) {
+        selectedCell = position
+        refreshSelectionAndAnomalies()
+    }
+
+    func jumpToNextAnomaly() {
+        jumpAcrossAnomalies(step: 1)
+    }
+
+    func jumpToPreviousAnomaly() {
+        jumpAcrossAnomalies(step: -1)
+    }
+
+    private func jumpAcrossAnomalies(step: Int) {
+        guard !allAnomalies.isEmpty else { return }
+
+        let currentID = currentSheet.flatMap { sheetName in
+            selectedCell.map { "\(sheetName)|\(WorkspaceDiagnostics.cellReference(row: $0.row, col: $0.col))" }
+        }
+
+        let currentIndex = currentID.flatMap { id in
+            allAnomalies.firstIndex(where: { $0.id == id })
+        } ?? (step > 0 ? -1 : 0)
+
+        let nextIndex = (currentIndex + step + allAnomalies.count) % allAnomalies.count
+        let target = allAnomalies[nextIndex]
+        selectedSheetSelection = .mergeable(target.sheetName)
+        syncSelectedSheetPresentation()
+        selectedCell = target.position
+        refreshSelectionAndAnomalies()
+    }
+
     /// 导出当前结果
     func exportResult() {
-        guard let result = mergedResult else { return }
+        guard canExport,
+              let templatePath = validationReport?.templateFile?.filepath else { return }
 
         let panel = NSSavePanel()
-        panel.nameFieldStringValue = "\(result.sheetName)_汇总"
-        panel.allowedContentTypes = [UTType.html]
+        let exportName = ExportNaming.suggestedWorkbookName(
+            from: validationReport?.files.map(\.filename) ??
+                selectedFilePaths.map { URL(fileURLWithPath: $0).lastPathComponent }
+        )
+        panel.nameFieldStringValue = exportName
+        panel.allowedContentTypes = [UTType(filenameExtension: "xlsx")!]
 
         if panel.runModal() == .OK, let url = panel.url {
-            let exporter = ExcelExporter()
-            do {
-                try exporter.saveHTML(result: result, to: url.path)
-            } catch {
-                errorMessage = "导出失败: \(error.localizedDescription)"
-                showError = true
+            let results = availableSheets.compactMap { mergedResultsBySheet[$0] }
+            let exporter = TemplateWorkbookExporter()
+            Task {
+                do {
+                    try exporter.exportWorkbook(
+                        templatePath: templatePath,
+                        results: results,
+                        to: url.path
+                    )
+                } catch {
+                    await MainActor.run {
+                        errorMessage = "导出失败: \(error.localizedDescription)"
+                        showError = true
+                    }
+                }
             }
         }
+    }
+
+    private func refreshSelectionAndAnomalies() {
+        allAnomalies = availableSheets.flatMap { sheetName in
+            mergedResultsBySheet[sheetName].map(WorkspaceDiagnostics.buildAnomalyQueue(for:)) ?? []
+        }
+
+        guard let currentSheet else {
+            anomalyQueue = []
+            selectedCell = nil
+            return
+        }
+
+        anomalyQueue = mergedResultsBySheet[currentSheet].map(WorkspaceDiagnostics.buildAnomalyQueue(for:)) ?? []
+
+        guard let result = mergedResult else {
+            selectedCell = nil
+            return
+        }
+
+        if let selectedCell,
+           selectedCell.row < result.rows.count,
+           selectedCell.col < result.rows[selectedCell.row].count {
+            return
+        }
+
+        if let firstAnomaly = anomalyQueue.first {
+            selectedCell = firstAnomaly.position
+        } else if !result.rows.isEmpty, !result.rows[0].isEmpty {
+            selectedCell = CellPosition(row: 0, col: 0)
+        } else {
+            selectedCell = nil
+        }
+    }
+
+    private func normalizedSelectedSheetSelection(report: WorkbookValidationReport?) -> WorkspaceSheetSelection? {
+        if let selectedSheetSelection {
+            switch selectedSheetSelection {
+            case .mergeable(let sheetName) where availableSheets.contains(sheetName):
+                return .mergeable(sheetName)
+            case .skipped(let sheetName) where report?.skippedSheetNames.contains(sheetName) == true:
+                return .skipped(sheetName)
+            default:
+                break
+            }
+        }
+
+        if let firstMergeableSheet = availableSheets.first {
+            return .mergeable(firstMergeableSheet)
+        }
+
+        if let firstSkippedSheet = report?.skippedSheetNames.first {
+            return .skipped(firstSkippedSheet)
+        }
+
+        return nil
+    }
+
+    private func syncSelectedSheetPresentation() {
+        let normalizedSelection = normalizedSelectedSheetSelection(report: validationReport)
+        if normalizedSelection != selectedSheetSelection {
+            selectedSheetSelection = normalizedSelection
+        }
+
+        switch normalizedSelection {
+        case .mergeable(let sheetName):
+            mergedResult = mergedResultsBySheet[sheetName]
+        case .skipped:
+            mergedResult = nil
+        case .none:
+            mergedResult = nil
+        }
+    }
+
+    private static func deduplicatedPaths(_ paths: [String]) -> [String] {
+        var seen: Set<String> = []
+        var result: [String] = []
+        for path in paths where !seen.contains(path) {
+            seen.insert(path)
+            result.append(path)
+        }
+        return result
     }
 }
 
 // MARK: - 覆盖操作历史
 
 private enum OverrideOperation {
-    case single(CellPosition)
-    case batch([CellPosition])
+    case single(sheetName: String, position: CellPosition)
+    case batch(sheetName: String, positions: [CellPosition])
 }

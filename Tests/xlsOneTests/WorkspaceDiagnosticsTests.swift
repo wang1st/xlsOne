@@ -1,0 +1,385 @@
+import XCTest
+import xlsOneCore
+@testable import xlsOne
+
+final class WorkspaceDiagnosticsTests: XCTestCase {
+    func testAnomalyQueueIncludesMixedLowConfidenceAndOverriddenCells() {
+        let mixedCell = MergedCell(
+            type: .mixed(2),
+            displayValue: "2条",
+            sources: [],
+            decision: MergedCellDecision(
+                autoDetectedType: .mixed(2),
+                confidence: 0.9,
+                decisionReasons: ["mixed"],
+                isSuspicious: true
+            )
+        )
+        let lowConfidenceCell = MergedCell(
+            type: .label,
+            displayValue: "33102400_",
+            sources: [],
+            decision: MergedCellDecision(
+                autoDetectedType: .label,
+                confidence: 0.55,
+                decisionReasons: ["low confidence"],
+                isSuspicious: true
+            )
+        )
+        let overriddenCell = MergedCell(
+            type: .sum(3000),
+            displayValue: "3000",
+            sources: [],
+            isOverridden: true,
+            decision: MergedCellDecision(
+                autoDetectedType: .label,
+                confidence: 0.92,
+                decisionReasons: ["overridden"],
+                isSuspicious: false
+            )
+        )
+
+        let result = MergedResult(
+            sheetName: "Sheet1",
+            rows: [
+                [mixedCell, lowConfidenceCell],
+                [overriddenCell]
+            ],
+            sourceFiles: ["a.xlsx", "b.xlsx"]
+        )
+
+        let queue = WorkspaceDiagnostics.buildAnomalyQueue(for: result)
+
+        XCTAssertEqual(queue.map(\.cellReference), ["A1", "B1", "A2"])
+        XCTAssertEqual(queue[0].summary, "存在多种来源值")
+        XCTAssertEqual(queue[1].summary, "自动判定置信度偏低")
+        XCTAssertEqual(queue[2].summary, "已人工修正")
+    }
+
+    func testColumnLettersSupportMultipleCharacters() {
+        XCTAssertEqual(WorkspaceDiagnostics.columnLetters(0), "A")
+        XCTAssertEqual(WorkspaceDiagnostics.columnLetters(25), "Z")
+        XCTAssertEqual(WorkspaceDiagnostics.columnLetters(26), "AA")
+        XCTAssertEqual(WorkspaceDiagnostics.cellReference(row: 4, col: 27), "AB5")
+    }
+
+    func testSheetOverviewBuildsMergedAndSkippedRows() {
+        let report = WorkbookValidationReport(
+            readiness: .ready,
+            templateFile: nil,
+            files: [
+                FileValidationReport(
+                    filename: "a.xlsx",
+                    filepath: "/tmp/a.xlsx",
+                    status: .included,
+                    isTemplate: true,
+                    issues: [],
+                    sheetReports: [
+                        SheetValidationReport(
+                            sheetName: "Sheet1",
+                            readiness: .ready,
+                            issues: [],
+                            templateRowCount: 12,
+                            templateColumnCount: 5,
+                            candidateRowCount: 12,
+                            candidateColumnCount: 5
+                        ),
+                        SheetValidationReport(
+                            sheetName: "Sheet2",
+                            readiness: .blocked,
+                            issues: [],
+                            templateRowCount: 8,
+                            templateColumnCount: 4,
+                            candidateRowCount: 8,
+                            candidateColumnCount: 4
+                        )
+                    ]
+                ),
+                FileValidationReport(
+                    filename: "b.xlsx",
+                    filepath: "/tmp/b.xlsx",
+                    status: .included,
+                    isTemplate: false,
+                    issues: [],
+                    sheetReports: [
+                        SheetValidationReport(
+                            sheetName: "Sheet1",
+                            readiness: .ready,
+                            issues: [],
+                            templateRowCount: 12,
+                            templateColumnCount: 5,
+                            candidateRowCount: 12,
+                            candidateColumnCount: 5
+                        ),
+                        SheetValidationReport(
+                            sheetName: "Sheet2",
+                            readiness: .blocked,
+                            issues: [],
+                            templateRowCount: 8,
+                            templateColumnCount: 4,
+                            candidateRowCount: 9,
+                            candidateColumnCount: 4
+                        )
+                    ]
+                )
+            ],
+            commonSheetNames: ["Sheet1"],
+            skippedSheetNames: ["Sheet2"],
+            skippedSheetIssues: [
+                ValidationIssue(
+                    severity: .warning,
+                    code: .rowCountMismatch,
+                    fileName: "b.xlsx",
+                    filePath: "/tmp/b.xlsx",
+                    sheetName: "Sheet2",
+                    message: "工作表“Sheet2”有效行数不一致（忽略尾部空白后：多数文件为 8 行，当前文件为 9 行），已从本次汇总中排除"
+                )
+            ]
+        )
+
+        let items = WorkspaceDiagnostics.buildSheetOverview(
+            report: report,
+            anomalyItems: [
+                CellAnomalyItem(
+                    sheetName: "Sheet1",
+                    position: CellPosition(row: 0, col: 0),
+                    cellReference: "A1",
+                    displayValue: "100",
+                    summary: "存在多种来源值"
+                )
+            ]
+        )
+
+        XCTAssertEqual(items.map(\.sheetName), ["Sheet1", "Sheet2"])
+        XCTAssertEqual(items[0].status, .mergeable)
+        XCTAssertEqual(items[0].participatingFileCount, 2)
+        XCTAssertEqual(items[0].totalFileCount, 2)
+        XCTAssertEqual(items[0].effectiveRowCount, 12)
+        XCTAssertEqual(items[0].anomalyCount, 1)
+
+        XCTAssertEqual(items[1].status, .skipped)
+        XCTAssertEqual(items[1].participatingFileCount, 1)
+        XCTAssertEqual(items[1].reasonSummary, "有效行数不一致")
+        XCTAssertEqual(items[1].detailMessages.count, 1)
+    }
+
+    func testSheetOverviewMissingSheetUsesConciseReasonSummary() {
+        let report = WorkbookValidationReport(
+            readiness: .blocked,
+            templateFile: nil,
+            files: [
+                FileValidationReport(
+                    filename: "a.xlsx",
+                    filepath: "/tmp/a.xlsx",
+                    status: .included,
+                    isTemplate: true,
+                    issues: [],
+                    sheetReports: [
+                        SheetValidationReport(
+                            sheetName: "SheetX",
+                            readiness: .blocked,
+                            issues: [],
+                            templateRowCount: 6,
+                            templateColumnCount: 3,
+                            candidateRowCount: 6,
+                            candidateColumnCount: 3
+                        )
+                    ]
+                ),
+                FileValidationReport(
+                    filename: "b.xlsx",
+                    filepath: "/tmp/b.xlsx",
+                    status: .included,
+                    isTemplate: false,
+                    issues: [],
+                    sheetReports: [
+                        SheetValidationReport(
+                            sheetName: "SheetX",
+                            readiness: .blocked,
+                            issues: [],
+                            templateRowCount: 6,
+                            templateColumnCount: 3,
+                            candidateRowCount: 0,
+                            candidateColumnCount: 0
+                        )
+                    ]
+                )
+            ],
+            commonSheetNames: [],
+            skippedSheetNames: ["SheetX"],
+            skippedSheetIssues: [
+                ValidationIssue(
+                    severity: .warning,
+                    code: .missingSheet,
+                    fileName: "b.xlsx",
+                    filePath: "/tmp/b.xlsx",
+                    sheetName: "SheetX",
+                    message: "工作表“SheetX”未在所有文件中同时出现，已从本次汇总中排除"
+                )
+            ]
+        )
+
+        let items = WorkspaceDiagnostics.buildSheetOverview(report: report, anomalyItems: [])
+
+        XCTAssertEqual(items.first?.reasonSummary, "部分文件缺少该工作表")
+    }
+
+    func testSkippedSheetConsensusBuildsStructureGroupsFromOverallComparison() {
+        let report = WorkbookValidationReport(
+            readiness: .ready,
+            templateFile: nil,
+            files: [
+                FileValidationReport(
+                    filename: "a.xlsx",
+                    filepath: "/tmp/a.xlsx",
+                    status: .included,
+                    isTemplate: false,
+                    issues: [],
+                    sheetReports: [
+                        SheetValidationReport(
+                            sheetName: "Sheet2",
+                            readiness: .blocked,
+                            issues: [],
+                            templateRowCount: 8,
+                            templateColumnCount: 4,
+                            candidateRowCount: 8,
+                            candidateColumnCount: 4
+                        )
+                    ]
+                ),
+                FileValidationReport(
+                    filename: "b.xlsx",
+                    filepath: "/tmp/b.xlsx",
+                    status: .included,
+                    isTemplate: false,
+                    issues: [],
+                    sheetReports: [
+                        SheetValidationReport(
+                            sheetName: "Sheet2",
+                            readiness: .blocked,
+                            issues: [],
+                            templateRowCount: 8,
+                            templateColumnCount: 4,
+                            candidateRowCount: 8,
+                            candidateColumnCount: 4
+                        )
+                    ]
+                ),
+                FileValidationReport(
+                    filename: "c.xlsx",
+                    filepath: "/tmp/c.xlsx",
+                    status: .included,
+                    isTemplate: false,
+                    issues: [
+                        ValidationIssue(
+                            severity: .warning,
+                            code: .missingSheet,
+                            fileName: "c.xlsx",
+                            filePath: "/tmp/c.xlsx",
+                            sheetName: "Sheet2",
+                            message: "工作表“Sheet2”未在所有文件中同时出现，已从本次汇总中排除"
+                        )
+                    ],
+                    sheetReports: [
+                        SheetValidationReport(
+                            sheetName: "Sheet2",
+                            readiness: .blocked,
+                            issues: [
+                                ValidationIssue(
+                                    severity: .warning,
+                                    code: .missingSheet,
+                                    fileName: "c.xlsx",
+                                    filePath: "/tmp/c.xlsx",
+                                    sheetName: "Sheet2",
+                                    message: "工作表“Sheet2”未在所有文件中同时出现，已从本次汇总中排除"
+                                )
+                            ],
+                            templateRowCount: 0,
+                            templateColumnCount: 0,
+                            candidateRowCount: 0,
+                            candidateColumnCount: 0
+                        )
+                    ]
+                )
+            ],
+            commonSheetNames: [],
+            skippedSheetNames: ["Sheet2"],
+            skippedSheetIssues: []
+        )
+
+        let consensus = WorkspaceDiagnostics.buildSkippedSheetConsensus(report: report, sheetName: "Sheet2")
+
+        XCTAssertEqual(consensus?.comparedFileCount, 3)
+        XCTAssertEqual(consensus?.groupCount, 2)
+        XCTAssertEqual(consensus?.groups.first?.detail, "有效尺寸 8 行 × 4 列")
+        XCTAssertEqual(consensus?.groups.first?.fileCount, 2)
+        XCTAssertEqual(consensus?.groups.last?.detail, "未包含该工作表")
+    }
+
+    func testExportNamingPrefersLongestSharedPhraseAcrossFilenames() {
+        let exportName = ExportNaming.suggestedWorkbookName(
+            from: [
+                "仙居县安洲街道办事处2025乡镇报表主体信息表.xlsx",
+                "仙居县白塔镇人民政府2025乡镇报表主体信息表.xlsx",
+                "仙居县横溪镇人民政府2025乡镇报表主体信息表.xlsx"
+            ]
+        )
+
+        XCTAssertEqual(exportName, "2025乡镇报表主体信息表_汇总")
+    }
+
+    func testExportNamingTrimsTrailingDelimitersFromSharedPrefix() {
+        let exportName = ExportNaming.suggestedWorkbookName(
+            from: [
+                "2025-乡镇-A-主体信息表.xlsx",
+                "2025-乡镇-B-主体信息表.xlsx"
+            ]
+        )
+
+        XCTAssertEqual(exportName, "2025-乡镇_汇总")
+    }
+
+    func testExportNamingFallsBackToMostRepeatedTokensWhenPrefixIsTooShort() {
+        let exportName = ExportNaming.suggestedWorkbookName(
+            from: [
+                "甲村2025主体信息表.xlsx",
+                "乙村2025主体信息表.xlsx",
+                "丙村2025主体信息表.xlsx"
+            ]
+        )
+
+        XCTAssertEqual(exportName, "2025主体信息表_汇总")
+    }
+
+    func testExportNamingFallsBackToSingleStemForSingleFile() {
+        let exportName = ExportNaming.suggestedWorkbookName(
+            from: ["安洲街道主体信息表.xlsx"]
+        )
+
+        XCTAssertEqual(exportName, "安洲街道主体信息表_汇总")
+    }
+
+    func testToolbarPresentationUsesImportAsPrimaryActionWhenWorkspaceIsEmpty() {
+        let presentation = WorkspaceToolbar.buildPresentation(
+            selectedFileCount: 0,
+            canExport: false
+        )
+
+        XCTAssertEqual(presentation.importTitle, "导入文件")
+        XCTAssertFalse(presentation.appendEnabled)
+        XCTAssertTrue(presentation.importIsProminent)
+        XCTAssertFalse(presentation.exportIsProminent)
+    }
+
+    func testToolbarPresentationPromotesExportWhenWorkspaceCanExport() {
+        let presentation = WorkspaceToolbar.buildPresentation(
+            selectedFileCount: 3,
+            canExport: true
+        )
+
+        XCTAssertEqual(presentation.importTitle, "替换文件")
+        XCTAssertTrue(presentation.appendEnabled)
+        XCTAssertFalse(presentation.importIsProminent)
+        XCTAssertTrue(presentation.exportIsProminent)
+    }
+}

@@ -2,6 +2,26 @@ import Foundation
 import CoreXLSX
 import ZIPFoundation
 
+public struct ExcelParseFailure: Sendable, Equatable {
+    public let path: String
+    public let message: String
+
+    public init(path: String, message: String) {
+        self.path = path
+        self.message = message
+    }
+}
+
+public struct ExcelParseBatchResult: Sendable {
+    public let files: [ExcelFile]
+    public let failures: [ExcelParseFailure]
+
+    public init(files: [ExcelFile], failures: [ExcelParseFailure]) {
+        self.files = files
+        self.failures = failures
+    }
+}
+
 /// Excel 文件解析器
 public struct ExcelParser {
 
@@ -233,32 +253,35 @@ public struct ExcelParser {
 
     /// 解析多个Excel文件
     public func parseFiles(at paths: [String]) async throws -> [ExcelFile] {
+        let batch = await parseFilesWithDiagnostics(at: paths)
+        if batch.files.isEmpty && !batch.failures.isEmpty {
+            throw ParserError.allFilesFailed(
+                batch.failures.map { ($0.path, ParserError.invalidFormat($0.message)) }
+            )
+        }
+        return batch.files
+    }
+
+    /// 解析多个 Excel 文件并返回诊断信息
+    public func parseFilesWithDiagnostics(at paths: [String]) async -> ExcelParseBatchResult {
         var files: [ExcelFile] = []
-        var errors: [(String, Error)] = []
+        var errors: [ExcelParseFailure] = []
 
         for path in paths {
             do {
                 let file = try await parseFile(at: path)
                 files.append(file)
             } catch {
-                errors.append((path, error))
+                errors.append(
+                    ExcelParseFailure(
+                        path: path,
+                        message: error.localizedDescription
+                    )
+                )
             }
         }
 
-        // 如果所有文件都解析失败，抛出错误
-        if files.isEmpty && !errors.isEmpty {
-            throw ParserError.allFilesFailed(errors)
-        }
-
-        // 记录错误但不中断
-        if !errors.isEmpty {
-            print("Warning: Failed to parse \(errors.count) file(s):")
-            for (path, error) in errors {
-                print("  - \(path): \(error)")
-            }
-        }
-
-        return files
+        return ExcelParseBatchResult(files: files, failures: errors)
     }
 
     /// 将 Excel 列引用转换为 0-based 列索引

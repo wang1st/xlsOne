@@ -2,17 +2,20 @@ import Foundation
 
 /// 单元格类型覆盖定义
 public struct CellTypeOverride: Codable, Sendable, Equatable {
+    public let sheetName: String?
     public let rowIndex: Int
     public let colIndex: Int
     public let cellType: CellOverrideType
     public let userNote: String?
 
     public init(
+        sheetName: String? = nil,
         rowIndex: Int,
         colIndex: Int,
         cellType: CellOverrideType,
         userNote: String? = nil
     ) {
+        self.sheetName = sheetName
         self.rowIndex = rowIndex
         self.colIndex = colIndex
         self.cellType = cellType

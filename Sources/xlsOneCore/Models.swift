@@ -117,6 +117,65 @@ public struct CellData: Equatable, Sendable {
     }
 }
 
+public enum CellSourceState: String, Equatable, Sendable {
+    case value
+    case empty
+    case missing
+}
+
+public struct CellSourceEntry: Equatable, Sendable {
+    public let filename: String
+    public let filepath: String
+    public let value: String
+    public let rawValue: String?
+    public let state: CellSourceState
+
+    public init(
+        filename: String,
+        filepath: String,
+        value: String,
+        rawValue: String? = nil,
+        state: CellSourceState
+    ) {
+        self.filename = filename
+        self.filepath = filepath
+        self.value = value
+        self.rawValue = rawValue
+        self.state = state
+    }
+}
+
+public struct CellMergeInput: Equatable, Sendable {
+    public let filename: String
+    public let filepath: String
+    public let cell: CellData?
+
+    public init(filename: String, filepath: String, cell: CellData?) {
+        self.filename = filename
+        self.filepath = filepath
+        self.cell = cell
+    }
+}
+
+public struct MergedCellDecision: Equatable, Sendable {
+    public let autoDetectedType: MergedCell.CellType
+    public let confidence: Double
+    public let decisionReasons: [String]
+    public let isSuspicious: Bool
+
+    public init(
+        autoDetectedType: MergedCell.CellType,
+        confidence: Double,
+        decisionReasons: [String],
+        isSuspicious: Bool
+    ) {
+        self.autoDetectedType = autoDetectedType
+        self.confidence = confidence
+        self.decisionReasons = decisionReasons
+        self.isSuspicious = isSuspicious
+    }
+}
+
 /// 聚合后的单元格数据
 public struct MergedCell: Equatable, Sendable {
     public enum CellType: Equatable, Sendable {
@@ -128,7 +187,7 @@ public struct MergedCell: Equatable, Sendable {
 
     public let type: CellType
     public let displayValue: String
-    public let sourceValues: [String: String]  // 文件名 -> 原始值
+    public let sources: [CellSourceEntry]
 
     /// 是否是用户覆盖的类型
     public let isOverridden: Bool
@@ -136,20 +195,31 @@ public struct MergedCell: Equatable, Sendable {
     /// Excel 原始格式码（用于输出时复刻格式）
     public let formatCode: String?
 
+    /// 自动判定解释信息
+    public let decision: MergedCellDecision
+
+    public var sourceValues: [String: String] {
+        Dictionary(uniqueKeysWithValues: sources.compactMap { source in
+            guard source.state == .value else { return nil }
+            return (source.filename, source.value)
+        })
+    }
+
     public init(
         type: CellType,
-        sourceValues: [String: String] = [:],
+        sources: [CellSourceEntry] = [],
         isOverridden: Bool = false,
-        formatCode: String? = nil
+        formatCode: String? = nil,
+        decision: MergedCellDecision? = nil
     ) {
         self.type = type
-        self.sourceValues = sourceValues
+        self.sources = sources
         self.isOverridden = isOverridden
         self.formatCode = formatCode
 
         switch type {
         case .label:
-            self.displayValue = Self.computeLabelDisplayValue(sourceValues: sourceValues)
+            self.displayValue = Self.computeLabelDisplayValue(sources: sources)
         case .sum(let total):
             self.displayValue = MergedCell.formatNumber(total, formatCode: formatCode)
         case .mixed(let count):
@@ -157,21 +227,24 @@ public struct MergedCell: Equatable, Sendable {
         case .single(let value):
             self.displayValue = value
         }
+        self.decision = decision ?? Self.defaultDecision(for: type)
     }
 
     /// 完整初始化器（用于自定义显示值）
     public init(
         type: CellType,
         displayValue: String,
-        sourceValues: [String: String],
+        sources: [CellSourceEntry],
         isOverridden: Bool = false,
-        formatCode: String? = nil
+        formatCode: String? = nil,
+        decision: MergedCellDecision? = nil
     ) {
         self.type = type
         self.displayValue = displayValue
-        self.sourceValues = sourceValues
+        self.sources = sources
         self.isOverridden = isOverridden
         self.formatCode = formatCode
+        self.decision = decision ?? Self.defaultDecision(for: type)
     }
 
     /// 从多个单元格创建聚合单元格 - 多因子动态判定系统
@@ -183,37 +256,90 @@ public struct MergedCell: Equatable, Sendable {
         row: Int,
         col: Int
     ) -> MergedCell {
+        let expandedCells = cells.map { CellMergeInput(filename: $0.filename, filepath: "", cell: $0.cell) }
+        let expandedLeftCells = leftCells.map { CellMergeInput(filename: $0.filename, filepath: "", cell: $0.cell) }
+        return from(
+            cells: expandedCells,
+            leftCells: expandedLeftCells,
+            neighborContext: neighborContext,
+            row: row,
+            col: col
+        )
+    }
+
+    public static func from(
+        cells: [CellMergeInput],
+        leftCells: [CellMergeInput] = [],
+        neighborContext: NeighborContext,
+        row: Int,
+        col: Int
+    ) -> MergedCell {
+        let sources = buildSources(from: cells)
+
         // 过滤空值
-        let validCells = cells.compactMap { tuple -> (String, CellData)? in
+        let validCells = cells.compactMap { tuple -> (CellMergeInput, CellData)? in
             guard let cell = tuple.cell, !cell.value.isEmpty else { return nil }
-            return (tuple.filename, cell)
+            return (tuple, cell)
         }
 
         // 提取 formatCode（取第一个非空单元格的格式）
-        let formatCode = cells.compactMap { $0.cell?.formatCode }.first
+        let formatCode = cells.compactMap(\.cell?.formatCode).first
 
-        // 如果只有一个文件，直接显示
-        if validCells.count == 1, let (_, cell) = validCells.first {
+        if validCells.isEmpty {
+            let type = CellType.label
             return MergedCell(
-                type: .single(cell.value),
-                sourceValues: [validCells[0].0: cell.value],
-                formatCode: formatCode
+                type: type,
+                displayValue: "",
+                sources: sources,
+                formatCode: formatCode,
+                decision: defaultDecision(
+                    for: type,
+                    reasons: ["所有来源单元格均为空或缺失，按空标签保留原始位置"],
+                    confidence: 1.0,
+                    isSuspicious: false
+                )
             )
         }
 
-        let sourceMap = Dictionary(uniqueKeysWithValues: validCells.map { ($0.0, $0.1.value) })
+        // 如果只有一个文件，直接显示
+        if validCells.count == 1, let (_, cell) = validCells.first {
+            let type = CellType.single(cell.value)
+            return MergedCell(
+                type: type,
+                sources: sources,
+                formatCode: formatCode,
+                decision: defaultDecision(
+                    for: type,
+                    reasons: ["仅有一个非空来源值，直接按单值显示"],
+                    confidence: 1.0,
+                    isSuspicious: false
+                )
+            )
+        }
 
         // 第一行强制表头
         if row == 0 {
-            return MergedCell(type: .label, sourceValues: sourceMap, formatCode: formatCode)
+            let type = CellType.label
+            return MergedCell(
+                type: type,
+                sources: sources,
+                formatCode: formatCode,
+                decision: defaultDecision(
+                    for: type,
+                    reasons: ["首行按表头处理，强制视为标签列"],
+                    confidence: 1.0,
+                    isSuspicious: Set(validCells.map(\.1.value)).count > 1
+                )
+            )
         }
 
         // 第一列特殊处理（无左邻列）
         if col == 0 {
             return determineFirstColumn(
                 validCells: validCells,
-                sourceMap: sourceMap,
-                formatCode: formatCode
+                sources: sources,
+                formatCode: formatCode,
+                row: row
             )
         }
 
@@ -221,7 +347,7 @@ public struct MergedCell: Equatable, Sendable {
         let selfFP = FormatProfile.fingerprint(for: validCells.first?.1)
 
         // 垂直穿透分析
-        let sampledCells = sampleFiles(from: cells).map { $0.cell }
+        let sampledCells = sampleFiles(from: cells).map(\.cell)
         let verticalProfile = FormatProfile(cells: sampledCells)
 
         // 左邻列分析
@@ -234,6 +360,9 @@ public struct MergedCell: Equatable, Sendable {
         // 多因子评分
         var amountScore = 0.0
         var labelScore = 0.0
+        var decisionReasons: [String] = [
+            "自身格式指纹: \(selfFP.descriptionText)"
+        ]
 
         // 1. 自身格式 (40%)
         let selfWeight = 0.4
@@ -256,10 +385,14 @@ public struct MergedCell: Equatable, Sendable {
         case .mixed:
             labelScore += 0.2 * selfWeight
         }
+        decisionReasons.append("自身格式得分 数值 \(Self.prettyScore(amountScore)) / 标签 \(Self.prettyScore(labelScore))")
 
         // 2. 垂直穿透一致性 (30%)
         let vertWeight = 0.3
         if let dominant = verticalProfile.dominantFingerprint {
+            decisionReasons.append(
+                "垂直穿透主导格式: \(dominant.descriptionText) (\(Int((verticalProfile.dominantRatio * 100).rounded()))%)"
+            )
             switch dominant {
             case .strongNumeric:
                 if verticalProfile.dominantRatio >= 0.8 {
@@ -281,6 +414,9 @@ public struct MergedCell: Equatable, Sendable {
         // 3. 左邻列语义 (20%)
         if let left = leftCell {
             let leftScore = analyzeLeftNeighbor(left)
+            decisionReasons.append(
+                "左邻列“\(left.value)”语义倾向 数值 \(Self.prettyScore(leftScore.numeric)) / 标签 \(Self.prettyScore(leftScore.label))"
+            )
             amountScore += leftScore.numeric * 0.2
             labelScore += leftScore.label * 0.2
         }
@@ -288,6 +424,9 @@ public struct MergedCell: Equatable, Sendable {
         // 4. 上下文邻居 (10%)
         amountScore += neighborContext.numericTendency * 0.1
         labelScore += neighborContext.labelTendency * 0.1
+        decisionReasons.append(
+            "邻居上下文倾向 数值 \(Self.prettyScore(neighborContext.numericTendency)) / 标签 \(Self.prettyScore(neighborContext.labelTendency))"
+        )
 
         // 特殊覆盖：左邻含"合计/总计" + 自身可解析为数字 → 强制求和
         if let left = leftCell {
@@ -295,11 +434,25 @@ public struct MergedCell: Equatable, Sendable {
             let isSummary = ["合计", "总计", "小计", "sum", "total"].contains { leftText.contains($0) }
             if isSummary && selfFP.isNumeric {
                 let total = validCells.compactMap { $0.1.numericValue }.reduce(0, +)
-                return MergedCell(type: .sum(total), sourceValues: sourceMap, formatCode: formatCode)
+                let type = CellType.sum(total)
+                return MergedCell(
+                    type: type,
+                    sources: sources,
+                    formatCode: formatCode,
+                    decision: defaultDecision(
+                        for: type,
+                        reasons: decisionReasons + ["左邻列命中合计语义，强制按求和处理"],
+                        confidence: 0.98,
+                        isSuspicious: false
+                    )
+                )
             }
         }
 
         // 判定
+        let scoreGap = abs(amountScore - labelScore)
+        let baseConfidence = max(0.35, min(0.99, 0.55 + scoreGap * 0.8))
+
         if amountScore > 0.5 {
             let accumulable = checkAccumulable(
                 selfFP: selfFP,
@@ -309,12 +462,47 @@ public struct MergedCell: Equatable, Sendable {
             )
             if accumulable {
                 let total = validCells.compactMap { $0.1.numericValue }.reduce(0, +)
-                return MergedCell(type: .sum(total), sourceValues: sourceMap, formatCode: formatCode)
+                let type = CellType.sum(total)
+                let isSuspicious = baseConfidence < 0.72
+                return MergedCell(
+                    type: type,
+                    sources: sources,
+                    formatCode: formatCode,
+                    decision: defaultDecision(
+                        for: type,
+                        reasons: decisionReasons + ["综合得分偏向数值，且通过可累加性检查"],
+                        confidence: baseConfidence,
+                        isSuspicious: isSuspicious
+                    )
+                )
             } else {
-                return MergedCell(type: .label, sourceValues: sourceMap, formatCode: formatCode)
+                let type = CellType.label
+                return MergedCell(
+                    type: type,
+                    sources: sources,
+                    formatCode: formatCode,
+                    decision: defaultDecision(
+                        for: type,
+                        reasons: decisionReasons + ["数值得分较高，但可累加性检查失败，回退为标签"],
+                        confidence: max(0.5, baseConfidence - 0.1),
+                        isSuspicious: true
+                    )
+                )
             }
         } else if labelScore > 0.5 {
-            return MergedCell(type: .label, sourceValues: sourceMap, formatCode: formatCode)
+            let type = CellType.label
+            let uniqueCount = Set(validCells.map(\.1.value)).count
+            return MergedCell(
+                type: type,
+                sources: sources,
+                formatCode: formatCode,
+                decision: defaultDecision(
+                    for: type,
+                    reasons: decisionReasons + ["综合得分偏向标签"],
+                    confidence: baseConfidence,
+                    isSuspicious: uniqueCount > 1 || baseConfidence < 0.72
+                )
+            )
         } else {
             // 边界情况：都是数值但分数不够高
             if selfFP.isNumeric {
@@ -326,38 +514,105 @@ public struct MergedCell: Equatable, Sendable {
                 )
                 if accumulable {
                     let total = validCells.compactMap { $0.1.numericValue }.reduce(0, +)
-                    return MergedCell(type: .sum(total), sourceValues: sourceMap, formatCode: formatCode)
+                    let type = CellType.sum(total)
+                    return MergedCell(
+                        type: type,
+                        sources: sources,
+                        formatCode: formatCode,
+                        decision: defaultDecision(
+                            for: type,
+                            reasons: decisionReasons + ["边界场景下仍满足可累加性，按求和处理"],
+                            confidence: max(0.5, baseConfidence - 0.08),
+                            isSuspicious: true
+                        )
+                    )
                 }
             }
-            return MergedCell(type: .label, sourceValues: sourceMap, formatCode: formatCode)
+            let type = CellType.label
+            return MergedCell(
+                type: type,
+                sources: sources,
+                formatCode: formatCode,
+                decision: defaultDecision(
+                    for: type,
+                    reasons: decisionReasons + ["分数接近，按保守策略作为标签处理"],
+                    confidence: max(0.45, baseConfidence - 0.12),
+                    isSuspicious: true
+                )
+            )
         }
     }
 
     /// 第一列判定（无左邻列）
     private static func determineFirstColumn(
-        validCells: [(String, CellData)],
-        sourceMap: [String: String],
-        formatCode: String?
+        validCells: [(CellMergeInput, CellData)],
+        sources: [CellSourceEntry],
+        formatCode: String?,
+        row: Int
     ) -> MergedCell {
-        let sampled = sampleFiles(from: validCells).map { $0.1 }
+        let sampled = sampleFiles(from: validCells).map(\.1)
         let profile = FormatProfile(cells: sampled)
 
         if let dominant = profile.dominantFingerprint {
             switch dominant {
             case .chineseText, .alphaText, .date:
-                return MergedCell(type: .label, sourceValues: sourceMap, formatCode: formatCode)
+                let type = CellType.label
+                return MergedCell(
+                    type: type,
+                    sources: sources,
+                    formatCode: formatCode,
+                    decision: defaultDecision(
+                        for: type,
+                        reasons: ["第 \(row + 1) 行首列主导格式为 \(dominant.descriptionText)，按标签处理"],
+                        confidence: 0.92,
+                        isSuspicious: Set(validCells.map(\.1.value)).count > 1
+                    )
+                )
             case .integerCode:
-                return MergedCell(type: .label, sourceValues: sourceMap, formatCode: formatCode)
+                let type = CellType.label
+                return MergedCell(
+                    type: type,
+                    sources: sources,
+                    formatCode: formatCode,
+                    decision: defaultDecision(
+                        for: type,
+                        reasons: ["首列主导格式为整数编码，按标签处理"],
+                        confidence: 0.95,
+                        isSuspicious: Set(validCells.map(\.1.value)).count > 1
+                    )
+                )
             case .strongNumeric, .integerWide:
                 if profile.dominantRatio >= 0.8 {
                     let total = validCells.compactMap { $0.1.numericValue }.reduce(0, +)
-                    return MergedCell(type: .sum(total), sourceValues: sourceMap, formatCode: formatCode)
+                    let type = CellType.sum(total)
+                    return MergedCell(
+                        type: type,
+                        sources: sources,
+                        formatCode: formatCode,
+                        decision: defaultDecision(
+                            for: type,
+                            reasons: ["首列以数值格式为主且一致性高，按求和处理"],
+                            confidence: 0.84,
+                            isSuspicious: false
+                        )
+                    )
                 }
             default:
                 break
             }
         }
-        return MergedCell(type: .label, sourceValues: sourceMap, formatCode: formatCode)
+        let type = CellType.label
+        return MergedCell(
+            type: type,
+            sources: sources,
+            formatCode: formatCode,
+            decision: defaultDecision(
+                for: type,
+                reasons: ["首列采用保守策略，按标签处理"],
+                confidence: 0.7,
+                isSuspicious: Set(validCells.map(\.1.value)).count > 1
+            )
+        )
     }
 
     // MARK: - 国际化语义模式
@@ -464,7 +719,7 @@ public struct MergedCell: Equatable, Sendable {
         selfFP: FormatFingerprint,
         leftCell: CellData?,
         verticalProfile: FormatProfile,
-        validCells: [(String, CellData)]
+        validCells: [(CellMergeInput, CellData)]
     ) -> Bool {
         let numericValues = validCells.compactMap { $0.1.numericValue }
         guard !numericValues.isEmpty else { return false }
@@ -559,9 +814,11 @@ public struct MergedCell: Equatable, Sendable {
     /// 显示公共前缀 + 后续差异部分用下划线填充
     /// 后续长度由75%阈值主导长度决定，无主导则取平均长度
     private static func computeLabelDisplayValue(
-        sourceValues: [String: String]
+        sources: [CellSourceEntry]
     ) -> String {
-        let values = Array(sourceValues.values)
+        let values = sources
+            .filter { $0.state == .value }
+            .map(\.value)
         guard values.count > 1 else {
             return values.first ?? ""
         }
@@ -681,17 +938,92 @@ public struct MergedCell: Equatable, Sendable {
     static func create(
         type: CellType,
         displayValue: String,
-        sourceValues: [String: String],
+        sources: [CellSourceEntry],
         isOverridden: Bool,
-        formatCode: String? = nil
+        formatCode: String? = nil,
+        decision: MergedCellDecision? = nil
     ) -> MergedCell {
         return MergedCell(
             type: type,
             displayValue: displayValue,
-            sourceValues: sourceValues,
+            sources: sources,
             isOverridden: isOverridden,
-            formatCode: formatCode
+            formatCode: formatCode,
+            decision: decision
         )
+    }
+
+    private static func buildSources(from cells: [CellMergeInput]) -> [CellSourceEntry] {
+        cells.map { source in
+            if let cell = source.cell {
+                if cell.value.isEmpty {
+                    return CellSourceEntry(
+                        filename: source.filename,
+                        filepath: source.filepath,
+                        value: "",
+                        rawValue: cell.rawValue,
+                        state: .empty
+                    )
+                }
+                return CellSourceEntry(
+                    filename: source.filename,
+                    filepath: source.filepath,
+                    value: cell.value,
+                    rawValue: cell.rawValue,
+                    state: .value
+                )
+            }
+            return CellSourceEntry(
+                filename: source.filename,
+                filepath: source.filepath,
+                value: "",
+                rawValue: nil,
+                state: .missing
+            )
+        }
+    }
+
+    private static func defaultDecision(
+        for type: CellType,
+        reasons: [String]? = nil,
+        confidence: Double = 1.0,
+        isSuspicious: Bool = false
+    ) -> MergedCellDecision {
+        MergedCellDecision(
+            autoDetectedType: type,
+            confidence: confidence,
+            decisionReasons: reasons ?? ["未提供额外判定解释"],
+            isSuspicious: isSuspicious
+        )
+    }
+
+    private static func prettyScore(_ score: Double) -> String {
+        String(format: "%.2f", score)
+    }
+}
+
+extension FormatFingerprint {
+    var descriptionText: String {
+        switch self {
+        case .strongNumeric:
+            return "强数值"
+        case .integerWide:
+            return "宽整数"
+        case .integerCode:
+            return "整数编码"
+        case .chineseText:
+            return "中文文本"
+        case .alphaText:
+            return "英文文本"
+        case .date:
+            return "日期"
+        case .dashMarker:
+            return "占位符"
+        case .empty:
+            return "空值"
+        case .mixed:
+            return "混合格式"
+        }
     }
 }
 
