@@ -32,6 +32,33 @@ struct CellAnomalyItem: Identifiable, Hashable {
     }
 }
 
+struct SourceInspectionOverview: Equatable {
+    let sourceCount: Int
+    let valueCount: Int
+    let emptyCount: Int
+    let missingCount: Int
+    let distinctValueCount: Int
+
+    var summaryText: String {
+        var segments = ["\(sourceCount) 个来源"]
+
+        if valueCount > 0 {
+            segments.append("\(valueCount) 个有值")
+        }
+        if emptyCount > 0 {
+            segments.append("\(emptyCount) 个空值")
+        }
+        if missingCount > 0 {
+            segments.append("\(missingCount) 个缺失")
+        }
+        if distinctValueCount > 0 {
+            segments.append("\(distinctValueCount) 个不同值")
+        }
+
+        return segments.joined(separator: " · ")
+    }
+}
+
 enum SheetOverviewStatus: String, Hashable {
     case mergeable
     case skipped
@@ -162,6 +189,42 @@ enum WorkspaceDiagnostics {
             return "需要人工复核"
         }
         return nil
+    }
+
+    static func buildSourceInspectionOverview(for sources: [CellSourceEntry]) -> SourceInspectionOverview {
+        let sourceCount = sources.count
+        let valueSources = sources.filter { $0.state == .value }
+        let valueCount = valueSources.count
+        let emptyCount = sources.filter { $0.state == .empty }.count
+        let missingCount = sources.filter { $0.state == .missing }.count
+        let distinctValueCount = Set(valueSources.map(\.value)).count
+
+        return SourceInspectionOverview(
+            sourceCount: sourceCount,
+            valueCount: valueCount,
+            emptyCount: emptyCount,
+            missingCount: missingCount,
+            distinctValueCount: distinctValueCount
+        )
+    }
+
+    static func compactSourceNames(for sources: [CellSourceEntry]) -> [String] {
+        let stems = sources.map { fileStem(from: $0.filename) }
+        guard stems.count > 1 else { return stems }
+
+        let sharedSuffix = trimDelimiters(longestCommonSuffix(stems))
+        guard sharedSuffix.count >= 4 else { return stems }
+
+        let compacted = stems.map { stem in
+            guard stem.hasSuffix(sharedSuffix), stem.count > sharedSuffix.count else {
+                return stem
+            }
+
+            let trimmed = trimDelimiters(String(stem.dropLast(sharedSuffix.count)))
+            return trimmed.isEmpty ? stem : trimmed
+        }
+
+        return Set(compacted).count == compacted.count ? compacted : stems
     }
 
     static func buildSheetOverview(
@@ -354,6 +417,30 @@ enum WorkspaceDiagnostics {
         case .missing:
             return "未包含该工作表"
         }
+    }
+
+    private static func fileStem(from filename: String) -> String {
+        URL(fileURLWithPath: filename).deletingPathExtension().lastPathComponent
+    }
+
+    private static func longestCommonSuffix(_ values: [String]) -> String {
+        guard var suffix = values.first else { return "" }
+
+        for value in values.dropFirst() {
+            while !value.hasSuffix(suffix) && !suffix.isEmpty {
+                suffix.removeFirst()
+            }
+            if suffix.isEmpty {
+                return ""
+            }
+        }
+
+        return suffix
+    }
+
+    private static func trimDelimiters(_ text: String) -> String {
+        let delimiterCharacterSet = CharacterSet(charactersIn: "-_()[]{}（）【】<>《》,.，。/\\| ")
+        return text.trimmingCharacters(in: delimiterCharacterSet.union(.whitespacesAndNewlines))
     }
 }
 

@@ -1547,50 +1547,55 @@ struct ExcelCellView: View {
 
 struct InspectionSidebar: View {
     @EnvironmentObject var viewModel: AppViewModel
+    @State private var isSourceListExpanded = false
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 12) {
                 if let cell = viewModel.selectedMergedCell,
                    let reference = viewModel.selectedCellReference {
                     cellDetailCard(cell: cell, reference: reference)
-                    sourceList(for: cell)
+                    sourceDisclosure(for: cell)
                 } else {
-                    placeholderCard("选择单元格后查看来源与修正。")
+                    placeholderCard("选择单元格后查看结果与来源。")
                 }
             }
             .padding()
         }
         .background(Color(NSColor.controlBackgroundColor))
+        .onChange(of: viewModel.selectedCellReference) { _ in
+            isSourceListExpanded = false
+        }
     }
 
     private func cellDetailCard(cell: MergedCell, reference: String) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 6) {
                     Text(reference)
-                        .font(.title3)
-                        .fontWeight(.semibold)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                     Text(cell.displayValue.isEmpty ? "空值" : cell.displayValue)
-                        .font(.body.monospaced())
+                        .font(.system(size: 18, weight: .semibold, design: .monospaced))
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 Spacer()
-                VStack(alignment: .trailing, spacing: 6) {
-                    CellTypeBadge(type: cell.type)
-                    if cell.isOverridden {
-                        Text("已修正")
-                            .font(.caption2)
-                            .foregroundStyle(.orange)
-                    }
-                }
+                CellTypeBadge(type: cell.type)
             }
 
-            HStack(spacing: 8) {
-                confidenceBadge(value: cell.decision.confidence)
+            HStack(spacing: 6) {
+                if cell.isOverridden {
+                    labelChip("已修正", tint: .orange)
+                }
                 if cell.decision.isSuspicious {
                     labelChip("需复核", tint: .orange)
                 }
-                labelChip("自动: \(cell.decision.autoDetectedType.displayName)", tint: .blue)
+                if cell.decision.confidence < 0.72 {
+                    confidenceBadge(value: cell.decision.confidence)
+                }
+                if displayName(for: cell.decision.autoDetectedType) != displayName(for: cell.type) {
+                    labelChip("自动: \(cell.decision.autoDetectedType.displayName)", tint: .blue)
+                }
             }
 
             if let decisionSummary = WorkspaceDiagnostics.decisionSummary(for: cell) {
@@ -1602,31 +1607,17 @@ struct InspectionSidebar: View {
 
             Divider()
 
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 8) {
                 HStack(spacing: 8) {
-                    Button("标签") {
-                        if let selectedCell = viewModel.selectedCell {
-                            viewModel.applyCellOverride(row: selectedCell.row, col: selectedCell.col, type: .label)
-                        }
+                    overrideButton(title: "标签", tint: .green, isActive: matches(cell.type, overrideType: .label)) {
+                        applyOverride(.label)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.small)
-
-                    Button("求和") {
-                        if let selectedCell = viewModel.selectedCell {
-                            viewModel.applyCellOverride(row: selectedCell.row, col: selectedCell.col, type: .sum)
-                        }
+                    overrideButton(title: "求和", tint: .blue, isActive: matches(cell.type, overrideType: .sum)) {
+                        applyOverride(.sum)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.small)
-
-                    Button("混合") {
-                        if let selectedCell = viewModel.selectedCell {
-                            viewModel.applyCellOverride(row: selectedCell.row, col: selectedCell.col, type: .mixed)
-                        }
+                    overrideButton(title: "混合", tint: .orange, isActive: matches(cell.type, overrideType: .mixed)) {
+                        applyOverride(.mixed)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.small)
                 }
 
                 Text("1/2/3 修正 · J/K 跳转")
@@ -1639,39 +1630,69 @@ struct InspectionSidebar: View {
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
-    private func sourceList(for cell: MergedCell) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            if !cell.sources.isEmpty {
-                HStack {
-                    Text("\(cell.sources.count) 个来源")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                }
+    private func sourceDisclosure(for cell: MergedCell) -> some View {
+        let overview = WorkspaceDiagnostics.buildSourceInspectionOverview(for: cell.sources)
+        let compactNames = WorkspaceDiagnostics.compactSourceNames(for: cell.sources)
 
-                VStack(alignment: .leading, spacing: 8) {
-                    ForEach(Array(cell.sources.enumerated()), id: \.offset) { _, source in
-                        HStack(alignment: .top, spacing: 10) {
-                            SourceStateBadge(state: source.state)
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(source.filename)
-                                    .font(.caption)
-                                    .fontWeight(.medium)
+        return VStack(alignment: .leading, spacing: 10) {
+            if !cell.sources.isEmpty {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.16)) {
+                        isSourceListExpanded.toggle()
+                    }
+                } label: {
+                    HStack(alignment: .center, spacing: 12) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(overview.summaryText)
+                                .font(.caption)
+                                .fontWeight(.medium)
+                                .foregroundStyle(.secondary)
+                            Text(isSourceListExpanded ? "按导入顺序显示原始来源" : "展开查看原始来源")
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
+                        }
+                        Spacer()
+                        Image(systemName: isSourceListExpanded ? "chevron.up" : "chevron.down")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+
+                if isSourceListExpanded {
+                    Divider()
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        ForEach(Array(cell.sources.enumerated()), id: \.offset) { index, source in
+                            VStack(alignment: .leading, spacing: 6) {
+                                HStack(alignment: .top, spacing: 10) {
+                                    Text(compactNames[index])
+                                        .font(.caption)
+                                        .fontWeight(.medium)
+                                        .lineLimit(1)
+                                    Spacer()
+                                    SourceStateBadge(state: source.state)
+                                }
+
                                 Text(sourceDisplayValue(source))
                                     .font(.system(.caption, design: .monospaced))
                                     .foregroundStyle(source.state == .value ? .primary : .secondary)
+                                    .fixedSize(horizontal: false, vertical: true)
                             }
-                            Spacer()
+                            .padding(10)
+                            .background(Color(NSColor.controlBackgroundColor))
+                            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                         }
-                        .padding()
-                        .background(Color.white)
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
                     }
                 }
             } else {
                 placeholderCard("当前单元格没有可显示的来源。")
             }
         }
+        .padding()
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
     private func confidenceBadge(value: Double) -> some View {
@@ -1688,36 +1709,33 @@ struct InspectionSidebar: View {
             .clipShape(Capsule())
     }
 
-    private var sourceSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("来源")
-                .font(.subheadline)
-                .fontWeight(.semibold)
+    private func overrideButton(
+        title: String,
+        tint: Color,
+        isActive: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(title, action: action)
+            .buttonStyle(InspectorOverrideButtonStyle(tint: tint, isActive: isActive))
+            .controlSize(.small)
+    }
 
-            if let cell = viewModel.selectedMergedCell {
-                VStack(alignment: .leading, spacing: 8) {
-                    ForEach(Array(cell.sources.enumerated()), id: \.offset) { _, source in
-                        HStack(alignment: .top, spacing: 10) {
-                            SourceStateBadge(state: source.state)
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(source.filename)
-                                    .font(.caption)
-                                    .fontWeight(.medium)
-                                Text(sourceDisplayValue(source))
-                                    .font(.system(.caption, design: .monospaced))
-                                    .foregroundStyle(source.state == .value ? .primary : .secondary)
-                            }
-                            Spacer()
-                        }
-                        .padding()
-                        .background(Color.white)
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                    }
-                }
-            } else {
-                placeholderCard("这里会显示该单元格在各文件中的来源。")
-            }
+    private func applyOverride(_ type: CellOverrideType) {
+        guard let selectedCell = viewModel.selectedCell else { return }
+        viewModel.applyCellOverride(row: selectedCell.row, col: selectedCell.col, type: type)
+    }
+
+    private func matches(_ cellType: MergedCell.CellType, overrideType: CellOverrideType) -> Bool {
+        switch (cellType, overrideType) {
+        case (.label, .label), (.sum, .sum), (.mixed, .mixed):
+            return true
+        default:
+            return false
         }
+    }
+
+    private func displayName(for type: MergedCell.CellType) -> String {
+        type.displayName
     }
 
     private func sourceDisplayValue(_ source: CellSourceEntry) -> String {
@@ -1739,6 +1757,60 @@ struct InspectionSidebar: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Color.white)
             .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+}
+
+private struct InspectorOverrideButtonStyle: ButtonStyle {
+    let tint: Color
+    let isActive: Bool
+
+    func makeBody(configuration: Configuration) -> some View {
+        InspectorOverrideButton(configuration: configuration, tint: tint, isActive: isActive)
+    }
+}
+
+private struct InspectorOverrideButton: View {
+    let configuration: InspectorOverrideButtonStyle.Configuration
+    let tint: Color
+    let isActive: Bool
+
+    @Environment(\.isEnabled) private var isEnabled
+
+    var body: some View {
+        configuration.label
+            .font(.system(size: 12, weight: .medium))
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .foregroundStyle(foregroundColor)
+            .background(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(backgroundColor)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .stroke(borderColor, lineWidth: 1)
+            )
+            .opacity(isEnabled ? 1 : 0.45)
+    }
+
+    private var foregroundColor: Color {
+        guard isEnabled else { return .secondary }
+        return isActive ? tint : .primary
+    }
+
+    private var backgroundColor: Color {
+        guard isEnabled else { return .clear }
+        if isActive {
+            return tint.opacity(configuration.isPressed ? 0.18 : 0.14)
+        }
+        return configuration.isPressed ? Color.secondary.opacity(0.08) : .clear
+    }
+
+    private var borderColor: Color {
+        if isActive {
+            return tint.opacity(0.28)
+        }
+        return Color.secondary.opacity(0.12)
     }
 }
 
