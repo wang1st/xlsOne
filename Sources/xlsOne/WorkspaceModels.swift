@@ -59,6 +59,19 @@ struct SourceInspectionOverview: Equatable {
     }
 }
 
+enum WorkspaceFocusTone: Equatable {
+    case accent
+    case warning
+    case neutral
+}
+
+struct WorkspaceFocusStatus: Equatable {
+    let title: String
+    let detail: String
+    let systemImage: String
+    let tone: WorkspaceFocusTone
+}
+
 enum SheetOverviewStatus: String, Hashable {
     case mergeable
     case skipped
@@ -205,6 +218,45 @@ enum WorkspaceDiagnostics {
             emptyCount: emptyCount,
             missingCount: missingCount,
             distinctValueCount: distinctValueCount
+        )
+    }
+
+    static func buildFocusStatus(
+        selection: WorkspaceSheetSelection?,
+        matchedSchemaName: String?,
+        correctionCount: Int
+    ) -> WorkspaceFocusStatus? {
+        guard let selection else { return nil }
+
+        let title = selection.sheetName
+        let systemImage: String
+        let tone: WorkspaceFocusTone
+        var segments: [String] = []
+
+        switch selection {
+        case .mergeable:
+            systemImage = "tablecells"
+            tone = .accent
+            segments.append("可合并")
+        case .skipped:
+            systemImage = "slash.circle"
+            tone = .warning
+            segments.append("已跳过")
+        }
+
+        if matchedSchemaName != nil {
+            segments.append("规则已命中")
+        }
+
+        if correctionCount > 0 {
+            segments.append("已修正 \(correctionCount)")
+        }
+
+        return WorkspaceFocusStatus(
+            title: title,
+            detail: segments.joined(separator: " · "),
+            systemImage: systemImage,
+            tone: tone
         )
     }
 
