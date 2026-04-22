@@ -369,6 +369,45 @@ final class WorkspaceDiagnosticsTests: XCTestCase {
         XCTAssertEqual(summary, "综合得分偏向标签")
     }
 
+    func testSourceInspectionOverviewBuildsCompactSummary() {
+        let sources = [
+            CellSourceEntry(filename: "a.xlsx", filepath: "/tmp/a.xlsx", value: "100", state: .value),
+            CellSourceEntry(filename: "b.xlsx", filepath: "/tmp/b.xlsx", value: "100", state: .value),
+            CellSourceEntry(filename: "c.xlsx", filepath: "/tmp/c.xlsx", value: "", state: .empty),
+            CellSourceEntry(filename: "d.xlsx", filepath: "/tmp/d.xlsx", value: "", state: .missing)
+        ]
+
+        let overview = WorkspaceDiagnostics.buildSourceInspectionOverview(for: sources)
+
+        XCTAssertEqual(overview.sourceCount, 4)
+        XCTAssertEqual(overview.valueCount, 2)
+        XCTAssertEqual(overview.emptyCount, 1)
+        XCTAssertEqual(overview.missingCount, 1)
+        XCTAssertEqual(overview.distinctValueCount, 1)
+        XCTAssertEqual(overview.summaryText, "4 个来源 · 2 个有值 · 1 个空值 · 1 个缺失 · 1 个不同值")
+    }
+
+    func testCompactSourceNamesTrimSharedWorkbookSuffix() {
+        let sources = [
+            CellSourceEntry(
+                filename: "仙居县安洲街道办事处2025乡镇报表主体信息表.xlsx",
+                filepath: "/tmp/a.xlsx",
+                value: "1",
+                state: .value
+            ),
+            CellSourceEntry(
+                filename: "仙居县白塔镇人民政府2025乡镇报表主体信息表.xlsx",
+                filepath: "/tmp/b.xlsx",
+                value: "2",
+                state: .value
+            )
+        ]
+
+        let names = WorkspaceDiagnostics.compactSourceNames(for: sources)
+
+        XCTAssertEqual(names, ["仙居县安洲街道办事处", "仙居县白塔镇人民政府"])
+    }
+
     func testExportNamingPrefersLongestSharedPhraseAcrossFilenames() {
         let exportName = ExportNaming.suggestedWorkbookName(
             from: [
