@@ -408,6 +408,32 @@ final class WorkspaceDiagnosticsTests: XCTestCase {
         XCTAssertEqual(names, ["仙居县安洲街道办事处", "仙居县白塔镇人民政府"])
     }
 
+    func testFocusStatusCombinesSheetStateSchemaAndCorrections() {
+        let status = WorkspaceDiagnostics.buildFocusStatus(
+            selection: .mergeable("乡镇报表主体信息表"),
+            matchedSchemaName: "主体信息规则",
+            correctionCount: 2
+        )
+
+        XCTAssertEqual(status?.title, "乡镇报表主体信息表")
+        XCTAssertEqual(status?.detail, "可合并 · 规则已命中 · 已修正 2")
+        XCTAssertEqual(status?.systemImage, "tablecells")
+        XCTAssertEqual(status?.tone, .accent)
+    }
+
+    func testFocusStatusUsesWarningToneForSkippedSheet() {
+        let status = WorkspaceDiagnostics.buildFocusStatus(
+            selection: .skipped("涉农资金项目类"),
+            matchedSchemaName: nil,
+            correctionCount: 0
+        )
+
+        XCTAssertEqual(status?.title, "涉农资金项目类")
+        XCTAssertEqual(status?.detail, "已跳过")
+        XCTAssertEqual(status?.systemImage, "slash.circle")
+        XCTAssertEqual(status?.tone, .warning)
+    }
+
     func testExportNamingPrefersLongestSharedPhraseAcrossFilenames() {
         let exportName = ExportNaming.suggestedWorkbookName(
             from: [

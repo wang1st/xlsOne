@@ -480,26 +480,8 @@ struct WorkbookStatusStrip: View {
 
             Spacer(minLength: 16)
 
-            if let selectedSheetName = viewModel.selectedSheetName {
-                statusPill(
-                    text: selectedSheetName,
-                    systemImage: selectedSheetIcon,
-                    tint: .secondary
-                )
-            }
-
-            statusPill(
-                text: viewModel.selectedSheetStructureStatus,
-                systemImage: selectedStatusIcon,
-                tint: selectedStatusTint
-            )
-
-            if viewModel.correctionCount > 0 {
-                statusPill(text: "已修正 \(viewModel.correctionCount)", systemImage: "slider.horizontal.3", tint: .orange)
-            }
-
-            if viewModel.matchedSchema != nil {
-                statusPill(text: "已命中规则库", systemImage: "books.vertical", tint: .blue)
+            if let focusStatus = focusStatus {
+                focusStatusCard(focusStatus)
             }
         }
         .padding(.horizontal)
@@ -511,47 +493,74 @@ struct WorkbookStatusStrip: View {
         WorkspaceDiagnostics.workspaceSummary(report: report)
     }
 
-    private var selectedSheetIcon: String {
-        switch viewModel.selectedSheetSelection {
-        case .mergeable:
-            return "tablecells"
-        case .skipped:
-            return "exclamationmark.circle"
-        case .none:
-            return "tablecells"
-        }
+    private var focusStatus: WorkspaceFocusStatus? {
+        WorkspaceDiagnostics.buildFocusStatus(
+            selection: viewModel.selectedSheetSelection,
+            matchedSchemaName: viewModel.matchedSchema?.name,
+            correctionCount: viewModel.correctionCount
+        )
     }
 
-    private var selectedStatusIcon: String {
-        switch viewModel.selectedSheetSelection {
-        case .mergeable:
-            return "checkmark.circle"
-        case .skipped:
-            return "slash.circle"
-        case .none:
-            return "circle"
+    private func focusStatusCard(_ status: WorkspaceFocusStatus) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: status.systemImage)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(statusTint(for: status))
+                .frame(width: 16)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(status.title)
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .lineLimit(1)
+
+                Text(status.detail)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
         }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(statusBackground(for: status))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(statusBorder(for: status), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
-    private var selectedStatusTint: Color {
-        switch viewModel.selectedSheetSelection {
-        case .mergeable:
+    private func statusTint(for status: WorkspaceFocusStatus) -> Color {
+        switch status.tone {
+        case .accent:
             return .accentColor
-        case .skipped:
+        case .warning:
             return .orange
-        case .none:
+        case .neutral:
             return .secondary
         }
     }
 
-    private func statusPill(text: String, systemImage: String, tint: Color) -> some View {
-        Label(text, systemImage: systemImage)
-            .font(.caption)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .background(tint.opacity(0.10))
-            .foregroundStyle(tint)
-            .clipShape(Capsule())
+    private func statusBackground(for status: WorkspaceFocusStatus) -> Color {
+        switch status.tone {
+        case .accent:
+            return Color.accentColor.opacity(0.06)
+        case .warning:
+            return Color.orange.opacity(0.08)
+        case .neutral:
+            return Color(NSColor.controlBackgroundColor)
+        }
+    }
+
+    private func statusBorder(for status: WorkspaceFocusStatus) -> Color {
+        switch status.tone {
+        case .accent:
+            return Color.accentColor.opacity(0.14)
+        case .warning:
+            return Color.orange.opacity(0.18)
+        case .neutral:
+            return Color.secondary.opacity(0.10)
+        }
     }
 }
 
