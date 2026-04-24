@@ -1,6 +1,6 @@
 import XCTest
 import xlsOneCore
-@testable import xlsOne
+@testable import xlsOneUI
 
 final class GridAutoWidthTests: XCTestCase {
     func testAutoWidthUsesHeaderAndSampledRows() {

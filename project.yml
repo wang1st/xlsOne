@@ -1,0 +1,52 @@
+name: xlsOne
+options:
+  minimumXcodeGenVersion: 2.44.1
+  createIntermediateGroups: true
+  deploymentTarget:
+    macOS: "12.0"
+configs:
+  Debug: debug
+  Release: release
+packages:
+  xlsOnePackage:
+    path: .
+targets:
+  xlsOneMacApp:
+    type: application
+    platform: macOS
+    deploymentTarget: "12.0"
+    sources:
+      - path: App/xlsOneMacApp
+    settings:
+      base:
+        PRODUCT_NAME: xlsOne
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.xlsone
+        INFOPLIST_FILE: App/xlsOneMacApp/Info.plist
+        CODE_SIGN_ENTITLEMENTS: App/xlsOneMacApp/xlsOneMacApp.entitlements
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        MARKETING_VERSION: 1.0.0
+        CURRENT_PROJECT_VERSION: 1
+        SWIFT_VERSION: 5.9
+        MACOSX_DEPLOYMENT_TARGET: 12.0
+        CODE_SIGN_STYLE: Automatic
+        GENERATE_INFOPLIST_FILE: NO
+        LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/../Frameworks"
+        SUPPORTS_MACCATALYST: NO
+    dependencies:
+      - package: xlsOnePackage
+        product: xlsOneUI
+schemes:
+  xlsOneMacApp:
+    build:
+      targets:
+        xlsOneMacApp: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release

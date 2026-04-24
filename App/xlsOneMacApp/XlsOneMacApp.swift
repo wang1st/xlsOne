@@ -2,7 +2,7 @@ import SwiftUI
 import xlsOneUI
 
 @main
-struct XlsOneApp: App {
+struct XlsOneMacApp: App {
     @NSApplicationDelegateAdaptor(WorkspaceAppDelegate.self) private var appDelegate
 
     var body: some Scene {

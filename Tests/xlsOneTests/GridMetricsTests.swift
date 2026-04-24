@@ -1,5 +1,5 @@
 import XCTest
-@testable import xlsOne
+@testable import xlsOneUI
 
 final class GridMetricsTests: XCTestCase {
     func testRenderedWidthMatchesContentWidthPlusInsets() {

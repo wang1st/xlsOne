@@ -1,6 +1,6 @@
 import AppKit
 import XCTest
-@testable import xlsOne
+@testable import xlsOneUI
 
 @MainActor
 final class HeaderDividerCursorOverlayTests: XCTestCase {
