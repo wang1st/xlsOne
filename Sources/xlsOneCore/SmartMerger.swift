@@ -47,6 +47,17 @@ public actor SmartMerger {
         return matchResult.result
     }
 
+    /// 合并指定工作表，并只应用调用方明确选定的一套规则
+    public func merge(
+        files: [ExcelFile],
+        sheetName: String,
+        applying schema: MergeSchema?
+    ) async -> MergedResult {
+        let baseResult = baseMerger.merge(files: files, sheetName: sheetName)
+        guard let schema else { return baseResult }
+        return applySchema(schema, to: baseResult)
+    }
+
     /// 合并第一个工作表（自动应用匹配的 Schema）
     public func mergeFirstSheets(from files: [ExcelFile]) async -> MergedResult {
         let baseResult = baseMerger.mergeFirstSheets(from: files)
@@ -80,11 +91,13 @@ public actor SmartMerger {
     public func createSchema(
         name: String,
         fingerprint: FileFingerprint,
+        workbookFingerprint: WorkbookRuleFingerprint? = nil,
         overrides: [CellTypeOverride]
     ) async throws -> MergeSchema {
         let schema = MergeSchema(
             name: name,
             fingerprint: fingerprint,
+            workbookFingerprint: workbookFingerprint,
             cellOverrides: overrides
         )
 
@@ -95,7 +108,9 @@ public actor SmartMerger {
     /// 更新 Schema 的单元格覆盖
     public func updateSchema(
         id: UUID,
-        overrides: [CellTypeOverride]
+        overrides: [CellTypeOverride],
+        fingerprint: FileFingerprint? = nil,
+        workbookFingerprint: WorkbookRuleFingerprint? = nil
     ) async throws -> MergeSchema? {
         guard let existing = try await schemaRepository.findSchema(id: id) else {
             return nil
@@ -104,7 +119,8 @@ public actor SmartMerger {
         let updated = MergeSchema(
             id: existing.id,
             name: existing.name,
-            fingerprint: existing.fingerprint,
+            fingerprint: fingerprint ?? existing.fingerprint,
+            workbookFingerprint: workbookFingerprint ?? existing.workbookFingerprint,
             cellOverrides: overrides,
             createdAt: existing.createdAt,
             updatedAt: Date(),
@@ -137,35 +153,34 @@ public actor SmartMerger {
             }
 
             let originalCell = modifiedRows[row][col]
-            let newType = override.cellType.toMergedCellType()
-
-            // 根据覆盖类型重新计算显示值
-            let newDisplayValue: String
-            switch newType {
+            let newType: MergedCell.CellType
+            switch override.cellType {
             case .label:
-                newDisplayValue = originalCell.sources.first(where: { $0.state == .value })?.value ?? ""
+                newType = .label
             case .sum:
-                // 重新计算总和
-                let sum = Self.calculateSum(from: originalCell.sources)
-                newDisplayValue = MergedCell.formatNumber(sum, formatCode: originalCell.formatCode)
+                newType = .sum(Self.calculateSum(from: originalCell.sources))
             case .mixed:
                 let uniqueCount = Set(
                     originalCell.sources
                         .filter { $0.state == .value }
                         .map(\.value)
                 ).count
-                newDisplayValue = "\(uniqueCount)条"
-            case .single(let value):
-                newDisplayValue = value
+                newType = .mixed(uniqueCount)
             }
 
-            let newCell = MergedCell.create(
+            let adjustedDecision = MergedCellDecision(
+                autoDetectedType: originalCell.decision.autoDetectedType,
+                confidence: originalCell.decision.confidence,
+                decisionReasons: originalCell.decision.decisionReasons + ["已按类型调整显示为\(override.cellType.displayName)"],
+                isSuspicious: originalCell.decision.isSuspicious
+            )
+
+            let newCell = MergedCell(
                 type: newType,
-                displayValue: newDisplayValue,
                 sources: originalCell.sources,
                 isOverridden: true,
                 formatCode: originalCell.formatCode,
-                decision: originalCell.decision
+                decision: adjustedDecision
             )
 
             modifiedRows[row][col] = newCell
@@ -186,6 +201,41 @@ public actor SmartMerger {
     /// 加载所有可用的 Schema
     public func loadAllSchemas() async throws -> [MergeSchema] {
         return try await schemaRepository.loadAllSchemas()
+    }
+
+    /// 为整个工作区选择一套可自动应用的规则
+    public func prepareWorkspaceSchema(
+        files: [ExcelFile],
+        sheetNames: [String]
+    ) async -> SchemaMatchResult {
+        guard !files.isEmpty, !sheetNames.isEmpty else {
+            appliedSchema = nil
+            lastMatchResult = SchemaMatchResult.none
+            return SchemaMatchResult.none
+        }
+
+        let fingerprint = FingerprintGenerator.generateWorkbook(
+            from: files,
+            sheetNames: sheetNames
+        )
+
+        do {
+            let matchResult = try await schemaRepository.findMatchingSchema(workbookFingerprint: fingerprint)
+            lastMatchResult = matchResult
+
+            switch matchResult {
+            case .exact(let schema):
+                appliedSchema = schema
+            case .ambiguous, .similar, .none:
+                appliedSchema = nil
+            }
+
+            return matchResult
+        } catch {
+            appliedSchema = nil
+            lastMatchResult = SchemaMatchResult.none
+            return SchemaMatchResult.none
+        }
     }
 
     /// 删除 Schema
@@ -222,7 +272,7 @@ public actor SmartMerger {
                 let modifiedResult = applySchema(schema, to: baseResult)
                 return (modifiedResult, matchResult, schema)
 
-            case .similar, .none:
+            case .ambiguous, .similar, .none:
                 // 无匹配或只有相似匹配，返回基础结果
                 return (baseResult, matchResult, nil)
             }

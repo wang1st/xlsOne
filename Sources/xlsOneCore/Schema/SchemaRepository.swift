@@ -17,6 +17,9 @@ public protocol SchemaRepositoryProtocol: Sendable {
     /// 根据指纹查找匹配的 Schema
     func findMatchingSchema(fingerprint: FileFingerprint) async throws -> SchemaMatchResult
 
+    /// 根据工作区指纹查找匹配的 Schema
+    func findMatchingSchema(workbookFingerprint: WorkbookRuleFingerprint) async throws -> SchemaMatchResult
+
     /// 更新 Schema 匹配计数
     func incrementMatchCount(id: UUID) async throws
 
@@ -147,6 +150,11 @@ public actor SchemaRepository: SchemaRepositoryProtocol {
         return SchemaMatcher.match(fingerprint: fingerprint, against: schemas)
     }
 
+    public func findMatchingSchema(workbookFingerprint: WorkbookRuleFingerprint) async throws -> SchemaMatchResult {
+        let schemas = try await loadAllSchemas()
+        return SchemaMatcher.match(workbookFingerprint: workbookFingerprint, against: schemas)
+    }
+
     public func incrementMatchCount(id: UUID) async throws {
         guard let schema = try await findSchema(id: id) else { return }
 
@@ -155,6 +163,7 @@ public actor SchemaRepository: SchemaRepositoryProtocol {
             id: schema.id,
             name: schema.name,
             fingerprint: schema.fingerprint,
+            workbookFingerprint: schema.workbookFingerprint,
             cellOverrides: schema.cellOverrides,
             createdAt: schema.createdAt,
             updatedAt: Date(),
@@ -193,6 +202,7 @@ public actor SchemaRepository: SchemaRepositoryProtocol {
                 id: UUID(),
                 name: schema.name + " (导入)",
                 fingerprint: schema.fingerprint,
+                workbookFingerprint: schema.workbookFingerprint,
                 cellOverrides: schema.cellOverrides,
                 matchCount: 0
             )
@@ -206,6 +216,7 @@ public actor SchemaRepository: SchemaRepositoryProtocol {
             id: UUID(),
             name: schema.name + " (导入)",
             fingerprint: schema.fingerprint,
+            workbookFingerprint: schema.workbookFingerprint,
             cellOverrides: schema.cellOverrides,
             matchCount: 0
         )

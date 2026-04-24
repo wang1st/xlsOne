@@ -14,7 +14,7 @@ struct XlsOneApp: App {
         }
         .commands {
             CommandMenu("文件") {
-                Button("\(viewModel.toolbarPresentation.importTitle)...") {
+                Button("导入文件...") {
                     viewModel.showOpenFileDialog()
                 }
                 .keyboardShortcut("o", modifiers: .command)
@@ -34,7 +34,7 @@ struct XlsOneApp: App {
             }
 
             CommandMenu("编辑") {
-                Button("重新校验") {
+                Button("刷新") {
                     viewModel.reloadFiles()
                 }
                 .keyboardShortcut("r", modifiers: .command)
@@ -45,7 +45,13 @@ struct XlsOneApp: App {
                 Button("清除所有修正") {
                     viewModel.clearOverrides()
                 }
-                .disabled(viewModel.userOverrides.isEmpty)
+                .disabled(viewModel.correctionCount == 0)
+            }
+
+            CommandMenu("高级") {
+                Button("调整记忆...") {
+                    viewModel.showSchemaManagerWindow()
+                }
             }
         }
     }
@@ -86,7 +92,7 @@ class AppViewModel: ObservableObject {
 
         if panel.runModal() == .OK {
             let paths = panel.urls.map { $0.path }
-            loadFiles(at: paths, append: false)
+            loadFiles(at: paths, append: !selectedFilePaths.isEmpty)
         }
     }
 
@@ -128,8 +134,13 @@ class AppViewModel: ObservableObject {
         anomalyQueue.removeAll()
         allAnomalies.removeAll()
         matchedSchema = nil
+        workspaceRuleState = .none
         userOverrides.removeAll()
+        forgottenOverrideKeys.removeAll()
         overrideHistory.removeAll()
+        workspaceBaseOverrides.removeAll()
+        workspaceBaseSchemaID = nil
+        workspaceActiveSchemaID = nil
         selectedSheetSelection = nil
     }
 
@@ -163,17 +174,22 @@ class AppViewModel: ObservableObject {
     /// 覆盖操作历史（用于撤销）
     private var overrideHistory: [OverrideOperation] = []
 
-    /// 是否显示 Schema 管理器
+    /// 本批次明确要求移除的已记住调整
+    private var forgottenOverrideKeys: Set<StoredOverrideKey> = []
+
+    /// 当前工作区在本批次开始前的已记住调整快照
+    private var workspaceBaseOverrides: [CellTypeOverride] = []
+    private var workspaceBaseSchemaID: UUID?
+    private var workspaceActiveSchemaID: UUID?
+
+    /// 是否显示规则管理器
     @Published var showSchemaManager = false
 
-    /// 是否显示保存 Schema 对话框
-    @Published var showSaveSchemaDialog = false
-
-    /// 新 Schema 名称
-    @Published var newSchemaName = ""
-
-    /// 当前匹配的 Schema
+    /// 当前匹配的规则
     @Published var matchedSchema: MergeSchema?
+
+    /// 当前工作区的规则应用状态
+    @Published var workspaceRuleState: WorkspaceRuleState = .none
 
     var canExport: Bool {
         workspacePhase == .ready &&
@@ -183,7 +199,16 @@ class AppViewModel: ObservableObject {
     }
 
     var correctionCount: Int {
-        userOverrides.count
+        userOverrides.count + forgottenOverrideKeys.count
+    }
+
+    var manualOverridePositionsForCurrentSheet: Set<CellPosition> {
+        guard let currentSheet else { return [] }
+        return Set(
+            userOverrides
+                .filter { $0.sheetName == currentSheet }
+                .map { CellPosition(row: $0.rowIndex, col: $0.colIndex) }
+        )
     }
 
     var participatingFileCount: Int {
@@ -259,6 +284,37 @@ class AppViewModel: ObservableObject {
         return result.rows[selectedCell.row][selectedCell.col]
     }
 
+    func correctionState(for position: CellPosition, cell: MergedCell? = nil) -> CellCorrectionState {
+        if manualOverridePositionsForCurrentSheet.contains(position) {
+            return .manual
+        }
+
+        if let cell {
+            return cell.isOverridden ? .rule : .none
+        }
+
+        guard let result = mergedResult,
+              position.row < result.rows.count,
+              position.col < result.rows[position.row].count else {
+            return .none
+        }
+
+        return result.rows[position.row][position.col].isOverridden ? .rule : .none
+    }
+
+    var canRestoreSelectedCellAutomatic: Bool {
+        guard let currentSheet,
+              let selectedCell else {
+            return false
+        }
+
+        return effectiveWorkspaceOverrides().contains {
+            $0.sheetName == currentSheet &&
+            $0.rowIndex == selectedCell.row &&
+            $0.colIndex == selectedCell.col
+        }
+    }
+
     /// 更新合并结果
     private func revalidateSelection() {
         guard !selectedFilePaths.isEmpty else {
@@ -290,6 +346,7 @@ class AppViewModel: ObservableObject {
                     anomalyQueue.removeAll()
                     allAnomalies.removeAll()
                     matchedSchema = nil
+                    workspaceRuleState = .none
                 }
                 return
             }
@@ -305,19 +362,36 @@ class AppViewModel: ObservableObject {
     private func refreshWorkspaceResults() async {
         guard workspacePhase == .ready, !files.isEmpty else { return }
 
-        var resultsBySheet: [String: MergedResult] = [:]
-        for sheetName in availableSheets {
-            let result = await smartMerger.merge(files: files, sheetName: sheetName)
-            let finalResult = smartMerger.applyOverrides(to: result, overrides: userOverrides)
-            resultsBySheet[sheetName] = finalResult
+        let ruleMatchResult = await smartMerger.prepareWorkspaceSchema(
+            files: files,
+            sheetNames: availableSheets
+        )
+        let workspaceSchema: MergeSchema?
+        switch ruleMatchResult {
+        case .exact(let schema):
+            workspaceSchema = schema
+        case .ambiguous, .similar, .none:
+            workspaceSchema = nil
         }
 
-        let schema = await smartMerger.appliedSchema
+        syncWorkspaceMemoryBase(with: workspaceSchema)
+        let effectiveOverrides = effectiveWorkspaceOverrides()
+        var resultsBySheet: [String: MergedResult] = [:]
+        for sheetName in availableSheets {
+            let result = await smartMerger.merge(
+                files: files,
+                sheetName: sheetName,
+                applying: nil
+            )
+            let finalResult = smartMerger.applyOverrides(to: result, overrides: effectiveOverrides)
+            resultsBySheet[sheetName] = finalResult
+        }
 
         await MainActor.run {
             mergedResultsBySheet = resultsBySheet
             syncSelectedSheetPresentation()
-            matchedSchema = schema
+            matchedSchema = workspaceSchema
+            workspaceRuleState = Self.ruleState(from: ruleMatchResult)
             refreshSelectionAndAnomalies()
         }
     }
@@ -325,18 +399,16 @@ class AppViewModel: ObservableObject {
     /// 应用单元格类型覆盖
     func applyCellOverride(row: Int, col: Int, type: CellOverrideType) {
         guard let currentSheet else { return }
-        // 记录历史（用于撤销）
-        let position = CellPosition(row: row, col: col)
-        overrideHistory.append(.single(sheetName: currentSheet, position: position))
-
-        // 移除已存在的同一位置覆盖
+        recordOverrideSnapshot()
         userOverrides.removeAll {
             $0.sheetName == currentSheet &&
             $0.rowIndex == row &&
             $0.colIndex == col
         }
+        forgottenOverrideKeys.remove(
+            StoredOverrideKey(sheetName: currentSheet, rowIndex: row, colIndex: col)
+        )
 
-        // 添加新覆盖
         let override = CellTypeOverride(
             sheetName: currentSheet,
             rowIndex: row,
@@ -346,9 +418,8 @@ class AppViewModel: ObservableObject {
         )
         userOverrides.append(override)
 
-        // 更新显示
         Task {
-            await refreshWorkspaceResults()
+            await persistAdjustmentMemoryAndRefresh()
         }
     }
 
@@ -356,19 +427,18 @@ class AppViewModel: ObservableObject {
     func applyBulkOverride(positions: [CellPosition], type: CellOverrideType) {
         guard let currentSheet, !positions.isEmpty else { return }
 
-        // 记录历史（用于撤销）
-        overrideHistory.append(.batch(sheetName: currentSheet, positions: positions))
-
-        // 移除这些位置的所有现有覆盖
+        recordOverrideSnapshot()
         for pos in positions {
             userOverrides.removeAll {
                 $0.sheetName == currentSheet &&
                 $0.rowIndex == pos.row &&
                 $0.colIndex == pos.col
             }
+            forgottenOverrideKeys.remove(
+                StoredOverrideKey(sheetName: currentSheet, rowIndex: pos.row, colIndex: pos.col)
+            )
         }
 
-        // 为每个位置添加覆盖
         for pos in positions {
             let override = CellTypeOverride(
                 sheetName: currentSheet,
@@ -380,35 +450,19 @@ class AppViewModel: ObservableObject {
             userOverrides.append(override)
         }
 
-        // 更新显示
         Task {
-            await refreshWorkspaceResults()
+            await persistAdjustmentMemoryAndRefresh()
         }
-    }
-
-    /// 保存当前覆盖为 Schema
-    func saveCurrentAsSchema(name: String) async throws {
-        guard workspacePhase == .ready, !files.isEmpty else { return }
-
-        let fingerprint = FingerprintGenerator.generate(from: files[0])
-        _ = try await smartMerger.createSchema(
-            name: name,
-            fingerprint: fingerprint,
-            overrides: userOverrides
-        )
-
-        // 清空临时覆盖（已保存）
-        userOverrides.removeAll()
-        overrideHistory.removeAll()
-        await refreshWorkspaceResults()
     }
 
     /// 清除所有用户覆盖
     func clearOverrides() {
+        guard correctionCount > 0 else { return }
+        recordOverrideSnapshot()
         userOverrides.removeAll()
-        overrideHistory.removeAll()
+        forgottenOverrideKeys.removeAll()
         Task {
-            await refreshWorkspaceResults()
+            await persistAdjustmentMemoryAndRefresh()
         }
     }
 
@@ -417,29 +471,17 @@ class AppViewModel: ObservableObject {
         guard let lastOperation = overrideHistory.popLast() else { return }
 
         switch lastOperation {
-        case .single(let sheetName, let position):
-            removeOverride(for: position, sheetName: sheetName)
-        case .batch(let sheetName, let positions):
-            for pos in positions {
-                removeOverride(for: pos, sheetName: sheetName)
-            }
+        case .snapshot(let previousOverrides, let previousForgottenKeys):
+            userOverrides = previousOverrides
+            forgottenOverrideKeys = previousForgottenKeys
         }
 
         Task {
-            await refreshWorkspaceResults()
+            await persistAdjustmentMemoryAndRefresh()
         }
     }
 
-    /// 移除指定位置的覆盖
-    private func removeOverride(for position: CellPosition, sheetName: String) {
-        userOverrides.removeAll {
-            $0.sheetName == sheetName &&
-            $0.rowIndex == position.row &&
-            $0.colIndex == position.col
-        }
-    }
-
-    /// 显示 Schema 管理器
+    /// 显示规则管理器
     func showSchemaManagerWindow() {
         showSchemaManager = true
     }
@@ -581,6 +623,34 @@ class AppViewModel: ObservableObject {
         }
     }
 
+    func restoreAutomaticDecisionForSelectedCell() {
+        guard let currentSheet,
+              let selectedCell,
+              canRestoreSelectedCellAutomatic else {
+            return
+        }
+
+        recordOverrideSnapshot()
+        userOverrides.removeAll {
+            $0.sheetName == currentSheet &&
+            $0.rowIndex == selectedCell.row &&
+            $0.colIndex == selectedCell.col
+        }
+
+        let key = StoredOverrideKey(sheetName: currentSheet, rowIndex: selectedCell.row, colIndex: selectedCell.col)
+        if workspaceBaseOverrides.contains(where: {
+            StoredOverrideKey(override: $0) == key
+        }) {
+            forgottenOverrideKeys.insert(key)
+        } else {
+            forgottenOverrideKeys.remove(key)
+        }
+
+        Task {
+            await persistAdjustmentMemoryAndRefresh()
+        }
+    }
+
     private static func deduplicatedPaths(_ paths: [String]) -> [String] {
         var seen: Set<String> = []
         var result: [String] = []
@@ -590,11 +660,158 @@ class AppViewModel: ObservableObject {
         }
         return result
     }
+
+    private static func ruleState(from matchResult: SchemaMatchResult) -> WorkspaceRuleState {
+        switch matchResult {
+        case .exact(let schema):
+            return .applied(name: schema.name, correctionCount: schema.cellOverrides.count)
+        case .ambiguous(let candidates):
+            return .ambiguous(count: candidates.count)
+        case .similar(let candidates):
+            return .similar(count: candidates.count)
+        case .none:
+            return .none
+        }
+    }
+
+    private static func mergedRuleOverrides(
+        existing: [CellTypeOverride],
+        updates: [CellTypeOverride]
+    ) -> [CellTypeOverride] {
+        var merged = existing
+
+        for update in updates {
+            merged.removeAll {
+                $0.sheetName == update.sheetName &&
+                $0.rowIndex == update.rowIndex &&
+                $0.colIndex == update.colIndex
+            }
+            merged.append(update)
+        }
+
+        return merged
+    }
+
+    private func recordOverrideSnapshot() {
+        overrideHistory.append(
+            .snapshot(
+                previousOverrides: userOverrides,
+                previousForgottenKeys: forgottenOverrideKeys
+            )
+        )
+    }
+
+    private func syncWorkspaceMemoryBase(with workspaceSchema: MergeSchema?) {
+        guard userOverrides.isEmpty, forgottenOverrideKeys.isEmpty else { return }
+        workspaceBaseOverrides = workspaceSchema?.cellOverrides ?? []
+        workspaceBaseSchemaID = workspaceSchema?.id
+        workspaceActiveSchemaID = workspaceSchema?.id
+    }
+
+    private func effectiveWorkspaceOverrides() -> [CellTypeOverride] {
+        let rememberedOverrides = workspaceBaseOverrides.filter {
+            !forgottenOverrideKeys.contains(StoredOverrideKey(override: $0))
+        }
+        return Self.mergedRuleOverrides(existing: rememberedOverrides, updates: userOverrides)
+    }
+
+    private func persistAdjustmentMemoryAndRefresh() async {
+        do {
+            try await persistAdjustmentMemory()
+        } catch {
+            errorMessage = "记住调整失败: \(error.localizedDescription)"
+            showError = true
+        }
+        await refreshWorkspaceResults()
+    }
+
+    private func persistAdjustmentMemory() async throws {
+        guard workspacePhase == .ready, !files.isEmpty, !availableSheets.isEmpty else { return }
+
+        let fingerprint = FingerprintGenerator.generateWorkspaceLegacyFingerprint(
+            from: files,
+            sheetNames: availableSheets
+        )
+        let workbookFingerprint = FingerprintGenerator.generateWorkbook(
+            from: files,
+            sheetNames: availableSheets
+        )
+        let effectiveOverrides = effectiveWorkspaceOverrides()
+        let schemaID = workspaceActiveSchemaID ?? workspaceBaseSchemaID
+
+        if effectiveOverrides.isEmpty {
+            if let schemaID {
+                if workspaceBaseSchemaID == nil {
+                    try await smartMerger.deleteSchema(id: schemaID)
+                    workspaceActiveSchemaID = nil
+                } else {
+                    _ = try await smartMerger.updateSchema(
+                        id: schemaID,
+                        overrides: [],
+                        fingerprint: fingerprint,
+                        workbookFingerprint: workbookFingerprint
+                    )
+                    workspaceActiveSchemaID = schemaID
+                }
+            }
+            return
+        }
+
+        if let schemaID {
+            _ = try await smartMerger.updateSchema(
+                id: schemaID,
+                overrides: effectiveOverrides,
+                fingerprint: fingerprint,
+                workbookFingerprint: workbookFingerprint
+            )
+            workspaceActiveSchemaID = schemaID
+        } else {
+            let schema = try await smartMerger.createSchema(
+                name: suggestedAdjustmentMemoryName(),
+                fingerprint: fingerprint,
+                workbookFingerprint: workbookFingerprint,
+                overrides: effectiveOverrides
+            )
+            workspaceActiveSchemaID = schema.id
+        }
+    }
+
+    private func suggestedAdjustmentMemoryName() -> String {
+        let exportName = ExportNaming.suggestedWorkbookName(
+            from: validationReport?.files.map(\.filename) ??
+                selectedFilePaths.map { URL(fileURLWithPath: $0).lastPathComponent }
+        )
+
+        if exportName.hasSuffix("_汇总") {
+            return String(exportName.dropLast("_汇总".count)) + "_调整记忆"
+        }
+        if exportName.hasSuffix("汇总") {
+            return String(exportName.dropLast("汇总".count)) + "调整记忆"
+        }
+        return "\(exportName)_调整记忆"
+    }
 }
 
 // MARK: - 覆盖操作历史
 
 private enum OverrideOperation {
-    case single(sheetName: String, position: CellPosition)
-    case batch(sheetName: String, positions: [CellPosition])
+    case snapshot(previousOverrides: [CellTypeOverride], previousForgottenKeys: Set<StoredOverrideKey>)
+}
+
+private struct StoredOverrideKey: Hashable {
+    let sheetName: String
+    let rowIndex: Int
+    let colIndex: Int
+
+    init(sheetName: String, rowIndex: Int, colIndex: Int) {
+        self.sheetName = sheetName
+        self.rowIndex = rowIndex
+        self.colIndex = colIndex
+    }
+
+    init(override: CellTypeOverride) {
+        self.sheetName = override.sheetName ?? ""
+        self.rowIndex = override.rowIndex
+        self.colIndex = override.colIndex
+    }
 }

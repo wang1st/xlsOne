@@ -52,4 +52,27 @@ final class AppViewModelSelectionTests: XCTestCase {
         XCTAssertEqual(viewModel.selectedSheetStructureStatus, "已跳过")
         XCTAssertNil(viewModel.currentSheet)
     }
+
+    func testCorrectionStateDistinguishesManualAndRuleAdjustedCells() {
+        let viewModel = AppViewModel()
+        viewModel.selectedSheetSelection = .mergeable("汇总表")
+        viewModel.userOverrides = [
+            CellTypeOverride(sheetName: "汇总表", rowIndex: 0, colIndex: 0, cellType: .sum)
+        ]
+        let ruleAdjustedCell = MergedCell(type: .label, sources: [], isOverridden: true)
+        viewModel.mergedResult = MergedResult(
+            sheetName: "汇总表",
+            rows: [[MergedCell(type: .sum(10), isOverridden: true), ruleAdjustedCell]],
+            sourceFiles: ["a.xlsx"]
+        )
+
+        XCTAssertEqual(
+            viewModel.correctionState(for: CellPosition(row: 0, col: 0), cell: viewModel.mergedResult?.rows[0][0]),
+            .manual
+        )
+        XCTAssertEqual(
+            viewModel.correctionState(for: CellPosition(row: 0, col: 1), cell: ruleAdjustedCell),
+            .rule
+        )
+    }
 }
