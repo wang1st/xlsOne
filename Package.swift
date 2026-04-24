@@ -6,6 +6,7 @@ let package = Package(
     platforms: [.macOS(.v12)],
     products: [
         .library(name: "xlsOneCore", targets: ["xlsOneCore"]),
+        .library(name: "xlsOneUI", targets: ["xlsOneUI"]),
         .executable(name: "xlsOne", targets: ["xlsOne"])
     ],
     dependencies: [
@@ -16,9 +17,13 @@ let package = Package(
             name: "xlsOneCore",
             dependencies: ["CoreXLSX"]
         ),
+        .target(
+            name: "xlsOneUI",
+            dependencies: ["xlsOneCore"]
+        ),
         .executableTarget(
             name: "xlsOne",
-            dependencies: ["xlsOneCore"]
+            dependencies: ["xlsOneUI"]
         ),
         .testTarget(
             name: "xlsOneCoreTests",
@@ -26,7 +31,7 @@ let package = Package(
         ),
         .testTarget(
             name: "xlsOneTests",
-            dependencies: ["xlsOne"]
+            dependencies: ["xlsOneUI"]
         )
     ]
 )

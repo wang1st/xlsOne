@@ -1,18 +1,18 @@
 # Swift build
 .build/
 .swiftpm/
-*.xcodeproj
-*.xcworkspace
 
 # macOS
 .DS_Store
 *.swp
 *.swo
 *~
+*.xcuserstate
 
 # IDE
 .idea/
 .vscode/
+xcuserdata/
 
 # Output files
 output_*.html

@@ -1,6 +1,6 @@
 import XCTest
 import xlsOneCore
-@testable import xlsOne
+@testable import xlsOneUI
 
 final class WorkspaceDiagnosticsTests: XCTestCase {
     func testAnomalyQueueStaysEmptyWhenReviewHintsAreHidden() {
