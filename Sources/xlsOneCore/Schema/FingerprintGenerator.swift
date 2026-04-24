@@ -36,6 +36,73 @@ public struct FingerprintGenerator {
         )
     }
 
+    /// 从指定工作表生成兼容旧规则的单表指纹
+    public static func generate(
+        from file: ExcelFile,
+        sheetName: String,
+        fileNamePattern: String? = nil
+    ) -> FileFingerprint {
+        guard let sheet = file.sheets.first(where: { $0.name == sheetName }) else {
+            return FileFingerprint(
+                sheetName: sheetName,
+                rowCount: 0,
+                colCount: 0,
+                headerHash: "",
+                sampleDataHash: "",
+                fileNamePattern: fileNamePattern
+            )
+        }
+
+        let dimensions = effectiveDimensions(for: sheet)
+        let sheetFingerprint = generateSheetRuleFingerprint(
+            sheet: sheet,
+            effectiveRowCount: dimensions.rows,
+            effectiveColumnCount: dimensions.cols
+        )
+
+        return FileFingerprint(
+            schemaVersion: 2,
+            sheetName: sheet.name,
+            rowCount: sheetFingerprint.rowCount,
+            colCount: sheetFingerprint.columnCount,
+            headerHash: sheetFingerprint.layoutHash,
+            sampleDataHash: sheetFingerprint.formatHash,
+            fileNamePattern: fileNamePattern
+        )
+    }
+
+    /// 从一组同构 Excel 的可合并工作表生成工作区级规则指纹
+    public static func generateWorkbook(
+        from files: [ExcelFile],
+        sheetNames: [String]
+    ) -> WorkbookRuleFingerprint {
+        let fingerprints = sheetNames.map { sheetName in
+            generateConsensusSheetFingerprint(from: files, sheetName: sheetName)
+        }
+
+        return WorkbookRuleFingerprint(sheetFingerprints: fingerprints)
+    }
+
+    /// 为新规则提供兼容旧字段的代表性指纹
+    public static func generateWorkspaceLegacyFingerprint(
+        from files: [ExcelFile],
+        sheetNames: [String]
+    ) -> FileFingerprint {
+        guard let firstSheetName = sheetNames.first,
+              let file = files.first else {
+            return FileFingerprint(
+                schemaVersion: 2,
+                sheetName: "",
+                rowCount: 0,
+                colCount: 0,
+                headerHash: "",
+                sampleDataHash: ""
+            )
+        }
+
+        return generate(from: file, sheetName: firstSheetName)
+    }
+
     /// 生成表头哈希
     /// 结合工作表名称、第一行（列头）和第一列（行标签）
     private static func generateHeaderHash(sheet: SheetData) -> String {
@@ -115,5 +182,125 @@ public struct FingerprintGenerator {
         let hash = SHA256.hash(data: data)
         // 取前 8 字节（16 个十六进制字符）作为哈希值
         return hash.prefix(8).map { String(format: "%02x", $0) }.joined()
+    }
+
+    private static func generateConsensusSheetFingerprint(
+        from files: [ExcelFile],
+        sheetName: String
+    ) -> SheetRuleFingerprint {
+        let sheets = files.compactMap { file in
+            file.sheets.first(where: { $0.name == sheetName })
+        }
+
+        let dimensions = chooseDominantDimensions(
+            from: sheets.map(effectiveDimensions)
+        )
+
+        guard let representativeSheet = sheets.first else {
+            return SheetRuleFingerprint(
+                sheetName: sheetName,
+                rowCount: 0,
+                columnCount: 0,
+                layoutHash: "",
+                formatHash: ""
+            )
+        }
+
+        return generateSheetRuleFingerprint(
+            sheet: representativeSheet,
+            effectiveRowCount: dimensions.rows,
+            effectiveColumnCount: dimensions.cols
+        )
+    }
+
+    private static func generateSheetRuleFingerprint(
+        sheet: SheetData,
+        effectiveRowCount: Int,
+        effectiveColumnCount: Int
+    ) -> SheetRuleFingerprint {
+        var layoutComponents: [String] = [sheet.name, "\(effectiveRowCount)x\(effectiveColumnCount)"]
+        var formatComponents: [String] = []
+
+        for rowIndex in 0..<effectiveRowCount {
+            for columnIndex in 0..<effectiveColumnCount {
+                let cell = sheet.cellAt(row: rowIndex, col: columnIndex)
+                let isEmpty = cell?.value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true
+                layoutComponents.append(isEmpty ? "0" : "1")
+                formatComponents.append(structuralToken(for: cell))
+            }
+        }
+
+        return SheetRuleFingerprint(
+            sheetName: sheet.name,
+            rowCount: effectiveRowCount,
+            columnCount: effectiveColumnCount,
+            layoutHash: hash(layoutComponents.joined(separator: "|")),
+            formatHash: hash(formatComponents.joined(separator: "|"))
+        )
+    }
+
+    private static func structuralToken(for cell: CellData?) -> String {
+        guard let cell else { return "E" }
+        let value = cell.value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !value.isEmpty else { return "E" }
+        if cell.isDate { return "D" }
+        if cell.numericValue != nil { return "N" }
+        if value.range(of: #"\p{Han}"#, options: .regularExpression) != nil { return "C" }
+        if value.range(of: #"[A-Za-z]"#, options: .regularExpression) != nil { return "A" }
+        return "T"
+    }
+
+    private static func effectiveDimensions(for sheet: SheetData) -> SheetDimensions {
+        var lastNonEmptyRow = -1
+        var lastNonEmptyColumn = -1
+
+        for (rowIndex, row) in sheet.rows.enumerated() {
+            for (columnIndex, cell) in row.enumerated()
+            where !cell.value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                lastNonEmptyRow = max(lastNonEmptyRow, rowIndex)
+                lastNonEmptyColumn = max(lastNonEmptyColumn, columnIndex)
+            }
+        }
+
+        return SheetDimensions(
+            rows: max(lastNonEmptyRow + 1, 0),
+            cols: max(lastNonEmptyColumn + 1, 0)
+        )
+    }
+
+    private static func chooseDominantDimensions(from dimensions: [SheetDimensions]) -> SheetDimensions {
+        guard !dimensions.isEmpty else { return SheetDimensions(rows: 0, cols: 0) }
+
+        return Dictionary(grouping: dimensions.enumerated(), by: \.element)
+            .values
+            .max { lhs, rhs in
+                if lhs.count != rhs.count {
+                    return lhs.count < rhs.count
+                }
+
+                let lhsDimensions = lhs[0].element
+                let rhsDimensions = rhs[0].element
+                if lhsDimensions != rhsDimensions {
+                    return lhsDimensions < rhsDimensions
+                }
+
+                let lhsFirstIndex = lhs.map(\.offset).min() ?? .max
+                let rhsFirstIndex = rhs.map(\.offset).min() ?? .max
+                return lhsFirstIndex > rhsFirstIndex
+            }?
+            .first?
+            .element ?? SheetDimensions(rows: 0, cols: 0)
+    }
+}
+
+private struct SheetDimensions: Hashable, Comparable {
+    let rows: Int
+    let cols: Int
+
+    static func < (lhs: SheetDimensions, rhs: SheetDimensions) -> Bool {
+        if lhs.rows != rhs.rows {
+            return lhs.rows < rhs.rows
+        }
+        return lhs.cols < rhs.cols
     }
 }

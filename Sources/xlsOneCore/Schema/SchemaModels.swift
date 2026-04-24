@@ -91,11 +91,53 @@ public struct FileFingerprint: Codable, Sendable, Equatable {
     }
 }
 
+/// 单张工作表的结构指纹 - 只描述布局，不使用业务值
+public struct SheetRuleFingerprint: Codable, Sendable, Equatable, Hashable {
+    public let sheetName: String
+    public let rowCount: Int
+    public let columnCount: Int
+    public let layoutHash: String
+    public let formatHash: String
+
+    public init(
+        sheetName: String,
+        rowCount: Int,
+        columnCount: Int,
+        layoutHash: String,
+        formatHash: String
+    ) {
+        self.sheetName = sheetName
+        self.rowCount = rowCount
+        self.columnCount = columnCount
+        self.layoutHash = layoutHash
+        self.formatHash = formatHash
+    }
+}
+
+/// 工作区级规则指纹 - 一整组同构 Excel 本次只匹配一套规则
+public struct WorkbookRuleFingerprint: Codable, Sendable, Equatable {
+    public let schemaVersion: Int
+    public let sheetFingerprints: [SheetRuleFingerprint]
+
+    public init(
+        schemaVersion: Int = 2,
+        sheetFingerprints: [SheetRuleFingerprint]
+    ) {
+        self.schemaVersion = schemaVersion
+        self.sheetFingerprints = sheetFingerprints
+    }
+
+    public var sheetNames: [String] {
+        sheetFingerprints.map(\.sheetName)
+    }
+}
+
 /// 合并 Schema - 包含用户对特定文件类型的修正配置
 public struct MergeSchema: Codable, Sendable, Identifiable {
     public let id: UUID
     public var name: String
     public let fingerprint: FileFingerprint
+    public let workbookFingerprint: WorkbookRuleFingerprint?
     public var cellOverrides: [CellTypeOverride]
     public let createdAt: Date
     public var updatedAt: Date
@@ -105,6 +147,7 @@ public struct MergeSchema: Codable, Sendable, Identifiable {
         id: UUID = UUID(),
         name: String,
         fingerprint: FileFingerprint,
+        workbookFingerprint: WorkbookRuleFingerprint? = nil,
         cellOverrides: [CellTypeOverride],
         createdAt: Date = Date(),
         updatedAt: Date = Date(),
@@ -113,10 +156,22 @@ public struct MergeSchema: Codable, Sendable, Identifiable {
         self.id = id
         self.name = name
         self.fingerprint = fingerprint
+        self.workbookFingerprint = workbookFingerprint
         self.cellOverrides = cellOverrides
         self.createdAt = createdAt
         self.updatedAt = updatedAt
         self.matchCount = matchCount
+    }
+}
+
+/// 规则匹配候选
+public struct SchemaMatchCandidate: Sendable {
+    public let schema: MergeSchema
+    public let score: Double
+
+    public init(schema: MergeSchema, score: Double) {
+        self.schema = schema
+        self.score = score
     }
 }
 
@@ -125,8 +180,11 @@ public enum SchemaMatchResult: Sendable {
     /// 精确匹配
     case exact(MergeSchema)
 
+    /// 多条规则同时高置信命中，需要用户明确选择
+    case ambiguous([SchemaMatchCandidate])
+
     /// 相似匹配（按相似度排序）
-    case similar([(schema: MergeSchema, score: Double)])
+    case similar([SchemaMatchCandidate])
 
     /// 无匹配
     case none

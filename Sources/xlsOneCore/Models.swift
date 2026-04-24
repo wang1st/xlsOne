@@ -301,22 +301,6 @@ public struct MergedCell: Equatable, Sendable {
             )
         }
 
-        // 如果只有一个文件，直接显示
-        if validCells.count == 1, let (_, cell) = validCells.first {
-            let type = CellType.single(cell.value)
-            return MergedCell(
-                type: type,
-                sources: sources,
-                formatCode: formatCode,
-                decision: defaultDecision(
-                    for: type,
-                    reasons: ["仅有一个非空来源值，直接按单值显示"],
-                    confidence: 1.0,
-                    isSuspicious: false
-                )
-            )
-        }
-
         // 第一行强制表头
         if row == 0 {
             let type = CellType.label
@@ -333,6 +317,17 @@ public struct MergedCell: Equatable, Sendable {
             )
         }
 
+        // 单个非空来源也要参考格式和同列上下文，避免金额列中的 0/空值组合被误当作普通单值。
+        if validCells.count == 1 {
+            return determineSingleValue(
+                validCells: validCells,
+                sources: sources,
+                leftCells: leftCells,
+                neighborContext: neighborContext,
+                formatCode: formatCode
+            )
+        }
+
         // 第一列特殊处理（无左邻列）
         if col == 0 {
             return determineFirstColumn(
@@ -345,6 +340,9 @@ public struct MergedCell: Equatable, Sendable {
 
         // 自身格式
         let selfFP = FormatProfile.fingerprint(for: validCells.first?.1)
+        let blankSourceCount = sources.filter { $0.state == .empty || $0.state == .missing }.count
+        let blanksWithNumericValues = blankSourceCount > 0 &&
+            validCells.allSatisfy { $0.1.numericValue != nil }
 
         // 垂直穿透分析
         let sampledCells = sampleFiles(from: cells).map(\.cell)
@@ -357,12 +355,54 @@ public struct MergedCell: Equatable, Sendable {
         }
         let leftCell = leftValidCells.first  // 取第一个非空左邻单元格
 
+        let numericValues = validCells.compactMap { $0.1.numericValue }
+        let allNonEmptyValuesAreNumeric = numericValues.count == validCells.count
+        let allNumericValuesAreZero = allNonEmptyValuesAreNumeric &&
+            numericValues.allSatisfy { abs($0) < 0.0000001 }
+        let allNumericValuesAreIdenticalNonZeroIntegers = allNonEmptyValuesAreNumeric &&
+            numericValues.allSatisfy { $0 == floor($0) && abs($0) >= 0.0000001 } &&
+            Set(numericValues).count == 1
+        if allNumericValuesAreZero,
+           leftCell.map({ !leftCellHasCodeSemantic($0) }) ?? true {
+            let type = CellType.sum(0)
+            return MergedCell(
+                type: type,
+                sources: sources,
+                formatCode: formatCode,
+                decision: defaultDecision(
+                    for: type,
+                    reasons: ["所有非空来源均为 0，按可累加单元格求和处理"],
+                    confidence: 0.9,
+                    isSuspicious: false
+                )
+            )
+        }
+        if allNumericValuesAreIdenticalNonZeroIntegers,
+           blankSourceCount == 0,
+           leftCell.map({ !leftCellHasAmountSemantic($0) }) ?? true {
+            let type = CellType.label
+            return MergedCell(
+                type: type,
+                sources: sources,
+                formatCode: formatCode,
+                decision: defaultDecision(
+                    for: type,
+                    reasons: ["所有来源为相同非零整数，且无明确可累加语义，按标签处理"],
+                    confidence: 0.9,
+                    isSuspicious: false
+                )
+            )
+        }
+
         // 多因子评分
         var amountScore = 0.0
         var labelScore = 0.0
         var decisionReasons: [String] = [
             "自身格式指纹: \(selfFP.descriptionText)"
         ]
+        if blanksWithNumericValues {
+            decisionReasons.append("部分来源为空或缺失，非空来源均为数值，空值按 0 参与可累加判断")
+        }
 
         // 1. 自身格式 (40%)
         let selfWeight = 0.4
@@ -458,7 +498,8 @@ public struct MergedCell: Equatable, Sendable {
                 selfFP: selfFP,
                 leftCell: leftCell,
                 verticalProfile: verticalProfile,
-                validCells: validCells
+                validCells: validCells,
+                blankSourceCount: blankSourceCount
             )
             if accumulable {
                 let total = validCells.compactMap { $0.1.numericValue }.reduce(0, +)
@@ -510,7 +551,8 @@ public struct MergedCell: Equatable, Sendable {
                     selfFP: selfFP,
                     leftCell: leftCell,
                     verticalProfile: verticalProfile,
-                    validCells: validCells
+                    validCells: validCells,
+                    blankSourceCount: blankSourceCount
                 )
                 if accumulable {
                     let total = validCells.compactMap { $0.1.numericValue }.reduce(0, +)
@@ -550,6 +592,45 @@ public struct MergedCell: Equatable, Sendable {
         formatCode: String?,
         row: Int
     ) -> MergedCell {
+        let blankSourceCount = sources.filter { $0.state == .empty || $0.state == .missing }.count
+        let numericValues = validCells.compactMap { $0.1.numericValue }
+        let allNonEmptyValuesAreNumeric = numericValues.count == validCells.count
+        let allNumericValuesAreZero = allNonEmptyValuesAreNumeric &&
+            numericValues.allSatisfy { abs($0) < 0.0000001 }
+        let allNumericValuesAreIdenticalNonZeroIntegers = allNonEmptyValuesAreNumeric &&
+            numericValues.allSatisfy { $0 == floor($0) && abs($0) >= 0.0000001 } &&
+            Set(numericValues).count == 1
+
+        if allNumericValuesAreZero {
+            let type = CellType.sum(0)
+            return MergedCell(
+                type: type,
+                sources: sources,
+                formatCode: formatCode,
+                decision: defaultDecision(
+                    for: type,
+                    reasons: ["首列所有非空来源均为 0，按可累加单元格求和处理"],
+                    confidence: 0.9,
+                    isSuspicious: false
+                )
+            )
+        }
+
+        if allNumericValuesAreIdenticalNonZeroIntegers, blankSourceCount == 0 {
+            let type = CellType.label
+            return MergedCell(
+                type: type,
+                sources: sources,
+                formatCode: formatCode,
+                decision: defaultDecision(
+                    for: type,
+                    reasons: ["首列所有来源为相同非零整数，按标签处理"],
+                    confidence: 0.9,
+                    isSuspicious: false
+                )
+            )
+        }
+
         let sampled = sampleFiles(from: validCells).map(\.1)
         let profile = FormatProfile(cells: sampled)
 
@@ -611,6 +692,104 @@ public struct MergedCell: Equatable, Sendable {
                 reasons: ["首列采用保守策略，按标签处理"],
                 confidence: 0.7,
                 isSuspicious: Set(validCells.map(\.1.value)).count > 1
+            )
+        )
+    }
+
+    private static func determineSingleValue(
+        validCells: [(CellMergeInput, CellData)],
+        sources: [CellSourceEntry],
+        leftCells: [CellMergeInput],
+        neighborContext: NeighborContext,
+        formatCode: String?
+    ) -> MergedCell {
+        guard let (_, cell) = validCells.first else {
+            let type = CellType.label
+            return MergedCell(type: type, displayValue: "", sources: sources, formatCode: formatCode)
+        }
+
+        let selfFP = FormatProfile.fingerprint(for: cell)
+        let leftCell = leftCells.compactMap { input -> CellData? in
+            guard let cell = input.cell, !cell.value.isEmpty else { return nil }
+            return cell
+        }.first
+        let leftScore = leftCell.map(analyzeLeftNeighbor(_:)) ?? (numeric: 0, label: 0)
+        let formatSuggestsNumeric = formatCodeLooksNumeric(cell.formatCode ?? formatCode) || selfFP == .strongNumeric
+        let sameColumnSuggestsNumeric = neighborContext.numericTendency >= 0.55 &&
+            neighborContext.numericTendency > neighborContext.labelTendency
+        let weakSameColumnNumeric = neighborContext.numericTendency > 0 &&
+            neighborContext.numericTendency >= neighborContext.labelTendency
+        let leftSuggestsNumeric = leftScore.numeric >= 0.5
+        let leftSuggestsLabel = leftScore.label >= 0.5
+        let hasBlankSources = sources.contains { $0.state == .empty || $0.state == .missing }
+        let numericValue = cell.numericValue
+        let isZero = numericValue.map { abs($0) < 0.0000001 } ?? false
+        let isCodeLike = selfFP == .integerCode || cell.formatCode == "@"
+        let zeroWithBlankBias = isZero &&
+            hasBlankSources &&
+            selfFP.isNumeric &&
+            !leftSuggestsLabel &&
+            neighborContext.labelTendency < 0.65 &&
+            (weakSameColumnNumeric || formatSuggestsNumeric || neighborContext.labelTendency == 0)
+
+        if let numericValue,
+           !isCodeLike,
+           !leftSuggestsLabel,
+           (formatSuggestsNumeric || sameColumnSuggestsNumeric || leftSuggestsNumeric || zeroWithBlankBias) {
+            let type = CellType.sum(numericValue)
+            var reasons = ["仅有一个非空数值，未直接按单值处理"]
+            if formatSuggestsNumeric {
+                reasons.append("单元格格式倾向数值")
+            }
+            if sameColumnSuggestsNumeric || weakSameColumnNumeric {
+                reasons.append("同列上下文倾向数值")
+            }
+            if leftSuggestsNumeric {
+                reasons.append("左邻语义倾向可累加")
+            }
+            if zeroWithBlankBias {
+                reasons.append("零值与空值/缺失并存，按可求和单元格处理")
+            }
+
+            let confidence: Double
+            if formatSuggestsNumeric || leftSuggestsNumeric {
+                confidence = 0.86
+            } else if sameColumnSuggestsNumeric {
+                confidence = 0.80
+            } else {
+                confidence = 0.74
+            }
+
+            return MergedCell(
+                type: type,
+                sources: sources,
+                formatCode: formatCode,
+                decision: defaultDecision(
+                    for: type,
+                    reasons: reasons,
+                    confidence: confidence,
+                    isSuspicious: confidence < 0.76
+                )
+            )
+        }
+
+        let type = CellType.single(cell.value)
+        var reasons = ["仅有一个非空来源值，按单值显示"]
+        if isCodeLike || leftSuggestsLabel || neighborContext.labelTendency > neighborContext.numericTendency {
+            reasons.append("格式或上下文更偏向标签/编码")
+        } else if cell.numericValue != nil {
+            reasons.append("暂无足够格式或同列证据支持求和")
+        }
+
+        return MergedCell(
+            type: type,
+            sources: sources,
+            formatCode: formatCode,
+            decision: defaultDecision(
+                for: type,
+                reasons: reasons,
+                confidence: 0.82,
+                isSuspicious: cell.numericValue != nil && !isCodeLike && !formatSuggestsNumeric && neighborContext.numericTendency == 0
             )
         )
     }
@@ -714,16 +893,28 @@ public struct MergedCell: Equatable, Sendable {
         return (0, 0)
     }
 
+    private static func leftCellHasCodeSemantic(_ leftCell: CellData) -> Bool {
+        let text = leftCell.value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return NeighborSemanticPatterns.matchesAny(text, patterns: NeighborSemanticPatterns.codePatterns)
+    }
+
+    private static func leftCellHasAmountSemantic(_ leftCell: CellData) -> Bool {
+        let text = leftCell.value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return NeighborSemanticPatterns.matchesAny(text, patterns: NeighborSemanticPatterns.amountPatterns)
+    }
+
     /// 检查数值可累加性
     private static func checkAccumulable(
         selfFP: FormatFingerprint,
         leftCell: CellData?,
         verticalProfile: FormatProfile,
-        validCells: [(CellMergeInput, CellData)]
+        validCells: [(CellMergeInput, CellData)],
+        blankSourceCount: Int = 0
     ) -> Bool {
         let numericValues = validCells.compactMap { $0.1.numericValue }
         guard !numericValues.isEmpty else { return false }
 
+        let allNonEmptyValuesAreNumeric = numericValues.count == validCells.count
         let allIntegers = numericValues.allSatisfy { $0 == floor($0) }
         let uniqueValues = Set(numericValues)
         let allUnique = uniqueValues.count == numericValues.count
@@ -748,6 +939,12 @@ public struct MergedCell: Equatable, Sendable {
                     return false
                 }
             }
+        }
+
+        // 非空来源都是数字，其他来源为空/缺失时，空值应视为 0 参与求和。
+        // 左邻的编码/编号语义已在上方否决，避免把明确标识字段误累加。
+        if blankSourceCount > 0, allNonEmptyValuesAreNumeric {
+            return true
         }
 
         // 1. 编码特征检查：纯整数 + 长度一致 + 有公共前缀 + 在已知编码长度列表中
@@ -995,6 +1192,28 @@ public struct MergedCell: Equatable, Sendable {
             decisionReasons: reasons ?? ["未提供额外判定解释"],
             isSuspicious: isSuspicious
         )
+    }
+
+    private static func formatCodeLooksNumeric(_ formatCode: String?) -> Bool {
+        guard let formatCode else { return false }
+        let code = formatCode.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !code.isEmpty else { return false }
+
+        let lowercased = code.lowercased()
+        if lowercased == "@" || lowercased.contains("@") {
+            return false
+        }
+
+        let dateMarkers = ["yy", "dd", "hh", "ss", "年", "月", "日"]
+        if dateMarkers.contains(where: { lowercased.contains($0) }) {
+            return false
+        }
+
+        return lowercased.contains("0") ||
+            lowercased.contains("#") ||
+            lowercased.contains("¥") ||
+            lowercased.contains("$") ||
+            lowercased.contains("%")
     }
 
     private static func prettyScore(_ score: Double) -> String {

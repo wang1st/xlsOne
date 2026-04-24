@@ -3,6 +3,7 @@ import xlsOneCore
 
 struct ContentView: View {
     @EnvironmentObject var viewModel: AppViewModel
+    @State private var isDropTargeted = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -28,18 +29,7 @@ struct ContentView: View {
         .sheet(isPresented: $viewModel.showSchemaManager) {
             SchemaManagerView()
         }
-        .alert("保存 Schema", isPresented: $viewModel.showSaveSchemaDialog) {
-            TextField("Schema 名称", text: $viewModel.newSchemaName)
-            Button("取消", role: .cancel) {}
-            Button("保存") {
-                Task {
-                    try? await viewModel.saveCurrentAsSchema(name: viewModel.newSchemaName)
-                }
-            }
-        } message: {
-            Text("将当前类型修正保存为后续可复用的 Schema")
-        }
-        .onDrop(of: [.fileURL], delegate: DropDelegateView(viewModel: viewModel))
+        .onDrop(of: [.fileURL], delegate: DropDelegateView(viewModel: viewModel, isTargeted: $isDropTargeted))
     }
 
     private var toolbar: some View {
@@ -47,31 +37,16 @@ struct ContentView: View {
         let hasWorkspace = !viewModel.selectedFilePaths.isEmpty
 
         return HStack(spacing: 10) {
-            toolbarPrimaryButton(
-                title: hasWorkspace ? "替换" : "导入",
-                systemImage: "folder.badge.plus",
-                prominent: presentation.importIsProminent,
-                help: hasWorkspace ? "替换当前批次中的文件" : "导入参与汇总的 Excel 文件"
-            ) {
-                viewModel.showOpenFileDialog()
-            }
-
-            HStack(spacing: 2) {
-                if hasWorkspace {
+            if hasWorkspace {
+                HStack(spacing: 2) {
                     toolbarUtilityButton(title: "追加", systemImage: "plus", help: "向当前批次追加文件") {
                         viewModel.showAddFileDialog()
                     }
                     .disabled(!presentation.appendEnabled)
-                }
 
-                toolbarUtilityButton(title: "规则", systemImage: "books.vertical", help: "查看或管理类型规则") {
-                    viewModel.showSchemaManagerWindow()
-                }
-
-                if hasWorkspace {
                     toolbarStripDivider
 
-                    toolbarUtilityButton(title: "校验", systemImage: "arrow.clockwise", help: "重新比较当前文件的工作表结构") {
+                    toolbarUtilityButton(title: "刷新", systemImage: "arrow.clockwise", help: "重新读取当前文件并刷新汇总结果") {
                         viewModel.reloadFiles()
                     }
                     .disabled(viewModel.selectedFilePaths.isEmpty)
@@ -81,14 +56,14 @@ struct ContentView: View {
                     }
                     .disabled(viewModel.selectedFilePaths.isEmpty)
                 }
+                .padding(4)
+                .background(Color(NSColor.controlBackgroundColor))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(Color.secondary.opacity(0.12), lineWidth: 1)
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             }
-            .padding(4)
-            .background(Color(NSColor.controlBackgroundColor))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(Color.secondary.opacity(0.12), lineWidth: 1)
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
             Spacer()
 
@@ -144,33 +119,64 @@ struct ContentView: View {
     }
 
     private var emptyView: some View {
-        VStack(spacing: 20) {
-            Image(systemName: "tablecells.badge.ellipsis")
-                .font(.system(size: 68))
-                .foregroundStyle(.secondary)
+        ZStack {
+            LinearGradient(
+                colors: [
+                    Color(NSColor.controlBackgroundColor),
+                    Color.white.opacity(0.92)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
 
-            Text("快速合并同构 Excel")
-                .font(.title2)
-                .fontWeight(.semibold)
-
-            Text("将多个结构一致的 Excel 汇总成同构结果文件。\n系统会先做结构校验，再进入可穿透、可修正的检查工作台。")
-                .multilineTextAlignment(.center)
-                .foregroundStyle(.secondary)
-
-            HStack(spacing: 12) {
-                Button(viewModel.toolbarPresentation.importTitle) {
-                    viewModel.showOpenFileDialog()
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .fill(Color.white.opacity(isDropTargeted ? 0.94 : 0.72))
+                .frame(maxWidth: 560, maxHeight: 360)
+                .overlay {
+                    EmptyWorkspaceBackdrop()
+                        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
                 }
-                .buttonStyle(.borderedProminent)
-            }
-            .padding(.top, 4)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 28, style: .continuous)
+                        .strokeBorder(dropZoneBorderColor, lineWidth: isDropTargeted ? 2 : 1)
+                }
+                .shadow(color: Color.black.opacity(isDropTargeted ? 0.08 : 0.04), radius: 24, y: 12)
+                .overlay {
+                    VStack(spacing: 18) {
+                        EmptyWorkspaceArtwork(isHighlighted: isDropTargeted)
 
-            Text("也可以直接拖拽 Excel 文件到窗口。")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                        VStack(spacing: 8) {
+                            Text(isDropTargeted ? "松手即可导入" : "拖入 Excel 文件")
+                                .font(.system(size: 28, weight: .semibold))
+                                .foregroundStyle(.primary)
+
+                            Text(isDropTargeted ? "支持多个 .xlsx / .xls" : "支持多个 .xlsx / .xls，导入结构一致的文件后即可开始汇总")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                        .multilineTextAlignment(.center)
+
+                        Button {
+                            viewModel.showOpenFileDialog()
+                        } label: {
+                            Label("选择文件", systemImage: "folder.badge.plus")
+                        }
+                        .buttonStyle(WorkspaceChromePrimaryButtonStyle(prominent: true))
+                        .controlSize(.large)
+                    }
+                    .padding(.horizontal, 40)
+                    .padding(.vertical, 36)
+                }
+                .padding(40)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(NSColor.controlBackgroundColor))
+        .animation(.easeInOut(duration: 0.18), value: isDropTargeted)
+    }
+
+    private var dropZoneBorderColor: Color {
+        isDropTargeted
+            ? Color.accentColor.opacity(0.45)
+            : Color.secondary.opacity(0.14)
     }
 
     private var loadingView: some View {
@@ -337,9 +343,6 @@ struct ContentView: View {
     private var readyWorkspace: some View {
         VStack(spacing: 0) {
             if let report = viewModel.validationReport {
-                WorkbookStatusStrip(report: report)
-                    .environmentObject(viewModel)
-                Divider()
                 SheetCapsuleStrip(
                     items: viewModel.sheetOverviewItems,
                     report: report,
@@ -387,6 +390,7 @@ struct ContentView: View {
                     set: { viewModel.selectCell($0) }
                 ),
                 anomalyPositions: Set(viewModel.anomalyQueue.map(\.position)),
+                manualOverridePositions: viewModel.manualOverridePositionsForCurrentSheet,
                 onApplyOverride: { row, col, type in
                     viewModel.applyCellOverride(row: row, col: col, type: type)
                 },
@@ -417,7 +421,7 @@ struct ContentView: View {
 
     private var correctionBar: some View {
         HStack {
-            Text("已应用 \(viewModel.correctionCount) 个类型修正")
+            Text("已调整 \(viewModel.correctionCount) 处")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
@@ -430,14 +434,7 @@ struct ContentView: View {
             .buttonStyle(.bordered)
             .controlSize(.small)
 
-            Button("保存为 Schema…") {
-                viewModel.showSaveSchemaDialog = true
-            }
-            .font(.caption)
-            .buttonStyle(.borderedProminent)
-            .controlSize(.small)
-
-            Button("清除全部修正") {
+            Button("清除本批次调整") {
                 viewModel.clearOverrides()
             }
             .font(.caption)
@@ -464,102 +461,6 @@ private extension FileValidationReport {
         case .included: return "参与合并"
         case .warning: return "已跳过"
         case .blocked: return "阻断"
-        }
-    }
-}
-
-struct WorkbookStatusStrip: View {
-    @EnvironmentObject var viewModel: AppViewModel
-    let report: WorkbookValidationReport
-
-    var body: some View {
-        HStack(spacing: 12) {
-            Text(summaryText)
-                .font(.subheadline)
-                .fontWeight(.medium)
-
-            Spacer(minLength: 16)
-
-            if let focusStatus = focusStatus {
-                focusStatusCard(focusStatus)
-            }
-        }
-        .padding(.horizontal)
-        .padding(.vertical, 12)
-        .background(Color(NSColor.windowBackgroundColor))
-    }
-
-    private var summaryText: String {
-        WorkspaceDiagnostics.workspaceSummary(report: report)
-    }
-
-    private var focusStatus: WorkspaceFocusStatus? {
-        WorkspaceDiagnostics.buildFocusStatus(
-            selection: viewModel.selectedSheetSelection,
-            matchedSchemaName: viewModel.matchedSchema?.name,
-            correctionCount: viewModel.correctionCount
-        )
-    }
-
-    private func focusStatusCard(_ status: WorkspaceFocusStatus) -> some View {
-        HStack(spacing: 10) {
-            Image(systemName: status.systemImage)
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(statusTint(for: status))
-                .frame(width: 16)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(status.title)
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .lineLimit(1)
-
-                Text(status.detail)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(statusBackground(for: status))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(statusBorder(for: status), lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-    }
-
-    private func statusTint(for status: WorkspaceFocusStatus) -> Color {
-        switch status.tone {
-        case .accent:
-            return .accentColor
-        case .warning:
-            return .orange
-        case .neutral:
-            return .secondary
-        }
-    }
-
-    private func statusBackground(for status: WorkspaceFocusStatus) -> Color {
-        switch status.tone {
-        case .accent:
-            return Color.accentColor.opacity(0.06)
-        case .warning:
-            return Color.orange.opacity(0.08)
-        case .neutral:
-            return Color(NSColor.controlBackgroundColor)
-        }
-    }
-
-    private func statusBorder(for status: WorkspaceFocusStatus) -> Color {
-        switch status.tone {
-        case .accent:
-            return Color.accentColor.opacity(0.14)
-        case .warning:
-            return Color.orange.opacity(0.18)
-        case .neutral:
-            return Color.secondary.opacity(0.10)
         }
     }
 }
@@ -756,6 +657,103 @@ private struct WorkspaceChromePrimaryButton: View {
 private struct WorkspaceChromeUtilityButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         WorkspaceChromeUtilityButton(configuration: configuration)
+    }
+}
+
+private struct EmptyWorkspaceBackdrop: View {
+    var body: some View {
+        ZStack {
+            LinearGradient(
+                colors: [
+                    Color.white.opacity(0.72),
+                    Color(red: 0.95, green: 0.96, blue: 0.98).opacity(0.88)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+
+            VStack(spacing: 18) {
+                ForEach(0..<5, id: \.self) { _ in
+                    Rectangle()
+                        .fill(Color.secondary.opacity(0.055))
+                        .frame(height: 1)
+                }
+            }
+            .padding(.horizontal, 32)
+
+            HStack(spacing: 18) {
+                ForEach(0..<6, id: \.self) { _ in
+                    Rectangle()
+                        .fill(Color.secondary.opacity(0.038))
+                        .frame(width: 1)
+                }
+            }
+            .padding(.vertical, 26)
+        }
+    }
+}
+
+private struct EmptyWorkspaceArtwork: View {
+    let isHighlighted: Bool
+
+    var body: some View {
+        ZStack {
+            sheet(width: 118, height: 92, x: -26, y: -10, opacity: 0.42)
+            sheet(width: 126, height: 98, x: 24, y: -4, opacity: 0.5)
+
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color.white.opacity(0.95))
+                .frame(width: 138, height: 106)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(
+                            isHighlighted ? Color.accentColor.opacity(0.38) : Color.primary.opacity(0.14),
+                            lineWidth: 1.2
+                        )
+                )
+                .overlay(alignment: .topLeading) {
+                    VStack(spacing: 8) {
+                        Rectangle()
+                            .fill(isHighlighted ? Color.accentColor.opacity(0.22) : Color.primary.opacity(0.08))
+                            .frame(height: 10)
+                            .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
+
+                        ForEach(0..<3, id: \.self) { _ in
+                            HStack(spacing: 6) {
+                                ForEach(0..<3, id: \.self) { _ in
+                                    RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                        .fill(Color.primary.opacity(0.07))
+                                        .frame(width: 32, height: 14)
+                                }
+                            }
+                        }
+                    }
+                    .padding(14)
+                }
+        }
+        .frame(width: 190, height: 124)
+    }
+
+    private func sheet(width: CGFloat, height: CGFloat, x: CGFloat, y: CGFloat, opacity: Double) -> some View {
+        RoundedRectangle(cornerRadius: 14, style: .continuous)
+            .fill(Color.white.opacity(0.7))
+            .frame(width: width, height: height)
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(Color.primary.opacity(0.08), lineWidth: 1)
+            )
+            .overlay {
+                VStack(spacing: 9) {
+                    ForEach(0..<3, id: \.self) { _ in
+                        Rectangle()
+                            .fill(Color.primary.opacity(0.05))
+                            .frame(height: 1)
+                    }
+                }
+                .padding(.horizontal, 14)
+            }
+            .offset(x: x, y: y)
+            .opacity(opacity)
     }
 }
 
@@ -986,6 +984,7 @@ struct ExcelGridView: View {
     let rows: [[MergedCell]]
     @Binding var selectedCell: CellPosition?
     let anomalyPositions: Set<CellPosition>
+    let manualOverridePositions: Set<CellPosition>
     var initialColumnWidths: [Int: CGFloat] = [:]
     var layoutObserver: GridLayoutObserver? = nil
     var onApplyOverride: ((Int, Int, CellOverrideType) -> Void)?
@@ -1004,6 +1003,7 @@ struct ExcelGridView: View {
         rows: [[MergedCell]],
         selectedCell: Binding<CellPosition?> = .constant(nil),
         anomalyPositions: Set<CellPosition> = [],
+        manualOverridePositions: Set<CellPosition> = [],
         initialColumnWidths: [Int: CGFloat] = [:],
         layoutObserver: GridLayoutObserver? = nil,
         onApplyOverride: ((Int, Int, CellOverrideType) -> Void)? = nil,
@@ -1014,6 +1014,7 @@ struct ExcelGridView: View {
         self.rows = rows
         self._selectedCell = selectedCell
         self.anomalyPositions = anomalyPositions
+        self.manualOverridePositions = manualOverridePositions
         self.initialColumnWidths = initialColumnWidths
         self.layoutObserver = layoutObserver
         self.onApplyOverride = onApplyOverride
@@ -1162,8 +1163,6 @@ struct ExcelGridView: View {
             applyQuickOverride(.label)
         case "2":
             applyQuickOverride(.sum)
-        case "3":
-            applyQuickOverride(.mixed)
         case "j":
             onJumpNextAnomaly?()
         case "k":
@@ -1189,6 +1188,7 @@ struct ExcelGridView: View {
             isInSelectedRow: selectedCell?.row == position.row,
             isInSelectedColumn: selectedCell?.col == position.col,
             showsAnomalyMarker: anomalyPositions.contains(position),
+            correctionState: correctionState(for: cell, at: position),
             width: contentWidth(for: colIdx),
             probe: layoutObserver.map { _ in .body(position) }
         )
@@ -1204,9 +1204,6 @@ struct ExcelGridView: View {
                 Button("求和") {
                     onApplyOverride?(position.row, position.col, .sum)
                 }
-                Button("混合") {
-                    onApplyOverride?(position.row, position.col, .mixed)
-                }
             }
         }
     }
@@ -1215,6 +1212,13 @@ struct ExcelGridView: View {
         rowNumberColumnWidth = ColumnWidthCalculator.rowNumberWidth(totalRows: rows.count)
         let calculatedWidths = ColumnWidthCalculator.defaultWidths(for: rows)
         columnWidths = calculatedWidths.merging(initialColumnWidths) { _, override in override }
+    }
+
+    private func correctionState(for cell: MergedCell, at position: CellPosition) -> CellCorrectionState {
+        if manualOverridePositions.contains(position) {
+            return .manual
+        }
+        return cell.isOverridden ? .rule : .none
     }
 
     private func handleCellTap(position: CellPosition) {
@@ -1391,10 +1395,6 @@ struct SelectionToolbar: View {
                 .buttonStyle(.borderedProminent)
                 .controlSize(.small)
 
-            Button("混合") { onApply(.mixed) }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.small)
-
             Divider()
                 .frame(height: 16)
 
@@ -1469,6 +1469,7 @@ struct ExcelCellView: View {
     let isInSelectedRow: Bool
     let isInSelectedColumn: Bool
     let showsAnomalyMarker: Bool
+    let correctionState: CellCorrectionState
     let width: CGFloat
     let probe: GridFrameProbe?
 
@@ -1491,20 +1492,7 @@ struct ExcelCellView: View {
                 .stroke(Color.gray.opacity(0.35), lineWidth: 0.5)
         )
         .overlay(alignment: .topTrailing) {
-            if showsAnomalyMarker {
-                Circle()
-                    .fill(Color.orange)
-                    .frame(width: 6, height: 6)
-                    .padding(4)
-            }
-        }
-        .overlay(alignment: .bottomTrailing) {
-            if cell.isOverridden {
-                Image(systemName: "pencil.circle.fill")
-                    .font(.caption2)
-                    .foregroundStyle(.orange)
-                    .padding(3)
-            }
+            statusMarker
         }
         .overlay(
             Group {
@@ -1535,8 +1523,6 @@ struct ExcelCellView: View {
         switch cell.type {
         case .sum:
             return Color.blue.opacity(0.05)
-        case .mixed:
-            return Color.orange.opacity(0.08)
         default:
             return .white
         }
@@ -1544,14 +1530,33 @@ struct ExcelCellView: View {
 
     private var foregroundColor: Color {
         switch cell.type {
-        case .mixed:
-            return .orange
         case .sum:
             return .blue
         default:
             return .primary
         }
     }
+
+    @ViewBuilder
+    private var statusMarker: some View {
+        if let statusTint {
+            Circle()
+                .fill(statusTint)
+                .frame(width: 5, height: 5)
+                .padding(4)
+        }
+    }
+
+    private var statusTint: Color? {
+        if correctionState != .none {
+            return CellStatusPalette.adjusted
+        }
+        return nil
+    }
+}
+
+private enum CellStatusPalette {
+    static let adjusted = Color(red: 0.16, green: 0.62, blue: 0.56)
 }
 
 struct InspectionSidebar: View {
@@ -1563,7 +1568,10 @@ struct InspectionSidebar: View {
             VStack(alignment: .leading, spacing: 12) {
                 if let cell = viewModel.selectedMergedCell,
                    let reference = viewModel.selectedCellReference {
-                    cellDetailCard(cell: cell, reference: reference)
+                    let correctionState = viewModel.selectedCell.map {
+                        viewModel.correctionState(for: $0, cell: cell)
+                    } ?? .none
+                    cellDetailCard(cell: cell, reference: reference, correctionState: correctionState)
                     sourceDisclosure(for: cell)
                 } else {
                     placeholderCard("选择单元格后查看结果与来源。")
@@ -1577,7 +1585,11 @@ struct InspectionSidebar: View {
         }
     }
 
-    private func cellDetailCard(cell: MergedCell, reference: String) -> some View {
+    private func cellDetailCard(
+        cell: MergedCell,
+        reference: String,
+        correctionState: CellCorrectionState
+    ) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 6) {
@@ -1589,26 +1601,10 @@ struct InspectionSidebar: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 Spacer()
-                CellTypeBadge(type: cell.type)
             }
 
-            HStack(spacing: 6) {
-                if cell.isOverridden {
-                    labelChip("已修正", tint: .orange)
-                }
-                if cell.decision.isSuspicious {
-                    labelChip("需复核", tint: .orange)
-                }
-                if cell.decision.confidence < 0.72 {
-                    confidenceBadge(value: cell.decision.confidence)
-                }
-                if displayName(for: cell.decision.autoDetectedType) != displayName(for: cell.type) {
-                    labelChip("自动: \(cell.decision.autoDetectedType.displayName)", tint: .blue)
-                }
-            }
-
-            if let decisionSummary = WorkspaceDiagnostics.decisionSummary(for: cell) {
-                Text(decisionSummary)
+            if let secondarySummary = secondarySummary(for: cell, correctionState: correctionState) {
+                Text(secondarySummary)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
@@ -1624,12 +1620,18 @@ struct InspectionSidebar: View {
                     overrideButton(title: "求和", tint: .blue, isActive: matches(cell.type, overrideType: .sum)) {
                         applyOverride(.sum)
                     }
-                    overrideButton(title: "混合", tint: .orange, isActive: matches(cell.type, overrideType: .mixed)) {
-                        applyOverride(.mixed)
-                    }
                 }
 
-                Text("1/2/3 修正 · J/K 跳转")
+                if viewModel.canRestoreSelectedCellAutomatic {
+                    Button("恢复自动判断") {
+                        viewModel.restoreAutomaticDecisionForSelectedCell()
+                    }
+                    .buttonStyle(.borderless)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                }
+
+                Text("按 1 或 2")
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
             }
@@ -1651,15 +1653,10 @@ struct InspectionSidebar: View {
                     }
                 } label: {
                     HStack(alignment: .center, spacing: 12) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(overview.summaryText)
-                                .font(.caption)
-                                .fontWeight(.medium)
-                                .foregroundStyle(.secondary)
-                            Text(isSourceListExpanded ? "按导入顺序显示原始来源" : "展开查看原始来源")
-                                .font(.caption2)
-                                .foregroundStyle(.tertiary)
-                        }
+                        Text(overview.summaryText)
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .foregroundStyle(.secondary)
                         Spacer()
                         Image(systemName: isSourceListExpanded ? "chevron.up" : "chevron.down")
                             .font(.caption.weight(.semibold))
@@ -1672,7 +1669,7 @@ struct InspectionSidebar: View {
                 if isSourceListExpanded {
                     Divider()
 
-                    VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 0) {
                         ForEach(Array(cell.sources.enumerated()), id: \.offset) { index, source in
                             VStack(alignment: .leading, spacing: 6) {
                                 HStack(alignment: .top, spacing: 10) {
@@ -1681,7 +1678,11 @@ struct InspectionSidebar: View {
                                         .fontWeight(.medium)
                                         .lineLimit(1)
                                     Spacer()
-                                    SourceStateBadge(state: source.state)
+                                    if let sourceStateText = sourceStateText(for: source.state) {
+                                        Text(sourceStateText)
+                                            .font(.caption2)
+                                            .foregroundStyle(sourceStateColor(for: source.state))
+                                    }
                                 }
 
                                 Text(sourceDisplayValue(source))
@@ -1689,9 +1690,11 @@ struct InspectionSidebar: View {
                                     .foregroundStyle(source.state == .value ? .primary : .secondary)
                                     .fixedSize(horizontal: false, vertical: true)
                             }
-                            .padding(10)
-                            .background(Color(NSColor.controlBackgroundColor))
-                            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                            .padding(.vertical, 10)
+
+                            if index < cell.sources.count - 1 {
+                                Divider()
+                            }
                         }
                     }
                 }
@@ -1702,20 +1705,6 @@ struct InspectionSidebar: View {
         .padding()
         .background(Color.white)
         .clipShape(RoundedRectangle(cornerRadius: 12))
-    }
-
-    private func confidenceBadge(value: Double) -> some View {
-        labelChip("置信度 \(Int((value * 100).rounded()))%", tint: value >= 0.72 ? .green : .orange)
-    }
-
-    private func labelChip(_ text: String, tint: Color) -> some View {
-        Text(text)
-            .font(.caption)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(tint.opacity(0.14))
-            .foregroundStyle(tint)
-            .clipShape(Capsule())
     }
 
     private func overrideButton(
@@ -1736,15 +1725,30 @@ struct InspectionSidebar: View {
 
     private func matches(_ cellType: MergedCell.CellType, overrideType: CellOverrideType) -> Bool {
         switch (cellType, overrideType) {
-        case (.label, .label), (.sum, .sum), (.mixed, .mixed):
+        case (.label, .label), (.sum, .sum):
             return true
         default:
             return false
         }
     }
 
-    private func displayName(for type: MergedCell.CellType) -> String {
-        type.displayName
+    private func secondarySummary(
+        for cell: MergedCell,
+        correctionState: CellCorrectionState
+    ) -> String? {
+        if correctionState != .none {
+            return "当前按\(displayTypeName(for: cell.type))显示"
+        }
+        return WorkspaceDiagnostics.decisionSummary(for: cell)
+    }
+
+    private func displayTypeName(for cellType: MergedCell.CellType) -> String {
+        switch cellType {
+        case .sum:
+            return "求和"
+        default:
+            return "标签"
+        }
     }
 
     private func sourceDisplayValue(_ source: CellSourceEntry) -> String {
@@ -1755,6 +1759,28 @@ struct InspectionSidebar: View {
             return "空值"
         case .missing:
             return "缺失单元格"
+        }
+    }
+
+    private func sourceStateText(for state: CellSourceState) -> String? {
+        switch state {
+        case .value:
+            return nil
+        case .empty:
+            return "空值"
+        case .missing:
+            return "缺失"
+        }
+    }
+
+    private func sourceStateColor(for state: CellSourceState) -> Color {
+        switch state {
+        case .value:
+            return .secondary
+        case .empty:
+            return .secondary
+        case .missing:
+            return Color.secondary.opacity(0.7)
         }
     }
 
@@ -1823,89 +1849,27 @@ private struct InspectorOverrideButton: View {
     }
 }
 
-struct SourceStateBadge: View {
-    let state: CellSourceState
-
-    var body: some View {
-        Text(title)
-            .font(.caption2)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(color.opacity(0.14))
-            .foregroundStyle(color)
-            .clipShape(Capsule())
-    }
-
-    private var title: String {
-        switch state {
-        case .value:
-            return "值"
-        case .empty:
-            return "空"
-        case .missing:
-            return "缺"
-        }
-    }
-
-    private var color: Color {
-        switch state {
-        case .value:
-            return .green
-        case .empty:
-            return .orange
-        case .missing:
-            return .secondary
-        }
-    }
-}
-
-struct CellTypeBadge: View {
-    let type: MergedCell.CellType
-
-    var body: some View {
-        Text(type.displayName)
-            .font(.caption)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(badgeColor.opacity(0.14))
-            .foregroundStyle(badgeColor)
-            .clipShape(Capsule())
-    }
-
-    private var badgeColor: Color {
-        switch type {
-        case .label:
-            return .green
-        case .sum:
-            return .blue
-        case .mixed:
-            return .orange
-        case .single:
-            return .gray
-        }
-    }
-}
-
-private extension MergedCell.CellType {
-    var displayName: String {
-        switch self {
-        case .label:
-            return "标签"
-        case .sum:
-            return "求和"
-        case .mixed:
-            return "混合"
-        case .single:
-            return "单值"
-        }
-    }
-}
-
 struct DropDelegateView: DropDelegate {
     @ObservedObject var viewModel: AppViewModel
+    @Binding var isTargeted: Bool
+
+    func dropEntered(info: DropInfo) {
+        isTargeted = validateDrop(info: info)
+    }
+
+    func dropExited(info: DropInfo) {
+        isTargeted = false
+    }
 
     func performDrop(info: DropInfo) -> Bool {
+        let isValid = validateDrop(info: info)
+        guard isValid else {
+            isTargeted = false
+            return false
+        }
+
         let items = info.itemProviders(for: [.fileURL])
+        isTargeted = false
 
         for item in items {
             item.loadItem(forTypeIdentifier: "public.file-url", options: nil) { data, _ in
@@ -1924,7 +1888,15 @@ struct DropDelegateView: DropDelegate {
         return true
     }
 
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        DropProposal(operation: .copy)
+    }
+
     func validateDrop(info: DropInfo) -> Bool {
-        info.hasItemsConforming(to: [.fileURL])
+        let isValid = info.hasItemsConforming(to: [.fileURL])
+        if !isValid {
+            isTargeted = false
+        }
+        return isValid
     }
 }

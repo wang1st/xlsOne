@@ -52,8 +52,6 @@ struct GridBodyCell: View {
         switch cell.type {
         case .sum:
             return Color.blue.opacity(0.05)
-        case .mixed:
-            return Color.yellow.opacity(0.08)
         default:
             return Color.white
         }
@@ -61,8 +59,6 @@ struct GridBodyCell: View {
 
     private var foregroundColor: Color {
         switch cell.type {
-        case .mixed:
-            return .orange
         case .sum:
             return .blue
         default:

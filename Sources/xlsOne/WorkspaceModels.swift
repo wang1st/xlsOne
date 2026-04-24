@@ -42,39 +42,58 @@ struct SourceInspectionOverview: Equatable {
     var summaryText: String {
         var segments = ["\(sourceCount) 个来源"]
 
-        if valueCount > 0 {
-            segments.append("\(valueCount) 个有值")
-        }
         if emptyCount > 0 {
             segments.append("\(emptyCount) 个空值")
         }
         if missingCount > 0 {
             segments.append("\(missingCount) 个缺失")
         }
-        if distinctValueCount > 0 {
-            segments.append("\(distinctValueCount) 个不同值")
+        if distinctValueCount > 1 {
+            segments.append("内容不完全一致")
         }
 
-        return segments.joined(separator: " · ")
+        return segments.joined(separator: "，")
     }
-}
-
-enum WorkspaceFocusTone: Equatable {
-    case accent
-    case warning
-    case neutral
-}
-
-struct WorkspaceFocusStatus: Equatable {
-    let title: String
-    let detail: String
-    let systemImage: String
-    let tone: WorkspaceFocusTone
 }
 
 enum SheetOverviewStatus: String, Hashable {
     case mergeable
     case skipped
+}
+
+enum CellCorrectionState: Equatable {
+    case none
+    case manual
+    case rule
+}
+
+enum WorkspaceRuleState: Equatable {
+    case none
+    case applied(name: String, correctionCount: Int)
+    case ambiguous(count: Int)
+    case similar(count: Int)
+
+    var message: String? {
+        switch self {
+        case .none:
+            return nil
+        case .applied(let name, let correctionCount):
+            return correctionCount > 0 ? "已应用规则：\(name)" : "已匹配规则：\(name)"
+        case .ambiguous(let count):
+            return "检测到 \(count) 套规则，未自动应用"
+        case .similar(let count):
+            return "发现 \(count) 套相近规则，未自动应用"
+        }
+    }
+
+    var isAttentionNeeded: Bool {
+        switch self {
+        case .ambiguous, .similar:
+            return true
+        case .none, .applied:
+            return false
+        }
+    }
 }
 
 struct SheetOverviewItem: Identifiable, Hashable {
@@ -189,18 +208,6 @@ enum WorkspaceDiagnostics {
     }
 
     static func anomalySummary(for cell: MergedCell) -> String? {
-        if case .mixed = cell.type {
-            return "存在多种来源值"
-        }
-        if cell.isOverridden {
-            return "已人工修正"
-        }
-        if cell.decision.confidence < 0.72 {
-            return "自动判定置信度偏低"
-        }
-        if cell.decision.isSuspicious {
-            return "需要人工复核"
-        }
         return nil
     }
 
@@ -218,45 +225,6 @@ enum WorkspaceDiagnostics {
             emptyCount: emptyCount,
             missingCount: missingCount,
             distinctValueCount: distinctValueCount
-        )
-    }
-
-    static func buildFocusStatus(
-        selection: WorkspaceSheetSelection?,
-        matchedSchemaName: String?,
-        correctionCount: Int
-    ) -> WorkspaceFocusStatus? {
-        guard let selection else { return nil }
-
-        let title = selection.sheetName
-        let systemImage: String
-        let tone: WorkspaceFocusTone
-        var segments: [String] = []
-
-        switch selection {
-        case .mergeable:
-            systemImage = "tablecells"
-            tone = .accent
-            segments.append("可合并")
-        case .skipped:
-            systemImage = "slash.circle"
-            tone = .warning
-            segments.append("已跳过")
-        }
-
-        if matchedSchemaName != nil {
-            segments.append("规则已命中")
-        }
-
-        if correctionCount > 0 {
-            segments.append("已修正 \(correctionCount)")
-        }
-
-        return WorkspaceFocusStatus(
-            title: title,
-            detail: segments.joined(separator: " · "),
-            systemImage: systemImage,
-            tone: tone
         )
     }
 
@@ -659,9 +627,9 @@ enum WorkspaceToolbar {
         canExport: Bool
     ) -> ToolbarPresentation {
         ToolbarPresentation(
-            importTitle: selectedFileCount == 0 ? "导入文件" : "替换文件",
+            importTitle: "导入文件",
             appendEnabled: selectedFileCount > 0,
-            importIsProminent: !canExport,
+            importIsProminent: selectedFileCount == 0,
             exportIsProminent: canExport
         )
     }

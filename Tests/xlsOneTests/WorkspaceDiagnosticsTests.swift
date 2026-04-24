@@ -3,7 +3,7 @@ import xlsOneCore
 @testable import xlsOne
 
 final class WorkspaceDiagnosticsTests: XCTestCase {
-    func testAnomalyQueueIncludesMixedLowConfidenceAndOverriddenCells() {
+    func testAnomalyQueueStaysEmptyWhenReviewHintsAreHidden() {
         let mixedCell = MergedCell(
             type: .mixed(2),
             displayValue: "2条",
@@ -50,10 +50,7 @@ final class WorkspaceDiagnosticsTests: XCTestCase {
 
         let queue = WorkspaceDiagnostics.buildAnomalyQueue(for: result)
 
-        XCTAssertEqual(queue.map(\.cellReference), ["A1", "B1", "A2"])
-        XCTAssertEqual(queue[0].summary, "存在多种来源值")
-        XCTAssertEqual(queue[1].summary, "自动判定置信度偏低")
-        XCTAssertEqual(queue[2].summary, "已人工修正")
+        XCTAssertTrue(queue.isEmpty)
     }
 
     func testColumnLettersSupportMultipleCharacters() {
@@ -384,7 +381,20 @@ final class WorkspaceDiagnosticsTests: XCTestCase {
         XCTAssertEqual(overview.emptyCount, 1)
         XCTAssertEqual(overview.missingCount, 1)
         XCTAssertEqual(overview.distinctValueCount, 1)
-        XCTAssertEqual(overview.summaryText, "4 个来源 · 2 个有值 · 1 个空值 · 1 个缺失 · 1 个不同值")
+        XCTAssertEqual(overview.summaryText, "4 个来源，1 个空值，1 个缺失")
+    }
+
+    func testSourceInspectionOverviewOnlyHighlightsMismatchWhenValuesDiffer() {
+        let sources = [
+            CellSourceEntry(filename: "a.xlsx", filepath: "/tmp/a.xlsx", value: "100", state: .value),
+            CellSourceEntry(filename: "b.xlsx", filepath: "/tmp/b.xlsx", value: "120", state: .value),
+            CellSourceEntry(filename: "c.xlsx", filepath: "/tmp/c.xlsx", value: "", state: .empty)
+        ]
+
+        let overview = WorkspaceDiagnostics.buildSourceInspectionOverview(for: sources)
+
+        XCTAssertEqual(overview.distinctValueCount, 2)
+        XCTAssertEqual(overview.summaryText, "3 个来源，1 个空值，内容不完全一致")
     }
 
     func testCompactSourceNamesTrimSharedWorkbookSuffix() {
@@ -406,32 +416,6 @@ final class WorkspaceDiagnosticsTests: XCTestCase {
         let names = WorkspaceDiagnostics.compactSourceNames(for: sources)
 
         XCTAssertEqual(names, ["仙居县安洲街道办事处", "仙居县白塔镇人民政府"])
-    }
-
-    func testFocusStatusCombinesSheetStateSchemaAndCorrections() {
-        let status = WorkspaceDiagnostics.buildFocusStatus(
-            selection: .mergeable("乡镇报表主体信息表"),
-            matchedSchemaName: "主体信息规则",
-            correctionCount: 2
-        )
-
-        XCTAssertEqual(status?.title, "乡镇报表主体信息表")
-        XCTAssertEqual(status?.detail, "可合并 · 规则已命中 · 已修正 2")
-        XCTAssertEqual(status?.systemImage, "tablecells")
-        XCTAssertEqual(status?.tone, .accent)
-    }
-
-    func testFocusStatusUsesWarningToneForSkippedSheet() {
-        let status = WorkspaceDiagnostics.buildFocusStatus(
-            selection: .skipped("涉农资金项目类"),
-            matchedSchemaName: nil,
-            correctionCount: 0
-        )
-
-        XCTAssertEqual(status?.title, "涉农资金项目类")
-        XCTAssertEqual(status?.detail, "已跳过")
-        XCTAssertEqual(status?.systemImage, "slash.circle")
-        XCTAssertEqual(status?.tone, .warning)
     }
 
     func testExportNamingPrefersLongestSharedPhraseAcrossFilenames() {
@@ -495,7 +479,7 @@ final class WorkspaceDiagnosticsTests: XCTestCase {
             canExport: true
         )
 
-        XCTAssertEqual(presentation.importTitle, "替换文件")
+        XCTAssertEqual(presentation.importTitle, "导入文件")
         XCTAssertTrue(presentation.appendEnabled)
         XCTAssertFalse(presentation.importIsProminent)
         XCTAssertTrue(presentation.exportIsProminent)

@@ -1,16 +1,15 @@
 import SwiftUI
 import xlsOneCore
 
-/// Schema 管理视图
+/// 调整记忆管理视图
 struct SchemaManagerView: View {
     @StateObject private var viewModel = SchemaManagerViewModel()
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         VStack(spacing: 0) {
-            // 标题栏
             HStack {
-                Text("Schema 管理")
+                Text("调整记忆")
                     .font(.headline)
 
                 Spacer()
@@ -23,7 +22,6 @@ struct SchemaManagerView: View {
 
             Divider()
 
-            // 内容区域
             if viewModel.isLoading {
                 ProgressView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -33,11 +31,11 @@ struct SchemaManagerView: View {
                         .font(.system(size: 48))
                         .foregroundStyle(.secondary)
 
-                    Text("暂无保存的 Schema")
+                    Text("暂无已记住的调整")
                         .font(.title3)
                         .foregroundStyle(.secondary)
 
-                    Text("在处理 Excel 文件时，您可以保存单元格类型修正作为 Schema")
+                    Text("系统会在后台记住你对同结构表格的调整，需要时也可以在这里查看或清理。")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
@@ -63,15 +61,14 @@ struct SchemaManagerView: View {
 
             Divider()
 
-            // 底部按钮
             HStack {
-                Button("导入 Schema...") {
+                Button("导入记忆...") {
                     viewModel.showImportPanel = true
                 }
 
                 Spacer()
 
-                Text("\(viewModel.schemas.count) 个 Schema")
+                Text("\(viewModel.schemas.count) 组记忆")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -98,7 +95,7 @@ struct SchemaManagerView: View {
     }
 }
 
-// MARK: - Schema 行视图
+// MARK: - 记忆行视图
 
 struct SchemaRowView: View {
     let schema: MergeSchema
@@ -113,11 +110,11 @@ struct SchemaRowView: View {
                         .font(.headline)
 
                     HStack(spacing: 8) {
-                        Label(schema.fingerprint.sheetName, systemImage: "doc.text")
+                        Label(schema.scopeSummary, systemImage: "rectangle.stack")
                         Text("•")
-                        Label("\(schema.cellOverrides.count) 个修正", systemImage: "pencil")
+                        Label("\(schema.cellOverrides.count) 处已记住调整", systemImage: "pencil")
                         Text("•")
-                        Label("使用 \(schema.matchCount) 次", systemImage: "checkmark.circle")
+                        Label("沿用 \(schema.matchCount) 次", systemImage: "checkmark.circle")
                     }
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -143,17 +140,22 @@ struct SchemaRowView: View {
                 }
             }
 
-            // 指纹信息
-            HStack(spacing: 16) {
-                Text("行列: \(schema.fingerprint.rowCount)×\(schema.fingerprint.colCount)")
-                Text("表头: \(schema.fingerprint.headerHash.prefix(8))...")
-                Text("样本: \(schema.fingerprint.sampleDataHash.prefix(8))...")
-            }
-            .font(.caption2)
-            .foregroundStyle(.secondary)
-            .padding(.top, 4)
         }
         .padding(.vertical, 8)
+    }
+}
+
+private extension MergeSchema {
+    var scopeSummary: String {
+        if let workbookFingerprint, !workbookFingerprint.sheetFingerprints.isEmpty {
+            let sheetCount = workbookFingerprint.sheetFingerprints.count
+            if sheetCount == 1, let sheetName = workbookFingerprint.sheetFingerprints.first?.sheetName {
+                return sheetName
+            }
+            return "\(sheetCount) 张工作表"
+        }
+
+        return fingerprint.sheetName.isEmpty ? "较早记忆" : fingerprint.sheetName
     }
 }
 
@@ -198,7 +200,7 @@ class SchemaManagerViewModel: ObservableObject {
 
                 // 显示保存面板
                 let panel = NSSavePanel()
-                panel.nameFieldStringValue = "schema-\(id.uuidString.prefix(8)).json"
+                panel.nameFieldStringValue = "memory-\(id.uuidString.prefix(8)).json"
                 panel.allowedContentTypes = [.json]
 
                 if panel.runModal() == .OK, let url = panel.url {
@@ -227,4 +229,3 @@ class SchemaManagerViewModel: ObservableObject {
         }
     }
 }
-

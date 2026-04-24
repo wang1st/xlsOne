@@ -150,6 +150,201 @@ final class SimpleMergerTests: XCTestCase {
         XCTAssertEqual(merged.displayValue, "hello")
     }
 
+    func testSingleNumericValueWithNumericFormatBecomesSum() {
+        let cells: [(filename: String, cell: CellData?)] = [
+            (filename: "file1", cell: CellData(value: "1250.50", numericValue: 1250.5, formatCode: "#,##0.00")),
+            (filename: "file2", cell: nil)
+        ]
+
+        let merged = MergedCell.from(
+            cells: cells,
+            leftCells: [(filename: "file1", cell: CellData(value: "金额"))],
+            neighborContext: NeighborContext(numericTendency: 0, labelTendency: 0),
+            row: 2,
+            col: 2
+        )
+
+        XCTAssertEqual(merged.type, .sum(1250.5))
+    }
+
+    func testSingleZeroWithBlankSourcesAndNumericContextBecomesSum() {
+        let cells: [(filename: String, cell: CellData?)] = [
+            (filename: "file1", cell: CellData(value: "0.0", numericValue: 0, formatCode: "0.0")),
+            (filename: "file2", cell: CellData(value: "")),
+            (filename: "file3", cell: nil)
+        ]
+
+        let merged = MergedCell.from(
+            cells: cells,
+            leftCells: [],
+            neighborContext: NeighborContext(numericTendency: 0.6, labelTendency: 0.1),
+            row: 4,
+            col: 3
+        )
+
+        XCTAssertEqual(merged.type, .sum(0))
+        XCTAssertEqual(merged.displayValue, "0.0")
+    }
+
+    func testAllZeroDecimalValuesBecomeSum() {
+        let cells: [(filename: String, cell: CellData?)] = [
+            (filename: "file1", cell: CellData(value: "0.0", numericValue: 0, formatCode: "0.0")),
+            (filename: "file2", cell: CellData(value: "0.0", numericValue: 0, formatCode: "0.0")),
+            (filename: "file3", cell: CellData(value: "0.0", numericValue: 0, formatCode: "0.0"))
+        ]
+
+        let merged = MergedCell.from(
+            cells: cells,
+            leftCells: [],
+            neighborContext: NeighborContext(numericTendency: 0, labelTendency: 0),
+            row: 2,
+            col: 2
+        )
+
+        XCTAssertEqual(merged.type, .sum(0))
+        XCTAssertEqual(merged.displayValue, "0.0")
+        XCTAssertTrue(merged.decision.decisionReasons.contains("所有非空来源均为 0，按可累加单元格求和处理"))
+    }
+
+    func testAllZeroDecimalValuesRespectCodeSemanticVeto() {
+        let cells: [(filename: String, cell: CellData?)] = [
+            (filename: "file1", cell: CellData(value: "0.0", numericValue: 0, formatCode: "0.0")),
+            (filename: "file2", cell: CellData(value: "0.0", numericValue: 0, formatCode: "0.0"))
+        ]
+
+        let merged = MergedCell.from(
+            cells: cells,
+            leftCells: [(filename: "file1", cell: CellData(value: "人员编号"))],
+            neighborContext: NeighborContext(numericTendency: 0, labelTendency: 0),
+            row: 2,
+            col: 2
+        )
+
+        XCTAssertEqual(merged.type, .label)
+        XCTAssertEqual(merged.displayValue, "0.0")
+    }
+
+    func testIdenticalNonZeroIntegerValuesPreferLabel() {
+        let cells: [(filename: String, cell: CellData?)] = [
+            (filename: "file1", cell: CellData(value: "2024")),
+            (filename: "file2", cell: CellData(value: "2024")),
+            (filename: "file3", cell: CellData(value: "2024"))
+        ]
+
+        let merged = MergedCell.from(
+            cells: cells,
+            leftCells: [],
+            neighborContext: NeighborContext(numericTendency: 0, labelTendency: 0),
+            row: 3,
+            col: 2
+        )
+
+        XCTAssertEqual(merged.type, .label)
+        XCTAssertEqual(merged.displayValue, "2024")
+        XCTAssertTrue(merged.decision.decisionReasons.contains("所有来源为相同非零整数，且无明确可累加语义，按标签处理"))
+    }
+
+    func testIdenticalNonZeroIntegerValuesInFirstColumnPreferLabel() {
+        let cells: [(filename: String, cell: CellData?)] = [
+            (filename: "file1", cell: CellData(value: "2024")),
+            (filename: "file2", cell: CellData(value: "2024")),
+            (filename: "file3", cell: CellData(value: "2024"))
+        ]
+
+        let merged = MergedCell.from(
+            cells: cells,
+            leftCells: [],
+            neighborContext: NeighborContext(numericTendency: 0, labelTendency: 0),
+            row: 3,
+            col: 0
+        )
+
+        XCTAssertEqual(merged.type, .label)
+        XCTAssertEqual(merged.displayValue, "2024")
+        XCTAssertTrue(merged.decision.decisionReasons.contains("首列所有来源为相同非零整数，按标签处理"))
+    }
+
+    func testIdenticalNonZeroIntegerValuesWithAmountSemanticCanSum() {
+        let cells: [(filename: String, cell: CellData?)] = [
+            (filename: "file1", cell: CellData(value: "1")),
+            (filename: "file2", cell: CellData(value: "1")),
+            (filename: "file3", cell: CellData(value: "1"))
+        ]
+
+        let merged = MergedCell.from(
+            cells: cells,
+            leftCells: [(filename: "file1", cell: CellData(value: "人数"))],
+            neighborContext: NeighborContext(numericTendency: 0, labelTendency: 0),
+            row: 3,
+            col: 2
+        )
+
+        XCTAssertEqual(merged.type, .sum(3))
+        XCTAssertEqual(merged.displayValue, "3")
+    }
+
+    func testNumericValuesWithBlankSourcesTreatBlanksAsZero() {
+        let cells: [(filename: String, cell: CellData?)] = [
+            (filename: "file1", cell: CellData(value: "123456")),
+            (filename: "file2", cell: CellData(value: "")),
+            (filename: "file3", cell: CellData(value: "123456")),
+            (filename: "file4", cell: nil)
+        ]
+
+        let merged = MergedCell.from(
+            cells: cells,
+            leftCells: [],
+            neighborContext: NeighborContext(numericTendency: 0, labelTendency: 0),
+            row: 3,
+            col: 2
+        )
+
+        XCTAssertEqual(merged.type, .sum(246912))
+        XCTAssertEqual(merged.displayValue, "246912")
+        XCTAssertTrue(
+            merged.decision.decisionReasons.contains("部分来源为空或缺失，非空来源均为数值，空值按 0 参与可累加判断")
+        )
+    }
+
+    func testNumericValuesWithBlankSourcesRespectCodeSemanticVeto() {
+        let cells: [(filename: String, cell: CellData?)] = [
+            (filename: "file1", cell: CellData(value: "331024001")),
+            (filename: "file2", cell: CellData(value: "")),
+            (filename: "file3", cell: CellData(value: "331024002"))
+        ]
+
+        let merged = MergedCell.from(
+            cells: cells,
+            leftCells: [(filename: "file1", cell: CellData(value: "行政区划代码"))],
+            neighborContext: NeighborContext(numericTendency: 0, labelTendency: 0),
+            row: 3,
+            col: 2
+        )
+
+        XCTAssertEqual(merged.type, .label)
+        XCTAssertEqual(merged.displayValue, "33102400_")
+    }
+
+    func testOverrideLabelUsesCommonPrefixDisplay() {
+        let sources = [
+            CellSourceEntry(filename: "a.xlsx", filepath: "/tmp/a.xlsx", value: "331024001", state: .value),
+            CellSourceEntry(filename: "b.xlsx", filepath: "/tmp/b.xlsx", value: "331024002", state: .value),
+            CellSourceEntry(filename: "c.xlsx", filepath: "/tmp/c.xlsx", value: "331024003", state: .value)
+        ]
+        let cell = MergedCell(type: .single("331024001"), sources: sources)
+        let result = MergedResult(sheetName: "Sheet1", rows: [[cell]], sourceFiles: ["a.xlsx", "b.xlsx", "c.xlsx"])
+
+        let overridden = SmartMerger().applyOverrides(
+            to: result,
+            overrides: [
+                CellTypeOverride(sheetName: "Sheet1", rowIndex: 0, colIndex: 0, cellType: .label)
+            ]
+        )
+
+        XCTAssertEqual(overridden.rows[0][0].type, .label)
+        XCTAssertEqual(overridden.rows[0][0].displayValue, "33102400_")
+    }
+
     func testMergedCellWithEmptyValues() {
         // 包含空值的测试
         let cells = [
