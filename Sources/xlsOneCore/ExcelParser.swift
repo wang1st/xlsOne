@@ -34,10 +34,19 @@ public struct ExcelParser {
     public func parseFile(at path: String) async throws -> ExcelFile {
         let url = URL(fileURLWithPath: path)
         let filename = url.lastPathComponent
+        let fileExtension = url.pathExtension.lowercased()
 
         // 检查文件是否存在
         guard FileManager.default.fileExists(atPath: path) else {
             throw ParserError.fileNotFound(path)
+        }
+
+        if fileExtension == "xls" {
+            return try BIFF8XLSParser().parseFile(at: path)
+        }
+
+        guard fileExtension == "xlsx" else {
+            throw ParserError.unsupportedFileExtension(fileExtension.isEmpty ? filename : ".\(fileExtension)")
         }
 
         // 解析XLSX文件
@@ -421,11 +430,12 @@ public struct ExcelParser {
 }
 
 /// 解析错误
-public enum ParserError: Error, CustomStringConvertible {
+public enum ParserError: Error, CustomStringConvertible, LocalizedError {
     case fileNotFound(String)
     case cannotOpenFile(String)
     case invalidFormat(String)
     case allFilesFailed([(String, Error)])
+    case unsupportedFileExtension(String)
 
     public var description: String {
         switch self {
@@ -437,7 +447,13 @@ public enum ParserError: Error, CustomStringConvertible {
             return "格式错误: \(reason)"
         case .allFilesFailed(let errors):
             return "所有文件解析失败:\n" + errors.map { "  - \($0.0): \($0.1)" }.joined(separator: "\n")
+        case .unsupportedFileExtension(let ext):
+            return "暂不支持的文件类型: \(ext)。请选择 .xlsx 或 .xls 文件。"
         }
+    }
+
+    public var errorDescription: String? {
+        description
     }
 }
 

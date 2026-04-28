@@ -5,13 +5,30 @@ enum GridDebugLogger {
     private static let fileURL = URL(fileURLWithPath: NSTemporaryDirectory())
         .appendingPathComponent("xlsone-grid-cursor.log")
     private static var didWriteSessionHeader = false
+    private static let debugOptInEnvironmentKey = "XLSONE_CURSOR_DEBUG_LOG"
 
     static var logPath: String {
         fileURL.path
     }
 
+    static var isEnabledForCurrentProcess: Bool {
+        isEnabled(environment: ProcessInfo.processInfo.environment)
+    }
+
+    static func isEnabled(environment: [String: String]) -> Bool {
+        if let override = environment[debugOptInEnvironmentKey] {
+            return override == "1"
+        }
+
+        #if DEBUG
+        return environment["XCTestConfigurationFilePath"] == nil
+        #else
+        return false
+        #endif
+    }
+
     static func log(_ message: String) {
-        guard isEnabled else { return }
+        guard isEnabledForCurrentProcess else { return }
 
         queue.async {
             if !didWriteSessionHeader {
@@ -21,10 +38,6 @@ enum GridDebugLogger {
 
             append(message)
         }
-    }
-
-    private static var isEnabled: Bool {
-        ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil
     }
 
     private static func append(_ line: String) {

@@ -20,7 +20,7 @@ targets:
     settings:
       base:
         PRODUCT_NAME: xlsOne
-        PRODUCT_BUNDLE_IDENTIFIER: com.example.xlsone
+        PRODUCT_BUNDLE_IDENTIFIER: com.xlsone.app
         INFOPLIST_FILE: App/xlsOneMacApp/Info.plist
         CODE_SIGN_ENTITLEMENTS: App/xlsOneMacApp/xlsOneMacApp.entitlements
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
@@ -29,6 +29,7 @@ targets:
         SWIFT_VERSION: 5.9
         MACOSX_DEPLOYMENT_TARGET: 12.0
         CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: "$(XLSONE_DEVELOPMENT_TEAM)"
         GENERATE_INFOPLIST_FILE: NO
         LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/../Frameworks"
         SUPPORTS_MACCATALYST: NO
