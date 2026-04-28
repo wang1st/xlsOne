@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>xlsOne 支持</title>
+    <meta name="description" content="获取 xlsOne 的支持方式、文件格式说明、最低系统版本和常见问题。">
+    <link rel="canonical" href="https://xlsone.com/support/">
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <header class="topbar">
+        <div class="topbar-inner">
+            <a class="brand" href="/">
+                <span class="brand-mark" aria-hidden="true"></span>
+                <span class="brand-copy">
+                    <strong>xlsOne</strong>
+                    <span>support</span>
+                </span>
+            </a>
+            <nav class="nav" aria-label="Primary">
+                <a href="/">首页</a>
+                <a href="/privacy/">隐私</a>
+                <a href="/changelog/">更新记录</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="page-shell">
+        <section class="hero">
+            <div class="hero-card">
+                <div class="hero-copy">
+                    <span class="eyebrow">Support</span>
+                    <h1>遇到问题时，先给我们一封能复现问题的邮件。</h1>
+                    <p class="lede">为了更快定位问题，建议在来信中附上 macOS 版本、问题出现步骤、是否稳定复现，以及必要时的脱敏样例文件说明。</p>
+                    <div class="button-row">
+                        <a class="button button-primary" href="mailto:support@xlsone.com">support@xlsone.com</a>
+                        <a class="button button-secondary" href="/privacy/">查看隐私政策</a>
+                    </div>
+                </div>
+                <div class="hero-visual">
+                    <article class="detail-card">
+                        <h3>支持范围</h3>
+                        <ul>
+                            <li>导入与追加 <span class="mono">.xlsx</span> / <span class="mono">.xls</span> 文件</li>
+                            <li>工作表无法对齐或被跳过</li>
+                            <li>汇总结果与来源值不一致</li>
+                            <li>导出工作簿失败</li>
+                        </ul>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <div class="card-grid">
+                <article class="content-card">
+                    <h3>当前支持的文件格式</h3>
+                    <p>当前支持 <span class="mono">.xlsx</span> 与常见 BIFF8 <span class="mono">.xls</span> 工作簿导入，导出统一生成 <span class="mono">.xlsx</span>。公式单元格读取文件内缓存值，不在应用内重新计算公式。</p>
+                </article>
+                <article class="content-card">
+                    <h3>最低系统版本</h3>
+                    <p>xlsOne 当前面向 <span class="mono">macOS 12</span> 及以上版本。建议在较新的系统版本上完成正式提审前验证。</p>
+                </article>
+                <article class="content-card">
+                    <h3>响应方式</h3>
+                    <p>我们优先通过邮件处理支持请求。正常情况下会在 3 个工作日内回复；提审期或上线初期可能更快。</p>
+                </article>
+            </div>
+        </section>
+
+        <section class="section">
+            <div class="section-header">
+                <div>
+                    <span class="eyebrow">FAQ</span>
+                    <h2>常见问题</h2>
+                </div>
+            </div>
+            <div class="faq-list">
+                <article class="faq-item">
+                    <h3>为什么有些工作表没有参与汇总？</h3>
+                    <p>xlsOne 会先校验所有文件中同名工作表的结构是否可对齐。若某个工作表在文件间差异过大，它会被跳过并在界面中提示。</p>
+                </article>
+                <article class="faq-item">
+                    <h3>为什么某个单元格显示“几条”而不是数字？</h3>
+                    <p>这通常代表同一位置的来源值不完全一致，且并非全都是可求和数字。你可以点击该单元格查看原始值列表。</p>
+                </article>
+                <article class="faq-item">
+                    <h3>数据会上传到你们服务器吗？</h3>
+                    <p>当前版本按本地处理方式设计。详细说明请查看 <a href="/privacy/">隐私政策</a>。</p>
+                </article>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="page-shell">
+            <div class="footer-card">
+                <div>
+                    <strong>还需要继续核对吗？</strong>
+                    <p class="meta">如果问题和工作簿结构有关，来信时请说明文件数量、工作表名称以及是否导出过模板文件。</p>
+                </div>
+                <a class="button button-secondary" href="mailto:support@xlsone.com">发送邮件</a>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

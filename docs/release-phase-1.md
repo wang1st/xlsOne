@@ -10,6 +10,12 @@
 2. 运行 `./scripts/validate_xcode_app.sh`
 3. 确认 `App/xlsOneMacApp/Assets.xcassets/AppIcon.appiconset` 已生成图标
 4. 如需在命令行检查归档结构，运行 `./scripts/archive_xcode_app.sh`
+5. 如果本机已经完成开发者登录、证书和 Team 配置，再额外运行一次：
+   - `./scripts/validate_xcode_app.sh --signed --team-id YOURTEAMID`
+   - `./scripts/archive_xcode_app.sh --signed --team-id YOURTEAMID`
+6. 也可以通过环境变量避免重复传参：
+   - `XLSONE_DEVELOPMENT_TEAM=YOURTEAMID ./scripts/validate_xcode_app.sh --signed`
+   - `XLSONE_DEVELOPMENT_TEAM=YOURTEAMID ./scripts/archive_xcode_app.sh --signed`
 
 ## 打开工程
 
@@ -17,8 +23,8 @@
 2. 用 Xcode 打开 `xlsOne.xcodeproj`
 3. 选中 `xlsOneMacApp` target
 4. 在 `Signing & Capabilities` 中确认：
-   - Bundle Identifier 已替换成正式值
-   - Team 已选择
+   - Bundle Identifier 为 `com.xlsone.app`
+   - Team 已选择，或已通过 `XLSONE_DEVELOPMENT_TEAM` 注入
    - App Sandbox 已启用
    - User Selected File Read/Write entitlement 已启用
 
@@ -43,6 +49,6 @@
 
 ## 当前占位项
 
-- `project.yml` 里的 `PRODUCT_BUNDLE_IDENTIFIER` 仍是占位值
+- `project.yml` 已切到正式 Bundle ID，并通过 `XLSONE_DEVELOPMENT_TEAM` 暴露 Team 注入入口
 - 图标是临时提交版，正式品牌稿后替换
 - 商店截图、隐私政策和支持 URL 在第二阶段补齐
