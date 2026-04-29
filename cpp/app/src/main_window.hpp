@@ -1,19 +1,28 @@
 #pragma once
 
+#include "diagnostics_view.hpp"
+#include "empty_workspace_view.hpp"
+#include "inspector_panel.hpp"
 #include "merged_table_model.hpp"
+#include "sheet_strip.hpp"
+#include "workspace_chrome.hpp"
 #include "xlsone/core/excel_parser.hpp"
 #include "xlsone/core/merger.hpp"
 #include "xlsone/core/schema_repository.hpp"
 #include "xlsone/core/validator.hpp"
 
-#include <QComboBox>
 #include <QLabel>
-#include <QListWidget>
 #include <QMainWindow>
 #include <QModelIndex>
+#include <QPushButton>
+#include <QStackedWidget>
 #include <QTableView>
-#include <QTextEdit>
+#include <QWidget>
 #include <optional>
+
+class QDragEnterEvent;
+class QDragLeaveEvent;
+class QDropEvent;
 
 class MainWindow final : public QMainWindow {
     Q_OBJECT
@@ -23,6 +32,7 @@ public:
 
 protected:
     void dragEnterEvent(QDragEnterEvent* event) override;
+    void dragLeaveEvent(QDragLeaveEvent* event) override;
     void dropEvent(QDropEvent* event) override;
 
 private slots:
@@ -41,7 +51,7 @@ private slots:
     void clearOverrides();
     void jumpToNextAnomaly();
     void jumpToPreviousAnomaly();
-    void selectSheet(int index);
+    void selectSheet(const QString& sheetName, bool mergeable);
     void inspectCell(const QModelIndex& index);
 
 private:
@@ -49,8 +59,12 @@ private:
     void loadFiles(const QStringList& paths, bool append);
     void recomputeWorkspace();
     void showResult(const xlsone::MergedResult& result);
+    void showSkippedSheet(const QString& sheetName);
     void showValidationSummary();
     void updateDiagnostics();
+    void updateChromeState();
+    void updateSheetStrip();
+    void updateCorrectionBar();
     QStringList chooseInputFiles() const;
     void applyOverrideForSelection(xlsone::SchemaCellOverrideType type);
     void rebuildResultsWithCurrentOverrides();
@@ -61,6 +75,7 @@ private:
     void jumpAcrossAnomalies(int step);
     QModelIndexList selectedCellIndexes() const;
     int currentResultIndex() const;
+    bool hasRestorableOverride(int row, int column, const QString& sheetName) const;
 
     struct OverrideSnapshot {
         std::vector<xlsone::SchemaCellOverride> currentOverrides;
@@ -84,12 +99,22 @@ private:
     std::vector<xlsone::SchemaCellOverride> workspaceBaseOverrides_;
     std::optional<QUuid> workspaceBaseSchemaId_;
     std::optional<QUuid> workspaceActiveSchemaId_;
+    QString selectedSheetName_;
+    bool selectedSheetMergeable_ = true;
 
-    QComboBox* sheetCombo_ = nullptr;
+    WorkspaceChrome* chrome_ = nullptr;
+    QStackedWidget* contentStack_ = nullptr;
+    EmptyWorkspaceView* emptyView_ = nullptr;
+    QWidget* workspaceView_ = nullptr;
+    SheetStrip* sheetStrip_ = nullptr;
+    QStackedWidget* workspaceStack_ = nullptr;
     QTableView* table_ = nullptr;
     MergedTableModel* tableModel_ = nullptr;
-    QListWidget* fileList_ = nullptr;
-    QTextEdit* inspector_ = nullptr;
-    QTextEdit* diagnostics_ = nullptr;
+    InspectorPanel* inspector_ = nullptr;
+    DiagnosticsView* diagnostics_ = nullptr;
+    QWidget* correctionBar_ = nullptr;
+    QLabel* correctionLabel_ = nullptr;
+    QPushButton* undoButton_ = nullptr;
+    QPushButton* clearOverridesButton_ = nullptr;
     QLabel* statusLabel_ = nullptr;
 };

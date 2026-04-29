@@ -1,25 +1,30 @@
 #include "main_window.hpp"
 
+#include "merged_table_delegate.hpp"
 #include "schema_manager_dialog.hpp"
+#include "ui_theme.hpp"
 #include "xlsone/core/exporter.hpp"
 
 #include <QAction>
 #include <QDateTime>
-#include <QDockWidget>
 #include <QDragEnterEvent>
+#include <QDragLeaveEvent>
 #include <QFileDialog>
 #include <QFileInfo>
+#include <QFrame>
 #include <QHeaderView>
+#include <QHBoxLayout>
 #include <QInputDialog>
+#include <QItemSelectionModel>
 #include <QKeySequence>
 #include <QLineEdit>
-#include <QListWidgetItem>
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QMimeData>
+#include <QSplitter>
 #include <QStatusBar>
-#include <QToolBar>
 #include <QUrl>
+#include <QVBoxLayout>
 
 #include <algorithm>
 
@@ -103,65 +108,58 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
 
 void MainWindow::buildUi()
 {
-    auto* toolbar = addToolBar(tr("Workspace"));
-    toolbar->setMovable(false);
+    xlsone::ui::applyAppStyle(this);
 
-    auto* openAction = toolbar->addAction(tr("打开"));
+    auto* openAction = new QAction(tr("打开"), this);
     openAction->setShortcut(QKeySequence::Open);
     connect(openAction, &QAction::triggered, this, &MainWindow::openFiles);
 
-    auto* appendAction = toolbar->addAction(tr("追加"));
+    auto* appendAction = new QAction(tr("追加"), this);
     appendAction->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_O));
     connect(appendAction, &QAction::triggered, this, &MainWindow::appendFiles);
 
-    auto* reloadAction = toolbar->addAction(tr("刷新"));
+    auto* reloadAction = new QAction(tr("刷新"), this);
     reloadAction->setShortcut(QKeySequence::Refresh);
     connect(reloadAction, &QAction::triggered, this, &MainWindow::reloadFiles);
 
-    auto* clearAction = toolbar->addAction(tr("清空"));
+    auto* clearAction = new QAction(tr("清空"), this);
     clearAction->setShortcut(QKeySequence::New);
     connect(clearAction, &QAction::triggered, this, &MainWindow::clearWorkspace);
 
-    auto* exportAction = toolbar->addAction(tr("导出"));
+    auto* exportAction = new QAction(tr("导出 XLSX"), this);
     exportAction->setShortcut(QKeySequence::Save);
     connect(exportAction, &QAction::triggered, this, &MainWindow::exportResult);
 
-    auto* markLabelAction = toolbar->addAction(tr("标签"));
+    auto* markLabelAction = new QAction(tr("标签"), this);
     connect(markLabelAction, &QAction::triggered, this, &MainWindow::markSelectedAsLabel);
 
-    auto* markSumAction = toolbar->addAction(tr("求和"));
+    auto* markSumAction = new QAction(tr("求和"), this);
     connect(markSumAction, &QAction::triggered, this, &MainWindow::markSelectedAsSum);
 
-    auto* markMixedAction = toolbar->addAction(tr("混合"));
+    auto* markMixedAction = new QAction(tr("混合"), this);
     connect(markMixedAction, &QAction::triggered, this, &MainWindow::markSelectedAsMixed);
 
-    auto* restoreAutoAction = toolbar->addAction(tr("恢复自动"));
+    auto* restoreAutoAction = new QAction(tr("恢复自动"), this);
     connect(restoreAutoAction, &QAction::triggered, this, &MainWindow::restoreAutomaticDecisionForSelection);
 
-    auto* saveSchemaAction = toolbar->addAction(tr("保存规则"));
+    auto* saveSchemaAction = new QAction(tr("保存规则"), this);
     connect(saveSchemaAction, &QAction::triggered, this, &MainWindow::saveCurrentSchema);
 
-    auto* manageSchemasAction = toolbar->addAction(tr("管理规则"));
+    auto* manageSchemasAction = new QAction(tr("管理规则"), this);
     connect(manageSchemasAction, &QAction::triggered, this, &MainWindow::manageSchemas);
 
-    auto* undoOverrideAction = toolbar->addAction(tr("撤销修正"));
+    auto* undoOverrideAction = new QAction(tr("撤销修正"), this);
     undoOverrideAction->setShortcut(QKeySequence::Undo);
     connect(undoOverrideAction, &QAction::triggered, this, &MainWindow::undoLastOverride);
 
-    auto* clearOverridesAction = toolbar->addAction(tr("清除修正"));
+    auto* clearOverridesAction = new QAction(tr("清除修正"), this);
     connect(clearOverridesAction, &QAction::triggered, this, &MainWindow::clearOverrides);
 
-    auto* previousAnomalyAction = toolbar->addAction(tr("上一异常"));
+    auto* previousAnomalyAction = new QAction(tr("上一异常"), this);
     connect(previousAnomalyAction, &QAction::triggered, this, &MainWindow::jumpToPreviousAnomaly);
 
-    auto* nextAnomalyAction = toolbar->addAction(tr("下一异常"));
+    auto* nextAnomalyAction = new QAction(tr("下一异常"), this);
     connect(nextAnomalyAction, &QAction::triggered, this, &MainWindow::jumpToNextAnomaly);
-
-    toolbar->addSeparator();
-    sheetCombo_ = new QComboBox(this);
-    sheetCombo_->setMinimumWidth(220);
-    toolbar->addWidget(sheetCombo_);
-    connect(sheetCombo_, &QComboBox::currentIndexChanged, this, &MainWindow::selectSheet);
 
     auto* fileMenu = menuBar()->addMenu(tr("文件"));
     fileMenu->addAction(openAction);
@@ -186,46 +184,129 @@ void MainWindow::buildUi()
     rulesMenu->addAction(previousAnomalyAction);
     rulesMenu->addAction(nextAnomalyAction);
 
+    auto* root = new QWidget(this);
+    auto* rootLayout = new QVBoxLayout(root);
+    rootLayout->setContentsMargins(0, 0, 0, 0);
+    rootLayout->setSpacing(0);
+
+    chrome_ = new WorkspaceChrome(root);
+    rootLayout->addWidget(chrome_);
+    connect(chrome_, &WorkspaceChrome::appendRequested, this, &MainWindow::appendFiles);
+    connect(chrome_, &WorkspaceChrome::reloadRequested, this, &MainWindow::reloadFiles);
+    connect(chrome_, &WorkspaceChrome::clearRequested, this, &MainWindow::clearWorkspace);
+    connect(chrome_, &WorkspaceChrome::exportRequested, this, &MainWindow::exportResult);
+
+    contentStack_ = new QStackedWidget(root);
+    rootLayout->addWidget(contentStack_, 1);
+
+    emptyView_ = new EmptyWorkspaceView(contentStack_);
+    connect(emptyView_, &EmptyWorkspaceView::openRequested, this, &MainWindow::openFiles);
+    contentStack_->addWidget(emptyView_);
+
+    workspaceView_ = new QWidget(contentStack_);
+    auto* workspaceLayout = new QVBoxLayout(workspaceView_);
+    workspaceLayout->setContentsMargins(0, 0, 0, 0);
+    workspaceLayout->setSpacing(0);
+
+    sheetStrip_ = new SheetStrip(workspaceView_);
+    workspaceLayout->addWidget(sheetStrip_);
+    connect(sheetStrip_, &SheetStrip::sheetSelected, this, &MainWindow::selectSheet);
+
+    auto* splitter = new QSplitter(Qt::Horizontal, workspaceView_);
+    splitter->setChildrenCollapsible(false);
+    splitter->setHandleWidth(1);
+
+    workspaceStack_ = new QStackedWidget(splitter);
     tableModel_ = new MergedTableModel(this);
     table_ = new QTableView(this);
     table_->setModel(tableModel_);
+    table_->setItemDelegate(new MergedTableDelegate(table_));
     table_->horizontalHeader()->setSectionResizeMode(QHeaderView::Interactive);
     table_->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
+    table_->verticalHeader()->setDefaultSectionSize(28);
+    table_->horizontalHeader()->setDefaultSectionSize(112);
     table_->setSelectionBehavior(QAbstractItemView::SelectItems);
     table_->setSelectionMode(QAbstractItemView::ExtendedSelection);
-    setCentralWidget(table_);
+    table_->setShowGrid(false);
+    table_->setAlternatingRowColors(false);
+    table_->setWordWrap(false);
+    workspaceStack_->addWidget(table_);
+
+    diagnostics_ = new DiagnosticsView(workspaceStack_);
+    workspaceStack_->addWidget(diagnostics_);
+    splitter->addWidget(workspaceStack_);
+
+    inspector_ = new InspectorPanel(splitter);
+    inspector_->setMinimumWidth(320);
+    inspector_->setMaximumWidth(420);
+    inspector_->resize(360, inspector_->height());
+    splitter->addWidget(inspector_);
+    splitter->setStretchFactor(0, 1);
+    splitter->setStretchFactor(1, 0);
+    splitter->setSizes({900, 360});
+    workspaceLayout->addWidget(splitter, 1);
+
+    correctionBar_ = new QWidget(workspaceView_);
+    correctionBar_->setObjectName(QStringLiteral("correctionBar"));
+    auto* correctionLayout = new QHBoxLayout(correctionBar_);
+    correctionLayout->setContentsMargins(14, 8, 14, 8);
+    correctionLabel_ = new QLabel(correctionBar_);
+    undoButton_ = new QPushButton(tr("撤销上一步"), correctionBar_);
+    clearOverridesButton_ = new QPushButton(tr("清除调整"), correctionBar_);
+    correctionLayout->addWidget(correctionLabel_);
+    correctionLayout->addStretch(1);
+    correctionLayout->addWidget(undoButton_);
+    correctionLayout->addWidget(clearOverridesButton_);
+    correctionBar_->setStyleSheet(QStringLiteral(
+        "QWidget#correctionBar { background: white; border-top: 1px solid #dce0e8; }"
+        "QLabel { color: #646d7a; }"
+    ));
+    workspaceLayout->addWidget(correctionBar_);
+    correctionBar_->hide();
+    connect(undoButton_, &QPushButton::clicked, this, &MainWindow::undoLastOverride);
+    connect(clearOverridesButton_, &QPushButton::clicked, this, &MainWindow::clearOverrides);
+
+    contentStack_->addWidget(workspaceView_);
+    setCentralWidget(root);
+
     connect(table_, &QTableView::clicked, this, &MainWindow::inspectCell);
+    connect(table_->selectionModel(), &QItemSelectionModel::currentChanged, this, [this](const QModelIndex& current) {
+        inspectCell(current);
+        table_->viewport()->update();
+    });
+    connect(inspector_, &InspectorPanel::markLabelRequested, this, &MainWindow::markSelectedAsLabel);
+    connect(inspector_, &InspectorPanel::markSumRequested, this, &MainWindow::markSelectedAsSum);
+    connect(inspector_, &InspectorPanel::markMixedRequested, this, &MainWindow::markSelectedAsMixed);
+    connect(inspector_, &InspectorPanel::restoreAutomaticRequested, this, &MainWindow::restoreAutomaticDecisionForSelection);
 
-    auto* filesDock = new QDockWidget(tr("文件"), this);
-    fileList_ = new QListWidget(filesDock);
-    filesDock->setWidget(fileList_);
-    addDockWidget(Qt::LeftDockWidgetArea, filesDock);
-
-    auto* inspectorDock = new QDockWidget(tr("来源"), this);
-    inspector_ = new QTextEdit(inspectorDock);
-    inspector_->setReadOnly(true);
-    inspectorDock->setWidget(inspector_);
-    addDockWidget(Qt::RightDockWidgetArea, inspectorDock);
-
-    auto* diagnosticsDock = new QDockWidget(tr("诊断"), this);
-    diagnostics_ = new QTextEdit(diagnosticsDock);
-    diagnostics_->setReadOnly(true);
-    diagnosticsDock->setWidget(diagnostics_);
-    addDockWidget(Qt::BottomDockWidgetArea, diagnosticsDock);
-
-    statusLabel_ = new QLabel(tr("拖入 Excel/CSV 文件，或点击打开开始。"), this);
+    statusLabel_ = new QLabel(tr("拖入 Excel 文件，或点击打开开始。"), this);
     statusBar()->addPermanentWidget(statusLabel_, 1);
+    updateChromeState();
 }
 
 void MainWindow::dragEnterEvent(QDragEnterEvent* event)
 {
     if (event->mimeData()->hasUrls()) {
+        if (emptyView_ != nullptr && contentStack_ != nullptr && contentStack_->currentWidget() == emptyView_) {
+            emptyView_->setDropTargeted(true);
+        }
         event->acceptProposedAction();
     }
 }
 
+void MainWindow::dragLeaveEvent(QDragLeaveEvent* event)
+{
+    if (emptyView_ != nullptr) {
+        emptyView_->setDropTargeted(false);
+    }
+    QMainWindow::dragLeaveEvent(event);
+}
+
 void MainWindow::dropEvent(QDropEvent* event)
 {
+    if (emptyView_ != nullptr) {
+        emptyView_->setDropTargeted(false);
+    }
     QStringList paths;
     for (const auto& url : event->mimeData()->urls()) {
         if (url.isLocalFile()) {
@@ -233,6 +314,7 @@ void MainWindow::dropEvent(QDropEvent* event)
         }
     }
     loadFiles(paths, !selectedPaths_.isEmpty());
+    event->acceptProposedAction();
 }
 
 QStringList MainWindow::chooseInputFiles() const
@@ -241,7 +323,7 @@ QStringList MainWindow::chooseInputFiles() const
         nullptr,
         tr("选择工作簿"),
         {},
-        tr("Excel/CSV Files (*.xlsx *.xls *.csv *.tsv);;All Files (*)")
+        tr("Excel Files (*.xlsx *.xls);;All Files (*)")
     );
 }
 
@@ -265,6 +347,7 @@ void MainWindow::clearWorkspace()
     selectedPaths_.clear();
     parsedFiles_.clear();
     parseFailures_.clear();
+    validation_ = {};
     baseResults_.clear();
     results_.clear();
     currentOverrides_.clear();
@@ -273,11 +356,14 @@ void MainWindow::clearWorkspace()
     workspaceBaseOverrides_.clear();
     workspaceBaseSchemaId_.reset();
     workspaceActiveSchemaId_.reset();
-    fileList_->clear();
-    sheetCombo_->clear();
+    selectedSheetName_.clear();
+    selectedSheetMergeable_ = true;
     tableModel_->setResult({});
-    inspector_->clear();
-    diagnostics_->clear();
+    diagnostics_->showEmpty();
+    inspector_->showPlaceholder(tr("选择单元格后查看结果与来源。"));
+    updateSheetStrip();
+    updateCorrectionBar();
+    updateChromeState();
     statusLabel_->setText(tr("工作区已清空。"));
 }
 
@@ -298,11 +384,6 @@ void MainWindow::loadFiles(const QStringList& paths, bool append)
     parsedFiles_ = parsed.files;
     parseFailures_ = parsed.failures;
 
-    fileList_->clear();
-    for (const auto& path : selectedPaths_) {
-        fileList_->addItem(path);
-    }
-
     recomputeWorkspace();
 }
 
@@ -312,16 +393,17 @@ void MainWindow::recomputeWorkspace()
     showValidationSummary();
     updateDiagnostics();
 
-    sheetCombo_->blockSignals(true);
-    sheetCombo_->clear();
-    sheetCombo_->addItems(validation_.report.commonSheetNames);
-    sheetCombo_->blockSignals(false);
-
     baseResults_.clear();
     results_.clear();
     if (validation_.report.readiness != xlsone::MergeReadiness::Ready) {
         tableModel_->setResult({});
-        inspector_->setPlainText(tr("没有可参与汇总的同构工作表。"));
+        selectedSheetName_.clear();
+        selectedSheetMergeable_ = true;
+        workspaceStack_->setCurrentWidget(diagnostics_);
+        inspector_->showPlaceholder(tr("没有可参与汇总的同构工作表。"));
+        updateSheetStrip();
+        updateCorrectionBar();
+        updateChromeState();
         return;
     }
 
@@ -344,8 +426,23 @@ void MainWindow::recomputeWorkspace()
     }
 
     rebuildResultsWithCurrentOverrides();
-    if (!results_.empty()) {
-        showResult(results_.front());
+
+    QString nextSheet = selectedSheetName_;
+    const auto resultIterator = std::find_if(results_.begin(), results_.end(), [&](const auto& result) {
+        return result.sheetName == nextSheet;
+    });
+    if (resultIterator == results_.end()) {
+        nextSheet = results_.empty() ? QString() : results_.front().sheetName;
+    }
+    selectedSheetName_ = nextSheet;
+    selectedSheetMergeable_ = true;
+    updateSheetStrip();
+    updateCorrectionBar();
+    updateChromeState();
+    if (!selectedSheetName_.isEmpty()) {
+        selectSheet(selectedSheetName_, true);
+    } else if (!validation_.report.skippedSheetNames.isEmpty()) {
+        selectSheet(validation_.report.skippedSheetNames.front(), false);
     }
 }
 
@@ -359,64 +456,132 @@ void MainWindow::showValidationSummary()
 
 void MainWindow::updateDiagnostics()
 {
-    fileList_->clear();
-    for (const auto& report : validation_.report.files) {
-        const QString marker = report.isTemplate ? tr("模板") : fileStatusName(report.status);
-        auto* item = new QListWidgetItem(tr("[%1] %2").arg(marker, report.filename), fileList_);
-        item->setToolTip(report.filepath);
-    }
-
-    QStringList lines;
     if (validation_.report.files.empty()) {
-        diagnostics_->setPlainText(tr("暂无诊断。"));
+        diagnostics_->showEmpty();
         return;
     }
-
-    lines << tr("状态: %1").arg(readinessName(validation_.report.readiness));
-    lines << tr("可合并工作表: %1").arg(
-        validation_.report.commonSheetNames.isEmpty()
-            ? tr("无")
-            : validation_.report.commonSheetNames.join(QStringLiteral(", "))
-    );
-    lines << tr("跳过工作表: %1").arg(
-        validation_.report.skippedSheetNames.isEmpty()
-            ? tr("无")
-            : validation_.report.skippedSheetNames.join(QStringLiteral(", "))
-    );
-
-    lines << QString();
-    lines << tr("文件:");
-    for (const auto& report : validation_.report.files) {
-        const QString templateFlag = report.isTemplate ? tr(" / 模板") : QString();
-        lines << tr("- %1: %2%3").arg(report.filename, fileStatusName(report.status), templateFlag);
-        for (const auto& issue : report.issues) {
-            lines << tr("  [%1] %2").arg(severityName(issue.severity), issue.message);
-        }
-    }
-
-    if (!validation_.report.skippedSheetIssues.empty()) {
-        lines << QString();
-        lines << tr("工作表问题:");
-        for (const auto& issue : validation_.report.skippedSheetIssues) {
-            lines << tr("- %1 / %2: %3").arg(issue.fileName, issue.sheetName, issue.message);
-        }
-    }
-
-    diagnostics_->setPlainText(lines.join(QLatin1Char('\n')));
+    diagnostics_->setReport(validation_.report);
 }
 
-void MainWindow::selectSheet(int index)
+void MainWindow::updateChromeState()
 {
-    if (index < 0 || index >= static_cast<int>(results_.size())) {
+    const bool hasWorkspace = !selectedPaths_.isEmpty();
+    const bool canExport = !results_.empty();
+    if (chrome_ != nullptr) {
+        chrome_->setWorkspaceState(hasWorkspace, canExport);
+    }
+    if (contentStack_ != nullptr) {
+        contentStack_->setCurrentWidget(hasWorkspace ? workspaceView_ : emptyView_);
+    }
+}
+
+void MainWindow::updateSheetStrip()
+{
+    QList<SheetStripItem> items;
+    for (const auto& result : results_) {
+        int anomalyCount = 0;
+        int columnCount = 0;
+        for (const auto& row : result.rows) {
+            columnCount = std::max(columnCount, static_cast<int>(row.size()));
+            for (const auto& cell : row) {
+                if (cell.type.kind == xlsone::CellKind::Mixed || cell.decision.isSuspicious) {
+                    ++anomalyCount;
+                }
+            }
+        }
+        SheetStripItem item;
+        item.sheetName = result.sheetName;
+        item.mergeable = true;
+        item.anomalyCount = anomalyCount;
+        item.subtitle = tr("%1 行 / %2 列").arg(static_cast<int>(result.rows.size())).arg(columnCount);
+        item.tooltip = anomalyCount > 0
+            ? tr("%1\n异常单元格: %2").arg(item.subtitle).arg(anomalyCount)
+            : item.subtitle;
+        items.push_back(item);
+    }
+
+    for (const auto& sheetName : validation_.report.skippedSheetNames) {
+        QStringList reasons;
+        for (const auto& issue : validation_.report.skippedSheetIssues) {
+            if (issue.sheetName == sheetName) {
+                reasons << tr("[%1] %2: %3").arg(severityName(issue.severity), issue.fileName, issue.message);
+            }
+        }
+        SheetStripItem item;
+        item.sheetName = sheetName;
+        item.mergeable = false;
+        item.subtitle = reasons.isEmpty() ? tr("已跳过") : reasons.join(QLatin1Char('\n'));
+        item.tooltip = item.subtitle;
+        items.push_back(item);
+    }
+
+    if (sheetStrip_ != nullptr) {
+        sheetStrip_->setVisible(!items.isEmpty());
+        sheetStrip_->setItems(items);
+        if (!selectedSheetName_.isEmpty()) {
+            sheetStrip_->setCurrentSheet(selectedSheetName_, selectedSheetMergeable_);
+        }
+    }
+}
+
+void MainWindow::updateCorrectionBar()
+{
+    const int count = static_cast<int>(currentOverrides_.size() + forgottenOverrides_.size());
+    if (correctionLabel_ != nullptr) {
+        correctionLabel_->setText(tr("已调整 %1 处").arg(count));
+    }
+    if (undoButton_ != nullptr) {
+        undoButton_->setEnabled(!overrideHistory_.empty());
+    }
+    if (clearOverridesButton_ != nullptr) {
+        clearOverridesButton_->setEnabled(count > 0);
+    }
+    if (correctionBar_ != nullptr) {
+        correctionBar_->setVisible(count > 0);
+    }
+}
+
+void MainWindow::selectSheet(const QString& sheetName, bool mergeable)
+{
+    if (sheetName.isEmpty()) {
         return;
     }
-    showResult(results_[static_cast<size_t>(index)]);
+    selectedSheetName_ = sheetName;
+    selectedSheetMergeable_ = mergeable;
+    sheetStrip_->setCurrentSheet(sheetName, mergeable);
+    if (!mergeable) {
+        showSkippedSheet(sheetName);
+        return;
+    }
+
+    const auto iterator = std::find_if(results_.begin(), results_.end(), [&](const auto& result) {
+        return result.sheetName == sheetName;
+    });
+    if (iterator == results_.end()) {
+        return;
+    }
+    showResult(*iterator);
 }
 
 void MainWindow::showResult(const xlsone::MergedResult& result)
 {
+    workspaceStack_->setCurrentWidget(table_);
     tableModel_->setResult(result);
-    inspector_->setPlainText(tr("选择一个单元格查看来源。"));
+    selectedSheetName_ = result.sheetName;
+    selectedSheetMergeable_ = true;
+    inspector_->showPlaceholder(tr("选择一个单元格查看来源。"));
+    statusLabel_->setText(tr("正在查看“%1”，共 %2 行。").arg(result.sheetName).arg(static_cast<int>(result.rows.size())));
+}
+
+void MainWindow::showSkippedSheet(const QString& sheetName)
+{
+    tableModel_->setResult({});
+    selectedSheetName_ = sheetName;
+    selectedSheetMergeable_ = false;
+    workspaceStack_->setCurrentWidget(diagnostics_);
+    diagnostics_->showSkippedSheet(validation_.report, sheetName);
+    inspector_->showPlaceholder(tr("该工作表未参与合并，请查看左侧诊断原因。"));
+    statusLabel_->setText(tr("“%1”已跳过。").arg(sheetName));
 }
 
 void MainWindow::inspectCell(const QModelIndex& index)
@@ -429,28 +594,11 @@ void MainWindow::inspectCell(const QModelIndex& index)
         return;
     }
 
-    QStringList lines;
-    lines << tr("%1: %2").arg(xlsone::cellReference(index.row(), index.column()), cell->displayValue);
-    lines << tr("类型: %1").arg(xlsone::cellKindName(cell->type.kind));
-    if (cell->isOverridden) {
-        lines << tr("状态: 已应用规则修正");
-    }
-    if (!cell->decision.decisionReasons.isEmpty()) {
-        lines << QString();
-        lines << tr("决策:");
-        for (const auto& reason : cell->decision.decisionReasons) {
-            lines << tr("- %1").arg(reason);
-        }
-    }
-    lines << QString();
-    lines << tr("来源:");
-    for (const auto& source : cell->sources) {
-        const auto state = source.state == xlsone::CellSourceState::Value
-            ? tr("值")
-            : source.state == xlsone::CellSourceState::Empty ? tr("空") : tr("缺失");
-        lines << tr("%1 [%2]: %3").arg(source.filename, state, source.value);
-    }
-    inspector_->setPlainText(lines.join(QLatin1Char('\n')));
+    inspector_->showCell(
+        xlsone::cellReference(index.row(), index.column()),
+        *cell,
+        hasRestorableOverride(index.row(), index.column(), selectedSheetName_)
+    );
 }
 
 int MainWindow::currentResultIndex() const
@@ -458,14 +606,29 @@ int MainWindow::currentResultIndex() const
     if (results_.empty()) {
         return -1;
     }
-    int index = sheetCombo_ == nullptr ? 0 : sheetCombo_->currentIndex();
-    if (index < 0) {
-        index = 0;
+    if (!selectedSheetName_.isEmpty()) {
+        const auto iterator = std::find_if(results_.begin(), results_.end(), [&](const auto& result) {
+            return result.sheetName == selectedSheetName_;
+        });
+        if (iterator != results_.end()) {
+            return static_cast<int>(std::distance(results_.begin(), iterator));
+        }
     }
-    if (index >= static_cast<int>(results_.size())) {
-        return -1;
+    return 0;
+}
+
+bool MainWindow::hasRestorableOverride(int row, int column, const QString& sheetName) const
+{
+    if (sheetName.isEmpty()) {
+        return false;
     }
-    return index;
+    const xlsone::SchemaCellOverride key{
+        {row, column},
+        xlsone::SchemaCellOverrideType::Label,
+        sheetName,
+    };
+    return containsOverrideCell(currentOverrides_, key)
+        || (containsOverrideCell(workspaceBaseOverrides_, key) && !containsOverrideCell(forgottenOverrides_, key));
 }
 
 void MainWindow::rebuildResultsWithCurrentOverrides()
@@ -473,7 +636,7 @@ void MainWindow::rebuildResultsWithCurrentOverrides()
     results_ = baseResults_;
     xlsone::MergeSchema transientSchema;
     transientSchema.name = tr("当前手动规则");
-    transientSchema.overrides = currentOverrides_;
+    transientSchema.overrides = effectiveWorkspaceOverrides();
     for (auto& result : results_) {
         result = xlsone::applySchema(transientSchema, result);
     }
@@ -624,6 +787,8 @@ void MainWindow::applyOverrideForSelection(xlsone::SchemaCellOverrideType type)
 
     rebuildResultsWithCurrentOverrides();
     showResult(results_[static_cast<size_t>(resultIndex)]);
+    updateSheetStrip();
+    updateCorrectionBar();
     const auto firstIndex = indexes.front();
     const QModelIndex refreshed = tableModel_->index(firstIndex.row(), firstIndex.column());
     table_->setCurrentIndex(refreshed);
@@ -689,6 +854,8 @@ void MainWindow::restoreAutomaticDecisionForSelection()
 
     rebuildResultsWithCurrentOverrides();
     showResult(results_[static_cast<size_t>(resultIndex)]);
+    updateSheetStrip();
+    updateCorrectionBar();
     const QModelIndex refreshed = tableModel_->index(index.row(), index.column());
     table_->setCurrentIndex(refreshed);
     inspectCell(refreshed);
@@ -716,6 +883,8 @@ void MainWindow::undoLastOverride()
     if (resultIndex >= 0 && resultIndex < static_cast<int>(results_.size())) {
         showResult(results_[static_cast<size_t>(resultIndex)]);
     }
+    updateSheetStrip();
+    updateCorrectionBar();
     statusLabel_->setText(tr("已撤销上一步修正。"));
     try {
         persistAdjustmentMemory();
@@ -739,6 +908,8 @@ void MainWindow::clearOverrides()
     if (resultIndex >= 0 && resultIndex < static_cast<int>(results_.size())) {
         showResult(results_[static_cast<size_t>(resultIndex)]);
     }
+    updateSheetStrip();
+    updateCorrectionBar();
     statusLabel_->setText(tr("已清除当前工作区的手动修正。"));
     try {
         persistAdjustmentMemory();
@@ -856,6 +1027,12 @@ void MainWindow::saveCurrentSchema()
     forgottenOverrides_.clear();
     overrideHistory_.clear();
     rebuildResultsWithCurrentOverrides();
+    const int resultIndex = currentResultIndex();
+    if (resultIndex >= 0) {
+        showResult(results_[static_cast<size_t>(resultIndex)]);
+    }
+    updateSheetStrip();
+    updateCorrectionBar();
 
     statusLabel_->setText(tr("已保存规则“%1”，包含 %2 个修正。").arg(schema.name).arg(static_cast<int>(schema.overrides.size())));
     QMessageBox::information(this, tr("保存规则"), tr("规则已保存，后续相同结构文件会自动匹配应用。"));
@@ -887,6 +1064,8 @@ void MainWindow::manageSchemas()
     if (resultIndex >= 0) {
         showResult(results_[static_cast<size_t>(resultIndex)]);
     }
+    updateSheetStrip();
+    updateCorrectionBar();
     statusLabel_->setText(tr("已应用规则“%1”。").arg(schema->name));
 }
 
@@ -901,7 +1080,7 @@ void MainWindow::exportResult()
         this,
         tr("导出汇总"),
         QStringLiteral("xlsone-summary.xlsx"),
-        tr("Excel Workbook (*.xlsx);;CSV Files (*.csv);;All Files (*)")
+        tr("Excel Workbook (*.xlsx);;All Files (*)")
     );
     if (path.isEmpty()) {
         return;

@@ -8,6 +8,12 @@ class MergedTableModel final : public QAbstractTableModel {
     Q_OBJECT
 
 public:
+    enum Role {
+        CellKindRole = Qt::UserRole + 1,
+        OverriddenRole,
+        SuspiciousRole,
+    };
+
     explicit MergedTableModel(QObject* parent = nullptr);
 
     int rowCount(const QModelIndex& parent = QModelIndex()) const override;
@@ -21,4 +27,3 @@ public:
 private:
     xlsone::MergedResult result_;
 };
-
