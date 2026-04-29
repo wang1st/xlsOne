@@ -199,6 +199,14 @@ QStringList amountSemanticPatterns()
     };
 }
 
+QStringList weakAmountSemanticPatterns()
+{
+    return {
+        QStringLiteral("数"), QStringLiteral("额"), QStringLiteral("值"),
+        QStringLiteral("量"), QStringLiteral("价")
+    };
+}
+
 QStringList codeSemanticPatterns()
 {
     return {
@@ -281,6 +289,23 @@ bool leftCellHasAmountSemantic(const std::vector<CellMergeInput>& leftCells)
     return false;
 }
 
+bool leftCellHasWeakAmountSemantic(const std::vector<CellMergeInput>& leftCells)
+{
+    for (const auto& input : leftCells) {
+        if (!input.cell.has_value()) {
+            continue;
+        }
+        const auto& value = input.cell->value;
+        if (matchesAnySemantic(value, codeSemanticPatterns()) || matchesAnySemantic(value, labelSemanticPatterns())) {
+            continue;
+        }
+        if (matchesAnySemantic(value, weakAmountSemanticPatterns())) {
+            return true;
+        }
+    }
+    return false;
+}
+
 bool leftCellHasLabelSemantic(const std::vector<CellMergeInput>& leftCells)
 {
     for (const auto& input : leftCells) {
@@ -316,6 +341,9 @@ SemanticScore analyzeLeftNeighbor(const CellData& leftCell)
     }
     if (matchesAnySemantic(leftCell.value, labelSemanticPatterns())) {
         return {0.0, 0.5};
+    }
+    if (matchesAnySemantic(leftCell.value, weakAmountSemanticPatterns())) {
+        return {0.45, 0.0};
     }
 
     const auto fingerprint = fingerprintFor(&leftCell);
@@ -480,6 +508,7 @@ SemanticScore classificationScores(
 
     scores.numeric += neighborContext.numericTendency * 0.1;
     scores.label += neighborContext.labelTendency * 0.1;
+    scores.numeric += neighborContext.columnMetricTendency * 0.08;
     return scores;
 }
 
@@ -819,11 +848,16 @@ MergedCell MergedCell::from(
     }));
     const bool codeSemantic = leftCellHasCodeSemantic(leftCells);
     const bool amountSemantic = leftCellHasAmountSemantic(leftCells);
+    const bool weakAmountSemantic = leftCellHasWeakAmountSemantic(leftCells);
     const bool labelSemantic = leftCellHasLabelSemantic(leftCells);
 
     if (validCells.size() == 1) {
         const auto& cell = validCells.front();
         const auto fingerprint = fingerprintFor(&cell);
+        const bool contextNumeric = neighborContext.numericTendency >= 0.55 && neighborContext.numericTendency > neighborContext.labelTendency;
+        const bool columnMetricSemantic = neighborContext.columnMetricTendency >= 0.55;
+        const int weakMetricEvidenceCount = (weakAmountSemantic ? 1 : 0) + (contextNumeric ? 1 : 0) + (columnMetricSemantic ? 1 : 0);
+        const bool metricSemantic = amountSemantic || (!codeSemantic && !labelSemantic && weakMetricEvidenceCount >= 2);
         const bool isCodeLike = fingerprint == FormatFingerprint::IntegerCode || (cell.formatCode.has_value() && *cell.formatCode == QStringLiteral("@"));
         const bool zeroWithBlankBias = cell.numericValue.has_value()
             && std::fabs(*cell.numericValue) < 0.0000001
@@ -839,7 +873,8 @@ MergedCell MergedCell::from(
             && (formatCodeLooksNumeric(cell.formatCode)
                 || formatCodeLooksNumeric(formatCode)
                 || amountSemantic
-                || neighborContext.numericTendency >= 0.55
+                || metricSemantic
+                || contextNumeric
                 || zeroWithBlankBias)) {
             return makeCell(
                 CellKind::Sum,
@@ -892,6 +927,11 @@ MergedCell MergedCell::from(
         && std::all_of(numericValues.begin(), numericValues.end(), [&](double value) {
             return std::fabs(value) >= 0.0000001 && std::fabs(value - numericValues.front()) < 0.0000001;
         });
+    const bool codeLikeSequence = codeLikeNumericSequence(validCells);
+    const bool contextNumeric = neighborContext.numericTendency >= 0.55 && neighborContext.numericTendency > neighborContext.labelTendency;
+    const bool columnMetricSemantic = neighborContext.columnMetricTendency >= 0.55;
+    const int weakMetricEvidenceCount = (weakAmountSemantic ? 1 : 0) + (contextNumeric ? 1 : 0) + (columnMetricSemantic ? 1 : 0);
+    const bool metricSemantic = amountSemantic || (!codeSemantic && !labelSemantic && weakMetricEvidenceCount >= 2);
 
     if (allZero && !codeSemantic && !labelSemantic) {
         return makeCell(
@@ -920,7 +960,7 @@ MergedCell MergedCell::from(
         );
     }
 
-    if (identicalNonZeroIntegers && blankSourceCount == 0 && !amountSemantic) {
+    if (identicalNonZeroIntegers && blankSourceCount == 0 && !metricSemantic) {
         return makeCell(
             CellKind::Label,
             {},
@@ -933,8 +973,6 @@ MergedCell MergedCell::from(
         );
     }
 
-    const bool codeLikeSequence = codeLikeNumericSequence(validCells);
-    const bool contextNumeric = neighborContext.numericTendency >= 0.55 && neighborContext.numericTendency > neighborContext.labelTendency;
     const bool strongNumeric = std::any_of(validCells.begin(), validCells.end(), [](const CellData& cell) {
         return fingerprintFor(&cell) == FormatFingerprint::StrongNumeric;
     });
@@ -958,8 +996,8 @@ MergedCell MergedCell::from(
     if (allNumeric
         && !codeSemantic
         && !labelSemantic
-        && (!codeLikeSequence || blankSourceCount > 0 || amountSemantic)
-        && (!sameValues || amountSemantic || blankSourceCount > 0 || firstFormatCode.has_value() || strongNumeric || contextNumeric)) {
+        && (!codeLikeSequence || blankSourceCount > 0 || metricSemantic)
+        && (!sameValues || metricSemantic || blankSourceCount > 0 || firstFormatCode.has_value() || strongNumeric || contextNumeric)) {
         const bool isSuspicious = numericSumShouldBeSuspicious(validCells, cells, leftCells, neighborContext, blankSourceCount);
         return makeCell(
             CellKind::Sum,
@@ -971,7 +1009,9 @@ MergedCell MergedCell::from(
             firstFormatCode,
             {blankSourceCount > 0
                 ? QStringLiteral("部分来源为空或缺失，非空来源均为数值，空值按 0 参与求和")
-                : QStringLiteral("所有有效来源均为数值，按求和处理")},
+                : sameValues && metricSemantic
+                    ? QStringLiteral("相同整数命中计量语义并得到同列上下文支持，按求和处理")
+                    : QStringLiteral("所有有效来源均为数值，按求和处理")},
             isSuspicious
         );
     }

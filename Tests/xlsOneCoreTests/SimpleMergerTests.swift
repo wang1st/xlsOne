@@ -283,6 +283,92 @@ final class SimpleMergerTests: XCTestCase {
         XCTAssertEqual(merged.displayValue, "3")
     }
 
+    func testRepeatedIntegerCountsBecomeSumWhenMetricEvidenceAgrees() {
+        let cells: [(filename: String, cell: CellData?)] = [
+            (filename: "file1", cell: CellData(value: "1", numericValue: 1, formatCode: "#,##0")),
+            (filename: "file2", cell: CellData(value: "1", numericValue: 1, formatCode: "#,##0")),
+            (filename: "file3", cell: CellData(value: "1", numericValue: 1, formatCode: "#,##0"))
+        ]
+
+        let merged = MergedCell.from(
+            cells: cells,
+            leftCells: [(filename: "file1", cell: CellData(value: "二、乡镇财政机构数"))],
+            neighborContext: NeighborContext(numericTendency: 0.7, labelTendency: 0, columnMetricTendency: 0.8),
+            row: 7,
+            col: 2
+        )
+
+        XCTAssertEqual(merged.type, .sum(3))
+        XCTAssertEqual(merged.displayValue, "3")
+    }
+
+    func testWeakMetricWordAloneKeepsRepeatedIntegerConservative() {
+        let cells: [(filename: String, cell: CellData?)] = [
+            (filename: "file1", cell: CellData(value: "1", numericValue: 1, formatCode: "#,##0")),
+            (filename: "file2", cell: CellData(value: "1", numericValue: 1, formatCode: "#,##0"))
+        ]
+
+        let merged = MergedCell.from(
+            cells: cells,
+            leftCells: [(filename: "file1", cell: CellData(value: "样本数"))],
+            neighborContext: NeighborContext(numericTendency: 0, labelTendency: 0),
+            row: 4,
+            col: 2
+        )
+
+        XCTAssertEqual(merged.type, .label)
+        XCTAssertEqual(merged.displayValue, "1")
+    }
+
+    func testCodeSemanticsStillProtectAgainstMetricColumnContext() {
+        let cells: [(filename: String, cell: CellData?)] = [
+            (filename: "file1", cell: CellData(value: "331024001")),
+            (filename: "file2", cell: CellData(value: "331024002"))
+        ]
+
+        let merged = MergedCell.from(
+            cells: cells,
+            leftCells: [(filename: "file1", cell: CellData(value: "行政区划代码"))],
+            neighborContext: NeighborContext(numericTendency: 0.8, labelTendency: 0, columnMetricTendency: 0.8),
+            row: 2,
+            col: 3
+        )
+
+        XCTAssertEqual(merged.type, .label)
+        XCTAssertEqual(merged.displayValue, "33102400_")
+    }
+
+    func testColumnMetricAnchorSumsTownFinanceCountRows() {
+        func countCell(_ value: Double) -> CellData {
+            CellData(value: String(Int(value)), numericValue: value, formatCode: "#,##0")
+        }
+
+        func makeSheet() -> SheetData {
+            SheetData(name: "乡镇财政基本情况表", rows: [
+                [CellData(value: ""), CellData(value: ""), CellData(value: "")],
+                [CellData(value: ""), CellData(value: "01表：乡镇财政基本情况表"), CellData(value: "")],
+                [CellData(value: ""), CellData(value: ""), CellData(value: "单位：人、个、万元")],
+                [CellData(value: ""), CellData(value: "项  目 (一)"), CellData(value: "决算数(一)")],
+                [CellData(value: ""), CellData(value: "一、本年乡镇数"), countCell(1)],
+                [CellData(value: ""), CellData(value: "其中:实行“乡财县管”的乡镇数"), countCell(0)],
+                [CellData(value: ""), CellData(value: "二、乡镇财政机构数"), countCell(1)],
+                [CellData(value: ""), CellData(value: "三、已建立乡镇国库的乡镇数"), countCell(0)],
+                [CellData(value: ""), CellData(value: "四、实行“分税制”管理体制的乡镇数"), countCell(1)]
+            ])
+        }
+
+        let files = [
+            ExcelFile(filename: "a.xlsx", filepath: "/a.xlsx", sheets: [makeSheet()]),
+            ExcelFile(filename: "b.xlsx", filepath: "/b.xlsx", sheets: [makeSheet()]),
+            ExcelFile(filename: "c.xlsx", filepath: "/c.xlsx", sheets: [makeSheet()])
+        ]
+
+        let result = SimpleMerger().merge(files: files, sheetName: "乡镇财政基本情况表")
+        XCTAssertEqual(result.rows[4][2].type, .sum(3))
+        XCTAssertEqual(result.rows[6][2].type, .sum(3))
+        XCTAssertEqual(result.rows[8][2].type, .sum(3))
+    }
+
     func testNumericValuesWithBlankSourcesTreatBlanksAsZero() {
         let cells: [(filename: String, cell: CellData?)] = [
             (filename: "file1", cell: CellData(value: "123456")),

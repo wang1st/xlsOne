@@ -22,6 +22,9 @@ public struct SimpleMerger {
 
         let maxRows = sheetDataList.map { $0.sheet.rows.count }.max() ?? 0
         let maxCols = sheetDataList.flatMap { $0.sheet.rows.map { $0.count } }.max() ?? 0
+        let columnMetricTendencies = (0..<maxCols).map {
+            buildColumnMetricTendency(sheetDataList: sheetDataList, colIdx: $0)
+        }
 
         var mergedRows: [[MergedCell]] = []
 
@@ -49,7 +52,8 @@ public struct SimpleMerger {
                 let neighborContext = buildNeighborContext(
                     sheetDataList: sheetDataList,
                     rowIdx: rowIdx,
-                    colIdx: colIdx
+                    colIdx: colIdx,
+                    columnMetricTendency: columnMetricTendencies[colIdx]
                 )
 
                 let mergedCell = MergedCell.from(
@@ -89,6 +93,9 @@ public struct SimpleMerger {
         let sheetName = sheetDataList.first?.sheet.name ?? "Sheet1"
         let maxRows = sheetDataList.map { $0.sheet.rows.count }.max() ?? 0
         let maxCols = sheetDataList.flatMap { $0.sheet.rows.map { $0.count } }.max() ?? 0
+        let columnMetricTendencies = (0..<maxCols).map {
+            buildColumnMetricTendency(sheetDataList: sheetDataList, colIdx: $0)
+        }
 
         var mergedRows: [[MergedCell]] = []
 
@@ -113,7 +120,8 @@ public struct SimpleMerger {
                 let neighborContext = buildNeighborContext(
                     sheetDataList: sheetDataList,
                     rowIdx: rowIdx,
-                    colIdx: colIdx
+                    colIdx: colIdx,
+                    columnMetricTendency: columnMetricTendencies[colIdx]
                 )
 
                 let mergedCell = MergedCell.from(
@@ -165,10 +173,119 @@ public struct SimpleMerger {
 
     // MARK: - 邻居上下文
 
+    private func buildColumnMetricTendency(
+        sheetDataList: [(filename: String, filepath: String, sheet: SheetData)],
+        colIdx: Int
+    ) -> Double {
+        var labeledColumns = 0
+        var metricAnchors = 0
+
+        for (_, _, sheet) in sheetDataList {
+            for rowIdx in 0..<sheet.rows.count {
+                guard let cell = sheet.cellAt(row: rowIdx, col: colIdx),
+                      !cell.value.isEmpty,
+                      cell.numericValue != nil else {
+                    continue
+                }
+
+                if let label = nearestLabelForFirstNumeric(sheet: sheet, rowIdx: rowIdx, colIdx: colIdx) {
+                    labeledColumns += 1
+                    if isMetricAnchor(label) {
+                        metricAnchors += 1
+                    }
+                }
+                break
+            }
+        }
+
+        guard labeledColumns > 0 else { return 0 }
+        return Double(metricAnchors) / Double(labeledColumns)
+    }
+
+    private func nearestLabelForFirstNumeric(sheet: SheetData, rowIdx: Int, colIdx: Int) -> CellData? {
+        if colIdx > 0 {
+            for leftCol in stride(from: colIdx - 1, through: 0, by: -1) {
+                if let cell = sheet.cellAt(row: rowIdx, col: leftCol),
+                   !cell.value.isEmpty,
+                   cell.numericValue == nil {
+                    return cell
+                }
+            }
+        }
+
+        let maxDistance = max(sheet.rows.count, colIdx + 1)
+        for distance in 1...maxDistance {
+            let aboveRow = rowIdx - distance
+            if aboveRow >= 0,
+               let cell = sheet.cellAt(row: aboveRow, col: colIdx),
+               !cell.value.isEmpty,
+               cell.numericValue == nil {
+                return cell
+            }
+            if aboveRow >= 0, colIdx > 0,
+               let cell = sheet.cellAt(row: aboveRow, col: colIdx - 1),
+               !cell.value.isEmpty,
+               cell.numericValue == nil {
+                return cell
+            }
+        }
+        return nil
+    }
+
+    private func isMetricAnchor(_ cell: CellData) -> Bool {
+        if matchesAnySemantic(cell.value, patterns: Self.codeAnchorPatterns) {
+            return false
+        }
+        return matchesAnySemantic(cell.value, patterns: Self.metricAnchorPatterns)
+    }
+
+    private func matchesAnySemantic(_ text: String, patterns: [String]) -> Bool {
+        let cleaned = cleanSemanticText(text)
+        return patterns.contains { cleaned.contains($0.lowercased()) }
+    }
+
+    private func cleanSemanticText(_ text: String) -> String {
+        var cleaned = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trailingPunctuations = CharacterSet(charactersIn: "：:：、。．;；/／-—")
+        while let last = cleaned.last,
+              String(last).rangeOfCharacter(from: trailingPunctuations) != nil {
+            cleaned.removeLast()
+        }
+        return cleaned.lowercased()
+    }
+
+    private static let metricAnchorPatterns = [
+        "合计", "总计", "小计",
+        "金额", "数额", "额度",
+        "数量", "单价", "总价",
+        "价格", "数值", "预算",
+        "收入", "支出", "成本",
+        "费用", "利润", "执行",
+        "决算", "款", "税金",
+        "人数", "人口", "户数",
+        "家数", "个数", "人员",
+        "编制", "职工",
+        "数", "额", "值", "量", "价"
+    ]
+
+    private static let codeAnchorPatterns = [
+        "代码", "编码", "编号",
+        "序号", "号码", "证号",
+        "区划", "邮编", "邮政编码",
+        "身份证", "电话", "传真",
+        "期间", "年月", "年份",
+        "日期", "时间", "学号",
+        "工号", "账号", "户号",
+        "卡号", "单号", "订单号",
+        "票号", "发票号", "批号",
+        "条码", "档案号", "许可证号"
+    ]
+
     private func buildNeighborContext(
         sheetDataList: [(filename: String, filepath: String, sheet: SheetData)],
         rowIdx: Int,
-        colIdx: Int
+        colIdx: Int,
+        columnMetricTendency: Double
     ) -> NeighborContext {
         var numericScore = 0.0
         var labelScore = 0.0
@@ -220,7 +337,8 @@ public struct SimpleMerger {
 
         return NeighborContext(
             numericTendency: totalWeight > 0 ? numericScore / totalWeight : 0.0,
-            labelTendency: totalWeight > 0 ? labelScore / totalWeight : 0.0
+            labelTendency: totalWeight > 0 ? labelScore / totalWeight : 0.0,
+            columnMetricTendency: columnMetricTendency
         )
     }
 
@@ -395,8 +513,19 @@ public struct FormatProfile {
 
 /// 邻居上下文
 public struct NeighborContext {
-    let numericTendency: Double  // 0.0 ~ 1.0
-    let labelTendency: Double    // 0.0 ~ 1.0
+    public let numericTendency: Double  // 0.0 ~ 1.0
+    public let labelTendency: Double    // 0.0 ~ 1.0
+    public let columnMetricTendency: Double // 0.0 ~ 1.0
+
+    public init(
+        numericTendency: Double = 0.0,
+        labelTendency: Double = 0.0,
+        columnMetricTendency: Double = 0.0
+    ) {
+        self.numericTendency = numericTendency
+        self.labelTendency = labelTendency
+        self.columnMetricTendency = columnMetricTendency
+    }
 }
 
 /// 抽样工具
