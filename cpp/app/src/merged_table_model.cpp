@@ -39,11 +39,19 @@ QVariant MergedTableModel::data(const QModelIndex& index, int role) const
     if (role == Qt::ToolTipRole) {
         return cell->decision.decisionReasons.join(QStringLiteral("\n"));
     }
-    if (role == Qt::BackgroundRole && cell->type.kind == xlsone::CellKind::Mixed) {
-        return QBrush(QColor(255, 244, 214));
+    if (role == CellKindRole) {
+        return static_cast<int>(cell->type.kind);
+    }
+    if (role == OverriddenRole) {
+        return cell->isOverridden;
+    }
+    if (role == SuspiciousRole) {
+        return cell->decision.isSuspicious || cell->type.kind == xlsone::CellKind::Mixed;
     }
     if (role == Qt::TextAlignmentRole) {
-        return Qt::AlignCenter;
+        return static_cast<int>(cell->type.kind == xlsone::CellKind::Sum
+            ? Qt::AlignRight | Qt::AlignVCenter
+            : Qt::AlignLeft | Qt::AlignVCenter);
     }
     return {};
 }
@@ -77,4 +85,3 @@ const xlsone::MergedCell* MergedTableModel::cellAt(int row, int column) const
     }
     return &rowData[static_cast<size_t>(column)];
 }
-
