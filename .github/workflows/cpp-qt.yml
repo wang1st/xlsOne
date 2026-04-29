@@ -1,0 +1,42 @@
+name: C++ Qt Port
+
+on:
+  push:
+    paths:
+      - "cpp/**"
+      - ".github/workflows/cpp-qt.yml"
+  pull_request:
+    paths:
+      - "cpp/**"
+      - ".github/workflows/cpp-qt.yml"
+
+jobs:
+  build:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: jurplel/install-qt-action@v4
+        with:
+          version: "6.6.3"
+
+      - uses: seanmiddleditch/gha-setup-ninja@v5
+
+      - name: Configure
+        working-directory: cpp
+        run: cmake --preset ${{ runner.os == 'Windows' && 'windows-release' || 'linux-release' }}
+
+      - name: Build
+        working-directory: cpp
+        run: cmake --build --preset ${{ runner.os == 'Windows' && 'windows-release' || 'linux-release' }}
+
+      - name: Test
+        if: runner.os != 'Windows'
+        working-directory: cpp
+        run: ctest --preset linux-release
