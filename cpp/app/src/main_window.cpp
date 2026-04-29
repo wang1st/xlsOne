@@ -12,6 +12,7 @@
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QFrame>
+#include <QHash>
 #include <QHeaderView>
 #include <QHBoxLayout>
 #include <QInputDialog>
@@ -21,6 +22,8 @@
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QMimeData>
+#include <QRegularExpression>
+#include <QSet>
 #include <QSplitter>
 #include <QStatusBar>
 #include <QUrl>
@@ -98,6 +101,220 @@ std::vector<xlsone::SchemaCellOverride> mergedOverrides(
     return existing;
 }
 
+bool isNameDelimiter(QChar character)
+{
+    static const QString delimiters = QStringLiteral("-_()[]{}（）【】<>《》,.，。/\\| ");
+    return character.isSpace() || delimiters.contains(character);
+}
+
+QString trimNameDelimiters(const QString& text)
+{
+    int start = 0;
+    int end = text.size();
+    while (start < end && isNameDelimiter(text.at(start))) {
+        ++start;
+    }
+    while (end > start && isNameDelimiter(text.at(end - 1))) {
+        --end;
+    }
+    return text.mid(start, end - start);
+}
+
+QString longestCommonPrefix(const QStringList& values)
+{
+    if (values.isEmpty()) {
+        return {};
+    }
+    QString prefix = values.first();
+    for (const auto& value : values.mid(1)) {
+        while (!prefix.isEmpty() && !value.startsWith(prefix)) {
+            prefix.chop(1);
+        }
+        if (prefix.isEmpty()) {
+            return {};
+        }
+    }
+    return prefix;
+}
+
+QStringList tokenizeName(const QString& text)
+{
+    QStringList tokens;
+    QString current;
+    std::optional<bool> lastWasDigit;
+    for (const auto character : text) {
+        if (isNameDelimiter(character)) {
+            if (!current.isEmpty()) {
+                tokens.append(current);
+                current.clear();
+            }
+            lastWasDigit.reset();
+            continue;
+        }
+
+        const bool isDigit = character.isNumber();
+        if (lastWasDigit.has_value() && *lastWasDigit != isDigit && !current.isEmpty()) {
+            tokens.append(current);
+            current.clear();
+        }
+
+        current.append(character);
+        lastWasDigit = isDigit;
+    }
+    if (!current.isEmpty()) {
+        tokens.append(current);
+    }
+    return tokens;
+}
+
+QString mostRepeatedTokenPhrase(const QStringList& values)
+{
+    if (values.isEmpty()) {
+        return {};
+    }
+
+    QHash<QString, int> frequency;
+    for (const auto& value : values) {
+        QSet<QString> uniqueTokens;
+        for (const auto& token : tokenizeName(value)) {
+            if (token.size() >= 2) {
+                uniqueTokens.insert(token);
+            }
+        }
+        for (const auto& token : uniqueTokens) {
+            ++frequency[token];
+        }
+    }
+
+    QStringList repeatedTokens;
+    for (auto iterator = frequency.cbegin(); iterator != frequency.cend(); ++iterator) {
+        if (iterator.value() >= 2) {
+            repeatedTokens.append(iterator.key());
+        }
+    }
+    if (repeatedTokens.isEmpty()) {
+        return {};
+    }
+
+    int maxFrequency = 0;
+    for (const auto& token : repeatedTokens) {
+        maxFrequency = std::max(maxFrequency, frequency.value(token));
+    }
+
+    QStringList topTokens;
+    for (const auto& token : tokenizeName(values.first())) {
+        if (frequency.value(token) == maxFrequency) {
+            topTokens.append(token);
+        }
+    }
+    if (!topTokens.isEmpty()) {
+        return topTokens.join(QString());
+    }
+
+    std::sort(repeatedTokens.begin(), repeatedTokens.end(), [&](const QString& lhs, const QString& rhs) {
+        const int lhsFrequency = frequency.value(lhs);
+        const int rhsFrequency = frequency.value(rhs);
+        if (lhsFrequency != rhsFrequency) {
+            return lhsFrequency > rhsFrequency;
+        }
+        return lhs.size() > rhs.size();
+    });
+    return repeatedTokens.mid(0, 2).join(QString());
+}
+
+QString sanitizeSuggestedFileName(const QString& text)
+{
+    static const QString illegal = QStringLiteral(":*?\"<>|/");
+    QString sanitized;
+    sanitized.reserve(text.size());
+    for (const auto character : text) {
+        sanitized.append(illegal.contains(character) ? QChar(QLatin1Char('_')) : character);
+    }
+    return sanitized
+        .replace(QRegularExpression(QStringLiteral("\\s+")), QStringLiteral(" "))
+        .trimmed();
+}
+
+QString fileStemFromName(const QString& filename)
+{
+    return QFileInfo(filename).completeBaseName();
+}
+
+QString suggestedWorkbookName(const QStringList& filenames)
+{
+    QStringList stems;
+    for (const auto& filename : filenames) {
+        const auto stem = fileStemFromName(filename)
+            .replace(QRegularExpression(QStringLiteral("\\s+")), QStringLiteral(" "))
+            .trimmed();
+        if (!stem.isEmpty()) {
+            stems.append(stem);
+        }
+    }
+
+    if (stems.isEmpty()) {
+        return QStringLiteral("汇总结果");
+    }
+
+    QString baseName;
+    if (stems.size() == 1) {
+        baseName = stems.first();
+    } else {
+        const auto prefix = trimNameDelimiters(longestCommonPrefix(stems));
+        const auto tokenPhrase = trimNameDelimiters(mostRepeatedTokenPhrase(stems));
+        if (prefix.size() >= 4) {
+            baseName = prefix;
+        } else if (tokenPhrase.size() >= 2) {
+            baseName = tokenPhrase;
+        } else if (prefix.size() >= 2) {
+            baseName = prefix;
+        } else {
+            baseName = QStringLiteral("汇总结果");
+        }
+    }
+
+    const auto sanitized = sanitizeSuggestedFileName(baseName);
+    if (sanitized.isEmpty()) {
+        return QStringLiteral("汇总结果");
+    }
+    if (sanitized.endsWith(QStringLiteral("汇总"))) {
+        return sanitized;
+    }
+    return sanitized + QStringLiteral("_汇总");
+}
+
+QStringList exportNamingFilenames(
+    const xlsone::WorkbookValidationReport& report,
+    const QStringList& selectedPaths
+)
+{
+    QStringList filenames;
+    for (const auto& file : report.files) {
+        if (!file.filename.isEmpty()) {
+            filenames.append(file.filename);
+        }
+    }
+    if (!filenames.isEmpty()) {
+        return filenames;
+    }
+    for (const auto& path : selectedPaths) {
+        filenames.append(QFileInfo(path).fileName());
+    }
+    return filenames;
+}
+
+QString suggestedWorkbookFileName(
+    const xlsone::WorkbookValidationReport& report,
+    const QStringList& selectedPaths
+)
+{
+    auto filename = suggestedWorkbookName(exportNamingFilenames(report, selectedPaths));
+    if (!filename.endsWith(QStringLiteral(".xlsx"), Qt::CaseInsensitive)) {
+        filename += QStringLiteral(".xlsx");
+    }
+    return filename;
+}
+
 } // namespace
 
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
@@ -136,9 +353,6 @@ void MainWindow::buildUi()
     auto* markSumAction = new QAction(tr("求和"), this);
     connect(markSumAction, &QAction::triggered, this, &MainWindow::markSelectedAsSum);
 
-    auto* markMixedAction = new QAction(tr("混合"), this);
-    connect(markMixedAction, &QAction::triggered, this, &MainWindow::markSelectedAsMixed);
-
     auto* restoreAutoAction = new QAction(tr("恢复自动"), this);
     connect(restoreAutoAction, &QAction::triggered, this, &MainWindow::restoreAutomaticDecisionForSelection);
 
@@ -172,7 +386,6 @@ void MainWindow::buildUi()
     auto* rulesMenu = menuBar()->addMenu(tr("规则"));
     rulesMenu->addAction(markLabelAction);
     rulesMenu->addAction(markSumAction);
-    rulesMenu->addAction(markMixedAction);
     rulesMenu->addAction(restoreAutoAction);
     rulesMenu->addSeparator();
     rulesMenu->addAction(saveSchemaAction);
@@ -276,7 +489,6 @@ void MainWindow::buildUi()
     });
     connect(inspector_, &InspectorPanel::markLabelRequested, this, &MainWindow::markSelectedAsLabel);
     connect(inspector_, &InspectorPanel::markSumRequested, this, &MainWindow::markSelectedAsSum);
-    connect(inspector_, &InspectorPanel::markMixedRequested, this, &MainWindow::markSelectedAsMixed);
     connect(inspector_, &InspectorPanel::restoreAutomaticRequested, this, &MainWindow::restoreAutomaticDecisionForSelection);
 
     statusLabel_ = new QLabel(tr("拖入 Excel 文件，或点击打开开始。"), this);
@@ -479,24 +691,15 @@ void MainWindow::updateSheetStrip()
 {
     QList<SheetStripItem> items;
     for (const auto& result : results_) {
-        int anomalyCount = 0;
         int columnCount = 0;
         for (const auto& row : result.rows) {
             columnCount = std::max(columnCount, static_cast<int>(row.size()));
-            for (const auto& cell : row) {
-                if (cell.type.kind == xlsone::CellKind::Mixed || cell.decision.isSuspicious) {
-                    ++anomalyCount;
-                }
-            }
         }
         SheetStripItem item;
         item.sheetName = result.sheetName;
         item.mergeable = true;
-        item.anomalyCount = anomalyCount;
         item.subtitle = tr("%1 行 / %2 列").arg(static_cast<int>(result.rows.size())).arg(columnCount);
-        item.tooltip = anomalyCount > 0
-            ? tr("%1\n异常单元格: %2").arg(item.subtitle).arg(anomalyCount)
-            : item.subtitle;
+        item.tooltip = item.subtitle;
         items.push_back(item);
     }
 
@@ -665,21 +868,16 @@ void MainWindow::syncWorkspaceSchemaBase(const std::optional<xlsone::MergeSchema
 
 QString MainWindow::suggestedAdjustmentMemoryName() const
 {
-    QString baseName;
-    if (!validation_.report.files.empty()) {
-        baseName = QFileInfo(validation_.report.files.front().filename).completeBaseName();
-    } else if (!selectedPaths_.isEmpty()) {
-        baseName = QFileInfo(selectedPaths_.front()).completeBaseName();
+    auto exportName = suggestedWorkbookName(exportNamingFilenames(validation_.report, selectedPaths_));
+    if (exportName.endsWith(QStringLiteral("_汇总"))) {
+        exportName.chop(QStringLiteral("_汇总").size());
+        return exportName + QStringLiteral("_调整记忆");
     }
-    if (baseName.isEmpty()) {
-        baseName = QStringLiteral("xlsOne");
+    if (exportName.endsWith(QStringLiteral("汇总"))) {
+        exportName.chop(QStringLiteral("汇总").size());
+        return exportName + QStringLiteral("调整记忆");
     }
-    if (baseName.endsWith(QStringLiteral("_汇总"))) {
-        baseName.chop(QStringLiteral("_汇总").size());
-    } else if (baseName.endsWith(QStringLiteral("汇总"))) {
-        baseName.chop(QStringLiteral("汇总").size());
-    }
-    return baseName + tr("调整记忆");
+    return exportName + QStringLiteral("_调整记忆");
 }
 
 void MainWindow::persistAdjustmentMemory()
@@ -815,11 +1013,6 @@ void MainWindow::markSelectedAsLabel()
 void MainWindow::markSelectedAsSum()
 {
     applyOverrideForSelection(xlsone::SchemaCellOverrideType::Sum);
-}
-
-void MainWindow::markSelectedAsMixed()
-{
-    applyOverrideForSelection(xlsone::SchemaCellOverrideType::Mixed);
 }
 
 void MainWindow::restoreAutomaticDecisionForSelection()
@@ -1079,7 +1272,7 @@ void MainWindow::exportResult()
     const auto path = QFileDialog::getSaveFileName(
         this,
         tr("导出汇总"),
-        QStringLiteral("xlsone-summary.xlsx"),
+        suggestedWorkbookFileName(validation_.report, selectedPaths_),
         tr("Excel Workbook (*.xlsx);;All Files (*)")
     );
     if (path.isEmpty()) {
@@ -1087,8 +1280,12 @@ void MainWindow::exportResult()
     }
 
     try {
+        QString outputPath = path;
+        if (!outputPath.endsWith(QStringLiteral(".xlsx"), Qt::CaseInsensitive)) {
+            outputPath += QStringLiteral(".xlsx");
+        }
         const QString templatePath = selectedPaths_.isEmpty() ? QString() : selectedPaths_.front();
-        xlsone::TemplateWorkbookExporter().exportWorkbook(templatePath, results_, path);
+        xlsone::TemplateWorkbookExporter().exportWorkbook(templatePath, results_, outputPath);
     } catch (const std::exception& error) {
         QMessageBox::critical(this, tr("导出失败"), QString::fromUtf8(error.what()));
     }

@@ -27,7 +27,6 @@ InspectorPanel::InspectorPanel(QWidget* parent) : QScrollArea(parent)
         "QPushButton[overrideButton=\"true\"] { border-radius: 8px; padding: 6px 10px; font-weight: 600; }"
         "QPushButton[overrideButton=\"label\"] { background: #ecfdf5; color: #16744f; border: 1px solid #bdebd4; }"
         "QPushButton[overrideButton=\"sum\"] { background: #eff6ff; color: #1d5fbf; border: 1px solid #bdd7ff; }"
-        "QPushButton[overrideButton=\"mixed\"] { background: #fff7e5; color: #7a5b19; border: 1px solid #f1d8a8; }"
         "QPushButton[restoreButton=\"true\"] { color: #646d7a; text-align: left; border: none; padding: 4px 0; }"
     ));
     showPlaceholder(tr("选择单元格后查看结果与来源。"));
@@ -90,16 +89,12 @@ void InspectorPanel::showCell(const QString& reference, const xlsone::MergedCell
     labelButton->setProperty("overrideButton", QStringLiteral("label"));
     auto* sumButton = new QPushButton(tr("求和"), detailCard);
     sumButton->setProperty("overrideButton", QStringLiteral("sum"));
-    auto* mixedButton = new QPushButton(tr("混合"), detailCard);
-    mixedButton->setProperty("overrideButton", QStringLiteral("mixed"));
     buttons->addWidget(labelButton);
     buttons->addWidget(sumButton);
-    buttons->addWidget(mixedButton);
     buttons->addStretch(1);
     detailLayout->addLayout(buttons);
     connect(labelButton, &QPushButton::clicked, this, &InspectorPanel::markLabelRequested);
     connect(sumButton, &QPushButton::clicked, this, &InspectorPanel::markSumRequested);
-    connect(mixedButton, &QPushButton::clicked, this, &InspectorPanel::markMixedRequested);
 
     if (canRestoreAutomatic) {
         auto* restoreButton = new QPushButton(tr("恢复自动判断"), detailCard);

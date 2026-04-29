@@ -973,10 +973,125 @@ final class HorizontalWheelScrollContainer<Content: View>: NSScrollView {
     }
 }
 
-private struct ScrollOffsetPreferenceKey: PreferenceKey {
-    static var defaultValue: CGPoint = .zero
-    static func reduce(value: inout CGPoint, nextValue: () -> CGPoint) {
-        value = nextValue()
+struct GridScrollView<Content: View>: NSViewRepresentable {
+    @Binding var scrollOffset: CGPoint
+    let content: Content
+
+    init(scrollOffset: Binding<CGPoint>, @ViewBuilder content: () -> Content) {
+        self._scrollOffset = scrollOffset
+        self.content = content()
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(scrollOffset: $scrollOffset)
+    }
+
+    func makeNSView(context: Context) -> GridScrollContainer<Content> {
+        let scrollView = GridScrollContainer(rootView: content)
+        scrollView.onScroll = { offset in
+            context.coordinator.update(offset)
+        }
+        return scrollView
+    }
+
+    func updateNSView(_ nsView: GridScrollContainer<Content>, context: Context) {
+        context.coordinator.scrollOffset = $scrollOffset
+        nsView.onScroll = { offset in
+            context.coordinator.update(offset)
+        }
+        nsView.update(rootView: content)
+    }
+
+    final class Coordinator {
+        var scrollOffset: Binding<CGPoint>
+
+        init(scrollOffset: Binding<CGPoint>) {
+            self.scrollOffset = scrollOffset
+        }
+
+        func update(_ offset: CGPoint) {
+            guard scrollOffset.wrappedValue != offset else { return }
+            scrollOffset.wrappedValue = offset
+        }
+    }
+}
+
+final class GridScrollContainer<Content: View>: NSScrollView {
+    var onScroll: ((CGPoint) -> Void)?
+
+    private let hostingView: NSHostingView<Content>
+    private var boundsObserver: NSObjectProtocol?
+
+    init(rootView: Content) {
+        self.hostingView = NSHostingView(rootView: rootView)
+        super.init(frame: .zero)
+        drawsBackground = false
+        borderType = .noBorder
+        hasVerticalScroller = true
+        hasHorizontalScroller = true
+        autohidesScrollers = true
+        scrollerStyle = .overlay
+        contentView.postsBoundsChangedNotifications = true
+        documentView = hostingView
+        boundsObserver = NotificationCenter.default.addObserver(
+            forName: NSView.boundsDidChangeNotification,
+            object: contentView,
+            queue: .main
+        ) { [weak self] _ in
+            self?.publishScrollOffset()
+        }
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    deinit {
+        if let boundsObserver {
+            NotificationCenter.default.removeObserver(boundsObserver)
+        }
+    }
+
+    override func layout() {
+        super.layout()
+        updateDocumentFrame()
+        publishScrollOffset()
+    }
+
+    func update(rootView: Content) {
+        hostingView.rootView = rootView
+        hostingView.layoutSubtreeIfNeeded()
+        updateDocumentFrame()
+        publishScrollOffset()
+    }
+
+    private func updateDocumentFrame() {
+        let fittingSize = hostingView.fittingSize
+        let viewportSize = contentView.bounds.size
+        hostingView.frame = NSRect(
+            x: 0,
+            y: 0,
+            width: max(fittingSize.width, viewportSize.width),
+            height: max(fittingSize.height, viewportSize.height)
+        )
+    }
+
+    private func publishScrollOffset() {
+        onScroll?(CGPoint(
+            x: max(0, contentView.bounds.origin.x),
+            y: max(0, contentView.bounds.origin.y)
+        ))
+    }
+}
+
+enum GridPinnedHeaderScrollSync {
+    static func columnHeaderXOffset(for scrollOffset: CGPoint) -> CGFloat {
+        -scrollOffset.x
+    }
+
+    static func rowHeaderYOffset(for scrollOffset: CGPoint) -> CGFloat {
+        -scrollOffset.y
     }
 }
 
@@ -1031,7 +1146,7 @@ struct ExcelGridView: View {
         ZStack(alignment: .bottom) {
             GeometryReader { geometry in
                 ZStack(alignment: .topLeading) {
-                    ScrollView([.horizontal, .vertical]) {
+                    GridScrollView(scrollOffset: $scrollOffset) {
                         HStack(alignment: .top, spacing: 0) {
                             VStack(alignment: .leading, spacing: 0) {
                                 Color.clear
@@ -1058,25 +1173,15 @@ struct ExcelGridView: View {
                             minHeight: geometry.size.height,
                             alignment: .topLeading
                         )
-                        .background(
-                            GeometryReader { proxy in
-                                Color.clear.preference(
-                                    key: ScrollOffsetPreferenceKey.self,
-                                    value: CGPoint(
-                                        x: max(0, -proxy.frame(in: .named(GridMetrics.coordinateSpaceName)).minX),
-                                        y: max(0, -proxy.frame(in: .named(GridMetrics.coordinateSpaceName)).minY)
-                                    )
-                                )
-                            }
-                        )
                     }
 
                     topLeftCorner
                         .frame(width: rowNumberColumnWidth, height: GridMetrics.headerHeight)
                         .background(Color(NSColor.controlBackgroundColor))
+                        .allowsHitTesting(false)
 
                     columnHeaders
-                        .offset(x: -scrollOffset.x)
+                        .offset(x: GridPinnedHeaderScrollSync.columnHeaderXOffset(for: scrollOffset))
                         .frame(
                             width: max(0, geometry.size.width - rowNumberColumnWidth),
                             height: GridMetrics.headerHeight,
@@ -1090,7 +1195,7 @@ struct ExcelGridView: View {
                         .offset(x: rowNumberColumnWidth)
 
                     rowNumbersColumn
-                        .offset(y: -scrollOffset.y)
+                        .offset(y: GridPinnedHeaderScrollSync.rowHeaderYOffset(for: scrollOffset))
                         .frame(
                             width: rowNumberColumnWidth,
                             height: max(0, geometry.size.height - GridMetrics.headerHeight),
@@ -1105,11 +1210,9 @@ struct ExcelGridView: View {
                             gridVerticalSeparator
                         }
                         .offset(y: GridMetrics.headerHeight)
+                        .allowsHitTesting(false)
                 }
                 .coordinateSpace(name: GridMetrics.coordinateSpaceName)
-                .onPreferenceChange(ScrollOffsetPreferenceKey.self) { offset in
-                    scrollOffset = offset
-                }
                 .onPreferenceChange(GridFramePreferenceKey.self) { frames in
                     layoutObserver?.onFramesChange(frames)
                 }
