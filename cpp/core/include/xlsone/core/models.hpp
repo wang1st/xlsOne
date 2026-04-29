@@ -60,6 +60,7 @@ struct CellMergeInput {
 struct NeighborContext {
     double numericTendency = 0.0;
     double labelTendency = 0.0;
+    double columnMetricTendency = 0.0;
 };
 
 enum class CellKind {

@@ -27,6 +27,10 @@ private slots:
     void treatsBlankSourcesAsZeroForNumericCells();
     void keepsBlankCodeColumnsNonNumeric();
     void sumsSingleNumericValueWhenContextIsNumeric();
+    void sumsRepeatedIntegerCountsWhenMetricEvidenceAgrees();
+    void keepsWeakMetricWordConservativeWithoutContext();
+    void keepsCodeColumnsProtectedAgainstMetricColumnContext();
+    void usesColumnMetricAnchorForTownFinanceCountRows();
     void validatesCompatibleSheets();
     void choosesRepresentativeTemplate();
     void storesSchemas();
@@ -444,6 +448,87 @@ void CoreTests::sumsSingleNumericValueWhenContextIsNumeric()
     const auto merged = MergedCell::from(cells, {}, NeighborContext{0.75, 0.0}, 5, 2);
     QCOMPARE(merged.type.kind, CellKind::Sum);
     QCOMPARE(merged.type.sum, 0.0);
+}
+
+void CoreTests::sumsRepeatedIntegerCountsWhenMetricEvidenceAgrees()
+{
+    const std::vector<CellMergeInput> cells = {
+        {QStringLiteral("a.xlsx"), QStringLiteral("/a.xlsx"), CellData(QStringLiteral("1"), std::nullopt, 1.0, QStringLiteral("#,##0"))},
+        {QStringLiteral("b.xlsx"), QStringLiteral("/b.xlsx"), CellData(QStringLiteral("1"), std::nullopt, 1.0, QStringLiteral("#,##0"))},
+        {QStringLiteral("c.xlsx"), QStringLiteral("/c.xlsx"), CellData(QStringLiteral("1"), std::nullopt, 1.0, QStringLiteral("#,##0"))},
+    };
+    const std::vector<CellMergeInput> left = {
+        {QStringLiteral("a.xlsx"), QStringLiteral("/a.xlsx"), CellData(QStringLiteral("二、乡镇财政机构数"))},
+    };
+
+    const auto merged = MergedCell::from(cells, left, NeighborContext{0.7, 0.0, 0.8}, 7, 2);
+    QCOMPARE(merged.type.kind, CellKind::Sum);
+    QCOMPARE(merged.type.sum, 3.0);
+    QVERIFY(merged.decision.decisionReasons.contains(QStringLiteral("相同整数命中计量语义并得到同列上下文支持，按求和处理")));
+}
+
+void CoreTests::keepsWeakMetricWordConservativeWithoutContext()
+{
+    const std::vector<CellMergeInput> cells = {
+        {QStringLiteral("a.xlsx"), QStringLiteral("/a.xlsx"), CellData(QStringLiteral("1"), std::nullopt, 1.0, QStringLiteral("#,##0"))},
+        {QStringLiteral("b.xlsx"), QStringLiteral("/b.xlsx"), CellData(QStringLiteral("1"), std::nullopt, 1.0, QStringLiteral("#,##0"))},
+    };
+    const std::vector<CellMergeInput> left = {
+        {QStringLiteral("a.xlsx"), QStringLiteral("/a.xlsx"), CellData(QStringLiteral("样本数"))},
+    };
+
+    const auto merged = MergedCell::from(cells, left, NeighborContext{}, 4, 2);
+    QCOMPARE(merged.type.kind, CellKind::Label);
+    QCOMPARE(merged.displayValue, QStringLiteral("1"));
+}
+
+void CoreTests::keepsCodeColumnsProtectedAgainstMetricColumnContext()
+{
+    const std::vector<CellMergeInput> cells = {
+        {QStringLiteral("a.xlsx"), QStringLiteral("/a.xlsx"), CellData(QStringLiteral("331024001"))},
+        {QStringLiteral("b.xlsx"), QStringLiteral("/b.xlsx"), CellData(QStringLiteral("331024002"))},
+    };
+    const std::vector<CellMergeInput> left = {
+        {QStringLiteral("a.xlsx"), QStringLiteral("/a.xlsx"), CellData(QStringLiteral("行政区划代码"))},
+    };
+
+    const auto merged = MergedCell::from(cells, left, NeighborContext{0.8, 0.0, 0.8}, 2, 3);
+    QCOMPARE(merged.type.kind, CellKind::Label);
+    QCOMPARE(merged.displayValue, QStringLiteral("33102400_"));
+}
+
+void CoreTests::usesColumnMetricAnchorForTownFinanceCountRows()
+{
+    auto countCell = [](int value) {
+        return CellData(QString::number(value), std::nullopt, static_cast<double>(value), QStringLiteral("#,##0"));
+    };
+    const auto makeSheet = [&](const QString& name) {
+        return SheetData{name, {
+            {CellData(QString()), CellData(QString()), CellData(QString())},
+            {CellData(QString()), CellData(QStringLiteral("01表：乡镇财政基本情况表")), CellData(QString())},
+            {CellData(QString()), CellData(QString()), CellData(QStringLiteral("单位：人、个、万元"))},
+            {CellData(QString()), CellData(QStringLiteral("项  目 (一)")), CellData(QStringLiteral("决算数(一)"))},
+            {CellData(QString()), CellData(QStringLiteral("一、本年乡镇数")), countCell(1)},
+            {CellData(QString()), CellData(QStringLiteral("其中:实行“乡财县管”的乡镇数")), countCell(0)},
+            {CellData(QString()), CellData(QStringLiteral("二、乡镇财政机构数")), countCell(1)},
+            {CellData(QString()), CellData(QStringLiteral("三、已建立乡镇国库的乡镇数")), countCell(0)},
+            {CellData(QString()), CellData(QStringLiteral("四、实行“分税制”管理体制的乡镇数")), countCell(1)},
+        }};
+    };
+
+    const std::vector<ExcelFile> files = {
+        {QStringLiteral("a.xlsx"), QStringLiteral("/a.xlsx"), {makeSheet(QStringLiteral("乡镇财政基本情况表"))}},
+        {QStringLiteral("b.xlsx"), QStringLiteral("/b.xlsx"), {makeSheet(QStringLiteral("乡镇财政基本情况表"))}},
+        {QStringLiteral("c.xlsx"), QStringLiteral("/c.xlsx"), {makeSheet(QStringLiteral("乡镇财政基本情况表"))}},
+    };
+
+    const auto result = SimpleMerger().merge(files, QStringLiteral("乡镇财政基本情况表"));
+    QCOMPARE(result.rows[4][2].type.kind, CellKind::Sum);
+    QCOMPARE(result.rows[4][2].type.sum, 3.0);
+    QCOMPARE(result.rows[6][2].type.kind, CellKind::Sum);
+    QCOMPARE(result.rows[6][2].type.sum, 3.0);
+    QCOMPARE(result.rows[8][2].type.kind, CellKind::Sum);
+    QCOMPARE(result.rows[8][2].type.sum, 3.0);
 }
 
 void CoreTests::validatesCompatibleSheets()

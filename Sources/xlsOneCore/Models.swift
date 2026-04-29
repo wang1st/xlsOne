@@ -354,6 +354,18 @@ public struct MergedCell: Equatable, Sendable {
             return cell
         }
         let leftCell = leftValidCells.first  // 取第一个非空左邻单元格
+        let codeSemantic = leftCell.map(leftCellHasCodeSemantic(_:)) ?? false
+        let amountSemantic = leftCell.map(leftCellHasAmountSemantic(_:)) ?? false
+        let weakAmountSemantic = leftCell.map(leftCellHasWeakAmountSemantic(_:)) ?? false
+        let labelSemantic = leftCell.map(leftCellHasLabelSemantic(_:)) ?? false
+        let contextNumeric = neighborContext.numericTendency >= 0.55 &&
+            neighborContext.numericTendency > neighborContext.labelTendency
+        let columnMetricSemantic = neighborContext.columnMetricTendency >= 0.55
+        let weakMetricEvidenceCount = (weakAmountSemantic ? 1 : 0) +
+            (contextNumeric ? 1 : 0) +
+            (columnMetricSemantic ? 1 : 0)
+        let metricSemantic = amountSemantic ||
+            (!codeSemantic && !labelSemantic && weakMetricEvidenceCount >= 2)
 
         let numericValues = validCells.compactMap { $0.1.numericValue }
         let allNonEmptyValuesAreNumeric = numericValues.count == validCells.count
@@ -363,7 +375,8 @@ public struct MergedCell: Equatable, Sendable {
             numericValues.allSatisfy { $0 == floor($0) && abs($0) >= 0.0000001 } &&
             Set(numericValues).count == 1
         if allNumericValuesAreZero,
-           leftCell.map({ !leftCellHasCodeSemantic($0) }) ?? true {
+           !codeSemantic,
+           !labelSemantic {
             let type = CellType.sum(0)
             return MergedCell(
                 type: type,
@@ -379,7 +392,7 @@ public struct MergedCell: Equatable, Sendable {
         }
         if allNumericValuesAreIdenticalNonZeroIntegers,
            blankSourceCount == 0,
-           leftCell.map({ !leftCellHasAmountSemantic($0) }) ?? true {
+           !metricSemantic {
             let type = CellType.label
             return MergedCell(
                 type: type,
@@ -464,6 +477,7 @@ public struct MergedCell: Equatable, Sendable {
         // 4. 上下文邻居 (10%)
         amountScore += neighborContext.numericTendency * 0.1
         labelScore += neighborContext.labelTendency * 0.1
+        amountScore += neighborContext.columnMetricTendency * 0.08
         decisionReasons.append(
             "邻居上下文倾向 数值 \(Self.prettyScore(neighborContext.numericTendency)) / 标签 \(Self.prettyScore(neighborContext.labelTendency))"
         )
@@ -721,6 +735,16 @@ public struct MergedCell: Equatable, Sendable {
             neighborContext.numericTendency >= neighborContext.labelTendency
         let leftSuggestsNumeric = leftScore.numeric >= 0.5
         let leftSuggestsLabel = leftScore.label >= 0.5
+        let codeSemantic = leftCell.map(leftCellHasCodeSemantic(_:)) ?? false
+        let amountSemantic = leftCell.map(leftCellHasAmountSemantic(_:)) ?? false
+        let weakAmountSemantic = leftCell.map(leftCellHasWeakAmountSemantic(_:)) ?? false
+        let labelSemantic = leftCell.map(leftCellHasLabelSemantic(_:)) ?? false
+        let columnMetricSemantic = neighborContext.columnMetricTendency >= 0.55
+        let weakMetricEvidenceCount = (weakAmountSemantic ? 1 : 0) +
+            (sameColumnSuggestsNumeric ? 1 : 0) +
+            (columnMetricSemantic ? 1 : 0)
+        let metricSemantic = amountSemantic ||
+            (!codeSemantic && !labelSemantic && weakMetricEvidenceCount >= 2)
         let hasBlankSources = sources.contains { $0.state == .empty || $0.state == .missing }
         let numericValue = cell.numericValue
         let isZero = numericValue.map { abs($0) < 0.0000001 } ?? false
@@ -735,7 +759,7 @@ public struct MergedCell: Equatable, Sendable {
         if let numericValue,
            !isCodeLike,
            !leftSuggestsLabel,
-           (formatSuggestsNumeric || sameColumnSuggestsNumeric || leftSuggestsNumeric || zeroWithBlankBias) {
+           (formatSuggestsNumeric || sameColumnSuggestsNumeric || leftSuggestsNumeric || metricSemantic || zeroWithBlankBias) {
             let type = CellType.sum(numericValue)
             var reasons = ["仅有一个非空数值，未直接按单值处理"]
             if formatSuggestsNumeric {
@@ -747,12 +771,15 @@ public struct MergedCell: Equatable, Sendable {
             if leftSuggestsNumeric {
                 reasons.append("左邻语义倾向可累加")
             }
+            if metricSemantic {
+                reasons.append("计量语义与同列上下文共同支持求和")
+            }
             if zeroWithBlankBias {
                 reasons.append("零值与空值/缺失并存，按可求和单元格处理")
             }
 
             let confidence: Double
-            if formatSuggestsNumeric || leftSuggestsNumeric {
+            if formatSuggestsNumeric || leftSuggestsNumeric || metricSemantic {
                 confidence = 0.86
             } else if sameColumnSuggestsNumeric {
                 confidence = 0.80
@@ -813,6 +840,11 @@ public struct MergedCell: Equatable, Sendable {
             "revenue", "income", "expense", "cost", "fee", "profit",
             "tax", "fund",
             "population", "headcount", "staff"
+        ]
+
+        /// 弱计量信号（必须叠加同列/邻域证据，不能单独触发求和）
+        static let weakAmountPatterns: [String] = [
+            "数", "额", "值", "量", "价"
         ]
 
         /// 编码/标识型模式（当前格应为标签，不可累加）
@@ -880,6 +912,10 @@ public struct MergedCell: Equatable, Sendable {
             return (0, 0.5)
         }
 
+        if NeighborSemanticPatterns.matchesAny(text, patterns: NeighborSemanticPatterns.weakAmountPatterns) {
+            return (0.45, 0)
+        }
+
         // 左邻是统一长度整数编码 → 当前格可能是名称（但权重要低，避免误判金额列）
         if fp == .integerCode {
             return (0, 0.1)
@@ -901,6 +937,20 @@ public struct MergedCell: Equatable, Sendable {
     private static func leftCellHasAmountSemantic(_ leftCell: CellData) -> Bool {
         let text = leftCell.value.trimmingCharacters(in: .whitespacesAndNewlines)
         return NeighborSemanticPatterns.matchesAny(text, patterns: NeighborSemanticPatterns.amountPatterns)
+    }
+
+    private static func leftCellHasWeakAmountSemantic(_ leftCell: CellData) -> Bool {
+        let text = leftCell.value.trimmingCharacters(in: .whitespacesAndNewlines)
+        if NeighborSemanticPatterns.matchesAny(text, patterns: NeighborSemanticPatterns.codePatterns) ||
+            NeighborSemanticPatterns.matchesAny(text, patterns: NeighborSemanticPatterns.labelPatterns) {
+            return false
+        }
+        return NeighborSemanticPatterns.matchesAny(text, patterns: NeighborSemanticPatterns.weakAmountPatterns)
+    }
+
+    private static func leftCellHasLabelSemantic(_ leftCell: CellData) -> Bool {
+        let text = leftCell.value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return NeighborSemanticPatterns.matchesAny(text, patterns: NeighborSemanticPatterns.labelPatterns)
     }
 
     /// 检查数值可累加性

@@ -2,6 +2,7 @@
 
 #include <QRegularExpression>
 #include <QSet>
+#include <QStringList>
 #include <algorithm>
 #include <cmath>
 #include <map>
@@ -93,10 +94,136 @@ LocalFingerprint fingerprint(const CellData* cell)
     return alpha ? LocalFingerprint::Label : LocalFingerprint::Mixed;
 }
 
+QString cleanSemanticText(QString text)
+{
+    text = text.trimmed();
+    static const QString trailing = QStringLiteral("：:、。．;；/／-—");
+    while (!text.isEmpty() && trailing.contains(text.back())) {
+        text.chop(1);
+    }
+    return text.toLower();
+}
+
+bool matchesAnySemantic(const QString& text, const QStringList& patterns)
+{
+    const auto cleaned = cleanSemanticText(text);
+    for (const auto& pattern : patterns) {
+        if (cleaned.contains(pattern.toLower())) {
+            return true;
+        }
+    }
+    return false;
+}
+
+QStringList metricAnchorPatterns()
+{
+    return {
+        QStringLiteral("合计"), QStringLiteral("总计"), QStringLiteral("小计"),
+        QStringLiteral("金额"), QStringLiteral("数额"), QStringLiteral("额度"),
+        QStringLiteral("数量"), QStringLiteral("单价"), QStringLiteral("总价"),
+        QStringLiteral("价格"), QStringLiteral("数值"), QStringLiteral("预算"),
+        QStringLiteral("收入"), QStringLiteral("支出"), QStringLiteral("成本"),
+        QStringLiteral("费用"), QStringLiteral("利润"), QStringLiteral("执行"),
+        QStringLiteral("决算"), QStringLiteral("款"), QStringLiteral("税金"),
+        QStringLiteral("人数"), QStringLiteral("人口"), QStringLiteral("户数"),
+        QStringLiteral("家数"), QStringLiteral("个数"), QStringLiteral("人员"),
+        QStringLiteral("编制"), QStringLiteral("职工"),
+        QStringLiteral("数"), QStringLiteral("额"), QStringLiteral("值"),
+        QStringLiteral("量"), QStringLiteral("价")
+    };
+}
+
+QStringList codeAnchorPatterns()
+{
+    return {
+        QStringLiteral("代码"), QStringLiteral("编码"), QStringLiteral("编号"),
+        QStringLiteral("序号"), QStringLiteral("号码"), QStringLiteral("证号"),
+        QStringLiteral("区划"), QStringLiteral("邮编"), QStringLiteral("邮政编码"),
+        QStringLiteral("身份证"), QStringLiteral("电话"), QStringLiteral("传真"),
+        QStringLiteral("期间"), QStringLiteral("年月"), QStringLiteral("年份"),
+        QStringLiteral("日期"), QStringLiteral("时间"), QStringLiteral("学号"),
+        QStringLiteral("工号"), QStringLiteral("账号"), QStringLiteral("户号"),
+        QStringLiteral("卡号"), QStringLiteral("单号"), QStringLiteral("订单号"),
+        QStringLiteral("票号"), QStringLiteral("发票号"), QStringLiteral("批号"),
+        QStringLiteral("条码"), QStringLiteral("档案号"), QStringLiteral("许可证号")
+    };
+}
+
+bool isMetricAnchor(const CellData* cell)
+{
+    if (cell == nullptr || cell->value.isEmpty()) {
+        return false;
+    }
+    if (matchesAnySemantic(cell->value, codeAnchorPatterns())) {
+        return false;
+    }
+    return matchesAnySemantic(cell->value, metricAnchorPatterns());
+}
+
+const CellData* nearestLabelForFirstNumeric(const SheetData& sheet, int row, int column)
+{
+    for (int leftColumn = column - 1; leftColumn >= 0; --leftColumn) {
+        const auto* cell = sheet.cellAt(row, leftColumn);
+        if (cell != nullptr && !cell->value.isEmpty() && !cell->numericValue.has_value()) {
+            return cell;
+        }
+    }
+
+    const int maxDistance = std::max(static_cast<int>(sheet.rows.size()), column + 1);
+    for (int distance = 1; distance <= maxDistance; ++distance) {
+        const int aboveRow = row - distance;
+        if (aboveRow >= 0) {
+            const auto* cell = sheet.cellAt(aboveRow, column);
+            if (cell != nullptr && !cell->value.isEmpty() && !cell->numericValue.has_value()) {
+                return cell;
+            }
+        }
+        const int aboveLeftRow = row - distance;
+        if (aboveLeftRow >= 0 && column > 0) {
+            const auto* cell = sheet.cellAt(aboveLeftRow, column - 1);
+            if (cell != nullptr && !cell->value.isEmpty() && !cell->numericValue.has_value()) {
+                return cell;
+            }
+        }
+    }
+    return nullptr;
+}
+
+double buildColumnMetricTendency(const std::vector<const SheetData*>& sheets, int column)
+{
+    int labeledColumns = 0;
+    int metricAnchors = 0;
+    for (const auto* sheet : sheets) {
+        if (sheet == nullptr) {
+            continue;
+        }
+        for (int row = 0; row < static_cast<int>(sheet->rows.size()); ++row) {
+            const auto* cell = sheet->cellAt(row, column);
+            if (cell == nullptr || cell->value.isEmpty() || !cell->numericValue.has_value()) {
+                continue;
+            }
+            const auto* label = nearestLabelForFirstNumeric(*sheet, row, column);
+            if (label != nullptr) {
+                ++labeledColumns;
+                if (isMetricAnchor(label)) {
+                    ++metricAnchors;
+                }
+            }
+            break;
+        }
+    }
+
+    if (labeledColumns == 0) {
+        return 0.0;
+    }
+    return static_cast<double>(metricAnchors) / static_cast<double>(labeledColumns);
+}
+
 NeighborContext buildNeighborContext(
     const std::vector<const SheetData*>& sheets,
     int row,
-    int column
+    int column,
+    double columnMetricTendency
 )
 {
     double numericScore = 0.0;
@@ -156,9 +283,9 @@ NeighborContext buildNeighborContext(
     }
 
     if (totalWeight <= 0) {
-        return {};
+        return {0.0, 0.0, columnMetricTendency};
     }
-    return {numericScore / totalWeight, labelScore / totalWeight};
+    return {numericScore / totalWeight, labelScore / totalWeight, columnMetricTendency};
 }
 
 } // namespace
@@ -202,6 +329,11 @@ MergedResult SimpleMerger::merge(const std::vector<ExcelFile>& files, const QStr
         }
     }
 
+    std::vector<double> columnMetricTendencies(static_cast<size_t>(maxColumns), 0.0);
+    for (int column = 0; column < maxColumns; ++column) {
+        columnMetricTendencies[static_cast<size_t>(column)] = buildColumnMetricTendency(sheets, column);
+    }
+
     result.rows.reserve(static_cast<size_t>(maxRows));
     for (int row = 0; row < maxRows; ++row) {
         std::vector<MergedCell> mergedRow;
@@ -227,7 +359,13 @@ MergedResult SimpleMerger::merge(const std::vector<ExcelFile>& files, const QStr
                 });
             }
 
-            mergedRow.push_back(MergedCell::from(inputs, leftInputs, buildNeighborContext(sheets, row, column), row, column));
+            mergedRow.push_back(MergedCell::from(
+                inputs,
+                leftInputs,
+                buildNeighborContext(sheets, row, column, columnMetricTendencies[static_cast<size_t>(column)]),
+                row,
+                column
+            ));
         }
         result.rows.push_back(std::move(mergedRow));
     }
