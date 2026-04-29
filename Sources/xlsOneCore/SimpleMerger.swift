@@ -288,16 +288,30 @@ public struct FormatProfile {
     init(cells: [CellData?]) {
         let nonEmpty = cells.filter { $0 != nil && !($0?.value.isEmpty ?? true) }
         var counts: [FormatFingerprint: Int] = [:]
+        var order: [FormatFingerprint] = []
         for cell in nonEmpty {
             let fp = FormatProfile.fingerprint(for: cell)
+            if counts[fp] == nil {
+                order.append(fp)
+            }
             counts[fp, default: 0] += 1
         }
         self.fingerprints = counts
         self.totalSamples = nonEmpty.count
 
-        if let dominant = counts.max(by: { $0.value < $1.value }) {
-            self.dominantFingerprint = dominant.key
-            self.dominantRatio = Double(dominant.value) / max(Double(nonEmpty.count), 1)
+        var dominant: FormatFingerprint?
+        var dominantCount = 0
+        for fp in order {
+            let count = counts[fp] ?? 0
+            if dominant == nil || count > dominantCount {
+                dominant = fp
+                dominantCount = count
+            }
+        }
+
+        if let dominant {
+            self.dominantFingerprint = dominant
+            self.dominantRatio = Double(dominantCount) / max(Double(nonEmpty.count), 1)
         } else {
             self.dominantFingerprint = nil
             self.dominantRatio = 0

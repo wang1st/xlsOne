@@ -1,6 +1,8 @@
 # Swift build
 .build/
 .swiftpm/
+cpp/build*/
+tmp/
 
 # macOS
 .DS_Store
