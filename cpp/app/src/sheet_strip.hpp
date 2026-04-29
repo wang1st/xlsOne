@@ -8,7 +8,6 @@ class QHBoxLayout;
 struct SheetStripItem {
     QString sheetName;
     bool mergeable = true;
-    int anomalyCount = 0;
     QString subtitle;
     QString tooltip;
 };

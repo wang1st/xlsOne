@@ -43,7 +43,6 @@ private slots:
     void exportResult();
     void markSelectedAsLabel();
     void markSelectedAsSum();
-    void markSelectedAsMixed();
     void restoreAutomaticDecisionForSelection();
     void saveCurrentSchema();
     void manageSchemas();

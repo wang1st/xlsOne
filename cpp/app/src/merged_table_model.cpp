@@ -45,9 +45,6 @@ QVariant MergedTableModel::data(const QModelIndex& index, int role) const
     if (role == OverriddenRole) {
         return cell->isOverridden;
     }
-    if (role == SuspiciousRole) {
-        return cell->decision.isSuspicious || cell->type.kind == xlsone::CellKind::Mixed;
-    }
     if (role == Qt::TextAlignmentRole) {
         return static_cast<int>(cell->type.kind == xlsone::CellKind::Sum
             ? Qt::AlignRight | Qt::AlignVCenter

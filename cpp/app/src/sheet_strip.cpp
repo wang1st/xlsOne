@@ -8,11 +8,7 @@ namespace {
 
 QString buttonTextFor(const SheetStripItem& item)
 {
-    QString text = item.mergeable ? item.sheetName : QObject::tr("%1 / 跳过").arg(item.sheetName);
-    if (item.anomalyCount > 0) {
-        text += QObject::tr("  %1").arg(item.anomalyCount);
-    }
-    return text;
+    return item.mergeable ? item.sheetName : QObject::tr("%1 / 跳过").arg(item.sheetName);
 }
 
 } // namespace

@@ -20,7 +20,6 @@ public:
 signals:
     void markLabelRequested();
     void markSumRequested();
-    void markMixedRequested();
     void restoreAutomaticRequested();
 
 private:
