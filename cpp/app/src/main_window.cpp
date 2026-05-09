@@ -2,10 +2,12 @@
 
 #include "merged_table_delegate.hpp"
 #include "schema_manager_dialog.hpp"
+#include "update_dialog.hpp"
 #include "ui_theme.hpp"
 #include "xlsone/core/exporter.hpp"
 
 #include <QAction>
+#include <QApplication>
 #include <QDateTime>
 #include <QDragEnterEvent>
 #include <QDragLeaveEvent>
@@ -24,6 +26,7 @@
 #include <QMimeData>
 #include <QRegularExpression>
 #include <QSet>
+#include <QShowEvent>
 #include <QSplitter>
 #include <QStatusBar>
 #include <QUrl>
@@ -382,6 +385,11 @@ void MainWindow::buildUi()
     fileMenu->addAction(clearAction);
     fileMenu->addSeparator();
     fileMenu->addAction(exportAction);
+    fileMenu->addSeparator();
+    auto* quitAction = new QAction(tr("退出"), this);
+    quitAction->setShortcut(QKeySequence::Quit);
+    connect(quitAction, &QAction::triggered, qApp, &QApplication::quit);
+    fileMenu->addAction(quitAction);
 
     auto* rulesMenu = menuBar()->addMenu(tr("规则"));
     rulesMenu->addAction(markLabelAction);
@@ -396,6 +404,56 @@ void MainWindow::buildUi()
     rulesMenu->addSeparator();
     rulesMenu->addAction(previousAnomalyAction);
     rulesMenu->addAction(nextAnomalyAction);
+
+    auto* helpAction = new QAction(tr("使用帮助"), this);
+    connect(helpAction, &QAction::triggered, this, [this] {
+        QMessageBox::information(this, tr("使用帮助"),
+            tr("表表归一  ·  多张同格式 Excel 报表一键汇总\n\n"
+               "1. 导入文件\n"
+               "   拖拽 .xlsx 或 .xls 文件到窗口，或点击 [文件] → [打开]\n\n"
+               "2. 切换工作表\n"
+               "   点击顶部的 Sheet 标签可切换要查看的报表页\n\n"
+               "3. 查看汇总\n"
+               "   - 金额列自动求和\n"
+               "   - 标签列显示原值\n"
+               "   - 混合列显示 X条\n\n"
+               "4. 穿透查阅\n"
+               "   点击单元格可查看各文件原始值\n\n"
+               "5. 导出结果\n"
+               "   点击 [导出 XLSX] 保存汇总结果\n\n"
+               "6. 单元格修正\n"
+               "   在右侧面板可将单元格手动指定为标签或求和\n\n"
+               "快捷键:\n"
+               "   Ctrl+O  打开文件\n"
+               "   Ctrl+Shift+O  追加文件\n"
+               "   Ctrl+S  导出\n"
+               "   Ctrl+R  刷新\n"
+               "   Ctrl+N  清空\n"
+               "   Ctrl+Z  撤销修正"));
+    });
+
+    auto* aboutAction = new QAction(tr("关于 表表归一"), this);
+    connect(aboutAction, &QAction::triggered, this, [this] {
+        QMessageBox::about(this, tr("关于 表表归一"),
+            tr("<h3>表表归一  V1.0</h3>"
+               "<p>多张同格式 Excel 报表一键汇总</p>"
+               "<p>将多张结构相同的 Excel 表格智能合并为一张，"
+               "金额自动求和、标签原样保留、混合类型智能标注。</p>"
+               "<p><b>作者：</b>王臻</p>"
+               "<p><b>技术：</b>C++  /  Qt</p>"
+               "<p><b>邮箱：</b>831261@qq.com</p>"
+               "<p>&copy; 2026 王臻. 保留所有权利.</p>"));
+    });
+
+    auto* checkUpdateAction = new QAction(tr("检查更新"), this);
+    connect(checkUpdateAction, &QAction::triggered, this, &MainWindow::checkForUpdates);
+
+    auto* helpMenu = menuBar()->addMenu(tr("帮助"));
+    helpMenu->addAction(checkUpdateAction);
+    helpMenu->addSeparator();
+    helpMenu->addAction(helpAction);
+    helpMenu->addSeparator();
+    helpMenu->addAction(aboutAction);
 
     auto* root = new QWidget(this);
     auto* rootLayout = new QVBoxLayout(root);
@@ -471,9 +529,12 @@ void MainWindow::buildUi()
     correctionLayout->addWidget(undoButton_);
     correctionLayout->addWidget(clearOverridesButton_);
     correctionBar_->setStyleSheet(QStringLiteral(
-        "QWidget#correctionBar { background: white; border-top: 1px solid #dce0e8; }"
-        "QLabel { color: #646d7a; }"
-    ));
+        "QWidget#correctionBar { background: %1; border-top: 1px solid %2; }"
+        "QLabel { color: %3; }"
+    )
+        .arg(xlsone::ui::theme().bg1.name(),
+             xlsone::ui::theme().border.name(),
+             xlsone::ui::theme().textMuted.name()));
     workspaceLayout->addWidget(correctionBar_);
     correctionBar_->hide();
     connect(undoButton_, &QPushButton::clicked, this, &MainWindow::undoLastOverride);
@@ -493,7 +554,37 @@ void MainWindow::buildUi()
 
     statusLabel_ = new QLabel(tr("拖入 Excel 文件，或点击打开开始。"), this);
     statusBar()->addPermanentWidget(statusLabel_, 1);
+
+    updateChecker_ = new xlsone::UpdateChecker(this);
+    connect(updateChecker_, &xlsone::UpdateChecker::updateAvailable, this,
+        [this](const xlsone::UpdateInfo& info) {
+            auto* dialog = new UpdateDialog(info.latestVersion,
+                                            info.changelog,
+                                            info.downloadUrl,
+                                            this);
+            dialog->show();
+        });
+
     updateChromeState();
+}
+
+void MainWindow::showEvent(QShowEvent* event)
+{
+    QMainWindow::showEvent(event);
+    if (firstShow_) {
+        firstShow_ = false;
+        checkForUpdates();
+    }
+}
+
+void MainWindow::checkForUpdates()
+{
+    if (updateChecker_ == nullptr) {
+        return;
+    }
+    const QString apiUrl = QStringLiteral(
+        "https://updates.xlsone.com/api/version");
+    updateChecker_->checkForUpdates(apiUrl);
 }
 
 void MainWindow::dragEnterEvent(QDragEnterEvent* event)
