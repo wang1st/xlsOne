@@ -5,6 +5,7 @@
 #include <QFrame>
 #include <QHBoxLayout>
 #include <QPushButton>
+#include <QVariant>
 
 InspectorPanel::InspectorPanel(QWidget* parent) : QScrollArea(parent)
 {
@@ -20,15 +21,27 @@ InspectorPanel::InspectorPanel(QWidget* parent) : QScrollArea(parent)
     layout_->addStretch(1);
     setWidget(content_);
 
+    const auto& t = xlsone::ui::theme();
     setStyleSheet(QStringLiteral(
-        "QScrollArea#inspectorPanel { background: #f6f7fa; border-left: 1px solid #dce0e8; }"
-        "QWidget[inspectorCard=\"true\"] { background: white; border: 1px solid #e8ebf0; border-radius: 12px; }"
-        "QLabel[muted=\"true\"] { color: #646d7a; }"
+        "QScrollArea#inspectorPanel { background: %1; border-left: 1px solid %2; }"
+        "QWidget[inspectorCard=\"true\"] { background: %3; border: 1px solid %4; border-radius: 12px; }"
+        "QLabel[muted=\"true\"] { color: %5; }"
         "QPushButton[overrideButton=\"true\"] { border-radius: 8px; padding: 6px 10px; font-weight: 600; }"
-        "QPushButton[overrideButton=\"label\"] { background: #ecfdf5; color: #16744f; border: 1px solid #bdebd4; }"
-        "QPushButton[overrideButton=\"sum\"] { background: #eff6ff; color: #1d5fbf; border: 1px solid #bdd7ff; }"
-        "QPushButton[restoreButton=\"true\"] { color: #646d7a; text-align: left; border: none; padding: 4px 0; }"
-    ));
+        "QPushButton[overrideButton=\"label\"] { background: %6; color: %7; border: 1px solid %8; }"
+        "QPushButton[overrideButton=\"sum\"] { background: %9; color: %10; border: 1px solid %11; }"
+        "QPushButton[restoreButton=\"true\"] { color: %5; text-align: left; border: none; padding: 4px 0; }"
+    )
+        .arg(t.bg0.name())
+        .arg(t.border.name())
+        .arg(t.bg1.name())
+        .arg(t.borderSoft.name())
+        .arg(t.textMuted.name())
+        .arg(t.labelBg.name())
+        .arg(t.labelFg.name())
+        .arg(t.labelBorder.name())
+        .arg(t.sumBg.name())
+        .arg(t.sumFg.name())
+        .arg(t.sumBorder.name()));
     showPlaceholder(tr("选择单元格后查看结果与来源。"));
 }
 
@@ -72,7 +85,7 @@ void InspectorPanel::showCell(const QString& reference, const xlsone::MergedCell
     QFont valueFont = valueLabel->font();
     valueFont.setPointSize(18);
     valueFont.setWeight(QFont::DemiBold);
-    valueFont.setFamilies({QStringLiteral("Menlo"), QStringLiteral("Consolas"), QStringLiteral("monospace")});
+    valueFont.setFamily(QStringLiteral("monospace"));
     valueLabel->setFont(valueFont);
     valueLabel->setWordWrap(true);
     detailLayout->addWidget(valueLabel);
@@ -86,9 +99,9 @@ void InspectorPanel::showCell(const QString& reference, const xlsone::MergedCell
 
     auto* buttons = new QHBoxLayout;
     auto* labelButton = new QPushButton(tr("标签"), detailCard);
-    labelButton->setProperty("overrideButton", QStringLiteral("label"));
+    labelButton->setProperty("overrideButton", QVariant(QStringLiteral("label")));
     auto* sumButton = new QPushButton(tr("求和"), detailCard);
-    sumButton->setProperty("overrideButton", QStringLiteral("sum"));
+    sumButton->setProperty("overrideButton", QVariant(QStringLiteral("sum")));
     buttons->addWidget(labelButton);
     buttons->addWidget(sumButton);
     buttons->addStretch(1);
@@ -98,7 +111,7 @@ void InspectorPanel::showCell(const QString& reference, const xlsone::MergedCell
 
     if (canRestoreAutomatic) {
         auto* restoreButton = new QPushButton(tr("恢复自动判断"), detailCard);
-        restoreButton->setProperty("restoreButton", true);
+        restoreButton->setProperty("restoreButton", QVariant(true));
         restoreButton->setCursor(Qt::PointingHandCursor);
         detailLayout->addWidget(restoreButton);
         connect(restoreButton, &QPushButton::clicked, this, &InspectorPanel::restoreAutomaticRequested);
@@ -113,10 +126,10 @@ void InspectorPanel::showCell(const QString& reference, const xlsone::MergedCell
 
     sourceToggle_ = new QToolButton(sourceCard);
     sourceToggle_->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
-    sourceToggle_->setArrowType(Qt::RightArrow);
+    sourceToggle_->setArrowType(sourceExpanded_ ? Qt::DownArrow : Qt::RightArrow);
     sourceToggle_->setText(tr("来源明细 %1 个").arg(static_cast<int>(cell.sources.size())));
     sourceToggle_->setCheckable(true);
-    sourceToggle_->setChecked(false);
+    sourceToggle_->setChecked(sourceExpanded_);
     sourceLayout->addWidget(sourceToggle_);
 
     sourceBody_ = new QWidget(sourceCard);
@@ -140,9 +153,10 @@ void InspectorPanel::showCell(const QString& reference, const xlsone::MergedCell
         rowLayout->addWidget(value);
         sourceBodyLayout->addWidget(row);
     }
-    sourceBody_->setVisible(false);
+    sourceBody_->setVisible(sourceExpanded_);
     sourceLayout->addWidget(sourceBody_);
     connect(sourceToggle_, &QToolButton::toggled, this, [this](bool checked) {
+        sourceExpanded_ = checked;
         sourceToggle_->setArrowType(checked ? Qt::DownArrow : Qt::RightArrow);
         sourceBody_->setVisible(checked);
     });
@@ -153,14 +167,14 @@ void InspectorPanel::showCell(const QString& reference, const xlsone::MergedCell
 QWidget* InspectorPanel::makeCard()
 {
     auto* card = new QWidget(content_);
-    card->setProperty("inspectorCard", true);
+    card->setProperty("inspectorCard", QVariant(true));
     return card;
 }
 
 QLabel* InspectorPanel::makeMutedLabel(const QString& text)
 {
     auto* label = new QLabel(text, content_);
-    label->setProperty("muted", true);
+    label->setProperty("muted", QVariant(true));
     return label;
 }
 

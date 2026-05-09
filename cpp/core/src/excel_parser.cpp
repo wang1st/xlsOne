@@ -257,7 +257,7 @@ std::vector<QString> parseDelimitedLine(const QString& line)
     std::vector<QString> values;
     QString current;
     bool inQuotes = false;
-    for (qsizetype index = 0; index < line.size(); ++index) {
+    for (int index = 0; index < line.size(); ++index) {
         const auto ch = line[index];
         if (ch == QLatin1Char('"')) {
             inQuotes = !inQuotes;

@@ -32,4 +32,5 @@ private:
     QVBoxLayout* layout_ = nullptr;
     QWidget* sourceBody_ = nullptr;
     QToolButton* sourceToggle_ = nullptr;
+    bool sourceExpanded_ = false;
 };

@@ -17,14 +17,19 @@ EmptyWorkspaceView::EmptyWorkspaceView(QWidget* parent) : QWidget(parent)
     openButton_->setIcon(style()->standardIcon(QStyle::SP_DirOpenIcon));
     openButton_->setCursor(Qt::PointingHandCursor);
     openButton_->setObjectName(QStringLiteral("primaryImportButton"));
+    const auto& t = xlsone::ui::theme();
     openButton_->setStyleSheet(QStringLiteral(
         "QPushButton#primaryImportButton {"
-        " background: #2a75ff; color: white; border: 1px solid rgba(42,117,255,0.30);"
+        " background: %1; color: white; border: 1px solid %2;"
         " border-radius: 10px; padding: 9px 16px; font-weight: 600;"
         "}"
-        "QPushButton#primaryImportButton:hover { background: #2368e8; }"
-        "QPushButton#primaryImportButton:pressed { background: #1c59cc; }"
-    ));
+        "QPushButton#primaryImportButton:hover { background: %3; }"
+        "QPushButton#primaryImportButton:pressed { background: %4; }"
+    )
+        .arg(t.accent.name(),
+             t.isDark ? QStringLiteral("rgba(82,148,255,0.30)") : QStringLiteral("rgba(42,117,255,0.30)"),
+             t.isDark ? QStringLiteral("#1e5fd6") : QStringLiteral("#2368e8"),
+             t.isDark ? QStringLiteral("#1647a8") : QStringLiteral("#1c59cc")));
     connect(openButton_, &QPushButton::clicked, this, &EmptyWorkspaceView::openRequested);
 }
 
@@ -46,14 +51,16 @@ void EmptyWorkspaceView::paintEvent(QPaintEvent* event)
     painter.setRenderHint(QPainter::Antialiasing);
 
     QLinearGradient background(rect().topLeft(), rect().bottomLeft());
-    background.setColorAt(0.0, t.windowTop);
-    background.setColorAt(1.0, t.windowBottom);
+    background.setColorAt(0.0, t.bg0);
+    background.setColorAt(1.0, t.bg1);
     painter.fillRect(rect(), background);
 
     const QRect card = cardRect();
     painter.save();
     painter.setPen(Qt::NoPen);
-    painter.setBrush(dropTargeted_ ? QColor(0, 0, 0, 20) : QColor(0, 0, 0, 10));
+    painter.setBrush(dropTargeted_
+        ? (t.isDark ? QColor(255, 255, 255, 20) : QColor(0, 0, 0, 20))
+        : (t.isDark ? QColor(255, 255, 255, 10) : QColor(0, 0, 0, 10)));
     painter.drawRoundedRect(card.translated(0, 12), 28, 28);
     painter.restore();
 

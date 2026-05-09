@@ -26,9 +26,9 @@ void MergedTableDelegate::paint(QPainter* painter, const QStyleOptionViewItem& o
     const auto kind = static_cast<xlsone::CellKind>(index.data(MergedTableModel::CellKindRole).toInt());
     const bool overridden = index.data(MergedTableModel::OverriddenRole).toBool();
 
-    QColor background = Qt::white;
+    QColor background = t.bg1;
     if (kind == xlsone::CellKind::Sum) {
-        background = t.sumSoft;
+        background = t.sumBg;
     }
     if (sameRow || sameColumn) {
         background = QColor(
@@ -47,7 +47,7 @@ void MergedTableDelegate::paint(QPainter* painter, const QStyleOptionViewItem& o
     painter->drawRect(option.rect.adjusted(0, 0, -1, -1));
 
     QRect textRect = option.rect.adjusted(8, 0, -8, 0);
-    painter->setPen(kind == xlsone::CellKind::Sum ? QColor(30, 95, 191) : t.text);
+    painter->setPen(kind == xlsone::CellKind::Sum ? t.sumFg : t.text);
     painter->drawText(textRect, opt.displayAlignment, opt.text);
 
     if (overridden) {

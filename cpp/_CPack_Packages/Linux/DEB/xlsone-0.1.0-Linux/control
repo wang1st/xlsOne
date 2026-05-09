@@ -1,0 +1,9 @@
+Architecture: arm64
+Depends: libc6 (>= 2.17), libgcc1 (>= 1:3.0), libstdc++6 (>= 5.2), qt5.15gles-basic.runtime.szbt, zlib1g (>= 1:1.2.0)
+Description: Cross-platform C++/Qt port of xlsOne
+Maintainer: xlsOne
+Package: xlsone
+Priority: optional
+Section: utils
+Version: 0.1.0
+Installed-Size: 854

@@ -1,13 +1,14 @@
 enable_testing()
 
-qt_add_executable(xlsone_core_tests
+add_executable(xlsone_core_tests
     core_tests.cpp
 )
 
 target_link_libraries(xlsone_core_tests
     PRIVATE
         xlsone_core
-        Qt6::Test
+        Qt5::Test
+        Qt5::Network
 )
 
 target_compile_definitions(xlsone_core_tests

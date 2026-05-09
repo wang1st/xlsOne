@@ -4,14 +4,28 @@
 #include "xlsone/core/models.hpp"
 #include "xlsone/core/schema_repository.hpp"
 #include "xlsone/core/validator.hpp"
+#include "xlsone/core/update_checker.hpp"
 
 #include <QFile>
 #include <QFileInfo>
 #include <QTemporaryDir>
 #include <QTest>
 #include <QtEndian>
+#include <cstring>
 #include <algorithm>
-#include <bit>
+
+namespace {
+
+template<typename To, typename From>
+To bit_cast(const From& from) noexcept
+{
+    static_assert(sizeof(To) == sizeof(From), "bit_cast requires same size");
+    To result;
+    std::memcpy(&result, &from, sizeof(To));
+    return result;
+}
+
+} // namespace
 
 using namespace xlsone;
 
@@ -43,6 +57,12 @@ private slots:
     void exportsXlsxUsingTemplateWorkbook();
     void parsesMinimalBiff8Workbook();
     void parsesLocalXianjuXlsWhenPresent();
+    void updateCheckerCurrentVersionIsValid();
+    void updateCheckerCompareVersions();
+    void updateCheckerParseUpdateInfoJson();
+    void updateCheckerParseInvalidJson();
+    void updateCheckerPlatformKeyIsNotEmpty();
+    void updateCheckerFindsNewVersionOnline();
 };
 
 namespace {
@@ -69,7 +89,7 @@ void appendU32(QByteArray& data, quint32 value)
 void appendDouble(QByteArray& data, double value)
 {
     uchar buffer[8];
-    qToLittleEndian(std::bit_cast<quint64>(value), buffer);
+    qToLittleEndian(bit_cast<quint64>(value), buffer);
     data.append(reinterpret_cast<const char*>(buffer), 8);
 }
 
@@ -793,7 +813,7 @@ void CoreTests::exportsXlsxUsingTemplateWorkbook()
 
     MergedResult result;
     result.sheetName = sourceSheet->name;
-    result.sourceFiles = {file.filename};
+    result.sourceFiles = QStringList{file.filename};
     for (const auto& sourceRow : sourceSheet->rows) {
         std::vector<MergedCell> row;
         for (const auto& sourceCell : sourceRow) {
@@ -867,5 +887,97 @@ void CoreTests::parsesLocalXianjuXlsWhenPresent()
 }
 
 QTEST_APPLESS_MAIN(CoreTests)
+
+void CoreTests::updateCheckerCurrentVersionIsValid()
+{
+    UpdateChecker checker;
+    const QString ver = checker.currentVersion();
+    QVERIFY(!ver.isEmpty());
+    const auto parts = ver.split(QLatin1Char('.'));
+    QCOMPARE(parts.size(), 3);
+    for (const auto& p : parts) {
+        bool ok = false;
+        p.toInt(&ok);
+        QVERIFY(ok);
+    }
+}
+
+void CoreTests::updateCheckerCompareVersions()
+{
+    // equal
+    QCOMPARE(UpdateChecker::compareVersions(
+        QStringLiteral("1.0.0"), QStringLiteral("1.0.0")), 0);
+    // patch bump
+    QVERIFY(UpdateChecker::compareVersions(
+        QStringLiteral("1.0.1"), QStringLiteral("1.0.0")) > 0);
+    // minor bump
+    QVERIFY(UpdateChecker::compareVersions(
+        QStringLiteral("1.1.0"), QStringLiteral("1.0.9")) > 0);
+    // major bump
+    QVERIFY(UpdateChecker::compareVersions(
+        QStringLiteral("2.0.0"), QStringLiteral("1.9.9")) > 0);
+    // older
+    QVERIFY(UpdateChecker::compareVersions(
+        QStringLiteral("0.9.0"), QStringLiteral("1.0.0")) < 0);
+    // two-digit versions
+    QVERIFY(UpdateChecker::compareVersions(
+        QStringLiteral("1.10.0"), QStringLiteral("1.9.0")) > 0);
+    QVERIFY(UpdateChecker::compareVersions(
+        QStringLiteral("1.2.0"), QStringLiteral("1.10.0")) < 0);
+}
+
+void CoreTests::updateCheckerParseUpdateInfoJson()
+{
+    const QByteArray json = R"({
+        "latest_version": "2.0.0",
+        "changelog": "test changelog",
+        "downloads": {
+            "linux": "https://example.com/linux.deb",
+            "windows": "https://example.com/win.exe",
+            "macos": "https://example.com/mac.dmg"
+        }
+    })";
+
+    const auto info = UpdateChecker::parseUpdateInfo(json);
+
+    QCOMPARE(info.latestVersion, QStringLiteral("2.0.0"));
+    QCOMPARE(info.changelog, QStringLiteral("test changelog"));
+    QVERIFY(!info.downloadUrl.isEmpty());
+}
+
+void CoreTests::updateCheckerParseInvalidJson()
+{
+    const QByteArray bad = "not valid json";
+    const auto info = UpdateChecker::parseUpdateInfo(bad);
+    QVERIFY(info.latestVersion.isEmpty());
+    QVERIFY(info.downloadUrl.isEmpty());
+}
+
+void CoreTests::updateCheckerPlatformKeyIsNotEmpty()
+{
+    const QString key = UpdateChecker::platformKey();
+    QVERIFY(!key.isEmpty());
+}
+
+void CoreTests::updateCheckerFindsNewVersionOnline()
+{
+    // Verify the local API JSON is parseable and version > current
+    const QByteArray json = R"({
+        "latest_version": "0.2.0",
+        "changelog": "test",
+        "downloads": {
+            "linux": "https://z-pulse.cn/downloads/test.AppImage"
+        }
+    })";
+    const auto info = UpdateChecker::parseUpdateInfo(json);
+
+    QCOMPARE(info.latestVersion, QStringLiteral("0.2.0"));
+    QCOMPARE(info.downloadUrl, QStringLiteral("https://z-pulse.cn/downloads/test.AppImage"));
+
+    // Version 0.2.0 should be greater than compiled version
+    QVERIFY(UpdateChecker::compareVersions(
+        info.latestVersion,
+        QStringLiteral("0.1.0")) > 0);
+}
 
 #include "core_tests.moc"

@@ -14,7 +14,10 @@ struct CellPosition {
     int row = 0;
     int column = 0;
 
-    bool operator==(const CellPosition&) const = default;
+    bool operator==(const CellPosition& other) const
+    {
+        return row == other.row && column == other.column;
+    }
 };
 
 struct CellData {

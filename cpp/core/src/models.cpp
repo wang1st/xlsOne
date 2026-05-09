@@ -128,7 +128,7 @@ FormatFingerprint fingerprintFor(const CellData* cell)
             }
         }
         static const std::set<int> codeLengths = {6, 9, 11, 12, 15, 18};
-        if (digits.size() >= 2 && digits.size() == fingerprintText.size() && codeLengths.contains(digits.size())) {
+        if (digits.size() >= 2 && digits.size() == fingerprintText.size() && codeLengths.count(digits.size())) {
             return FormatFingerprint::IntegerCode;
         }
         if (cell->formatCode.has_value() && *cell->formatCode == QStringLiteral("@") && digits.size() >= 2 && digits.size() == fingerprintText.size()) {
@@ -683,7 +683,7 @@ bool codeLikeNumericSequence(const std::vector<CellData>& validCells)
 
     static const std::set<int> codeLengths = {3, 6, 9, 11, 12, 15, 18};
     const int length = *lengths.begin();
-    if (!codeLengths.contains(length)) {
+    if (!codeLengths.count(length)) {
         return false;
     }
 

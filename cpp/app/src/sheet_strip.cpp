@@ -1,8 +1,11 @@
 #include "sheet_strip.hpp"
 
+#include "ui_theme.hpp"
+
 #include <QHBoxLayout>
 #include <QPushButton>
 #include <QScrollBar>
+#include <QVariant>
 
 namespace {
 
@@ -34,22 +37,35 @@ SheetStrip::SheetStrip(QWidget* parent) : QWidget(parent)
     scrollArea_->setWidget(content_);
     root->addWidget(scrollArea_);
 
+    const auto& t = xlsone::ui::theme();
     setStyleSheet(QStringLiteral(
-        "QWidget#sheetStrip { background: white; border-bottom: 1px solid #dce0e8; }"
+        "QWidget#sheetStrip { background: %1; border-bottom: 1px solid %2; }"
         "QPushButton[sheetCapsule=\"true\"] {"
-        " border: 1px solid #dce0e8; border-radius: 14px; background: #f8f9fb;"
-        " padding: 6px 12px; color: #596375; font-weight: 600;"
+        " border: 1px solid %2; border-radius: 14px; background: %3;"
+        " padding: 6px 12px; color: %4; font-weight: 600;"
         "}"
         "QPushButton[sheetCapsule=\"true\"]:checked {"
-        " background: #e8f0ff; border-color: rgba(42,117,255,0.38); color: #1f2328;"
+        " background: %5; border-color: %6; color: %7;"
         "}"
         "QPushButton[sheetCapsule=\"true\"][mergeable=\"false\"] {"
-        " background: #fff7e5; border-color: #f1d8a8; color: #7a5b19;"
+        " background: %8; border-color: %9; color: %10;"
         "}"
         "QPushButton[sheetCapsule=\"true\"][mergeable=\"false\"]:checked {"
-        " background: #fff1cf; border-color: #e4bd62;"
+        " background: %11; border-color: %12;"
         "}"
-    ));
+    )
+        .arg(t.bg1.name())
+        .arg(t.border.name())
+        .arg(t.bg2.name())
+        .arg(t.textMuted.name())
+        .arg(t.accentSoft.name())
+        .arg(t.isDark ? t.accent.name() : QStringLiteral("rgba(42,117,255,0.38)"))
+        .arg(t.text.name())
+        .arg(t.warningSoft.name())
+        .arg(t.isDark ? QColor(180, 150, 80).name() : QStringLiteral("#f1d8a8"))
+        .arg(t.isDark ? QColor(220, 190, 100).name() : QStringLiteral("#7a5b19"))
+        .arg(t.isDark ? QColor(140, 110, 40).name() : QStringLiteral("#fff1cf"))
+        .arg(t.isDark ? QColor(200, 160, 60).name() : QStringLiteral("#e4bd62")));
 }
 
 void SheetStrip::setItems(const QList<SheetStripItem>& items)
@@ -77,8 +93,8 @@ void SheetStrip::rebuild()
     for (const auto& item : items_) {
         auto* button = new QPushButton(buttonTextFor(item), content_);
         button->setCheckable(true);
-        button->setProperty("sheetCapsule", true);
-        button->setProperty("mergeable", item.mergeable);
+        button->setProperty("sheetCapsule", QVariant(true));
+        button->setProperty("mergeable", QVariant(item.mergeable));
         button->setToolTip(item.tooltip.isEmpty() ? item.subtitle : item.tooltip);
         button->setChecked(item.sheetName == currentSheet_ && item.mergeable == currentMergeable_);
         button->setCursor(Qt::PointingHandCursor);

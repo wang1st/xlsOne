@@ -65,7 +65,10 @@ struct SheetDimensions {
     int rows = 0;
     int columns = 0;
 
-    bool operator==(const SheetDimensions&) const = default;
+    bool operator==(const SheetDimensions& other) const
+    {
+        return rows == other.rows && columns == other.columns;
+    }
     bool operator<(const SheetDimensions& other) const
     {
         if (rows != other.rows) {
@@ -109,7 +112,7 @@ SheetDimensions chooseDominantDimensions(const std::vector<SheetDimensions>& dim
         if (lhs.count != rhs.count) {
             return lhs.count < rhs.count;
         }
-        if (lhs.dimensions != rhs.dimensions) {
+        if (!(lhs.dimensions == rhs.dimensions)) {
             return lhs.dimensions < rhs.dimensions;
         }
         return lhs.firstIndex > rhs.firstIndex;

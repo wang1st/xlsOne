@@ -6,6 +6,7 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QVBoxLayout>
+#include <QVariant>
 
 namespace {
 
@@ -42,12 +43,15 @@ DiagnosticsView::DiagnosticsView(QWidget* parent) : QScrollArea(parent)
     layout_->setSpacing(10);
     layout_->addStretch(1);
     setWidget(content_);
+    const auto& t = xlsone::ui::theme();
     setStyleSheet(QStringLiteral(
-        "QScrollArea#diagnosticsView { background: #f6f7fa; border: none; }"
-        "QWidget[diagnosticsCard=\"true\"] { background: white; border: 1px solid #e8ebf0; border-radius: 12px; }"
-        "QLabel[diagnosticsTitle=\"true\"] { font-weight: 700; color: #1f2328; }"
-        "QLabel[diagnosticsBody=\"true\"] { color: #646d7a; }"
-    ));
+        "QScrollArea#diagnosticsView { background: %1; border: none; }"
+        "QWidget[diagnosticsCard=\"true\"] { background: %2; border: 1px solid %3; border-radius: 12px; }"
+        "QLabel[diagnosticsTitle=\"true\"] { font-weight: 700; color: %4; }"
+        "QLabel[diagnosticsBody=\"true\"] { color: %5; }"
+    )
+        .arg(t.bg0.name(), t.bg1.name(), t.borderSoft.name(),
+             t.text.name(), t.textMuted.name()));
     showEmpty();
 }
 
@@ -111,7 +115,7 @@ void DiagnosticsView::showSkippedSheet(const xlsone::WorkbookValidationReport& r
 QWidget* DiagnosticsView::makeCard(const QString& title, const QString& body, const QColor& accent)
 {
     auto* card = new QWidget(content_);
-    card->setProperty("diagnosticsCard", true);
+    card->setProperty("diagnosticsCard", QVariant(true));
     auto* outerLayout = new QHBoxLayout(card);
     outerLayout->setContentsMargins(0, 0, 0, 0);
     outerLayout->setSpacing(0);
@@ -126,9 +130,9 @@ QWidget* DiagnosticsView::makeCard(const QString& title, const QString& body, co
     layout->setContentsMargins(12, 12, 14, 12);
     layout->setSpacing(7);
     auto* titleLabel = new QLabel(title, bodyWidget);
-    titleLabel->setProperty("diagnosticsTitle", true);
+    titleLabel->setProperty("diagnosticsTitle", QVariant(true));
     auto* bodyLabel = new QLabel(body, bodyWidget);
-    bodyLabel->setProperty("diagnosticsBody", true);
+    bodyLabel->setProperty("diagnosticsBody", QVariant(true));
     bodyLabel->setWordWrap(true);
     bodyLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
     layout->addWidget(titleLabel);

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QMetaType>
 #include <QObject>
 #include <QString>
 
@@ -41,3 +42,5 @@ private:
 };
 
 } // namespace xlsone
+
+Q_DECLARE_METATYPE(xlsone::UpdateInfo)
