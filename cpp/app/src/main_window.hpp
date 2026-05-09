@@ -19,10 +19,12 @@
 #include <QTableView>
 #include <QWidget>
 #include <optional>
+#include "xlsone/core/update_checker.hpp"
 
 class QDragEnterEvent;
 class QDragLeaveEvent;
 class QDropEvent;
+class QShowEvent;
 
 class MainWindow final : public QMainWindow {
     Q_OBJECT
@@ -34,6 +36,7 @@ protected:
     void dragEnterEvent(QDragEnterEvent* event) override;
     void dragLeaveEvent(QDragLeaveEvent* event) override;
     void dropEvent(QDropEvent* event) override;
+    void showEvent(QShowEvent* event) override;
 
 private slots:
     void openFiles();
@@ -52,6 +55,7 @@ private slots:
     void jumpToPreviousAnomaly();
     void selectSheet(const QString& sheetName, bool mergeable);
     void inspectCell(const QModelIndex& index);
+    void checkForUpdates();
 
 private:
     void buildUi();
@@ -116,4 +120,6 @@ private:
     QPushButton* undoButton_ = nullptr;
     QPushButton* clearOverridesButton_ = nullptr;
     QLabel* statusLabel_ = nullptr;
+    xlsone::UpdateChecker* updateChecker_ = nullptr;
+    bool firstShow_ = true;
 };
