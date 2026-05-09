@@ -1,9 +1,9 @@
 {
-  "latest_version": "0.1.0",
-  "changelog": "初始版本发布",
+  "latest_version": "0.2.0",
+  "changelog": "v0.2.0 更新内容：\n- 新增自动更新检测功能\n- 优化 BIFF8 .xls 解析兼容性\n- 修复 Qt 跨平台 UI 一致性问题",
   "downloads": {
-    "macos": "https://downloads.xlsone.com/v0.1.0/xlsOne-0.1.0-macos.dmg",
-    "windows": "https://downloads.xlsone.com/v0.1.0/xlsOne-0.1.0-win64.exe",
-    "linux": "https://downloads.xlsone.com/v0.1.0/xlsOne-0.1.0-linux-x86_64.AppImage"
+    "macos": "https://z-pulse.cn/downloads/xlsOne-0.2.0-macos.dmg",
+    "windows": "https://z-pulse.cn/downloads/xlsOne-0.2.0-win64.exe",
+    "linux": "https://z-pulse.cn/downloads/xlsOne-0.2.0-linux-x86_64.AppImage"
   }
 }
