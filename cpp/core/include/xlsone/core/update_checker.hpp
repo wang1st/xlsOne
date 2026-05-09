@@ -38,7 +38,6 @@ private slots:
 
 private:
     QNetworkAccessManager* networkManager_ = nullptr;
-    int pendingRequests_ = 0;
 };
 
 } // namespace xlsone

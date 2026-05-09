@@ -31,31 +31,34 @@ QString UpdateChecker::currentVersion() const
 void UpdateChecker::checkForUpdates(const QString& apiUrl)
 {
     QNetworkRequest request{QUrl(apiUrl)};
-    request.setHeader(QNetworkRequest::ContentTypeHeader,
-                      QStringLiteral("application/json"));
+    request.setRawHeader("Accept", "application/json");
 
     auto* reply = networkManager_->get(request);
 
     auto* timer = new QTimer(reply);
     timer->setSingleShot(true);
+    reply->setProperty("_timer", QVariant::fromValue(timer));
     connect(timer, &QTimer::timeout, reply, &QNetworkReply::abort);
     timer->start(5000);
-
-    ++pendingRequests_;
 }
 
 void UpdateChecker::onReplyFinished(QNetworkReply* reply)
 {
     reply->deleteLater();
-    --pendingRequests_;
+
+    if (auto* timer = qvariant_cast<QTimer*>(reply->property("_timer"))) {
+        timer->stop();
+    }
 
     if (reply->error() != QNetworkReply::NoError) {
+        emit checkError(reply->errorString());
         return;
     }
 
     const int statusCode = reply->attribute(
         QNetworkRequest::HttpStatusCodeAttribute).toInt();
     if (statusCode != 200) {
+        emit checkError(QStringLiteral("HTTP %1").arg(statusCode));
         return;
     }
 
@@ -63,6 +66,7 @@ void UpdateChecker::onReplyFinished(QNetworkReply* reply)
     const UpdateInfo info = parseUpdateInfo(body);
 
     if (info.latestVersion.isEmpty() || info.downloadUrl.isEmpty()) {
+        emit checkError(QStringLiteral("Invalid update info"));
         return;
     }
 
