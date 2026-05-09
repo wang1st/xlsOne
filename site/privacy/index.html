@@ -8,39 +8,41 @@
 </head>
 <body>
 
-<header class="site-header">
+<nav class="nav">
     <div class="container">
-        <div class="brand"><a href="/" style="color:inherit">ZENITH <span>PULSE</span></a></div>
-        <nav class="nav">
-            <a href="/">首页</a>
-            <a href="/products/xlsone/">产品</a>
+        <a href="/" class="nav-brand">ZENITH PULSE</a>
+        <div class="nav-links">
+            <a href="/products/xlsone/">表表归一</a>
             <a href="/support/">支持</a>
-        </nav>
+        </div>
     </div>
-</header>
+</nav>
 
-<main class="container content-page">
-    <h1>隐私政策</h1>
-    <p>最后更新：2026 年 5 月</p>
+<main class="container">
+    <div class="content-page">
+        <h1>隐私政策</h1>
+        <p class="last-updated">最后更新：2026 年 5 月</p>
 
-    <h2>数据收集</h2>
-    <p>我们的桌面应用 <strong>表表归一（xlsOne）</strong> 完全在本地运行，<strong>不收集、不上传任何用户文件内容或个人数据</strong>。</p>
-    <p>软件在启动时会检查是否有新版本可用（通过请求 <code>/api/version.json</code>），此请求仅包含基本 HTTP 信息，<strong>不包含任何个人标识信息或文件内容</strong>。</p>
+        <h2>数据收集</h2>
+        <p>桌面应用 <strong>表表归一（xlsOne）</strong> 完全在本地运行，<strong>不收集、不上传任何用户文件内容或个人数据</strong>。</p>
+        <p>启动时软件会检查版本更新（请求 /api/version.json），该请求仅包含基本 HTTP 信息，不含任何个人标识。</p>
 
-    <h2>第三方服务</h2>
-    <p>本软件不使用任何第三方分析、广告或追踪服务。</p>
+        <h2>第三方服务</h2>
+        <p>不使用任何第三方分析、广告或追踪服务。</p>
 
-    <h2>数据存储</h2>
-    <p>所有导入的 Excel 文件和处理结果均保存在用户本地设备上。软件不会将数据同步到云端。</p>
+        <h2>数据存储</h2>
+        <p>所有文件与处理结果均保存在本地设备。不会同步到云端。</p>
 
-    <h2>联系方式</h2>
-    <p>如有隐私相关问题，请发送邮件至 <a href="mailto:831261@qq.com">831261@qq.com</a>。</p>
+        <h2>联系方式</h2>
+        <p>有关隐私的问题，请发邮件至 <a href="mailto:831261@qq.com">831261@qq.com</a>。</p>
+    </div>
 </main>
 
-<footer class="site-footer">
+<footer class="footer">
     <div class="container">
-        <p><a href="/support/">支持</a><a href="/privacy/">隐私政策</a></p>
-        <p style="margin-top:12px">&copy; 2026 ZENITH PULSE</p>
+        <a href="/support/">支持</a>
+        <a href="/privacy/">隐私政策</a>
+        <p class="copyright">&copy; 2026 ZENITH PULSE</p>
     </div>
 </footer>
 
