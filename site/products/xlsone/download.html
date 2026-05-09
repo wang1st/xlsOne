@@ -22,7 +22,9 @@
     <section class="download-section" style="padding-top:120px">
         <div class="container">
             <h2 class="section-title" style="margin-bottom:12px">下载</h2>
-            <p style="text-align:center;color:#86868b;font-size:0.95rem;margin-bottom:48px">表表归一 v0.2.0</p>
+            <p style="text-align:center;color:#86868b;font-size:0.95rem;margin-bottom:48px">
+                表表归一 v<span id="ver">-</span>
+            </p>
 
             <div class="download-list">
                 <div class="download-card">
@@ -30,21 +32,21 @@
                         <div class="platform">macOS</div>
                         <div class="meta">Apple Silicon &amp; Intel · macOS 12+</div>
                     </div>
-                    <a href="/downloads/xlsOne-0.2.0-macos-arm64.dmg" class="btn btn-outline">下载 DMG</a>
+                    <a id="dl-macos" href="#" class="btn btn-outline">macOS 版</a>
                 </div>
                 <div class="download-card">
                     <div>
                         <div class="platform">Windows</div>
                         <div class="meta">Windows 10 / 11 ARM64</div>
                     </div>
-                    <a href="/downloads/xlsOne-0.2.0-win64.exe" class="btn btn-outline">下载 EXE</a>
+                    <a id="dl-windows" href="#" class="btn btn-outline">Windows 版</a>
                 </div>
                 <div class="download-card">
                     <div>
                         <div class="platform">Linux</div>
                         <div class="meta">ARM64 · Ubuntu 20.04+ / Debian 11+ / UOS</div>
                     </div>
-                    <a href="/downloads/xlsOne-0.2.0-linux-arm64.deb" class="btn btn-outline">下载 DEB</a>
+                    <a id="dl-linux" href="#" class="btn btn-outline">下载 DEB</a>
                 </div>
             </div>
 
@@ -62,6 +64,23 @@
         <p class="copyright">&copy; 2026 ZENITH PULSE</p>
     </div>
 </footer>
+
+<script>
+fetch('/api/version.json')
+    .then(r => r.json())
+    .then(data => {
+        document.getElementById('ver').textContent = data.latest_version;
+        if (data.downloads.macos)
+            document.getElementById('dl-macos').href = data.downloads.macos;
+        if (data.downloads.windows)
+            document.getElementById('dl-windows').href = data.downloads.windows;
+        if (data.downloads.linux)
+            document.getElementById('dl-linux').href = data.downloads.linux;
+    })
+    .catch(() => {
+        document.getElementById('ver').textContent = '（加载失败）';
+    });
+</script>
 
 </body>
 </html>
