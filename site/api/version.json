@@ -1,0 +1,9 @@
+{
+  "latest_version": "0.1.0",
+  "changelog": "初始版本发布",
+  "downloads": {
+    "macos": "https://downloads.xlsone.com/v0.1.0/xlsOne-0.1.0-macos.dmg",
+    "windows": "https://downloads.xlsone.com/v0.1.0/xlsOne-0.1.0-win64.exe",
+    "linux": "https://downloads.xlsone.com/v0.1.0/xlsOne-0.1.0-linux-x86_64.AppImage"
+  }
+}
