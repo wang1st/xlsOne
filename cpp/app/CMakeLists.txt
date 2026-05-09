@@ -1,4 +1,4 @@
-qt_add_executable(xlsone_app
+add_executable(xlsone_app
     src/diagnostics_view.cpp
     src/diagnostics_view.hpp
     src/empty_workspace_view.cpp
@@ -18,6 +18,8 @@ qt_add_executable(xlsone_app
     src/sheet_strip.hpp
     src/ui_theme.cpp
     src/ui_theme.hpp
+    src/update_dialog.cpp
+    src/update_dialog.hpp
     src/workspace_chrome.cpp
     src/workspace_chrome.hpp
 )
@@ -31,9 +33,9 @@ set_target_properties(xlsone_app PROPERTIES
 target_link_libraries(xlsone_app
     PRIVATE
         xlsone_core
-        Qt6::Core
-        Qt6::Gui
-        Qt6::Widgets
+        Qt5::Core
+        Qt5::Gui
+        Qt5::Widgets
 )
 
 install(TARGETS xlsone_app
