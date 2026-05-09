@@ -38,6 +38,15 @@ target_link_libraries(xlsone_app
         Qt5::Widgets
 )
 
+# XLSONE_UPDATE_BASE_URL: override with -D for local dev (http) vs release (https)
+if(NOT DEFINED XLSONE_UPDATE_BASE_URL)
+    set(XLSONE_UPDATE_BASE_URL "https://z-pulse.cn")
+endif()
+target_compile_definitions(xlsone_app
+    PRIVATE
+        XLSONE_UPDATE_BASE_URL="${XLSONE_UPDATE_BASE_URL}"
+)
+
 install(TARGETS xlsone_app
     BUNDLE DESTINATION .
     RUNTIME DESTINATION bin

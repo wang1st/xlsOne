@@ -15,7 +15,8 @@
       "displayName": "Developer Debug",
       "binaryDir": "${sourceDir}/build",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug"
+        "CMAKE_BUILD_TYPE": "Debug",
+        "XLSONE_UPDATE_BASE_URL": "http://z-pulse.cn"
       }
     },
     {
