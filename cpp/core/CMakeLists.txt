@@ -19,7 +19,8 @@ target_include_directories(xlsone_core
 
 target_link_libraries(xlsone_core
     PUBLIC
-        Qt6::Core
+        Qt5::Core
+        Qt5::Network
     PRIVATE
         ZLIB::ZLIB
 )
@@ -27,4 +28,7 @@ target_link_libraries(xlsone_core
 target_compile_definitions(xlsone_core
     PRIVATE
         QT_NO_CAST_FROM_ASCII
+        XLSONE_VERSION_MAJOR=${PROJECT_VERSION_MAJOR}
+        XLSONE_VERSION_MINOR=${PROJECT_VERSION_MINOR}
+        XLSONE_VERSION_PATCH=${PROJECT_VERSION_PATCH}
 )
