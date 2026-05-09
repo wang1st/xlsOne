@@ -52,3 +52,7 @@
 - `project.yml` 已切到正式 Bundle ID，并通过 `XLSONE_DEVELOPMENT_TEAM` 暴露 Team 注入入口
 - 图标是临时提交版，正式品牌稿后替换
 - 商店截图、隐私政策和支持 URL 在第二阶段补齐
+
+## 版本更新发布
+
+每次发版后在 `site/api/version.json` 中更新 `latest_version` 和 `changelog`，同步到 CloudFlare R2。
