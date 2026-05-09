@@ -9,6 +9,7 @@
 #include <QAction>
 #include <QApplication>
 #include <QDateTime>
+#include <QDesktopServices>
 #include <QDragEnterEvent>
 #include <QDragLeaveEvent>
 #include <QFileDialog>
@@ -562,6 +563,10 @@ void MainWindow::buildUi()
                                             info.changelog,
                                             info.downloadUrl,
                                             this);
+            connect(dialog, &QDialog::accepted, this, [this] {
+                QDesktopServices::openUrl(QUrl(
+                    QStringLiteral("https://z-pulse.cn/products/xlsone/download.html")));
+            });
             dialog->show();
         });
 
@@ -583,7 +588,7 @@ void MainWindow::checkForUpdates()
         return;
     }
     const QString apiUrl = QStringLiteral(
-        "https://z-pulse.cn/api/version");
+        "http://z-pulse.cn/api/version");
     updateChecker_->checkForUpdates(apiUrl);
 }
 
