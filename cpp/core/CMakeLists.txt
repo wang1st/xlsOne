@@ -8,6 +8,7 @@ add_library(xlsone_core STATIC
     src/merger.cpp
     src/models.cpp
     src/schema_repository.cpp
+    src/update_checker.cpp
     src/validator.cpp
     src/zip_archive.cpp
 )
