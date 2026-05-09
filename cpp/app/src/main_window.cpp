@@ -565,7 +565,7 @@ void MainWindow::buildUi()
                                             this);
             connect(dialog, &QDialog::accepted, this, [this] {
                 QDesktopServices::openUrl(QUrl(
-                    QStringLiteral("https://z-pulse.cn/products/xlsone/download.html")));
+                    QStringLiteral(XLSONE_UPDATE_BASE_URL "/products/xlsone/download.html")));
             });
             dialog->show();
         });
@@ -588,7 +588,7 @@ void MainWindow::checkForUpdates()
         return;
     }
     const QString apiUrl = QStringLiteral(
-        "http://z-pulse.cn/api/version");
+        XLSONE_UPDATE_BASE_URL "/api/version");
     updateChecker_->checkForUpdates(apiUrl);
 }
 
