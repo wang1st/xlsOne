@@ -87,6 +87,12 @@ public struct XlsOneWorkspaceScene: Scene {
             }
 
             CommandGroup(after: .help) {
+                Button("在 App Store 中查看...") {
+                    if let url = URL(string: "macappstore://apps.apple.com/app/id0000000000") {
+                        NSWorkspace.shared.open(url)
+                    }
+                }
+
                 Divider()
 
                 Button("关于 \(WorkspaceAppPresentation.displayName)") {
