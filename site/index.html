@@ -1,172 +1,62 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>xlsOne | 为 macOS 准备的 Excel 汇总工作台</title>
-    <meta name="description" content="xlsOne 是一款面向 macOS 的本地优先 Excel 汇总工具，帮助你把多个结构一致的 .xlsx 或常见 .xls 文件合并、复核并导出为新的工作簿。">
-    <meta name="theme-color" content="#17191d">
-    <link rel="canonical" href="https://xlsone.com/">
-    <link rel="stylesheet" href="/styles.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZENITH PULSE · 巅峰脉动</title>
+    <meta name="description" content="ZENITH PULSE 巅峰脉动 — 独立开发者打造的效率工具品牌">
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="icon" type="image/png" href="/favicon.png">
 </head>
 <body>
-    <header class="topbar">
-        <div class="topbar-inner">
-            <a class="brand" href="/">
-                <span class="brand-mark" aria-hidden="true"></span>
-                <span class="brand-copy">
-                    <strong>xlsOne</strong>
-                    <span>macOS spreadsheet workspace</span>
-                </span>
-            </a>
-            <nav class="nav" aria-label="Primary">
-                <a href="/support/">支持</a>
-                <a href="/privacy/">隐私</a>
-                <a href="/changelog/">更新记录</a>
-            </nav>
-        </div>
-    </header>
 
-    <main class="page-shell">
-        <section class="hero">
-            <div class="hero-card">
-                <div class="hero-copy">
-                    <span class="eyebrow">Local-first consolidation</span>
-                    <h1>把零散报表<br>收拢成一张能复核的总表。</h1>
-                    <p class="lede">xlsOne 为需要在 macOS 上处理结构一致 Excel 文件的团队准备。导入多个 <span class="mono">.xlsx</span> 或常见 <span class="mono">.xls</span> 工作簿后，你可以对齐工作表、检查差异、追溯单元格来源，并导出新的汇总工作簿。</p>
-                    <div class="button-row">
-                        <a class="button button-primary" href="/support/">联系支持</a>
-                        <a class="button button-secondary" href="/privacy/">查看隐私政策</a>
+<header class="site-header">
+    <div class="container">
+        <div class="brand">ZENITH <span>PULSE</span></div>
+        <nav class="nav">
+            <a href="/">首页</a>
+            <a href="/products/xlsone/">产品</a>
+            <a href="/support/">支持</a>
+        </nav>
+    </div>
+</header>
+
+<main>
+    <section class="hero">
+        <h1>ZENITH <span>PULSE</span></h1>
+        <p>巅峰脉动 · 独立开发者打造的效率工具</p>
+    </section>
+
+    <section class="product-section">
+        <div class="container">
+            <div class="product-card">
+                <img src="/products/xlsone/icon.png" alt="表表归一" onerror="this.style.display='none'">
+                <div class="product-info">
+                    <h2>表表归一</h2>
+                    <div class="tagline">xlsOne — 多张同格式 Excel 报表一键汇总</div>
+                    <p>将多个结构相同的 Excel 表格智能合并为一张：金额自动求和、标签原样保留、混合类型智能标注。</p>
+                    <div class="platform-badges">
+                        <span>macOS</span>
+                        <span>Windows</span>
+                        <span>Linux</span>
                     </div>
-                    <div class="stat-strip" aria-label="Product highlights">
-                        <article class="stat-card">
-                            <strong>本地处理</strong>
-                            <span>默认不上传用户文件到远端服务器。</span>
-                        </article>
-                        <article class="stat-card">
-                            <strong>可追溯</strong>
-                            <span>点击单元格可回看原始文件中的来源值。</span>
-                        </article>
-                        <article class="stat-card">
-                            <strong>导出 XLSX</strong>
-                            <span>结果可回写为新的 Excel 工作簿继续流转。</span>
-                        </article>
-                    </div>
-                </div>
-
-                <div class="hero-visual">
-                    <div class="sheet-preview">
-                        <div class="preview-window" aria-hidden="true">
-                            <div class="preview-toolbar">
-                                <div class="preview-dots">
-                                    <span></span>
-                                    <span></span>
-                                    <span></span>
-                                </div>
-                                <span class="badge">macOS 12+</span>
-                            </div>
-                            <div class="preview-grid">
-                                <div class="preview-row">
-                                    <div class="preview-cell"><strong>项目</strong></div>
-                                    <div class="preview-cell"><strong>一季度</strong></div>
-                                    <div class="preview-cell"><strong>二季度</strong></div>
-                                    <div class="preview-cell"><strong>汇总</strong></div>
-                                </div>
-                                <div class="preview-row">
-                                    <div class="preview-cell">办公经费</div>
-                                    <div class="preview-cell">12,600</div>
-                                    <div class="preview-cell">11,900</div>
-                                    <div class="preview-cell accent">24,500</div>
-                                </div>
-                                <div class="preview-row">
-                                    <div class="preview-cell">设备维护</div>
-                                    <div class="preview-cell">4,200</div>
-                                    <div class="preview-cell">4,200</div>
-                                    <div class="preview-cell">标签</div>
-                                </div>
-                                <div class="preview-row">
-                                    <div class="preview-cell">差异来源</div>
-                                    <div class="preview-cell accent">3 条</div>
-                                    <div class="preview-cell">穿透查看</div>
-                                    <div class="preview-cell">已记录</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <p class="badge">支持 <span class="mono">.xlsx</span> 与常见 BIFF8 <span class="mono">.xls</span> 导入，导出统一为 <span class="mono">.xlsx</span>。</p>
-                </div>
-            </div>
-        </section>
-
-        <section class="section" id="features">
-            <div class="section-header">
-                <div>
-                    <span class="eyebrow">What stands out</span>
-                    <h2>不是只把表拼在一起，而是把核对过程也设计进去。</h2>
-                </div>
-            </div>
-            <div class="card-grid">
-                <article class="content-card">
-                    <h3>多文件导入</h3>
-                    <p>一次导入多个结构一致的 <span class="mono">.xlsx</span> 或常见 <span class="mono">.xls</span> 文件，自动整理可参与汇总的工作表。</p>
-                </article>
-                <article class="content-card">
-                    <h3>差异可视化</h3>
-                    <p>相同值、可求和数值和混合内容分别按不同逻辑呈现，方便先看结果，再看例外。</p>
-                </article>
-                <article class="content-card">
-                    <h3>穿透追溯</h3>
-                    <p>遇到异常单元格时，可以回看每个来源文件在同一位置上的原始值，减少手动翻表。</p>
-                </article>
-            </div>
-        </section>
-
-        <section class="section">
-            <div class="split-layout">
-                <article class="detail-card">
-                    <span class="eyebrow">Release readiness</span>
-                    <h2>站点会先服务于提审，再逐步变成正式产品主页。</h2>
-                    <p>这版 <span class="mono">xlsone.com</span> 会优先承担 App Store 所需的公开入口：品牌首页、支持页、隐私政策和更新记录。等 App 上线后，再继续补品牌素材、截图、下载说明和 FAQ。</p>
-                    <ul>
-                        <li>首页用于 <span class="mono">Marketing URL</span></li>
-                        <li>支持页用于 <span class="mono">Support URL</span></li>
-                        <li>隐私页用于 <span class="mono">Privacy Policy URL</span></li>
-                    </ul>
-                </article>
-                <div class="timeline">
-                    <article class="timeline-card">
-                        <time>Phase 0</time>
-                        <h3>发布阻断项收口</h3>
-                        <p>正式 Bundle ID、Excel 格式文案、release 日志开关、签名验证入口。</p>
-                    </article>
-                    <article class="timeline-card">
-                        <time>Phase 1</time>
-                        <h3>域名与 DNS</h3>
-                        <p>将 <span class="mono">xlsone.com</span> 切到 Cloudflare，配置自定义域名、HTTPS 和来信转发。</p>
-                    </article>
-                    <article class="timeline-card">
-                        <time>Phase 2</time>
-                        <h3>官网最小版上线</h3>
-                        <p>首页、支持页、隐私页和更新记录四个入口即可满足提审与用户触达。</p>
-                    </article>
-                </div>
-            </div>
-        </section>
-    </main>
-
-    <footer class="footer">
-        <div class="page-shell">
-            <div class="footer-card">
-                <div>
-                    <strong>xlsOne</strong>
-                    <p class="meta">面向 macOS 的 Excel 汇总工作台。当前公开页面会随着产品发布节奏持续更新。</p>
-                </div>
-                <div class="button-row">
-                    <a class="button button-secondary" href="mailto:support@xlsone.com">support@xlsone.com</a>
-                    <a class="button button-secondary" href="/changelog/">查看更新记录</a>
+                    <a href="/products/xlsone/" class="btn btn-primary">了解详情</a>
+                    <a href="/products/xlsone/download.html" class="btn btn-outline" style="margin-left:8px">免费下载</a>
                 </div>
             </div>
         </div>
-    </footer>
+    </section>
+</main>
+
+<footer class="site-footer">
+    <div class="container">
+        <p>
+            <a href="/support/">支持</a>
+            <a href="/privacy/">隐私政策</a>
+        </p>
+        <p style="margin-top:12px">&copy; 2026 ZENITH PULSE</p>
+    </div>
+</footer>
+
 </body>
 </html>
