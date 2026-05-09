@@ -1,4 +1,3 @@
 User-agent: *
 Allow: /
-
-Sitemap: https://xlsone.com/sitemap.xml
+Sitemap: https://z-pulse.cn/sitemap.xml

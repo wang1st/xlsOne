@@ -1,0 +1,254 @@
+/* ZENITH PULSE - 巅峰脉动 */
+/* Brand colors: deep teal #0d7377, dark bg #1a1a2e, accent #e94560 */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #0f0f1a;
+    color: #e0e0e0;
+    line-height: 1.6;
+    min-height: 100vh;
+}
+
+a {
+    color: #0d7377;
+    text-decoration: none;
+}
+a:hover {
+    color: #0fa3a8;
+}
+
+.container {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 0 24px;
+}
+
+.site-header {
+    padding: 24px 0;
+    border-bottom: 1px solid #1e1e32;
+}
+.site-header .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.brand {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: 0.05em;
+}
+.brand span {
+    color: #0fa3a8;
+}
+.nav a {
+    margin-left: 24px;
+    font-size: 0.95rem;
+}
+
+.hero {
+    padding: 100px 0 60px;
+    text-align: center;
+}
+.hero h1 {
+    font-size: 3rem;
+    font-weight: 800;
+    color: #ffffff;
+    margin-bottom: 16px;
+    letter-spacing: 0.02em;
+}
+.hero h1 span {
+    color: #0fa3a8;
+}
+.hero p {
+    font-size: 1.15rem;
+    color: #999;
+    max-width: 560px;
+    margin: 0 auto 32px;
+}
+
+.btn {
+    display: inline-block;
+    padding: 12px 32px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 1rem;
+    transition: all 0.2s;
+}
+.btn-primary {
+    background: #0fa3a8;
+    color: #fff;
+}
+.btn-primary:hover {
+    background: #0d7377;
+    color: #fff;
+}
+.btn-outline {
+    border: 1px solid #0fa3a8;
+    color: #0fa3a8;
+}
+.btn-outline:hover {
+    background: #0fa3a8;
+    color: #fff;
+}
+
+.product-section {
+    padding: 60px 0;
+}
+.product-card {
+    background: #16162a;
+    border: 1px solid #1e1e32;
+    border-radius: 12px;
+    padding: 40px;
+    display: flex;
+    gap: 32px;
+    align-items: center;
+}
+.product-card img {
+    width: 80px;
+    height: 80px;
+    border-radius: 16px;
+    flex-shrink: 0;
+}
+.product-info h2 {
+    font-size: 1.5rem;
+    color: #fff;
+    margin-bottom: 8px;
+}
+.product-info .tagline {
+    color: #0fa3a8;
+    font-size: 0.9rem;
+    margin-bottom: 12px;
+}
+.product-info p {
+    color: #999;
+    font-size: 0.95rem;
+    margin-bottom: 16px;
+}
+.platform-badges {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+.platform-badges span {
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    background: #1e1e32;
+    color: #888;
+}
+
+.features {
+    padding: 60px 0;
+}
+.features h2 {
+    text-align: center;
+    font-size: 1.8rem;
+    color: #fff;
+    margin-bottom: 40px;
+}
+.feature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 24px;
+}
+.feature-item {
+    background: #16162a;
+    border: 1px solid #1e1e32;
+    border-radius: 10px;
+    padding: 28px;
+}
+.feature-item h3 {
+    color: #0fa3a8;
+    font-size: 1.05rem;
+    margin-bottom: 8px;
+}
+.feature-item p {
+    color: #999;
+    font-size: 0.9rem;
+}
+
+.download-section {
+    padding: 60px 0;
+}
+.download-section h2 {
+    color: #fff;
+    font-size: 1.4rem;
+    margin-bottom: 24px;
+}
+.download-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.download-item {
+    background: #16162a;
+    border: 1px solid #1e1e32;
+    border-radius: 10px;
+    padding: 20px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.download-item .platform-name {
+    font-weight: 600;
+    color: #fff;
+}
+.download-item .version {
+    color: #888;
+    font-size: 0.85rem;
+    margin-left: 12px;
+}
+
+.content-page {
+    padding: 60px 0;
+    max-width: 720px;
+    margin: 0 auto;
+}
+.content-page h1 {
+    color: #fff;
+    font-size: 1.8rem;
+    margin-bottom: 24px;
+}
+.content-page h2 {
+    color: #0fa3a8;
+    font-size: 1.2rem;
+    margin: 32px 0 12px;
+}
+.content-page p,
+.content-page li {
+    color: #999;
+    font-size: 0.95rem;
+    margin-bottom: 8px;
+}
+.content-page ul {
+    padding-left: 20px;
+}
+
+.site-footer {
+    padding: 32px 0;
+    border-top: 1px solid #1e1e32;
+    text-align: center;
+    color: #666;
+    font-size: 0.85rem;
+}
+.site-footer a {
+    color: #666;
+    margin: 0 12px;
+}
+.site-footer a:hover {
+    color: #0fa3a8;
+}
+
+@media (max-width: 768px) {
+    .hero h1 { font-size: 2rem; }
+    .product-card { flex-direction: column; text-align: center; }
+    .platform-badges { justify-content: center; }
+    .nav a { margin-left: 16px; font-size: 0.85rem; }
+}
