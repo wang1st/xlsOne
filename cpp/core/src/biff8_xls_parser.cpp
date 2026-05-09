@@ -10,7 +10,7 @@
 #include <QSet>
 #include <QtEndian>
 #include <algorithm>
-#include <bit>
+#include <cstring>
 #include <cmath>
 #include <map>
 #include <optional>
@@ -19,6 +19,15 @@
 namespace xlsone {
 
 namespace {
+
+template<typename To, typename From>
+To bit_cast(const From& from) noexcept
+{
+    static_assert(sizeof(To) == sizeof(From), "bit_cast requires same size");
+    To result;
+    std::memcpy(&result, &from, sizeof(To));
+    return result;
+}
 
 struct Record {
     quint16 id = 0;
@@ -73,7 +82,7 @@ double f64(const QByteArray& data, qsizetype offset)
         return 0.0;
     }
     const quint64 bits = qFromLittleEndian<quint64>(reinterpret_cast<const uchar*>(data.constData() + offset));
-    return std::bit_cast<double>(bits);
+    return bit_cast<double>(bits);
 }
 
 QString decodeByteString(const QByteArray& data)
@@ -521,7 +530,7 @@ double decodeRK(quint32 rk)
         value = static_cast<double>(static_cast<qint32>(rk & 0xfffffffc) >> 2);
     } else {
         const quint64 bits = static_cast<quint64>(rk & 0xfffffffc) << 32;
-        value = std::bit_cast<double>(bits);
+        value = bit_cast<double>(bits);
     }
     return divideBy100 ? value / 100.0 : value;
 }

@@ -55,15 +55,26 @@ WorkspaceChrome::WorkspaceChrome(QWidget* parent) : QWidget(parent)
     connect(clearButton_, &QPushButton::clicked, this, &WorkspaceChrome::clearRequested);
     connect(exportButton_, &QPushButton::clicked, this, &WorkspaceChrome::exportRequested);
 
+    const auto& t = xlsone::ui::theme();
     setStyleSheet(QStringLiteral(
-        "QWidget#workspaceChrome { background: #f6f7fa; border-bottom: 1px solid #dce0e8; }"
-        "QWidget#workspaceButtonGroup { background: #ffffff; border: 1px solid #dce0e8; border-radius: 12px; }"
-        "QPushButton#workspaceUtilityButton { border: none; border-radius: 9px; padding: 7px 10px; font-weight: 500; }"
-        "QPushButton#workspaceUtilityButton:hover { background: rgba(0,0,0,0.06); }"
-        "QPushButton#workspacePrimaryButton { background: #2a75ff; color: white; border: 1px solid rgba(42,117,255,0.30); border-radius: 10px; padding: 8px 14px; font-weight: 700; }"
-        "QPushButton#workspacePrimaryButton:hover { background: #2368e8; }"
-        "QPushButton#workspacePrimaryButton:disabled { background: #e2e6ef; color: #8b95a6; border-color: #dce0e8; }"
-    ));
+        "QWidget#workspaceChrome { background: %1; border-bottom: 1px solid %2; }"
+        "QWidget#workspaceButtonGroup { background: %3; border: 1px solid %2; border-radius: 12px; }"
+        "QPushButton#workspaceUtilityButton { border: none; border-radius: 9px; padding: 7px 10px; font-weight: 500; color: %4; }"
+        "QPushButton#workspaceUtilityButton:hover { background: %5; }"
+        "QPushButton#workspacePrimaryButton { background: %6; color: white; border: 1px solid %7; border-radius: 10px; padding: 8px 14px; font-weight: 700; }"
+        "QPushButton#workspacePrimaryButton:hover { background: %8; }"
+        "QPushButton#workspacePrimaryButton:disabled { background: %9; color: %10; border-color: %2; }"
+    )
+        .arg(t.bg0.name())
+        .arg(t.border.name())
+        .arg(t.bg1.name())
+        .arg(t.textMuted.name())
+        .arg(t.isDark ? QStringLiteral("rgba(255,255,255,0.06)") : QStringLiteral("rgba(0,0,0,0.06)"))
+        .arg(t.accent.name())
+        .arg(t.isDark ? QStringLiteral("rgba(82,148,255,0.30)") : QStringLiteral("rgba(42,117,255,0.30)"))
+        .arg(t.isDark ? QStringLiteral("#1e5fd6") : QStringLiteral("#2368e8"))
+        .arg(t.isDark ? QColor(50, 52, 62).name() : QStringLiteral("#e2e6ef"))
+        .arg(t.textMuted.name()));
     setWorkspaceState(false, false);
 }
 

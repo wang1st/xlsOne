@@ -271,7 +271,7 @@ std::vector<CompoundFileReader::DirectoryEntry> CompoundFileReader::parseDirecto
 
         entries.push_back({
             name,
-            static_cast<quint8>(data[offset + 66]),
+            static_cast<quint8>(data[static_cast<int>(offset + 66)]),
             startingSector == EndOfChain ? -1 : static_cast<int>(startingSector),
             static_cast<qsizetype>(streamSize)
         });

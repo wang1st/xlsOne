@@ -14,7 +14,10 @@ struct SheetDimensions {
     int rows = 0;
     int columns = 0;
 
-    bool operator==(const SheetDimensions&) const = default;
+    bool operator==(const SheetDimensions& other) const
+    {
+        return rows == other.rows && columns == other.columns;
+    }
     bool operator<(const SheetDimensions& other) const
     {
         return rows == other.rows ? columns < other.columns : rows < other.rows;

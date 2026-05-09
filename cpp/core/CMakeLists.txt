@@ -11,6 +11,7 @@ add_library(xlsone_core STATIC
     src/update_checker.cpp
     src/validator.cpp
     src/zip_archive.cpp
+    include/xlsone/core/update_checker.hpp
 )
 
 target_include_directories(xlsone_core
