@@ -583,7 +583,7 @@ void MainWindow::checkForUpdates()
         return;
     }
     const QString apiUrl = QStringLiteral(
-        "https://updates.xlsone.com/api/version");
+        "https://z-pulse.cn/api/version");
     updateChecker_->checkForUpdates(apiUrl);
 }
 
