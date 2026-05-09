@@ -435,15 +435,19 @@ void MainWindow::buildUi()
 
     auto* aboutAction = new QAction(tr("关于 表表归一"), this);
     connect(aboutAction, &QAction::triggered, this, [this] {
+        const QString ver = QStringLiteral("%1.%2.%3")
+            .arg(XLSONE_VERSION_MAJOR)
+            .arg(XLSONE_VERSION_MINOR)
+            .arg(XLSONE_VERSION_PATCH);
         QMessageBox::about(this, tr("关于 表表归一"),
-            tr("<h3>表表归一  V1.0</h3>"
+            tr("<h3>表表归一  V%1</h3>"
                "<p>多张同格式 Excel 报表一键汇总</p>"
                "<p>将多张结构相同的 Excel 表格智能合并为一张，"
                "金额自动求和、标签原样保留、混合类型智能标注。</p>"
                "<p><b>作者：</b>王臻</p>"
                "<p><b>技术：</b>C++  /  Qt</p>"
                "<p><b>邮箱：</b>831261@qq.com</p>"
-               "<p>&copy; 2026 王臻. 保留所有权利.</p>"));
+                "<p>&copy; 2026 王臻. 保留所有权利.</p>").arg(ver));
     });
 
     auto* checkUpdateAction = new QAction(tr("检查更新"), this);
