@@ -1683,9 +1683,6 @@ struct InspectionSidebar: View {
             .padding()
         }
         .background(Color(NSColor.controlBackgroundColor))
-        .onChange(of: viewModel.selectedCellReference) { _ in
-            isSourceListExpanded = false
-        }
     }
 
     private func cellDetailCard(

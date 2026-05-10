@@ -123,8 +123,7 @@ public actor SmartMerger {
             workbookFingerprint: workbookFingerprint ?? existing.workbookFingerprint,
             cellOverrides: overrides,
             createdAt: existing.createdAt,
-            updatedAt: Date(),
-            matchCount: existing.matchCount
+            updatedAt: Date()
         )
 
         try await schemaRepository.saveSchema(updated)

@@ -388,7 +388,7 @@ SchemaMatchResult SchemaMatcher::match(
         if (std::fabs(lhs.score - rhs.score) > 0.0000001) {
             return lhs.score > rhs.score;
         }
-        return lhs.schema.matchCount > rhs.schema.matchCount;
+        return lhs.schema.updatedAt > rhs.schema.updatedAt;
     });
 
     std::vector<SchemaMatchCandidate> exact;
@@ -522,7 +522,6 @@ QJsonObject toJson(const MergeSchema& schema)
     object.insert(QStringLiteral("overrides"), overrides);
     object.insert(QStringLiteral("createdAt"), schema.createdAt.toString(Qt::ISODate));
     object.insert(QStringLiteral("updatedAt"), schema.updatedAt.toString(Qt::ISODate));
-    object.insert(QStringLiteral("matchCount"), schema.matchCount);
     return object;
 }
 
@@ -551,7 +550,6 @@ MergeSchema schemaFromJson(const QJsonObject& object)
     }
     schema.createdAt = QDateTime::fromString(object.value(QStringLiteral("createdAt")).toString(), Qt::ISODate);
     schema.updatedAt = QDateTime::fromString(object.value(QStringLiteral("updatedAt")).toString(), Qt::ISODate);
-    schema.matchCount = object.value(QStringLiteral("matchCount")).toInt();
     return schema;
 }
 

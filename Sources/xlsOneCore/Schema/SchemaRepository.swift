@@ -89,7 +89,7 @@ public actor SchemaRepository: SchemaRepositoryProtocol {
         }
 
         // 按匹配次数排序（常用优先）
-        schemas.sort { $0.matchCount > $1.matchCount }
+        schemas.sort { $0.updatedAt > $1.updatedAt }
 
         cachedSchemas = schemas
         return schemas
@@ -166,8 +166,7 @@ public actor SchemaRepository: SchemaRepositoryProtocol {
             workbookFingerprint: schema.workbookFingerprint,
             cellOverrides: schema.cellOverrides,
             createdAt: schema.createdAt,
-            updatedAt: Date(),
-            matchCount: schema.matchCount + 1
+            updatedAt: Date()
         )
 
         try await saveSchema(updatedSchema)
@@ -203,8 +202,7 @@ public actor SchemaRepository: SchemaRepositoryProtocol {
                 name: schema.name + " (导入)",
                 fingerprint: schema.fingerprint,
                 workbookFingerprint: schema.workbookFingerprint,
-                cellOverrides: schema.cellOverrides,
-                matchCount: 0
+                cellOverrides: schema.cellOverrides
             )
             try await saveSchema(newSchema)
             return newSchema
@@ -217,8 +215,7 @@ public actor SchemaRepository: SchemaRepositoryProtocol {
             name: schema.name + " (导入)",
             fingerprint: schema.fingerprint,
             workbookFingerprint: schema.workbookFingerprint,
-            cellOverrides: schema.cellOverrides,
-            matchCount: 0
+            cellOverrides: schema.cellOverrides
         )
         try await saveSchema(newSchema)
         return newSchema

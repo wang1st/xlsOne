@@ -1,0 +1,3421 @@
+======================================================================
+  软件名称：表表归一（xlsOne）                    第 1 页
+======================================================================
+
+      1 | /* ===== /home/ethan/xlsone/Sources/xlsOneCore/BIFF8XLSParser.swift ===== */
+      2 | import Foundation
+      3 | 
+      4 | struct BIFF8XLSParser {
+      5 |     private struct Record {
+      6 |         let id: UInt16
+      7 |         let offset: Int
+      8 |         let body: Data
+      9 |     }
+     10 | 
+     11 |     private struct BoundSheet {
+     12 |         let offset: Int
+     13 |         let name: String
+     14 |     }
+     15 | 
+     16 |     private struct WorkbookGlobals {
+     17 |         let sheets: [BoundSheet]
+     18 |         let sharedStrings: [String]
+     19 |         let formats: [Int: String]
+     20 |         let xfFormatIDs: [Int: Int]
+     21 |     }
+     22 | 
+     23 |     private struct CellAddress: Hashable {
+     24 |         let row: Int
+     25 |         let column: Int
+     26 |     }
+     27 | 
+     28 |     func parseFile(at path: String) throws -> ExcelFile {
+     29 |         let url = URL(fileURLWithPath: path)
+     30 |         let fileData = try Data(contentsOf: url)
+     31 |         let compoundFile = try CompoundFileReader(data: fileData)
+     32 |         let workbookData = try compoundFile.stream(named: ["Workbook", "Book"])
+     33 |         let globals = parseWorkbookGlobals(from: workbookData)
+     34 | 
+     35 |         let sheets = globals.sheets.compactMap { sheet -> SheetData? in
+     36 |             guard sheet.offset >= 0, sheet.offset < workbookData.count else { return nil }
+     37 |             return parseWorksheet(
+     38 |                 workbookData: workbookData,
+     39 |                 sheet: sheet,
+     40 |                 globals: globals
+     41 |             )
+     42 |         }
+     43 | 
+     44 |         guard !sheets.isEmpty else {
+     45 |             throw ParserError.cannotOpenFile(path)
+     46 |         }
+     47 | 
+     48 |         return ExcelFile(
+     49 |             filename: url.lastPathComponent,
+     50 |             filepath: path,
+
+──────────────────────────────────────────────────────────────────────
+                         第 1 页 / 共 60 页
+======================================================================
+  软件名称：表表归一（xlsOne）                    第 2 页
+======================================================================
+
+     51 |             sheets: sheets
+     52 |         )
+     53 |     }
+     54 | 
+     55 |     private func parseWorkbookGlobals(from data: Data) -> WorkbookGlobals {
+     56 |         var sheets: [BoundSheet] = []
+     57 |         var sharedStrings: [String] = []
+     58 |         var formats: [Int: String] = Self.defaultFormats
+     59 |         var xfFormatIDs: [Int: Int] = [:]
+     60 | 
+     61 |         let records = parseRecords(in: data)
+     62 |         var index = 0
+     63 |         while index < records.count {
+     64 |             let record = records[index]
+     65 |             switch record.id {
+     66 |             case 0x0085:
+     67 |                 if let sheet = parseBoundSheet(record.body) {
+     68 |                     sheets.append(sheet)
+     69 |                 }
+     70 |             case 0x00FC:
+     71 |                 let chunks = continuationChunks(records: records, startingAt: index)
+     72 |                 sharedStrings = parseSharedStrings(from: record.body, continuationChunks: chunks)
+     73 |                 index += chunks.count
+     74 |             case 0x041E:
+     75 |                 if let format = parseFormat(record.body) {
+     76 |                     formats[format.id] = format.code
+     77 |                 }
+     78 |             case 0x00E0:
+     79 |                 if record.body.count >= 4 {
+     80 |                     let xfIndex = xfFormatIDs.count
+     81 |                     xfFormatIDs[xfIndex] = Int(record.body.xlsUInt16(at: 2))
+     82 |                 }
+     83 |             case 0x000A:
+     84 |                 return WorkbookGlobals(
+     85 |                     sheets: sheets.sorted { $0.offset < $1.offset },
+     86 |                     sharedStrings: sharedStrings,
+     87 |                     formats: formats,
+     88 |                     xfFormatIDs: xfFormatIDs
+     89 |                 )
+     90 |             default:
+     91 |                 break
+     92 |             }
+     93 |             index += 1
+     94 |         }
+     95 | 
+     96 |         return WorkbookGlobals(
+     97 |             sheets: sheets.sorted { $0.offset < $1.offset },
+     98 |             sharedStrings: sharedStrings,
+     99 |             formats: formats,
+    100 |             xfFormatIDs: xfFormatIDs
+
+──────────────────────────────────────────────────────────────────────
+                         第 2 页 / 共 60 页
+======================================================================
+  软件名称：表表归一（xlsOne）                    第 3 页
+======================================================================
+
+    101 |         )
+    102 |     }
+    103 | 
+    104 |     private func parseWorksheet(
+    105 |         workbookData: Data,
+    106 |         sheet: BoundSheet,
+    107 |         globals: WorkbookGlobals
+    108 |     ) -> SheetData {
+    109 |         var cells: [CellAddress: CellData] = [:]
+    110 |         var maxRow = -1
+    111 |         var maxColumn = -1
+    112 | 
+    113 |         for record in parseRecords(in: workbookData, startingAt: sheet.offset) {
+    114 |             switch record.id {
+    115 |             case 0x000A:
+    116 |                 return SheetData(name: sheet.name, rows: buildRows(from: cells, maxRow: maxRow, maxColumn: maxColumn))
+    117 |             case 0x0200:
+    118 |                 let dimensions = parseDimensions(record.body)
+    119 |                 maxRow = max(maxRow, dimensions.maxRow)
+    120 |                 maxColumn = max(maxColumn, dimensions.maxColumn)
+    121 |             case 0x00FD:
+    122 |                 guard record.body.count >= 10 else { break }
+    123 |                 let row = Int(record.body.xlsUInt16(at: 0))
+    124 |                 let column = Int(record.body.xlsUInt16(at: 2))
+    125 |                 let xfIndex = Int(record.body.xlsUInt16(at: 4))
+    126 |                 let stringIndex = Int(record.body.xlsUInt32(at: 6))
+    127 |                 let value = stringIndex < globals.sharedStrings.count ? globals.sharedStrings[stringIndex] : ""
+    128 |                 setCell(
+    129 |                     CellData(value: value, formatCode: formatCode(xfIndex: xfIndex, globals: globals)),
+    130 |                     row: row,
+    131 |                     column: column,
+    132 |                     cells: &cells,
+    133 |                     maxRow: &maxRow,
+    134 |                     maxColumn: &maxColumn
+    135 |                 )
+    136 |             case 0x0204, 0x00D6:
+    137 |                 guard record.body.count >= 8 else { break }
+    138 |                 let row = Int(record.body.xlsUInt16(at: 0))
+    139 |                 let column = Int(record.body.xlsUInt16(at: 2))
+    140 |                 let xfIndex = Int(record.body.xlsUInt16(at: 4))
+    141 |                 let value = parseXLUnicodeString(record.body, offset: 6)?.value ?? ""
+    142 |                 setCell(
+    143 |                     CellData(value: value, formatCode: formatCode(xfIndex: xfIndex, globals: globals)),
+    144 |                     row: row,
+    145 |                     column: column,
+    146 |                     cells: &cells,
+    147 |                     maxRow: &maxRow,
+    148 |                     maxColumn: &maxColumn
+    149 |                 )
+    150 |             case 0x0203:
+
+──────────────────────────────────────────────────────────────────────
+                         第 3 页 / 共 60 页
+======================================================================
+  软件名称：表表归一（xlsOne）                    第 4 页
+======================================================================
+
+    151 |                 guard record.body.count >= 14 else { break }
+    152 |                 let row = Int(record.body.xlsUInt16(at: 0))
+    153 |                 let column = Int(record.body.xlsUInt16(at: 2))
+    154 |                 let xfIndex = Int(record.body.xlsUInt16(at: 4))
+    155 |                 let number = record.body.xlsDouble(at: 6)
+    156 |                 setCell(
+    157 |                     numericCell(number, xfIndex: xfIndex, globals: globals),
+    158 |                     row: row,
+    159 |                     column: column,
+    160 |                     cells: &cells,
+    161 |                     maxRow: &maxRow,
+    162 |                     maxColumn: &maxColumn
+    163 |                 )
+    164 |             case 0x027E:
+    165 |                 guard record.body.count >= 10 else { break }
+    166 |                 let row = Int(record.body.xlsUInt16(at: 0))
+    167 |                 let column = Int(record.body.xlsUInt16(at: 2))
+    168 |                 let xfIndex = Int(record.body.xlsUInt16(at: 4))
+    169 |                 let number = decodeRK(record.body.xlsUInt32(at: 6))
+    170 |                 setCell(
+    171 |                     numericCell(number, xfIndex: xfIndex, globals: globals),
+    172 |                     row: row,
+    173 |                     column: column,
+    174 |                     cells: &cells,
+    175 |                     maxRow: &maxRow,
+    176 |                     maxColumn: &maxColumn
+    177 |                 )
+    178 |             case 0x00BD:
+    179 |                 parseMulRK(record.body, globals: globals).forEach { entry in
+    180 |                     setCell(
+    181 |                         entry.cell,
+    182 |                         row: entry.row,
+    183 |                         column: entry.column,
+    184 |                         cells: &cells,
+    185 |                         maxRow: &maxRow,
+    186 |                         maxColumn: &maxColumn
+    187 |                     )
+    188 |                 }
+    189 |             case 0x0205:
+    190 |                 guard record.body.count >= 8 else { break }
+    191 |                 let row = Int(record.body.xlsUInt16(at: 0))
+    192 |                 let column = Int(record.body.xlsUInt16(at: 2))
+    193 |                 let xfIndex = Int(record.body.xlsUInt16(at: 4))
+    194 |                 let isError = record.body[7] != 0
+    195 |                 let value = isError ? errorValue(record.body[6]) : (record.body[6] == 0 ? "FALSE" : "TRUE")
+    196 |                 setCell(
+    197 |                     CellData(value: value, formatCode: formatCode(xfIndex: xfIndex, globals: globals)),
+    198 |                     row: row,
+    199 |                     column: column,
+    200 |                     cells: &cells,
+
+──────────────────────────────────────────────────────────────────────
+                         第 4 页 / 共 60 页
+======================================================================
+  软件名称：表表归一（xlsOne）                    第 5 页
+======================================================================
+
+    201 |                     maxRow: &maxRow,
+    202 |                     maxColumn: &maxColumn
+    203 |                 )
+    204 |             case 0x0006:
+    205 |                 parseFormula(record.body, globals: globals).map { entry in
+    206 |                     setCell(
+    207 |                         entry.cell,
+    208 |                         row: entry.row,
+    209 |                         column: entry.column,
+    210 |                         cells: &cells,
+    211 |                         maxRow: &maxRow,
+    212 |                         maxColumn: &maxColumn
+    213 |                     )
+    214 |                 }
+    215 |             default:
+    216 |                 break
+    217 |             }
+    218 |         }
+    219 | 
+    220 |         return SheetData(name: sheet.name, rows: buildRows(from: cells, maxRow: maxRow, maxColumn: maxColumn))
+    221 |     }
+    222 | 
+    223 |     private func parseRecords(in data: Data, startingAt startOffset: Int = 0) -> [Record] {
+    224 |         var records: [Record] = []
+    225 |         var offset = startOffset
+    226 |         while offset + 4 <= data.count {
+    227 |             let id = data.xlsUInt16(at: offset)
+    228 |             let length = Int(data.xlsUInt16(at: offset + 2))
+    229 |             let bodyOffset = offset + 4
+    230 |             guard bodyOffset + length <= data.count else { break }
+    231 |             records.append(Record(id: id, offset: offset, body: Data(data[bodyOffset..<bodyOffset + length])))
+    232 |             offset = bodyOffset + length
+    233 |             if id == 0x000A, startOffset != 0 {
+    234 |                 break
+    235 |             }
+    236 |         }
+    237 |         return records
+    238 |     }
+    239 | 
+    240 |     private func continuationChunks(records: [Record], startingAt index: Int) -> [Data] {
+    241 |         var chunks: [Data] = []
+    242 |         var nextIndex = index + 1
+    243 |         while nextIndex < records.count, records[nextIndex].id == 0x003C {
+    244 |             chunks.append(records[nextIndex].body)
+    245 |             nextIndex += 1
+    246 |         }
+    247 |         return chunks
+    248 |     }
+    249 | 
+    250 |     private func parseBoundSheet(_ data: Data) -> BoundSheet? {
+
+──────────────────────────────────────────────────────────────────────
+                         第 5 页 / 共 60 页
+======================================================================
+  软件名称：表表归一（xlsOne）                    第 6 页
+======================================================================
+
+    251 |         guard data.count >= 8 else { return nil }
+    252 |         let offset = Int(data.xlsUInt32(at: 0))
+    253 |         let nameLength = Int(data[6])
+    254 |         let flags = data[7]
+    255 |         let nameOffset = 8
+    256 |         let name: String
+    257 |         if flags & 0x01 == 0 {
+    258 |             guard nameOffset + nameLength <= data.count else { return nil }
+    259 |             name = String(data: data[nameOffset..<nameOffset + nameLength], encoding: .windowsCP1252) ?? "Sheet"
+    260 |         } else {
+    261 |             let byteLength = nameLength * 2
+    262 |             guard nameOffset + byteLength <= data.count else { return nil }
+    263 |             name = String(data: data[nameOffset..<nameOffset + byteLength], encoding: .utf16LittleEndian) ?? "Sheet"
+    264 |         }
+    265 |         return BoundSheet(offset: offset, name: name)
+    266 |     }
+    267 | 
+    268 |     private func parseSharedStrings(from recordBody: Data, continuationChunks: [Data]) -> [String] {
+    269 |         guard recordBody.count >= 8 else { return [] }
+    270 |         let uniqueCount = Int(recordBody.xlsUInt32(at: 4))
+    271 |         let segments = [Data(recordBody[8..<recordBody.count])] + continuationChunks
+    272 |         var cursor = SharedStringCursor(segments: segments)
+    273 | 
+    274 |         var strings: [String] = []
+    275 |         while !cursor.isAtEnd, strings.count < uniqueCount {
+    276 |             guard let parsed = cursor.readXLUnicodeString() else { break }
+    277 |             strings.append(parsed)
+    278 |         }
+    279 |         return strings
+    280 |     }
+    281 | 
+    282 |     private func parseFormat(_ data: Data) -> (id: Int, code: String)? {
+    283 |         guard data.count >= 5 else { return nil }
+    284 |         let id = Int(data.xlsUInt16(at: 0))
+    285 |         guard let parsed = parseXLUnicodeString(data, offset: 2) else { return nil }
+    286 |         return (id, parsed.value)
+    287 |     }
+    288 | 
+    289 |     private func parseXLUnicodeString(_ data: Data, offset: Int) -> (value: String, nextOffset: Int)? {
+    290 |         guard offset + 3 <= data.count else { return nil }
+    291 |         let characterCount = Int(data.xlsUInt16(at: offset))
+    292 |         let flags = data[offset + 2]
+    293 |         var cursor = offset + 3
+    294 | 
+    295 |         let hasAsianPhonetics = flags & 0x04 != 0
+    296 |         let hasRichText = flags & 0x08 != 0
+    297 |         let isWide = flags & 0x01 != 0
+    298 | 
+    299 |         var richTextRunCount = 0
+    300 |         var extensionByteCount = 0
+
+──────────────────────────────────────────────────────────────────────
+                         第 6 页 / 共 60 页
+======================================================================
+  软件名称：表表归一（xlsOne）                    第 7 页
+======================================================================
+
+    301 |         if hasRichText {
+    302 |             guard cursor + 2 <= data.count else { return nil }
+    303 |             richTextRunCount = Int(data.xlsUInt16(at: cursor))
+    304 |             cursor += 2
+    305 |         }
+    306 |         if hasAsianPhonetics {
+    307 |             guard cursor + 4 <= data.count else { return nil }
+    308 |             extensionByteCount = Int(data.xlsUInt32(at: cursor))
+    309 |             cursor += 4
+    310 |         }
+    311 | 
+    312 |         let byteCount = characterCount * (isWide ? 2 : 1)
+    313 |         guard cursor + byteCount <= data.count else { return nil }
+    314 |         let valueData = data[cursor..<cursor + byteCount]
+    315 |         let value = String(
+    316 |             data: valueData,
+    317 |             encoding: isWide ? .utf16LittleEndian : .windowsCP1252
+    318 |         ) ?? ""
+    319 |         cursor += byteCount
+    320 |         cursor += richTextRunCount * 4
+    321 |         cursor += extensionByteCount
+    322 |         guard cursor <= data.count else { return nil }
+    323 |         return (value, cursor)
+    324 |     }
+    325 | 
+    326 |     private func parseMulRK(
+    327 |         _ data: Data,
+    328 |         globals: WorkbookGlobals
+    329 |     ) -> [(row: Int, column: Int, cell: CellData)] {
+    330 |         guard data.count >= 6 else { return [] }
+    331 |         let row = Int(data.xlsUInt16(at: 0))
+    332 |         let firstColumn = Int(data.xlsUInt16(at: 2))
+    333 |         let lastColumn = Int(data.xlsUInt16(at: data.count - 2))
+    334 |         let count = max(0, lastColumn - firstColumn + 1)
+    335 | 
+    336 |         return (0..<count).compactMap { index in
+    337 |             let offset = 4 + index * 6
+    338 |             guard offset + 6 <= data.count - 2 else { return nil }
+    339 |             let xfIndex = Int(data.xlsUInt16(at: offset))
+    340 |             let rk = data.xlsUInt32(at: offset + 2)
+    341 |             return (
+    342 |                 row: row,
+    343 |                 column: firstColumn + index,
+    344 |                 cell: numericCell(decodeRK(rk), xfIndex: xfIndex, globals: globals)
+    345 |             )
+    346 |         }
+    347 |     }
+    348 | 
+    349 |     private func parseDimensions(_ data: Data) -> (maxRow: Int, maxColumn: Int) {
+    350 |         if data.count >= 14 {
+
+──────────────────────────────────────────────────────────────────────
+                         第 7 页 / 共 60 页
+======================================================================
+  软件名称：表表归一（xlsOne）                    第 8 页
+======================================================================
+
+    351 |             let rowMac = Int(data.xlsUInt32(at: 4))
+    352 |             let colMac = Int(data.xlsUInt16(at: 10))
+    353 |             return (max(-1, rowMac - 1), max(-1, colMac - 1))
+    354 |         }
+    355 | 
+    356 |         if data.count >= 10 {
+    357 |             let rowMac = Int(data.xlsUInt16(at: 2))
+    358 |             let colMac = Int(data.xlsUInt16(at: 6))
+    359 |             return (max(-1, rowMac - 1), max(-1, colMac - 1))
+    360 |         }
+    361 | 
+    362 |         return (-1, -1)
+    363 |     }
+    364 | 
+    365 |     private func parseFormula(
+    366 |         _ data: Data,
+    367 |         globals: WorkbookGlobals
+    368 |     ) -> (row: Int, column: Int, cell: CellData)? {
+    369 |         guard data.count >= 14 else { return nil }
+    370 |         let row = Int(data.xlsUInt16(at: 0))
+    371 |         let column = Int(data.xlsUInt16(at: 2))
+    372 |         let xfIndex = Int(data.xlsUInt16(at: 4))
+    373 |         let resultMarker = data.xlsUInt16(at: 12)
+    374 | 
+    375 |         if resultMarker == 0xFFFF {
+    376 |             let type = data[6]
+    377 |             let value: String
+    378 |             switch type {
+    379 |             case 0:
+    380 |                 value = ""
+    381 |             case 1:
+    382 |                 value = data[8] == 0 ? "FALSE" : "TRUE"
+    383 |             case 2:
+    384 |                 value = errorValue(data[8])
+    385 |             default:
+    386 |                 return nil
+    387 |             }
+    388 |             return (row, column, CellData(value: value, formatCode: formatCode(xfIndex: xfIndex, globals: globals)))
+    389 |         }
+    390 | 
+    391 |         let number = data.xlsDouble(at: 6)
+    392 |         return (row, column, numericCell(number, xfIndex: xfIndex, globals: globals))
+    393 |     }
+    394 | 
+    395 |     private func numericCell(_ number: Double, xfIndex: Int, globals: WorkbookGlobals) -> CellData {
+    396 |         let formatCode = formatCode(xfIndex: xfIndex, globals: globals)
+    397 |         if isDateFormat(formatCode: formatCode),
+    398 |            let date = formatExcelDate(number) {
+    399 |             return CellData(
+    400 |                 value: date,
+
+──────────────────────────────────────────────────────────────────────
+                         第 8 页 / 共 60 页
+======================================================================
+  软件名称：表表归一（xlsOne）                    第 9 页
+======================================================================
+
+    401 |                 rawValue: numberDisplayValue(number),
+    402 |                 numericValue: number,
+    403 |                 formatCode: formatCode,
+    404 |                 isDate: true
+    405 |             )
+    406 |         }
+    407 | 
+    408 |         let displayValue = numberDisplayValue(number)
+    409 |         return CellData(
+    410 |             value: displayValue,
+    411 |             rawValue: displayValue,
+    412 |             numericValue: number,
+    413 |             formatCode: formatCode,
+    414 |             isDate: false
+    415 |         )
+    416 |     }
+    417 | 
+    418 |     private func setCell(
+    419 |         _ cell: CellData,
+    420 |         row: Int,
+    421 |         column: Int,
+    422 |         cells: inout [CellAddress: CellData],
+    423 |         maxRow: inout Int,
+    424 |         maxColumn: inout Int
+    425 |     ) {
+    426 |         cells[CellAddress(row: row, column: column)] = cell
+    427 |         maxRow = max(maxRow, row)
+    428 |         maxColumn = max(maxColumn, column)
+    429 |     }
+    430 | 
+    431 |     private func buildRows(from cells: [CellAddress: CellData], maxRow: Int, maxColumn: Int) -> [[CellData]] {
+    432 |         guard maxRow >= 0, maxColumn >= 0 else { return [] }
+    433 |         return (0...maxRow).map { row in
+    434 |             (0...maxColumn).map { column in
+    435 |                 cells[CellAddress(row: row, column: column)] ?? CellData(value: "")
+    436 |             }
+    437 |         }
+    438 |     }
+    439 | 
+    440 |     private func formatCode(xfIndex: Int, globals: WorkbookGlobals) -> String? {
+    441 |         guard let formatID = globals.xfFormatIDs[xfIndex] else { return nil }
+    442 |         return globals.formats[formatID]
+    443 |     }
+    444 | 
+    445 |     private func isDateFormat(formatCode: String?) -> Bool {
+    446 |         guard let formatCode else { return false }
+    447 |         let code = formatCode.lowercased()
+    448 |         return ["y", "m", "d", "h", "s"].contains { code.contains($0) } &&
+    449 |             !code.contains("general") &&
+    450 |             !code.contains("@")
+
+──────────────────────────────────────────────────────────────────────
+                         第 9 页 / 共 60 页
+======================================================================
+  软件名称：表表归一（xlsOne）                    第 10 页
+======================================================================
+
+    451 |     }
+    452 | 
+    453 |     private func formatExcelDate(_ number: Double) -> String? {
+    454 |         let base = Date(timeIntervalSince1970: -2209161600)
+    455 |         let days = number - 2
+    456 |         guard let date = Calendar(identifier: .gregorian).date(
+    457 |             byAdding: .day,
+    458 |             value: Int(days.rounded(.towardZero)),
+    459 |             to: base
+    460 |         ) else {
+    461 |             return nil
+    462 |         }
+    463 | 
+    464 |         let formatter = DateFormatter()
+    465 |         formatter.calendar = Calendar(identifier: .gregorian)
+    466 |         formatter.locale = Locale(identifier: "en_US_POSIX")
+    467 |         formatter.dateFormat = "yyyy-MM-dd"
+    468 |         return formatter.string(from: date)
+    469 |     }
+    470 | 
+    471 |     private func numberDisplayValue(_ number: Double) -> String {
+    472 |         if number.isFinite, number.rounded() == number {
+    473 |             return String(Int64(number))
+    474 |         }
+    475 |         return String(number)
+    476 |     }
+    477 | 
+    478 |     private func decodeRK(_ rk: UInt32) -> Double {
+    479 |         let divideBy100 = rk & 0x01 != 0
+    480 |         let isInteger = rk & 0x02 != 0
+    481 |         let value: Double
+    482 | 
+    483 |         if isInteger {
+    484 |             value = Double(Int32(bitPattern: rk & 0xFFFFFFFC) >> 2)
+    485 |         } else {
+    486 |             let bits = UInt64(rk & 0xFFFFFFFC) << 32
+    487 |             value = Double(bitPattern: bits)
+    488 |         }
+    489 | 
+    490 |         return divideBy100 ? value / 100 : value
+    491 |     }
+    492 | 
+    493 |     private func errorValue(_ code: UInt8) -> String {
+    494 |         switch code {
+    495 |         case 0x00: return "#NULL!"
+    496 |         case 0x07: return "#DIV/0!"
+    497 |         case 0x0F: return "#VALUE!"
+    498 |         case 0x17: return "#REF!"
+    499 |         case 0x1D: return "#NAME?"
+    500 |         case 0x24: return "#NUM!"
+
+──────────────────────────────────────────────────────────────────────
+                         第 10 页 / 共 60 页
+======================================================================
+  软件名称：表表归一（xlsOne）                    第 11 页
+======================================================================
+
+    501 |         case 0x2A: return "#N/A"
+    502 |         default: return "#ERROR"
+    503 |         }
+    504 |     }
+    505 | 
+    506 |     private static let defaultFormats: [Int: String] = [
+    507 |         0: "General",
+    508 |         1: "0",
+    509 |         2: "0.00",
+    510 |         3: "#,##0",
+    511 |         4: "#,##0.00",
+    512 |         9: "0%",
+    513 |         10: "0.00%",
+    514 |         11: "0.00E+00",
+    515 |         12: "# ?/?",
+    516 |         13: "# ??/??",
+    517 |         14: "yyyy-MM-dd",
+    518 |         15: "d-mmm-yy",
+    519 |         16: "d-mmm",
+    520 |         17: "mmm-yy",
+    521 |         18: "h:mm AM/PM",
+    522 |         19: "h:mm:ss AM/PM",
+    523 |         20: "h:mm",
+    524 |         21: "h:mm:ss",
+    525 |         22: "m/d/yy h:mm",
+    526 |         37: "#,##0 ;(#,##0)",
+    527 |         38: "#,##0 ;[Red](#,##0)",
+    528 |         39: "#,##0.00;(#,##0.00)",
+    529 |         40: "#,##0.00;[Red](#,##0.00)",
+    530 |         45: "mm:ss",
+    531 |         46: "[h]:mm:ss",
+    532 |         47: "mmss.0",
+    533 |         48: "##0.0E+0",
+    534 |         49: "@"
+    535 |     ]
+    536 | }
+    537 | 
+    538 | private struct SharedStringCursor {
+    539 |     private let segments: [Data]
+    540 |     private var segmentIndex = 0
+    541 |     private var offset = 0
+    542 | 
+    543 |     init(segments: [Data]) {
+    544 |         self.segments = segments
+    545 |     }
+    546 | 
+    547 |     var isAtEnd: Bool {
+    548 |         var index = segmentIndex
+    549 |         var cursor = offset
+    550 |         while index < segments.count {
+
+──────────────────────────────────────────────────────────────────────
+                         第 11 页 / 共 60 页
+======================================================================
+  软件名称：表表归一（xlsOne）                    第 12 页
+======================================================================
+
+    551 |             if cursor < segments[index].count {
+    552 |                 return false
+    553 |             }
+    554 |             index += 1
+    555 |             cursor = 0
+    556 |         }
+    557 |         return true
+    558 |     }
+    559 | 
+    560 |     mutating func readXLUnicodeString() -> String? {
+    561 |         guard let characterCount = readUInt16(),
+    562 |               let flags = readUInt8() else {
+    563 |             return nil
+    564 |         }
+    565 | 
+    566 |         var isWide = flags & 0x01 != 0
+    567 |         let hasAsianPhonetics = flags & 0x04 != 0
+    568 |         let hasRichText = flags & 0x08 != 0
+    569 | 
+    570 |         var richTextRunCount = 0
+    571 |         var extensionByteCount = 0
+    572 |         if hasRichText {
+    573 |             guard let value = readUInt16() else { return nil }
+    574 |             richTextRunCount = Int(value)
+    575 |         }
+    576 |         if hasAsianPhonetics {
+    577 |             guard let value = readUInt32() else { return nil }
+    578 |             extensionByteCount = Int(value)
+    579 |         }
+    580 | 
+    581 |         guard let value = readCharacters(count: Int(characterCount), isWide: &isWide) else {
+    582 |             return nil
+    583 |         }
+    584 | 
+    585 |         guard skip(richTextRunCount * 4 + extensionByteCount) else {
+    586 |             return nil
+    587 |         }
+    588 | 
+    589 |         return value
+    590 |     }
+    591 | 
+    592 |     private mutating func readCharacters(count: Int, isWide: inout Bool) -> String? {
+    593 |         var value = ""
+    594 | 
+    595 |         for _ in 0..<count {
+    596 |             let byteCount = isWide ? 2 : 1
+    597 |             guard ensureTextBytes(byteCount, isWide: &isWide),
+    598 |                   let bytes = readBytes(byteCount) else {
+    599 |                 return nil
+    600 |             }
+
+──────────────────────────────────────────────────────────────────────
+                         第 12 页 / 共 60 页
+======================================================================
+  软件名称：表表归一（xlsOne）                    第 13 页
+======================================================================
+
+    601 | 
+    602 |             let scalar = String(
+    603 |                 data: bytes,
+    604 |                 encoding: isWide ? .utf16LittleEndian : .windowsCP1252
+    605 |             ) ?? ""
+    606 |             value.append(scalar)
+    607 |         }
+    608 | 
+    609 |         return value
+    610 |     }
+    611 | 
+    612 |     private mutating func ensureTextBytes(_ byteCount: Int, isWide: inout Bool) -> Bool {
+    613 |         while segmentIndex < segments.count {
+    614 |             let available = segments[segmentIndex].count - offset
+    615 |             if available >= byteCount {
+    616 |                 return true
+    617 |             }
+    618 | 
+    619 |             guard available == 0 else {
+    620 |                 return false
+    621 |             }
+    622 | 
+    623 |             segmentIndex += 1
+    624 |             offset = 0
+    625 | 
+    626 |             guard segmentIndex < segments.count else {
+    627 |                 return false
+    628 |             }
+    629 | 
+    630 |             guard let flags = readUInt8() else {
+    631 |                 return false
+    632 |             }
+    633 |             isWide = flags & 0x01 != 0
+    634 |         }
+    635 | 
+    636 |         return false
+    637 |     }
+    638 | 
+    639 |     private mutating func skip(_ count: Int) -> Bool {
+    640 |         guard count > 0 else { return true }
+    641 |         return readBytes(count) != nil
+    642 |     }
+    643 | 
+    644 |     private mutating func readUInt8() -> UInt8? {
+    645 |         readBytes(1).map { $0[0] }
+    646 |     }
+    647 | 
+    648 |     private mutating func readUInt16() -> UInt16? {
+    649 |         readBytes(2).map { $0.xlsUInt16(at: 0) }
+    650 |     }
+
+──────────────────────────────────────────────────────────────────────
+                         第 13 页 / 共 60 页
+======================================================================
+  软件名称：表表归一（xlsOne）                    第 14 页
+======================================================================
+
+    651 | 
+    652 |     private mutating func readUInt32() -> UInt32? {
+    653 |         readBytes(4).map { $0.xlsUInt32(at: 0) }
+    654 |     }
+    655 | 
+    656 |     private mutating func readBytes(_ count: Int) -> Data? {
+    657 |         guard count >= 0 else { return nil }
+    658 |         var result = Data()
+    659 |         var remaining = count
+    660 | 
+    661 |         while remaining > 0 {
+    662 |             guard segmentIndex < segments.count else {
+    663 |                 return nil
+    664 |             }
+    665 | 
+    666 |             let segment = segments[segmentIndex]
+    667 |             let available = segment.count - offset
+    668 |             if available == 0 {
+    669 |                 segmentIndex += 1
+    670 |                 offset = 0
+    671 |                 continue
+    672 |             }
+    673 | 
+    674 |             let chunkSize = min(available, remaining)
+    675 |             result.append(segment[offset..<offset + chunkSize])
+    676 |             offset += chunkSize
+    677 |             remaining -= chunkSize
+    678 |         }
+    679 | 
+    680 |         return result
+    681 |     }
+    682 | }
+    683 | 
+    684 | /* ===== /home/ethan/xlsone/Sources/xlsOneCore/ColumnTypeAnalyzer.swift ===== */
+    685 | import Foundation
+    686 | 
+    687 | /// 列类型推断器 - 基于多因子评分系统的智能推断
+    688 | /// 核心公式: f(表头信号，数据统计，位置信息) → 列类型 + 置信度
+    689 | public struct ColumnTypeAnalyzer {
+    690 | 
+    691 |     /// 列的语义类型
+    692 |     public enum SemanticType: Equatable, Sendable {
+    693 |         case code           // 编码列（区划代码、科目代码等）
+    694 |         case amount         // 金额/数值列（需要求和）
+    695 |         case label          // 标签列（名称、描述等）
+    696 |         case date           // 日期列
+    697 |         case unknown        // 未知类型
+    698 | 
+    699 |         public var displayName: String {
+    700 |             switch self {
+
+──────────────────────────────────────────────────────────────────────
+                         第 14 页 / 共 60 页
+======================================================================
+  软件名称：表表归一（xlsOne）                    第 15 页
+======================================================================
+
+    701 |             case .code: return "编码"
+    702 |             case .amount: return "金额"
+    703 |             case .label: return "标签"
+    704 |             case .date: return "日期"
+    705 |             case .unknown: return "未知"
+    706 |             }
+    707 |         }
+    708 |     }
+    709 | 
+    710 |     /// 信号强度
+    711 |     private enum SignalStrength: Double {
+    712 |         case strong = 1.0      // 强信号，高置信度
+    713 |         case medium = 0.5     // 中信号，需要其他证据
+    714 |         case weak = 0.3       // 弱信号，仅供参考
+    715 |         case negative = -1.0  // 反信号，排除某类型
+    716 |     }
+    717 | 
+    718 |     /// 列类型推断结果
+    719 |     public struct ColumnProfile: Sendable {
+    720 |         public let colIndex: Int
+    721 |         public let header: String
+    722 |         public let semanticType: SemanticType
+    723 |         public let confidence: Double  // 0-1
+    724 |         public let evidence: [String]  // 推断依据
+    725 |         public let dataStats: DataStats // 数据统计
+    726 |     }
+    727 | 
+    728 |     /// 数据统计特征
+    729 |     public struct DataStats: Sendable {
+    730 |         public let totalCount: Int           // 总数据行数
+    731 |         public let numericCount: Int         // 可解析为数值的数量
+    732 |         public let uniqueCount: Int          // 唯一值数量
+    733 |         public let emptyCount: Int           // 空值数量
+    734 |         public let maxValue: Double?         // 最大值
+    735 |         public let minValue: Double?         // 最小值
+    736 |         public let avgLength: Double         // 平均文本长度
+    737 | 
+    738 |         public var numericRatio: Double {
+    739 |             guard totalCount > 0 else { return 0 }
+    740 |             return Double(numericCount) / Double(totalCount)
+    741 |         }
+    742 | 
+    743 |         public var uniqueRatio: Double {
+    744 |             guard totalCount > 0 else { return 0 }
+    745 |             return Double(uniqueCount) / Double(totalCount)
+    746 |         }
+    747 | 
+    748 |         /// 是否是统一长度（编码特征）
+    749 |         public var isUniformLength: Bool {
+    750 |             return avgLength > 0 && avgLength < 20  // 简化的判断
+
+──────────────────────────────────────────────────────────────────────
+                         第 15 页 / 共 60 页
+======================================================================
+  软件名称：表表归一（xlsOne）                    第 16 页
+======================================================================
+
+    751 |         }
+    752 |     }
+    753 | 
+    754 |     // MARK: - 关键词权重表
+    755 | 
+    756 |     /// 金额类关键词 - 强信号（权重1.0）
+    757 |     private static let strongAmountKeywords = [
+    758 |         "金额", "总额", "合计", "总计", "小计",
+    759 |         "预算", "执行", "决算", "收入", "支出",
+    760 |         "费用", "成本", "资金", "付款", "收款"
+    761 |     ]
+    762 | 
+    763 |     /// 金额类关键词 - 中信号（权重0.5，需要数据验证）
+    764 |     private static let mediumAmountKeywords = [
+    765 |         "数", "额", "值", "量", "价"
+    766 |     ]
+    767 | 
+    768 |     /// 标签类关键词 - 强信号（权重1.0）
+    769 |     private static let strongLabelKeywords = [
+    770 |         "名称", "名字", "描述", "说明", "备注",
+    771 |         "标题", "内容", "详情", "注释"
+    772 |     ]
+    773 | 
+    774 |     /// 编码类关键词 - 强信号（权重1.0，反信号：排除金额）
+    775 |     private static let strongCodeKeywords = [
+    776 |         "代码", "编码", "编号", "序号", "id", "code", "no",
+    777 |         "区划", "行政区划", "科目代码", "项目代码",
+    778 |         "邮编", "电话", "传真", "社会信用代码", "统一代码"
+    779 |     ]
+    780 | 
+    781 |     /// 日期类关键词 - 强信号（权重1.0）
+    782 |     private static let strongDateKeywords = [
+    783 |         "日期", "时间", "年度", "年份", "月份", "年月",
+    784 |         "填报日期", "报送日期", "截止日期", "创建时间"
+    785 |     ]
+    786 | 
+    787 |     // MARK: - 公共接口
+    788 | 
+    789 |     /// 分析工作表的所有列类型
+    790 |     public static func analyzeSheet(_ sheet: SheetData) -> [ColumnProfile] {
+    791 |         guard !sheet.rows.isEmpty else { return [] }
+    792 | 
+    793 |         let maxCols = sheet.rows.map { $0.count }.max() ?? 0
+    794 |         var profiles: [ColumnProfile] = []
+    795 | 
+    796 |         for colIdx in 0..<maxCols {
+    797 |             let profile = analyzeColumn(sheet: sheet, colIndex: colIdx)
+    798 |             profiles.append(profile)
+    799 |         }
+    800 | 
+
+──────────────────────────────────────────────────────────────────────
+                         第 16 页 / 共 60 页
+======================================================================
+  软件名称：表表归一（xlsOne）                    第 17 页
+======================================================================
+
+    801 |         return profiles
+    802 |     }
+    803 | 
+    804 |     // MARK: - 核心分析逻辑
+    805 | 
+    806 |     /// 分析单列类型 - 多因子评分系统
+    807 |     private static func analyzeColumn(sheet: SheetData, colIndex: Int) -> ColumnProfile {
+    808 |         // 1. 获取列头
+    809 |         let header = sheet.rows.first?.element(at: colIndex)?.value ?? ""
+    810 |         let headerLower = header.lowercased()
+    811 | 
+    812 |         // 2. 收集该列的所有值（跳过第一行）
+    813 |         var values: [String] = []
+    814 |         for row in sheet.rows.dropFirst() {
+    815 |             if colIndex < row.count {
+    816 |                 let value = row[colIndex].value.trimmingCharacters(in: .whitespaces)
+    817 |                 if !value.isEmpty {
+    818 |                     values.append(value)
+    819 |                 }
+    820 |             }
+    821 |         }
+    822 | 
+    823 |         // 3. 计算数据统计特征
+    824 |         let dataStats = calculateDataStats(values: values)
+    825 | 
+    826 |         // 4. 多因子评分
+    827 |         var scores: [SemanticType: Double] = [
+    828 |             .amount: 0,
+    829 |             .label: 0,
+    830 |             .code: 0,
+    831 |             .date: 0
+    832 |         ]
+    833 |         var evidence: [String] = []
+    834 | 
+    835 |         // 4.1 表头信号评分
+    836 |         let headerScores = scoreFromHeader(headerLower)
+    837 |         for (type, score) in headerScores {
+    838 |             scores[type, default: 0] += score
+    839 |         }
+    840 | 
+    841 |         // 4.2 数据统计信号评分
+    842 |         let dataScores = scoreFromData(stats: dataStats, header: headerLower)
+    843 |         for (type, score) in dataScores {
+    844 |             scores[type, default: 0] += score
+    845 |         }
+    846 | 
+    847 |         // 4.3 位置信号（第一列通常是标签）
+    848 |         if colIndex == 0 {
+    849 |             scores[.label, default: 0] += 0.3
+    850 |             evidence.append("第一列默认为标签")
+
+──────────────────────────────────────────────────────────────────────
+                         第 17 页 / 共 60 页
+======================================================================
+  软件名称：表表归一（xlsOne）                    第 18 页
+======================================================================
+
+    851 |         }
+    852 | 
+    853 |         // 5. 反信号处理（某些组合可以排除特定类型）
+    854 |         applyNegativeSignals(scores: &scores, header: headerLower, stats: dataStats)
+    855 | 
+    856 |         // 6. 选择最高分的类型
+    857 |         let (bestType, maxScore) = scores.max { $0.value < $1.value } ?? (.unknown, 0)
+    858 | 
+    859 |         // 7. 计算置信度（0-1）
+    860 |         let confidence = min(abs(maxScore), 1.0)
+    861 | 
+    862 |         // 8. 构建证据说明
+    863 |         if maxScore >= 0.8 {
+    864 |             evidence.insert("强信号: 表头「\(header)」匹配\(bestType.displayName)类型", at: 0)
+    865 |         } else if maxScore >= 0.5 {
+    866 |             evidence.insert("中信号: 表头「\(header)」与数据特征共同指向\(bestType.displayName)", at: 0)
+    867 |         } else if maxScore > 0 {
+    868 |             evidence.insert("弱信号: 推测为\(bestType.displayName)", at: 0)
+    869 |         } else {
+    870 |             evidence.insert("无法确定类型", at: 0)
+    871 |         }
+    872 | 
+    873 |         return ColumnProfile(
+    874 |             colIndex: colIndex,
+    875 |             header: header,
+    876 |             semanticType: maxScore > 0.2 ? bestType : .unknown,
+    877 |             confidence: confidence,
+    878 |             evidence: evidence,
+    879 |             dataStats: dataStats
+    880 |         )
+    881 |     }
+    882 | 
+    883 |     /// 从表头计算评分
+    884 |     private static func scoreFromHeader(_ header: String) -> [SemanticType: Double] {
+    885 |         var scores: [SemanticType: Double] = [:]
+    886 | 
+    887 |         // 强金额信号 (+1.0)
+    888 |         for keyword in strongAmountKeywords {
+    889 |             if header.contains(keyword) {
+    890 |                 scores[.amount, default: 0] += SignalStrength.strong.rawValue
+    891 |                 return scores  // 强信号直接返回
+    892 |             }
+    893 |         }
+    894 | 
+    895 |         // 强编码信号 (+1.0)
+    896 |         for keyword in strongCodeKeywords {
+    897 |             if header.contains(keyword) {
+    898 |                 scores[.code, default: 0] += SignalStrength.strong.rawValue
+    899 |                 return scores
+    900 |             }
+
+──────────────────────────────────────────────────────────────────────
+                         第 18 页 / 共 60 页
+======================================================================
+  软件名称：表表归一（xlsOne）                    第 19 页
+======================================================================
+
+    901 |         }
+    902 | 
+    903 |         // 强日期信号 (+1.0)
+    904 |         for keyword in strongDateKeywords {
+    905 |             if header.contains(keyword) {
+    906 |                 scores[.date, default: 0] += SignalStrength.strong.rawValue
+    907 |                 return scores
+    908 |             }
+    909 |         }
+    910 | 
+    911 |         // 强标签信号 (+1.0)
+    912 |         for keyword in strongLabelKeywords {
+    913 |             if header.contains(keyword) {
+    914 |                 scores[.label, default: 0] += SignalStrength.strong.rawValue
+    915 |                 return scores
+    916 |             }
+    917 |         }
+    918 | 
+    919 |         // 中金额信号 (+0.5) - 需要后续数据验证
+    920 |         for char in mediumAmountKeywords {
+    921 |             if header.contains(char) {
+    922 |                 scores[.amount, default: 0] += SignalStrength.medium.rawValue
+    923 |                 break
+    924 |             }
+    925 |         }
+    926 | 
+    927 |         return scores
+    928 |     }
+    929 | 
+    930 |     /// 从数据特征计算评分
+    931 |     private static func scoreFromData(stats: DataStats, header: String) -> [SemanticType: Double] {
+    932 |         var scores: [SemanticType: Double] = [:]
+    933 | 
+    934 |         // 数值化比例高 → 金额候选
+    935 |         if stats.numericRatio >= 0.8 {
+    936 |             scores[.amount, default: 0] += 0.5
+    937 |         }
+    938 | 
+    939 |         // 唯一值比例100%且统一长度 → 编码候选
+    940 |         if stats.uniqueRatio >= 0.9 && stats.isUniformLength && stats.numericRatio >= 0.5 {
+    941 |             scores[.code, default: 0] += 0.7
+    942 |         }
+    943 | 
+    944 |         // 数值化比例低 → 标签候选
+    945 |         if stats.numericRatio < 0.3 {
+    946 |             scores[.label, default: 0] += 0.4
+    947 |         }
+    948 | 
+    949 |         return scores
+    950 |     }
+
+──────────────────────────────────────────────────────────────────────
+                         第 19 页 / 共 60 页
+======================================================================
+  软件名称：表表归一（xlsOne）                    第 20 页
+======================================================================
+
+    951 | 
+    952 |     /// 应用反信号（排除逻辑）
+    953 |     private static func applyNegativeSignals(
+    954 |         scores: inout [SemanticType: Double],
+    955 |         header: String,
+    956 |         stats: DataStats
+    957 |     ) {
+    958 |         // 如果包含编码关键词，降低金额评分
+    959 |         let hasCodeKeyword = strongCodeKeywords.contains { header.contains($0) }
+    960 |         if hasCodeKeyword {
+    961 |             scores[.amount, default: 0] -= 0.8  // 编码列不应该求和
+    962 |         }
+    963 | 
+    964 |         // 如果数值都是统一长度的纯数字（如3位科目代码、9位区划代码），降低金额评分
+    965 |         if stats.numericRatio >= 0.8 && stats.isUniformLength && stats.uniqueRatio >= 0.9 {
+    966 |             // 可能是编码而非金额
+    967 |             if scores[.code, default: 0] < scores[.amount, default: 0] {
+    968 |                 scores[.amount, default: 0] -= 0.5
+    969 |                 scores[.code, default: 0] += 0.5
+    970 |             }
+    971 |         }
+    972 | 
+    973 |         // 如果金额评分很低但中金额信号存在，需要惩罚
+    974 |         if scores[.amount, default: 0] < 0.3 {
+    975 |             for char in mediumAmountKeywords {
+    976 |                 if header.contains(char) && hasCodeKeyword {
+    977 |                     // "科目代码"不应该因为是"码"而被识别为金额
+    978 |                     scores[.amount] = 0
+    979 |                     break
+    980 |                 }
+    981 |             }
+    982 |         }
+    983 |     }
+    984 | 
+    985 |     /// 计算数据统计特征
+    986 |     private static func calculateDataStats(values: [String]) -> DataStats {
+    987 |         let totalCount = values.count
+    988 |         guard totalCount > 0 else {
+    989 |             return DataStats(
+    990 |                 totalCount: 0,
+    991 |                 numericCount: 0,
+    992 |                 uniqueCount: 0,
+    993 |                 emptyCount: 0,
+    994 |                 maxValue: nil,
+    995 |                 minValue: nil,
+    996 |                 avgLength: 0
+    997 |             )
+    998 |         }
+    999 | 
+   1000 |         // 数值解析
+
+──────────────────────────────────────────────────────────────────────
+                         第 20 页 / 共 60 页
+======================================================================
+  软件名称：表表归一（xlsOne）                    第 21 页
+======================================================================
+
+   1001 |         var numericValues: [Double] = []
+   1002 |         var totalLength = 0
+   1003 | 
+   1004 |         for value in values {
+   1005 |             totalLength += value.count
+   1006 |             if let num = parseNumber(value) {
+   1007 |                 numericValues.append(num)
+   1008 |             }
+   1009 |         }
+   1010 | 
+   1011 |         let uniqueCount = Set(values).count
+   1012 |         let numericCount = numericValues.count
+   1013 | 
+   1014 |         return DataStats(
+   1015 |             totalCount: totalCount,
+   1016 |             numericCount: numericCount,
+   1017 |             uniqueCount: uniqueCount,
+   1018 |             emptyCount: 0,
+   1019 |             maxValue: numericValues.max(),
+   1020 |             minValue: numericValues.min(),
+   1021 |             avgLength: Double(totalLength) / Double(totalCount)
+   1022 |         )
+   1023 |     }
+   1024 | 
+   1025 |     /// 解析数值（简化版）
+   1026 |     private static func parseNumber(_ text: String) -> Double? {
+   1027 |         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+   1028 | 
+   1029 |         if trimmed.isEmpty { return nil }
+   1030 | 
+   1031 |         // 处理负数
+   1032 |         var workingText = trimmed
+   1033 |         var isNegative = false
+   1034 | 
+   1035 |         if trimmed.hasPrefix("(") && trimmed.hasSuffix(")") {
+   1036 |             workingText = String(trimmed.dropFirst().dropLast())
+   1037 |             isNegative = true
+   1038 |         } else if trimmed.hasPrefix("-") {
+   1039 |             workingText = String(trimmed.dropFirst())
+   1040 |             isNegative = true
+   1041 |         }
+   1042 | 
+   1043 |         // 标准化（移除千分位分隔符）
+   1044 |         let normalized = workingText
+   1045 |             .replacingOccurrences(of: ",", with: "")
+   1046 |             .replacingOccurrences(of: "，", with: "")
+   1047 | 
+   1048 |         if let number = Double(normalized) {
+   1049 |             return isNegative ? -number : number
+   1050 |         }
+
+──────────────────────────────────────────────────────────────────────
+                         第 21 页 / 共 60 页
+======================================================================
+  软件名称：表表归一（xlsOne）                    第 22 页
+======================================================================
+
+   1051 | 
+   1052 |         return nil
+   1053 |     }
+   1054 | }
+   1055 | 
+   1056 | // MARK: - 数组扩展
+   1057 | 
+   1058 | private extension Array {
+   1059 |     func element(at index: Int) -> Element? {
+   1060 |         guard index >= 0 && index < count else { return nil }
+   1061 |         return self[index]
+   1062 |     }
+   1063 | }
+   1064 | 
+   1065 | /* ===== /home/ethan/xlsone/Sources/xlsOneCore/CompoundFileReader.swift ===== */
+   1066 | import Foundation
+   1067 | 
+   1068 | enum CompoundFileError: Error, CustomStringConvertible {
+   1069 |     case invalidHeader
+   1070 |     case unsupportedSectorSize(Int)
+   1071 |     case chainLoop(Int)
+   1072 |     case sectorOutOfBounds(Int)
+   1073 |     case streamNotFound([String])
+   1074 | 
+   1075 |     var description: String {
+   1076 |         switch self {
+   1077 |         case .invalidHeader:
+   1078 |             return "不是有效的 OLE Compound File。"
+   1079 |         case .unsupportedSectorSize(let size):
+   1080 |             return "暂不支持的 OLE sector size: \(size)。"
+   1081 |         case .chainLoop(let sector):
+   1082 |             return "OLE sector chain 出现循环: \(sector)。"
+   1083 |         case .sectorOutOfBounds(let sector):
+   1084 |             return "OLE sector 越界: \(sector)。"
+   1085 |         case .streamNotFound(let names):
+   1086 |             return "未找到工作簿数据流: \(names.joined(separator: ", "))。"
+   1087 |         }
+   1088 |     }
+   1089 | }
+   1090 | 
+   1091 | struct CompoundFileReader {
+   1092 |     private struct DirectoryEntry {
+   1093 |         let name: String
+   1094 |         let type: UInt8
+   1095 |         let startingSector: Int
+   1096 |         let streamSize: Int
+   1097 |     }
+   1098 | 
+   1099 |     private static let endOfChain = UInt32(0xFFFFFFFE)
+   1100 |     private static let freeSector = UInt32(0xFFFFFFFF)
+
+──────────────────────────────────────────────────────────────────────
+                         第 22 页 / 共 60 页
+======================================================================
+  软件名称：表表归一（xlsOne）                    第 23 页
+======================================================================
+
+   1101 |     private static let difatSector = UInt32(0xFFFFFFFC)
+   1102 |     private static let fatSector = UInt32(0xFFFFFFFD)
+   1103 | 
+   1104 |     private let data: Data
+   1105 |     private let sectorSize: Int
+   1106 |     private let miniSectorSize: Int
+   1107 |     private let miniStreamCutoffSize: Int
+   1108 |     private let firstDirectorySector: Int
+   1109 |     private let firstMiniFATSector: Int
+   1110 |     private let numberOfMiniFATSectors: Int
+   1111 |     private let fat: [UInt32]
+   1112 |     private let miniFAT: [UInt32]
+   1113 |     private let directoryEntries: [DirectoryEntry]
+   1114 |     private let rootEntry: DirectoryEntry?
+   1115 |     private let miniStream: Data
+   1116 | 
+   1117 |     init(data: Data) throws {
+   1118 |         guard data.count >= 512,
+   1119 |               data.prefix(8).elementsEqual([0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1]) else {
+   1120 |             throw CompoundFileError.invalidHeader
+   1121 |         }
+   1122 | 
+   1123 |         self.data = data
+   1124 | 
+   1125 |         let sectorShift = Int(data.xlsUInt16(at: 30))
+   1126 |         let miniSectorShift = Int(data.xlsUInt16(at: 32))
+   1127 |         self.sectorSize = 1 << sectorShift
+   1128 |         self.miniSectorSize = 1 << miniSectorShift
+   1129 |         self.firstDirectorySector = Int(data.xlsUInt32(at: 48))
+   1130 |         self.miniStreamCutoffSize = Int(data.xlsUInt32(at: 56))
+   1131 |         self.firstMiniFATSector = Int(data.xlsUInt32(at: 60))
+   1132 |         self.numberOfMiniFATSectors = Int(data.xlsUInt32(at: 64))
+   1133 | 
+   1134 |         guard sectorSize == 512 || sectorSize == 4096 else {
+   1135 |             throw CompoundFileError.unsupportedSectorSize(sectorSize)
+   1136 |         }
+   1137 | 
+   1138 |         let numberOfFATSectors = Int(data.xlsUInt32(at: 44))
+   1139 |         let firstDIFATSector = Int(data.xlsUInt32(at: 68))
+   1140 |         let numberOfDIFATSectors = Int(data.xlsUInt32(at: 72))
+   1141 |         let difat = try Self.readDIFAT(
+   1142 |             data: data,
+   1143 |             sectorSize: sectorSize,
+   1144 |             headerFATSectorCount: numberOfFATSectors,
+   1145 |             firstDIFATSector: firstDIFATSector,
+   1146 |             numberOfDIFATSectors: numberOfDIFATSectors
+   1147 |         )
+   1148 | 
+   1149 |         self.fat = try Self.readFAT(data: data, sectorSize: sectorSize, fatSectorIDs: difat)
+   1150 | 
+
+──────────────────────────────────────────────────────────────────────
+                         第 23 页 / 共 60 页
+======================================================================
+  软件名称：表表归一（xlsOne）                    第 24 页
+======================================================================
+
+   1151 |         let directoryData = try Self.readRegularChain(
+   1152 |             data: data,
+   1153 |             sectorSize: sectorSize,
+   1154 |             fat: fat,
+   1155 |             startSector: firstDirectorySector
+   1156 |         )
+   1157 |         self.directoryEntries = Self.parseDirectoryEntries(from: directoryData)
+   1158 |         self.rootEntry = directoryEntries.first { $0.type == 5 }
+   1159 | 
+   1160 |         if firstMiniFATSector >= 0, numberOfMiniFATSectors > 0 {
+   1161 |             let miniFATData = try Self.readRegularChain(
+   1162 |                 data: data,
+   1163 |                 sectorSize: sectorSize,
+   1164 |                 fat: fat,
+   1165 |                 startSector: firstMiniFATSector,
+   1166 |                 sectorLimit: numberOfMiniFATSectors
+   1167 |             )
+   1168 |             self.miniFAT = Self.readUInt32Table(from: miniFATData)
+   1169 |         } else {
+   1170 |             self.miniFAT = []
+   1171 |         }
+   1172 | 
+   1173 |         if let rootEntry, rootEntry.startingSector >= 0, rootEntry.streamSize > 0 {
+   1174 |             self.miniStream = try Self.readRegularChain(
+   1175 |                 data: data,
+   1176 |                 sectorSize: sectorSize,
+   1177 |                 fat: fat,
+   1178 |                 startSector: rootEntry.startingSector,
+   1179 |                 byteLimit: rootEntry.streamSize
+   1180 |             )
+   1181 |         } else {
+   1182 |             self.miniStream = Data()
+   1183 |         }
+   1184 |     }
+   1185 | 
+   1186 |     func stream(named candidateNames: [String]) throws -> Data {
+   1187 |         for name in candidateNames {
+   1188 |             if let entry = directoryEntries.first(where: { $0.type == 2 && $0.name.caseInsensitiveCompare(name) == .orderedSame }) {
+   1189 |                 return try stream(for: entry)
+   1190 |             }
+   1191 |         }
+   1192 |         throw CompoundFileError.streamNotFound(candidateNames)
+   1193 |     }
+   1194 | 
+   1195 |     private func stream(for entry: DirectoryEntry) throws -> Data {
+   1196 |         guard entry.startingSector >= 0, entry.streamSize > 0 else {
+   1197 |             return Data()
+   1198 |         }
+   1199 | 
+   1200 |         if entry.streamSize < miniStreamCutoffSize, !miniFAT.isEmpty, !miniStream.isEmpty {
+
+──────────────────────────────────────────────────────────────────────
+                         第 24 页 / 共 60 页
+======================================================================
+  软件名称：表表归一（xlsOne）                    第 25 页
+======================================================================
+
+   1201 |             return try Self.readMiniChain(
+   1202 |                 miniStream: miniStream,
+   1203 |                 miniSectorSize: miniSectorSize,
+   1204 |                 miniFAT: miniFAT,
+   1205 |                 startSector: entry.startingSector,
+   1206 |                 byteLimit: entry.streamSize
+   1207 |             )
+   1208 |         }
+   1209 | 
+   1210 |         return try Self.readRegularChain(
+   1211 |             data: data,
+   1212 |             sectorSize: sectorSize,
+   1213 |             fat: fat,
+   1214 |             startSector: entry.startingSector,
+   1215 |             byteLimit: entry.streamSize
+   1216 |         )
+   1217 |     }
+   1218 | 
+   1219 |     private static func readDIFAT(
+   1220 |         data: Data,
+   1221 |         sectorSize: Int,
+   1222 |         headerFATSectorCount: Int,
+   1223 |         firstDIFATSector: Int,
+   1224 |         numberOfDIFATSectors: Int
+   1225 |     ) throws -> [Int] {
+   1226 |         var sectorIDs: [Int] = []
+   1227 | 
+   1228 |         for index in 0..<109 {
+   1229 |             let value = data.xlsUInt32(at: 76 + index * 4)
+   1230 |             if value != freeSector {
+   1231 |                 sectorIDs.append(Int(value))
+   1232 |             }
+   1233 |         }
+   1234 | 
+   1235 |         var current = firstDIFATSector
+   1236 |         for _ in 0..<numberOfDIFATSectors where current >= 0 {
+   1237 |             let sector = try sectorData(in: data, sectorSize: sectorSize, sectorID: current)
+   1238 |             let entriesPerDIFATSector = sectorSize / 4 - 1
+   1239 |             for index in 0..<entriesPerDIFATSector {
+   1240 |                 let value = sector.xlsUInt32(at: index * 4)
+   1241 |                 if value != freeSector {
+   1242 |                     sectorIDs.append(Int(value))
+   1243 |                 }
+   1244 |             }
+   1245 |             let next = sector.xlsUInt32(at: entriesPerDIFATSector * 4)
+   1246 |             current = next == endOfChain ? -1 : Int(next)
+   1247 |         }
+   1248 | 
+   1249 |         if sectorIDs.count > headerFATSectorCount {
+   1250 |             return Array(sectorIDs.prefix(headerFATSectorCount))
+
+──────────────────────────────────────────────────────────────────────
+                         第 25 页 / 共 60 页
+======================================================================
+  软件名称：表表归一（xlsOne）                    第 26 页
+======================================================================
+
+   1251 |         }
+   1252 |         return sectorIDs
+   1253 |     }
+   1254 | 
+   1255 |     private static func readFAT(data: Data, sectorSize: Int, fatSectorIDs: [Int]) throws -> [UInt32] {
+   1256 |         var result: [UInt32] = []
+   1257 |         for sectorID in fatSectorIDs {
+   1258 |             let sector = try sectorData(in: data, sectorSize: sectorSize, sectorID: sectorID)
+   1259 |             result.append(contentsOf: readUInt32Table(from: sector))
+   1260 |         }
+   1261 |         return result
+   1262 |     }
+   1263 | 
+   1264 |     private static func readUInt32Table(from data: Data) -> [UInt32] {
+   1265 |         stride(from: 0, to: data.count - data.count % 4, by: 4).map {
+   1266 |             data.xlsUInt32(at: $0)
+   1267 |         }
+   1268 |     }
+   1269 | 
+   1270 |     private static func readRegularChain(
+   1271 |         data: Data,
+   1272 |         sectorSize: Int,
+   1273 |         fat: [UInt32],
+   1274 |         startSector: Int,
+   1275 |         sectorLimit: Int? = nil,
+   1276 |         byteLimit: Int? = nil
+   1277 |     ) throws -> Data {
+   1278 |         var result = Data()
+   1279 |         var seen: Set<Int> = []
+   1280 |         var current = startSector
+   1281 |         var sectorCount = 0
+   1282 | 
+   1283 |         while current >= 0 {
+   1284 |             if seen.contains(current) {
+   1285 |                 throw CompoundFileError.chainLoop(current)
+   1286 |             }
+   1287 |             seen.insert(current)
+   1288 | 
+   1289 |             let sector = try sectorData(in: data, sectorSize: sectorSize, sectorID: current)
+   1290 |             result.append(sector)
+   1291 |             sectorCount += 1
+   1292 | 
+   1293 |             if let sectorLimit, sectorCount >= sectorLimit {
+   1294 |                 break
+   1295 |             }
+   1296 |             guard current < fat.count else {
+   1297 |                 throw CompoundFileError.sectorOutOfBounds(current)
+   1298 |             }
+   1299 | 
+   1300 |             let next = fat[current]
+
+──────────────────────────────────────────────────────────────────────
+                         第 26 页 / 共 60 页
+======================================================================
+  软件名称：表表归一（xlsOne）                    第 27 页
+======================================================================
+
+   1301 |             if next == endOfChain || next == freeSector || next == fatSector || next == difatSector {
+   1302 |                 break
+   1303 |             }
+   1304 |             current = Int(next)
+   1305 |         }
+   1306 | 
+   1307 |         if let byteLimit, result.count > byteLimit {
+   1308 |             result.removeSubrange(byteLimit..<result.count)
+   1309 |         }
+   1310 |         return result
+   1311 |     }
+   1312 | 
+   1313 |     private static func readMiniChain(
+   1314 |         miniStream: Data,
+   1315 |         miniSectorSize: Int,
+   1316 |         miniFAT: [UInt32],
+   1317 |         startSector: Int,
+   1318 |         byteLimit: Int
+   1319 |     ) throws -> Data {
+   1320 |         var result = Data()
+   1321 |         var seen: Set<Int> = []
+   1322 |         var current = startSector
+   1323 | 
+   1324 |         while current >= 0 {
+   1325 |             if seen.contains(current) {
+   1326 |                 throw CompoundFileError.chainLoop(current)
+   1327 |             }
+   1328 |             seen.insert(current)
+   1329 | 
+   1330 |             let offset = current * miniSectorSize
+   1331 |             guard offset >= 0, offset < miniStream.count else {
+   1332 |                 throw CompoundFileError.sectorOutOfBounds(current)
+   1333 |             }
+   1334 |             result.append(Data(miniStream[offset..<min(offset + miniSectorSize, miniStream.count)]))
+   1335 | 
+   1336 |             guard current < miniFAT.count else {
+   1337 |                 throw CompoundFileError.sectorOutOfBounds(current)
+   1338 |             }
+   1339 |             let next = miniFAT[current]
+   1340 |             if next == endOfChain || next == freeSector {
+   1341 |                 break
+   1342 |             }
+   1343 |             current = Int(next)
+   1344 |         }
+   1345 | 
+   1346 |         if result.count > byteLimit {
+   1347 |             result.removeSubrange(byteLimit..<result.count)
+   1348 |         }
+   1349 |         return result
+   1350 |     }
+
+──────────────────────────────────────────────────────────────────────
+                         第 27 页 / 共 60 页
+======================================================================
+  软件名称：表表归一（xlsOne）                    第 28 页
+======================================================================
+
+   1351 | 
+   1352 |     private static func sectorData(in data: Data, sectorSize: Int, sectorID: Int) throws -> Data {
+   1353 |         let offset = (sectorID + 1) * sectorSize
+   1354 |         guard sectorID >= 0, offset >= 0, offset + sectorSize <= data.count else {
+   1355 |             throw CompoundFileError.sectorOutOfBounds(sectorID)
+   1356 |         }
+   1357 |         return Data(data[offset..<offset + sectorSize])
+   1358 |     }
+   1359 | 
+   1360 |     private static func parseDirectoryEntries(from data: Data) -> [DirectoryEntry] {
+   1361 |         stride(from: 0, to: data.count - data.count % 128, by: 128).compactMap { offset in
+   1362 |             let nameLength = Int(data.xlsUInt16(at: offset + 64))
+   1363 |             guard nameLength >= 2, offset + nameLength <= data.count else { return nil }
+   1364 | 
+   1365 |             let nameBytes = Data(data[(offset)..<(offset + nameLength - 2)])
+   1366 |             let name = String(data: nameBytes, encoding: .utf16LittleEndian) ?? ""
+   1367 |             let type = data[offset + 66]
+   1368 |             let startingSectorValue = data.xlsUInt32(at: offset + 116)
+   1369 |             let streamSizeLow = UInt64(data.xlsUInt32(at: offset + 120))
+   1370 |             let streamSizeHigh = UInt64(data.xlsUInt32(at: offset + 124))
+   1371 |             let streamSize = Int((streamSizeHigh << 32) | streamSizeLow)
+   1372 | 
+   1373 |             return DirectoryEntry(
+   1374 |                 name: name,
+   1375 |                 type: type,
+   1376 |                 startingSector: startingSectorValue == endOfChain ? -1 : Int(startingSectorValue),
+   1377 |                 streamSize: streamSize
+   1378 |             )
+   1379 |         }
+   1380 |     }
+   1381 | }
+   1382 | 
+   1383 | extension Data {
+   1384 |     func xlsUInt16(at offset: Int) -> UInt16 {
+   1385 |         guard offset + 2 <= count else { return 0 }
+   1386 |         return withUnsafeBytes { $0.loadUnaligned(fromByteOffset: offset, as: UInt16.self) }.littleEndian
+   1387 |     }
+   1388 | 
+   1389 |     func xlsUInt32(at offset: Int) -> UInt32 {
+   1390 |         guard offset + 4 <= count else { return 0 }
+   1391 |         return withUnsafeBytes { $0.loadUnaligned(fromByteOffset: offset, as: UInt32.self) }.littleEndian
+   1392 |     }
+   1393 | 
+   1394 |     func xlsInt32(at offset: Int) -> Int32 {
+   1395 |         Int32(bitPattern: xlsUInt32(at: offset))
+   1396 |     }
+   1397 | 
+   1398 |     func xlsDouble(at offset: Int) -> Double {
+   1399 |         guard offset + 8 <= count else { return 0 }
+   1400 |         let bitPattern = withUnsafeBytes { $0.loadUnaligned(fromByteOffset: offset, as: UInt64.self) }.littleEndian
+
+──────────────────────────────────────────────────────────────────────
+                         第 28 页 / 共 60 页
+======================================================================
+  软件名称：表表归一（xlsOne）                    第 29 页
+======================================================================
+
+   1401 |         return Double(bitPattern: bitPattern)
+   1402 |     }
+   1403 | }
+   1404 | 
+   1405 | /* ===== /home/ethan/xlsone/Sources/xlsOneCore/ExcelExporter.swift ===== */
+   1406 | import Foundation
+   1407 | 
+   1408 | /// Excel 导出器
+   1409 | public struct ExcelExporter {
+   1410 | 
+   1411 |     public init() {}
+   1412 | 
+   1413 |     /// 导出合并结果为CSV格式
+   1414 |     public func exportToCSV(result: MergedResult) -> String {
+   1415 |         var csv = ""
+   1416 | 
+   1417 |         for row in result.rows {
+   1418 |             let rowValues = row.map { $0.displayValue }
+   1419 |             // 处理包含逗号的值
+   1420 |             let escapedValues = rowValues.map { value -> String in
+   1421 |                 if value.contains(",") || value.contains("\"") || value.contains("\n") {
+   1422 |                     let escaped = value.replacingOccurrences(of: "\"", with: "\"\"")
+   1423 |                     return "\"\(escaped)\""
+   1424 |                 }
+   1425 |                 return value
+   1426 |             }
+   1427 |             csv += escapedValues.joined(separator: ",") + "\n"
+   1428 |         }
+   1429 | 
+   1430 |         return csv
+   1431 |     }
+   1432 | 
+   1433 |     /// 保存CSV到文件
+   1434 |     public func saveCSV(result: MergedResult, to path: String) throws {
+   1435 |         let csv = exportToCSV(result: result)
+   1436 |         try csv.write(toFile: path, atomically: true, encoding: .utf8)
+   1437 |     }
+   1438 | 
+   1439 |     /// 导出为HTML表格（复刻原始Excel格式）
+   1440 |     public func exportToHTML(result: MergedResult) -> String {
+   1441 |         var html = """
+   1442 |         <!DOCTYPE html>
+   1443 |         <html>
+   1444 |         <head>
+   1445 |             <meta charset="UTF-8">
+   1446 |             <title>\(result.sheetName) - 汇总结果</title>
+   1447 |             <style>
+   1448 |                 body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; margin: 20px; }
+   1449 |                 h1 { font-size: 18px; margin-bottom: 10px; }
+   1450 |                 .info { color: #666; margin-bottom: 20px; font-size: 12px; }
+
+──────────────────────────────────────────────────────────────────────
+                         第 29 页 / 共 60 页
+======================================================================
+  软件名称：表表归一（xlsOne）                    第 30 页
+======================================================================
+
+   1451 |                 table { border-collapse: collapse; width: 100%; }
+   1452 |                 th, td { border: 1px solid #ccc; padding: 8px; text-align: left; font-size: 13px; }
+   1453 |                 th { background-color: #f5f5f5; font-weight: 600; }
+   1454 |                 tr:nth-child(even) { background-color: #fafafa; }
+   1455 |                 .numeric { text-align: right; }
+   1456 |                 .currency { text-align: right; font-family: 'SF Mono', monospace; }
+   1457 |                 .percentage { text-align: right; }
+   1458 |                 .date { text-align: center; }
+   1459 |                 .label { color: #333; }
+   1460 |                 .mixed { color: #999; font-style: italic; }
+   1461 |             </style>
+   1462 |         </head>
+   1463 |         <body>
+   1464 |             <h1>工作表: \(result.sheetName)</h1>
+   1465 |             <div class="info">来源文件: \(result.sourceFiles.joined(separator: ", "))</div>
+   1466 |             <table>
+   1467 |         """
+   1468 | 
+   1469 |         for (rowIdx, row) in result.rows.enumerated() {
+   1470 |             html += "        <tr>\n"
+   1471 |             for cell in row {
+   1472 |                 let cellClass = determineCellClass(cell)
+   1473 |                 let tag = rowIdx == 0 ? "th" : "td"
+   1474 |                 html += "            <\(tag) class=\"\(cellClass)\">\(escapeHTML(cell.displayValue))</\(tag)>\n"
+   1475 |             }
+   1476 |             html += "        </tr>\n"
+   1477 |         }
+   1478 | 
+   1479 |         html += """
+   1480 |             </table>
+   1481 |         </body>
+   1482 |         </html>
+   1483 |         """
+   1484 | 
+   1485 |         return html
+   1486 |     }
+   1487 | 
+   1488 |     /// 根据单元格类型和格式码确定CSS类
+   1489 |     private func determineCellClass(_ cell: MergedCell) -> String {
+   1490 |         // 优先根据 formatCode 判断
+   1491 |         if let formatCode = cell.formatCode {
+   1492 |             if formatCode.contains("¥") || formatCode.contains("$") || formatCode.contains("\\¥") {
+   1493 |                 return "currency"
+   1494 |             }
+   1495 |             if formatCode.contains("%") {
+   1496 |                 return "percentage"
+   1497 |             }
+   1498 |             if formatCode.contains("yyyy") || formatCode.contains("MM") || formatCode.contains("dd") {
+   1499 |                 return "date"
+   1500 |             }
+
+──────────────────────────────────────────────────────────────────────
+                         第 30 页 / 共 60 页
+======================================================================
+  软件名称：表表归一（xlsOne）                    第 31 页
+======================================================================
+
+  18487 |             const double value = *cell.numericValue;
+  18488 |             total += value;
+  18489 |             numericValues.push_back(value);
+  18490 |             allIntegers = allIntegers && std::fabs(value - std::floor(value)) < 0.0000001;
+  18491 |         }
+  18492 |         if (!firstFormatCode.has_value() && cell.formatCode.has_value()) {
+  18493 |             firstFormatCode = cell.formatCode;
+  18494 |         }
+  18495 |     }
+  18496 | 
+  18497 |     const bool sameValues = distinctValues.size() == 1;
+  18498 |     const bool allZero = allNumeric && std::all_of(numericValues.begin(), numericValues.end(), [](double value) {
+  18499 |         return std::fabs(value) < 0.0000001;
+  18500 |     });
+  18501 |     const bool allDates = std::all_of(validCells.begin(), validCells.end(), [](const CellData& cell) {
+  18502 |         return cell.isDate;
+  18503 |     });
+  18504 |     const bool identicalNonZeroIntegers = allNumeric
+  18505 |         && allIntegers
+  18506 |         && !numericValues.empty()
+  18507 |         && std::all_of(numericValues.begin(), numericValues.end(), [&](double value) {
+  18508 |             return std::fabs(value) >= 0.0000001 && std::fabs(value - numericValues.front()) < 0.0000001;
+  18509 |         });
+  18510 |     const bool codeLikeSequence = codeLikeNumericSequence(validCells);
+  18511 |     const bool contextNumeric = neighborContext.numericTendency >= 0.55 && neighborContext.numericTendency > neighborContext.labelTendency;
+  18512 |     const bool columnMetricSemantic = neighborContext.columnMetricTendency >= 0.55;
+  18513 |     const int weakMetricEvidenceCount = (weakAmountSemantic ? 1 : 0) + (contextNumeric ? 1 : 0) + (columnMetricSemantic ? 1 : 0);
+  18514 |     const bool metricSemantic = amountSemantic || (!codeSemantic && !labelSemantic && weakMetricEvidenceCount >= 2);
+  18515 | 
+  18516 |     if (allZero && !codeSemantic && !labelSemantic) {
+  18517 |         return makeCell(
+  18518 |             CellKind::Sum,
+  18519 |             formatNumber(0, firstFormatCode),
+  18520 |             sources,
+  18521 |             0,
+  18522 |             0,
+  18523 |             {},
+  18524 |             firstFormatCode,
+  18525 |             {QStringLiteral("所有非空来源均为 0，按可累加单元格求和处理")}
+  18526 |         );
+  18527 |     }
+  18528 | 
+  18529 |     if (allDates) {
+  18530 |         return makeCell(
+  18531 |             CellKind::Label,
+  18532 |             {},
+  18533 |             sources,
+  18534 |             0.0,
+  18535 |             0,
+  18536 |             {},
+
+──────────────────────────────────────────────────────────────────────
+                         第 31 页 / 共 60 页
+======================================================================
+  软件名称：表表归一（xlsOne）                    第 32 页
+======================================================================
+
+  18537 |             firstFormatCode,
+  18538 |             {QStringLiteral("日期单元格按标签处理")},
+  18539 |             distinctValueCount(validCells) > 1
+  18540 |         );
+  18541 |     }
+  18542 | 
+  18543 |     if (identicalNonZeroIntegers && blankSourceCount == 0 && !metricSemantic) {
+  18544 |         return makeCell(
+  18545 |             CellKind::Label,
+  18546 |             {},
+  18547 |             sources,
+  18548 |             0.0,
+  18549 |             0,
+  18550 |             {},
+  18551 |             firstFormatCode,
+  18552 |             {QStringLiteral("所有来源为相同非零整数，且无明确可累加语义，按标签处理")}
+  18553 |         );
+  18554 |     }
+  18555 | 
+  18556 |     const bool strongNumeric = std::any_of(validCells.begin(), validCells.end(), [](const CellData& cell) {
+  18557 |         return fingerprintFor(&cell) == FormatFingerprint::StrongNumeric;
+  18558 |     });
+  18559 |     const bool textFormat = firstFormatCode.has_value()
+  18560 |         && (*firstFormatCode == QStringLiteral("@") || *firstFormatCode == QStringLiteral(";;;"));
+  18561 | 
+  18562 |     if (codeSemantic && codeLikeSequence && !amountSemantic) {
+  18563 |         return makeCell(
+  18564 |             CellKind::Label,
+  18565 |             {},
+  18566 |             sources,
+  18567 |             0.0,
+  18568 |             0,
+  18569 |             {},
+  18570 |             firstFormatCode,
+  18571 |             {QStringLiteral("左邻列命中编码语义，按标签处理")},
+  18572 |             distinctValueCount(validCells) > 1
+  18573 |         );
+  18574 |     }
+  18575 | 
+  18576 |     if (allNumeric
+  18577 |         && !codeSemantic
+  18578 |         && !labelSemantic
+  18579 |         && (!codeLikeSequence || blankSourceCount > 0 || metricSemantic)
+  18580 |         && (!sameValues || metricSemantic || blankSourceCount > 0 || firstFormatCode.has_value() || strongNumeric || contextNumeric)) {
+  18581 |         const bool isSuspicious = numericSumShouldBeSuspicious(validCells, cells, leftCells, neighborContext, blankSourceCount);
+  18582 |         return makeCell(
+  18583 |             CellKind::Sum,
+  18584 |             formatNumber(total, firstFormatCode),
+  18585 |             sources,
+  18586 |             total,
+
+──────────────────────────────────────────────────────────────────────
+                         第 32 页 / 共 60 页
+======================================================================
+  软件名称：表表归一（xlsOne）                    第 33 页
+======================================================================
+
+  18587 |             0,
+  18588 |             {},
+  18589 |             firstFormatCode,
+  18590 |             {blankSourceCount > 0
+  18591 |                 ? QStringLiteral("部分来源为空或缺失，非空来源均为数值，空值按 0 参与求和")
+  18592 |                 : sameValues && metricSemantic
+  18593 |                     ? QStringLiteral("相同整数命中计量语义并得到同列上下文支持，按求和处理")
+  18594 |                     : QStringLiteral("所有有效来源均为数值，按求和处理")},
+  18595 |             isSuspicious
+  18596 |         );
+  18597 |     }
+  18598 | 
+  18599 |     if (column == 0 && allNumeric && !codeLikeSequence && !sameValues && (strongNumeric || contextNumeric)) {
+  18600 |         return makeCell(
+  18601 |             CellKind::Sum,
+  18602 |             formatNumber(total, firstFormatCode),
+  18603 |             sources,
+  18604 |             total,
+  18605 |             0,
+  18606 |             {},
+  18607 |             firstFormatCode,
+  18608 |             {QStringLiteral("首列以数值格式为主且上下文支持，按求和处理")}
+  18609 |         );
+  18610 |     }
+  18611 | 
+  18612 |     if (sameValues) {
+  18613 |         return makeCell(
+  18614 |             CellKind::Label,
+  18615 |             {},
+  18616 |             sources,
+  18617 |             0.0,
+  18618 |             0,
+  18619 |             {},
+  18620 |             validCells.front().formatCode,
+  18621 |             {QStringLiteral("所有有效来源值一致，按标签处理")},
+  18622 |             labelShouldBeSuspicious(validCells, cells, leftCells, neighborContext)
+  18623 |         );
+  18624 |     }
+  18625 | 
+  18626 |     if (column == 0) {
+  18627 |         return makeCell(
+  18628 |             CellKind::Label,
+  18629 |             {},
+  18630 |             sources,
+  18631 |             0.0,
+  18632 |             0,
+  18633 |             {},
+  18634 |             firstFormatCode,
+  18635 |             {QStringLiteral("首列采用保守策略，按标签处理")},
+  18636 |             distinctValueCount(validCells) > 1
+
+──────────────────────────────────────────────────────────────────────
+                         第 33 页 / 共 60 页
+======================================================================
+  软件名称：表表归一（xlsOne）                    第 34 页
+======================================================================
+
+  18637 |         );
+  18638 |     }
+  18639 | 
+  18640 |     if (!allNumeric && (textFormat || labelSemantic || neighborContext.labelTendency >= 0.5)) {
+  18641 |         return makeCell(
+  18642 |             CellKind::Label,
+  18643 |             {},
+  18644 |             sources,
+  18645 |             0.0,
+  18646 |             0,
+  18647 |             {},
+  18648 |             firstFormatCode,
+  18649 |             {QStringLiteral("文本格式或上下文偏向标签，按标签处理")},
+  18650 |             distinctValueCount(validCells) > 1
+  18651 |         );
+  18652 |     }
+  18653 | 
+  18654 |     return makeCell(
+  18655 |         CellKind::Mixed,
+  18656 |         QStringLiteral("%1条").arg(distinctValues.size()),
+  18657 |         sources,
+  18658 |         0.0,
+  18659 |         static_cast<int>(distinctValues.size()),
+  18660 |         {},
+  18661 |         std::nullopt,
+  18662 |         {QStringLiteral("存在多个不同的非聚合值")}
+  18663 |     );
+  18664 | }
+  18665 | 
+  18666 | QString MergedCell::formatNumber(double value, const std::optional<QString>& formatCode)
+  18667 | {
+  18668 |     if (formatCode.has_value()) {
+  18669 |         const QString code = *formatCode;
+  18670 |         if (code.contains(QStringLiteral("¥"))
+  18671 |             || code.contains(QStringLiteral("\\¥"))
+  18672 |             || code.contains(QStringLiteral("[$¥]"))) {
+  18673 |             return QStringLiteral("¥") + QString::number(value, 'f', 2);
+  18674 |         }
+  18675 |         if (code.contains(QLatin1Char('$')) && !code.contains(QStringLiteral("[$-"))) {
+  18676 |             return QStringLiteral("$") + QString::number(value, 'f', 2);
+  18677 |         }
+  18678 |         if (code.contains(QStringLiteral("#,##0"))) {
+  18679 |             return groupedDecimal(value, 2);
+  18680 |         }
+  18681 |         if (code.contains(QLatin1Char('%'))) {
+  18682 |             return QString::number(value * 100.0, 'f', 2) + QStringLiteral("%");
+  18683 |         }
+  18684 |         if (code.contains(QStringLiteral(".00"))) {
+  18685 |             return QString::number(value, 'f', 2);
+  18686 |         }
+
+──────────────────────────────────────────────────────────────────────
+                         第 34 页 / 共 60 页
+======================================================================
+  软件名称：表表归一（xlsOne）                    第 35 页
+======================================================================
+
+  18687 |         if (code.contains(QStringLiteral(".0")) && !code.contains(QStringLiteral(".00"))) {
+  18688 |             return QString::number(value, 'f', 1);
+  18689 |         }
+  18690 |     }
+  18691 | 
+  18692 |     if (std::fabs(value - std::round(value)) < 0.0000001) {
+  18693 |         return QString::number(static_cast<qint64>(std::llround(value)));
+  18694 |     }
+  18695 |     QString display = QString::number(value, 'f', 2);
+  18696 |     display.remove(QRegularExpression(QStringLiteral("\\.00$")));
+  18697 |     display.replace(QRegularExpression(QStringLiteral("(\\d)0+$")), QStringLiteral("\\1"));
+  18698 |     return display;
+  18699 | }
+  18700 | 
+  18701 | const CellData* SheetData::cellAt(int row, int column) const
+  18702 | {
+  18703 |     if (row < 0 || column < 0 || row >= static_cast<int>(rows.size())) {
+  18704 |         return nullptr;
+  18705 |     }
+  18706 |     const auto& rowData = rows[static_cast<size_t>(row)];
+  18707 |     if (column >= static_cast<int>(rowData.size())) {
+  18708 |         return nullptr;
+  18709 |     }
+  18710 |     return &rowData[static_cast<size_t>(column)];
+  18711 | }
+  18712 | 
+  18713 | int SheetData::effectiveRowCount() const
+  18714 | {
+  18715 |     int lastNonEmpty = -1;
+  18716 |     for (int row = 0; row < static_cast<int>(rows.size()); ++row) {
+  18717 |         for (const auto& cell : rows[static_cast<size_t>(row)]) {
+  18718 |             if (!cell.value.isEmpty()) {
+  18719 |                 lastNonEmpty = row;
+  18720 |                 break;
+  18721 |             }
+  18722 |         }
+  18723 |     }
+  18724 |     return lastNonEmpty + 1;
+  18725 | }
+  18726 | 
+  18727 | int SheetData::effectiveColumnCount() const
+  18728 | {
+  18729 |     int maxColumn = 0;
+  18730 |     for (const auto& row : rows) {
+  18731 |         int lastNonEmpty = -1;
+  18732 |         for (int column = 0; column < static_cast<int>(row.size()); ++column) {
+  18733 |             if (!row[static_cast<size_t>(column)].value.isEmpty()) {
+  18734 |                 lastNonEmpty = column;
+  18735 |             }
+  18736 |         }
+
+──────────────────────────────────────────────────────────────────────
+                         第 35 页 / 共 60 页
+======================================================================
+  软件名称：表表归一（xlsOne）                    第 36 页
+======================================================================
+
+  18737 |         maxColumn = std::max(maxColumn, lastNonEmpty + 1);
+  18738 |     }
+  18739 |     return maxColumn;
+  18740 | }
+  18741 | 
+  18742 | const SheetData* ExcelFile::sheetNamed(const QString& sheetName) const
+  18743 | {
+  18744 |     for (const auto& sheet : sheets) {
+  18745 |         if (sheet.name == sheetName) {
+  18746 |             return &sheet;
+  18747 |         }
+  18748 |     }
+  18749 |     return nullptr;
+  18750 | }
+  18751 | 
+  18752 | QString columnLetters(int column)
+  18753 | {
+  18754 |     QString result;
+  18755 |     int number = column;
+  18756 |     do {
+  18757 |         result.prepend(QChar(QLatin1Char('A').unicode() + (number % 26)));
+  18758 |         number = number / 26 - 1;
+  18759 |     } while (number >= 0);
+  18760 |     return result;
+  18761 | }
+  18762 | 
+  18763 | QString cellReference(int row, int column)
+  18764 | {
+  18765 |     return QStringLiteral("%1%2").arg(columnLetters(column)).arg(row + 1);
+  18766 | }
+  18767 | 
+  18768 | QString cellKindName(CellKind kind)
+  18769 | {
+  18770 |     switch (kind) {
+  18771 |     case CellKind::Label: return QStringLiteral("label");
+  18772 |     case CellKind::Sum: return QStringLiteral("sum");
+  18773 |     case CellKind::Mixed: return QStringLiteral("mixed");
+  18774 |     case CellKind::Single: return QStringLiteral("single");
+  18775 |     }
+  18776 |     return QStringLiteral("unknown");
+  18777 | }
+  18778 | 
+  18779 | QJsonObject toJson(const MergedCell& cell)
+  18780 | {
+  18781 |     QJsonArray sources;
+  18782 |     for (const auto& source : cell.sources) {
+  18783 |         QJsonObject object;
+  18784 |         object.insert(QStringLiteral("filename"), source.filename);
+  18785 |         object.insert(QStringLiteral("value"), source.value);
+  18786 |         object.insert(QStringLiteral("state"), source.state == CellSourceState::Value ? QStringLiteral("value") : source.state == CellSourceState::Empty ? QStringLiteral("empty") : QStringLiteral("missing"));
+
+──────────────────────────────────────────────────────────────────────
+                         第 36 页 / 共 60 页
+======================================================================
+  软件名称：表表归一（xlsOne）                    第 37 页
+======================================================================
+
+  18787 |         sources.append(object);
+  18788 |     }
+  18789 | 
+  18790 |     QJsonObject object;
+  18791 |     object.insert(QStringLiteral("type"), cellKindName(cell.type.kind));
+  18792 |     object.insert(QStringLiteral("displayValue"), cell.displayValue);
+  18793 |     object.insert(QStringLiteral("sources"), sources);
+  18794 |     return object;
+  18795 | }
+  18796 | 
+  18797 | QJsonObject toJson(const MergedResult& result)
+  18798 | {
+  18799 |     QJsonArray rows;
+  18800 |     for (const auto& row : result.rows) {
+  18801 |         QJsonArray rowArray;
+  18802 |         for (const auto& cell : row) {
+  18803 |             rowArray.append(toJson(cell));
+  18804 |         }
+  18805 |         rows.append(rowArray);
+  18806 |     }
+  18807 | 
+  18808 |     QJsonObject object;
+  18809 |     object.insert(QStringLiteral("sheetName"), result.sheetName);
+  18810 |     object.insert(QStringLiteral("rows"), rows);
+  18811 |     object.insert(QStringLiteral("sourceFiles"), QJsonArray::fromStringList(result.sourceFiles));
+  18812 |     return object;
+  18813 | }
+  18814 | 
+  18815 | } // namespace xlsone
+  18816 | 
+  18817 | /* ===== /home/ethan/xlsone/cpp/core/src/schema_repository.cpp ===== */
+  18818 | #include "xlsone/core/schema_repository.hpp"
+  18819 | 
+  18820 | #include <QCoreApplication>
+  18821 | #include <QCryptographicHash>
+  18822 | #include <QFile>
+  18823 | #include <QJsonArray>
+  18824 | #include <QJsonDocument>
+  18825 | #include <QRegularExpression>
+  18826 | #include <QStandardPaths>
+  18827 | #include <algorithm>
+  18828 | #include <cmath>
+  18829 | #include <map>
+  18830 | #include <set>
+  18831 | #include <stdexcept>
+  18832 | 
+  18833 | namespace xlsone {
+  18834 | 
+  18835 | namespace {
+  18836 | 
+
+──────────────────────────────────────────────────────────────────────
+                         第 37 页 / 共 60 页
+======================================================================
+  软件名称：表表归一（xlsOne）                    第 38 页
+======================================================================
+
+  18837 | QDir defaultSchemaDir()
+  18838 | {
+  18839 |     const auto root = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+  18840 |     return QDir(root + QStringLiteral("/schemas"));
+  18841 | }
+  18842 | 
+  18843 | QString schemaFileName(const QUuid& id)
+  18844 | {
+  18845 |     return id.toString(QUuid::WithoutBraces) + QStringLiteral(".json");
+  18846 | }
+  18847 | 
+  18848 | QString normalized(QString text)
+  18849 | {
+  18850 |     text = text.toLower().trimmed();
+  18851 |     text.remove(QRegularExpression(QStringLiteral("\\s+")));
+  18852 |     return text;
+  18853 | }
+  18854 | 
+  18855 | QString shortHash(const QString& text)
+  18856 | {
+  18857 |     const auto hash = QCryptographicHash::hash(text.toUtf8(), QCryptographicHash::Sha256).toHex();
+  18858 |     return QString::fromLatin1(hash.left(16));
+  18859 | }
+  18860 | 
+  18861 | QString structuralToken(const CellData* cell)
+  18862 | {
+  18863 |     if (cell == nullptr || cell->value.trimmed().isEmpty()) {
+  18864 |         return QStringLiteral("E");
+  18865 |     }
+  18866 |     if (cell->isDate) {
+  18867 |         return QStringLiteral("D");
+  18868 |     }
+  18869 |     if (cell->numericValue.has_value()) {
+  18870 |         return QStringLiteral("N");
+  18871 |     }
+  18872 |     if (cell->value.contains(QRegularExpression(QStringLiteral("\\p{Han}")))) {
+  18873 |         return QStringLiteral("C");
+  18874 |     }
+  18875 |     if (cell->value.contains(QRegularExpression(QStringLiteral("[A-Za-z]")))) {
+  18876 |         return QStringLiteral("A");
+  18877 |     }
+  18878 |     return QStringLiteral("T");
+  18879 | }
+  18880 | 
+  18881 | struct SheetDimensions {
+  18882 |     int rows = 0;
+  18883 |     int columns = 0;
+  18884 | 
+  18885 |     bool operator==(const SheetDimensions& other) const
+  18886 |     {
+
+──────────────────────────────────────────────────────────────────────
+                         第 38 页 / 共 60 页
+======================================================================
+  软件名称：表表归一（xlsOne）                    第 39 页
+======================================================================
+
+  18887 |         return rows == other.rows && columns == other.columns;
+  18888 |     }
+  18889 |     bool operator<(const SheetDimensions& other) const
+  18890 |     {
+  18891 |         if (rows != other.rows) {
+  18892 |             return rows < other.rows;
+  18893 |         }
+  18894 |         return columns < other.columns;
+  18895 |     }
+  18896 | };
+  18897 | 
+  18898 | SheetDimensions effectiveDimensions(const SheetData& sheet)
+  18899 | {
+  18900 |     return {sheet.effectiveRowCount(), sheet.effectiveColumnCount()};
+  18901 | }
+  18902 | 
+  18903 | SheetDimensions chooseDominantDimensions(const std::vector<SheetDimensions>& dimensions)
+  18904 | {
+  18905 |     if (dimensions.empty()) {
+  18906 |         return {};
+  18907 |     }
+  18908 | 
+  18909 |     struct Bucket {
+  18910 |         SheetDimensions dimensions;
+  18911 |         int count = 0;
+  18912 |         int firstIndex = 0;
+  18913 |     };
+  18914 | 
+  18915 |     std::vector<Bucket> buckets;
+  18916 |     for (int index = 0; index < static_cast<int>(dimensions.size()); ++index) {
+  18917 |         const auto& current = dimensions[static_cast<size_t>(index)];
+  18918 |         auto iterator = std::find_if(buckets.begin(), buckets.end(), [&](const Bucket& bucket) {
+  18919 |             return bucket.dimensions == current;
+  18920 |         });
+  18921 |         if (iterator == buckets.end()) {
+  18922 |             buckets.push_back({current, 1, index});
+  18923 |         } else {
+  18924 |             ++iterator->count;
+  18925 |         }
+  18926 |     }
+  18927 | 
+  18928 |     return std::max_element(buckets.begin(), buckets.end(), [](const Bucket& lhs, const Bucket& rhs) {
+  18929 |         if (lhs.count != rhs.count) {
+  18930 |             return lhs.count < rhs.count;
+  18931 |         }
+  18932 |         if (!(lhs.dimensions == rhs.dimensions)) {
+  18933 |             return lhs.dimensions < rhs.dimensions;
+  18934 |         }
+  18935 |         return lhs.firstIndex > rhs.firstIndex;
+  18936 |     })->dimensions;
+
+──────────────────────────────────────────────────────────────────────
+                         第 39 页 / 共 60 页
+======================================================================
+  软件名称：表表归一（xlsOne）                    第 40 页
+======================================================================
+
+  18937 | }
+  18938 | 
+  18939 | SheetRuleFingerprint sheetFingerprint(const SheetData& sheet, int rows, int columns)
+  18940 | {
+  18941 |     QStringList layout;
+  18942 |     QStringList format;
+  18943 |     layout << sheet.name << QStringLiteral("%1x%2").arg(rows).arg(columns);
+  18944 | 
+  18945 |     for (int row = 0; row < rows; ++row) {
+  18946 |         for (int column = 0; column < columns; ++column) {
+  18947 |             const auto* cell = sheet.cellAt(row, column);
+  18948 |             const bool empty = cell == nullptr || cell->value.trimmed().isEmpty();
+  18949 |             layout << (empty ? QStringLiteral("0") : QStringLiteral("1"));
+  18950 |             format << structuralToken(cell);
+  18951 |         }
+  18952 |     }
+  18953 | 
+  18954 |     return {
+  18955 |         sheet.name,
+  18956 |         rows,
+  18957 |         columns,
+  18958 |         shortHash(layout.join(QLatin1Char('|'))),
+  18959 |         shortHash(format.join(QLatin1Char('|')))
+  18960 |     };
+  18961 | }
+  18962 | 
+  18963 | SheetRuleFingerprint sheetFingerprint(const SheetData& sheet)
+  18964 | {
+  18965 |     const auto dimensions = effectiveDimensions(sheet);
+  18966 |     return sheetFingerprint(sheet, dimensions.rows, dimensions.columns);
+  18967 | }
+  18968 | 
+  18969 | SheetRuleFingerprint consensusSheetFingerprint(const std::vector<ExcelFile>& files, const QString& sheetName)
+  18970 | {
+  18971 |     std::vector<const SheetData*> sheets;
+  18972 |     std::vector<SheetDimensions> dimensions;
+  18973 |     for (const auto& file : files) {
+  18974 |         if (const auto* sheet = file.sheetNamed(sheetName)) {
+  18975 |             sheets.push_back(sheet);
+  18976 |             dimensions.push_back(effectiveDimensions(*sheet));
+  18977 |         }
+  18978 |     }
+  18979 |     if (!sheets.empty()) {
+  18980 |         const auto dominant = chooseDominantDimensions(dimensions);
+  18981 |         return sheetFingerprint(*sheets.front(), dominant.rows, dominant.columns);
+  18982 |     }
+  18983 |     return {sheetName, 0, 0, {}, {}};
+  18984 | }
+  18985 | 
+  18986 | double sheetSimilarity(const SheetRuleFingerprint& lhs, const SheetRuleFingerprint& rhs)
+
+──────────────────────────────────────────────────────────────────────
+                         第 40 页 / 共 60 页
+======================================================================
+  软件名称：表表归一（xlsOne）                    第 41 页
+======================================================================
+
+  18987 | {
+  18988 |     double score = 0.0;
+  18989 |     score += lhs.sheetName == rhs.sheetName ? 0.30 : 0.0;
+  18990 |     score += (lhs.rowCount == rhs.rowCount && lhs.columnCount == rhs.columnCount) ? 0.30 : 0.0;
+  18991 |     score += lhs.layoutHash == rhs.layoutHash ? 0.25 : 0.0;
+  18992 |     score += lhs.formatHash == rhs.formatHash ? 0.15 : 0.0;
+  18993 |     return score;
+  18994 | }
+  18995 | 
+  18996 | std::vector<QString> sourceValues(const MergedCell& cell)
+  18997 | {
+  18998 |     std::vector<QString> values;
+  18999 |     for (const auto& source : cell.sources) {
+  19000 |         if (source.state == CellSourceState::Value) {
+  19001 |             values.push_back(source.value);
+  19002 |         }
+  19003 |     }
+  19004 |     return values;
+  19005 | }
+  19006 | 
+  19007 | QString commonPrefixDisplay(const MergedCell& cell)
+  19008 | {
+  19009 |     auto values = sourceValues(cell);
+  19010 |     if (values.empty()) {
+  19011 |         return {};
+  19012 |     }
+  19013 |     if (values.size() == 1) {
+  19014 |         return values.front();
+  19015 |     }
+  19016 |     std::set<QString> unique(values.begin(), values.end());
+  19017 |     if (unique.size() == 1) {
+  19018 |         return values.front();
+  19019 |     }
+  19020 | 
+  19021 |     QString prefix = values.front();
+  19022 |     for (const auto& value : values) {
+  19023 |         while (!value.startsWith(prefix)) {
+  19024 |             prefix.chop(1);
+  19025 |             if (prefix.isEmpty()) {
+  19026 |                 break;
+  19027 |             }
+  19028 |         }
+  19029 |     }
+  19030 | 
+  19031 |     std::map<int, int> lengths;
+  19032 |     int total = 0;
+  19033 |     for (const auto& value : values) {
+  19034 |         ++lengths[value.size()];
+  19035 |         total += value.size();
+  19036 |     }
+
+──────────────────────────────────────────────────────────────────────
+                         第 41 页 / 共 60 页
+======================================================================
+  软件名称：表表归一（xlsOne）                    第 42 页
+======================================================================
+
+  19037 |     int standardLength = std::round(static_cast<double>(total) / static_cast<double>(values.size()));
+  19038 |     for (auto iterator = lengths.rbegin(); iterator != lengths.rend(); ++iterator) {
+  19039 |         if (static_cast<double>(iterator->second) / static_cast<double>(values.size()) >= 0.75) {
+  19040 |             standardLength = iterator->first;
+  19041 |             break;
+  19042 |         }
+  19043 |     }
+  19044 | 
+  19045 |     return prefix + QString(std::max<qsizetype>(0, static_cast<qsizetype>(standardLength) - prefix.size()), QLatin1Char('_'));
+  19046 | }
+  19047 | 
+  19048 | double sumSources(const MergedCell& cell)
+  19049 | {
+  19050 |     double total = 0.0;
+  19051 |     for (const auto& source : cell.sources) {
+  19052 |         if (source.state != CellSourceState::Value) {
+  19053 |             continue;
+  19054 |         }
+  19055 |         auto numeric = CellData::parseNumber(source.value);
+  19056 |         if (numeric.has_value()) {
+  19057 |             total += *numeric;
+  19058 |         }
+  19059 |     }
+  19060 |     return total;
+  19061 | }
+  19062 | 
+  19063 | int distinctSourceValueCount(const MergedCell& cell)
+  19064 | {
+  19065 |     std::set<QString> values;
+  19066 |     for (const auto& source : cell.sources) {
+  19067 |         if (source.state == CellSourceState::Value) {
+  19068 |             values.insert(source.value);
+  19069 |         }
+  19070 |     }
+  19071 |     return static_cast<int>(values.size());
+  19072 | }
+  19073 | 
+  19074 | QJsonObject sheetFingerprintToJson(const SheetRuleFingerprint& fingerprint)
+  19075 | {
+  19076 |     QJsonObject object;
+  19077 |     object.insert(QStringLiteral("sheetName"), fingerprint.sheetName);
+  19078 |     object.insert(QStringLiteral("rowCount"), fingerprint.rowCount);
+  19079 |     object.insert(QStringLiteral("columnCount"), fingerprint.columnCount);
+  19080 |     object.insert(QStringLiteral("layoutHash"), fingerprint.layoutHash);
+  19081 |     object.insert(QStringLiteral("formatHash"), fingerprint.formatHash);
+  19082 |     return object;
+  19083 | }
+  19084 | 
+  19085 | SheetRuleFingerprint sheetFingerprintFromJson(const QJsonObject& object)
+  19086 | {
+
+──────────────────────────────────────────────────────────────────────
+                         第 42 页 / 共 60 页
+======================================================================
+  软件名称：表表归一（xlsOne）                    第 43 页
+======================================================================
+
+  19087 |     return {
+  19088 |         object.value(QStringLiteral("sheetName")).toString(),
+  19089 |         object.value(QStringLiteral("rowCount")).toInt(),
+  19090 |         object.value(QStringLiteral("columnCount")).toInt(),
+  19091 |         object.value(QStringLiteral("layoutHash")).toString(),
+  19092 |         object.value(QStringLiteral("formatHash")).toString()
+  19093 |     };
+  19094 | }
+  19095 | 
+  19096 | } // namespace
+  19097 | 
+  19098 | SchemaRepository::SchemaRepository(QDir baseDirectory) :
+  19099 |     baseDirectory_(baseDirectory.path().isEmpty() ? defaultSchemaDir() : std::move(baseDirectory))
+  19100 | {
+  19101 | }
+  19102 | 
+  19103 | std::vector<MergeSchema> SchemaRepository::loadAll() const
+  19104 | {
+  19105 |     std::vector<MergeSchema> schemas;
+  19106 |     if (!baseDirectory_.exists()) {
+  19107 |         return schemas;
+  19108 |     }
+  19109 |     for (const auto& fileName : baseDirectory_.entryList({QStringLiteral("*.json")}, QDir::Files)) {
+  19110 |         QFile file(baseDirectory_.filePath(fileName));
+  19111 |         if (!file.open(QIODevice::ReadOnly)) {
+  19112 |             continue;
+  19113 |         }
+  19114 |         schemas.push_back(schemaFromJson(QJsonDocument::fromJson(file.readAll()).object()));
+  19115 |     }
+  19116 |     return schemas;
+  19117 | }
+  19118 | 
+  19119 | void SchemaRepository::save(const MergeSchema& schema) const
+  19120 | {
+  19121 |     if (!baseDirectory_.exists() && !baseDirectory_.mkpath(QStringLiteral("."))) {
+  19122 |         throw std::runtime_error("无法创建 schema 存储目录");
+  19123 |     }
+  19124 |     QFile file(baseDirectory_.filePath(schemaFileName(schema.id)));
+  19125 |     if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+  19126 |         throw std::runtime_error(QStringLiteral("无法保存 schema: %1").arg(file.errorString()).toStdString());
+  19127 |     }
+  19128 |     file.write(QJsonDocument(toJson(schema)).toJson(QJsonDocument::Indented));
+  19129 | }
+  19130 | 
+  19131 | std::optional<MergeSchema> SchemaRepository::find(const QUuid& id) const
+  19132 | {
+  19133 |     QFile file(baseDirectory_.filePath(schemaFileName(id)));
+  19134 |     if (!file.open(QIODevice::ReadOnly)) {
+  19135 |         return std::nullopt;
+  19136 |     }
+
+──────────────────────────────────────────────────────────────────────
+                         第 43 页 / 共 60 页
+======================================================================
+  软件名称：表表归一（xlsOne）                    第 44 页
+======================================================================
+
+  19137 |     return schemaFromJson(QJsonDocument::fromJson(file.readAll()).object());
+  19138 | }
+  19139 | 
+  19140 | void SchemaRepository::remove(const QUuid& id) const
+  19141 | {
+  19142 |     QFile::remove(baseDirectory_.filePath(schemaFileName(id)));
+  19143 | }
+  19144 | 
+  19145 | QDir SchemaRepository::baseDirectory() const
+  19146 | {
+  19147 |     return baseDirectory_;
+  19148 | }
+  19149 | 
+  19150 | WorkbookFingerprint fingerprintFor(const std::vector<ExcelFile>& files)
+  19151 | {
+  19152 |     QStringList sheetNames;
+  19153 |     if (!files.empty()) {
+  19154 |         for (const auto& sheet : files.front().sheets) {
+  19155 |             sheetNames.append(sheet.name);
+  19156 |         }
+  19157 |     }
+  19158 |     return fingerprintFor(files, sheetNames);
+  19159 | }
+  19160 | 
+  19161 | WorkbookFingerprint fingerprintFor(const std::vector<ExcelFile>& files, const QStringList& sheetNames)
+  19162 | {
+  19163 |     WorkbookFingerprint fingerprint;
+  19164 |     fingerprint.fileCount = static_cast<int>(files.size());
+  19165 |     fingerprint.sheetNames = sheetNames;
+  19166 |     for (const auto& sheetName : sheetNames) {
+  19167 |         fingerprint.sheetFingerprints.push_back(consensusSheetFingerprint(files, sheetName));
+  19168 |     }
+  19169 |     QStringList parts;
+  19170 |     parts << QString::number(fingerprint.fileCount);
+  19171 |     for (const auto& sheet : fingerprint.sheetFingerprints) {
+  19172 |         parts << sheet.sheetName
+  19173 |               << QString::number(sheet.rowCount)
+  19174 |               << QString::number(sheet.columnCount)
+  19175 |               << sheet.layoutHash
+  19176 |               << sheet.formatHash;
+  19177 |     }
+  19178 |     fingerprint.signature = shortHash(parts.join(QLatin1Char('|')));
+  19179 |     return fingerprint;
+  19180 | }
+  19181 | 
+  19182 | std::optional<MergeSchema> SchemaMatchResult::exactSchema() const
+  19183 | {
+  19184 |     if (kind == SchemaMatchKind::Exact && candidates.size() == 1) {
+  19185 |         return candidates.front().schema;
+  19186 |     }
+
+──────────────────────────────────────────────────────────────────────
+                         第 44 页 / 共 60 页
+======================================================================
+  软件名称：表表归一（xlsOne）                    第 45 页
+======================================================================
+
+  19187 |     return std::nullopt;
+  19188 | }
+  19189 | 
+  19190 | SchemaMatchResult SchemaMatcher::match(
+  19191 |     const WorkbookFingerprint& fingerprint,
+  19192 |     const std::vector<MergeSchema>& schemas
+  19193 | )
+  19194 | {
+  19195 |     SchemaMatchResult result;
+  19196 |     if (schemas.empty()) {
+  19197 |         return result;
+  19198 |     }
+  19199 | 
+  19200 |     for (const auto& schema : schemas) {
+  19201 |         result.candidates.push_back({schema, calculateSimilarity(fingerprint, schema.fingerprint)});
+  19202 |     }
+  19203 | 
+  19204 |     std::sort(result.candidates.begin(), result.candidates.end(), [](const auto& lhs, const auto& rhs) {
+  19205 |         if (std::fabs(lhs.score - rhs.score) > 0.0000001) {
+  19206 |             return lhs.score > rhs.score;
+  19207 |         }
+  19208 |         return lhs.schema.matchCount > rhs.schema.matchCount;
+  19209 |     });
+  19210 | 
+  19211 |     std::vector<SchemaMatchCandidate> exact;
+  19212 |     std::copy_if(result.candidates.begin(), result.candidates.end(), std::back_inserter(exact), [](const auto& candidate) {
+  19213 |         return candidate.score >= HighConfidenceThreshold;
+  19214 |     });
+  19215 |     if (exact.size() == 1) {
+  19216 |         result.kind = SchemaMatchKind::Exact;
+  19217 |         result.candidates = exact;
+  19218 |         return result;
+  19219 |     }
+  19220 |     if (exact.size() > 1) {
+  19221 |         result.kind = SchemaMatchKind::Ambiguous;
+  19222 |         result.candidates = exact;
+  19223 |         return result;
+  19224 |     }
+  19225 | 
+  19226 |     std::vector<SchemaMatchCandidate> similar;
+  19227 |     std::copy_if(result.candidates.begin(), result.candidates.end(), std::back_inserter(similar), [](const auto& candidate) {
+  19228 |         return candidate.score >= MediumConfidenceThreshold;
+  19229 |     });
+  19230 |     if (!similar.empty()) {
+  19231 |         result.kind = SchemaMatchKind::Similar;
+  19232 |         result.candidates = similar;
+  19233 |         return result;
+  19234 |     }
+  19235 | 
+  19236 |     result.kind = SchemaMatchKind::None;
+
+──────────────────────────────────────────────────────────────────────
+                         第 45 页 / 共 60 页
+======================================================================
+  软件名称：表表归一（xlsOne）                    第 46 页
+======================================================================
+
+  19237 |     result.candidates.clear();
+  19238 |     return result;
+  19239 | }
+  19240 | 
+  19241 | double SchemaMatcher::calculateSimilarity(
+  19242 |     const WorkbookFingerprint& lhs,
+  19243 |     const WorkbookFingerprint& rhs
+  19244 | )
+  19245 | {
+  19246 |     if (!lhs.sheetFingerprints.empty() && lhs.sheetFingerprints.size() == rhs.sheetFingerprints.size()) {
+  19247 |         double total = 0.0;
+  19248 |         bool namesAndDimensionsMatch = true;
+  19249 |         for (size_t index = 0; index < lhs.sheetFingerprints.size(); ++index) {
+  19250 |             const auto& left = lhs.sheetFingerprints[index];
+  19251 |             const auto& right = rhs.sheetFingerprints[index];
+  19252 |             if (left.sheetName != right.sheetName || left.rowCount != right.rowCount || left.columnCount != right.columnCount) {
+  19253 |                 namesAndDimensionsMatch = false;
+  19254 |             }
+  19255 |             total += sheetSimilarity(left, right);
+  19256 |         }
+  19257 |         const double score = total / static_cast<double>(lhs.sheetFingerprints.size());
+  19258 |         return namesAndDimensionsMatch ? std::max(score, HighConfidenceThreshold) : score;
+  19259 |     }
+  19260 | 
+  19261 |     if (lhs.signature == rhs.signature && !lhs.signature.isEmpty()) {
+  19262 |         return 1.0;
+  19263 |     }
+  19264 |     double score = 0.0;
+  19265 |     score += lhs.sheetNames == rhs.sheetNames ? 0.50 : 0.0;
+  19266 |     score += lhs.fileCount == rhs.fileCount ? 0.20 : 0.0;
+  19267 |     return score;
+  19268 | }
+  19269 | 
+  19270 | MergedResult applySchema(const MergeSchema& schema, const MergedResult& result)
+  19271 | {
+  19272 |     MergedResult modified = result;
+  19273 |     for (const auto& override : schema.overrides) {
+  19274 |         if (!override.sheetName.isEmpty() && override.sheetName != result.sheetName) {
+  19275 |             continue;
+  19276 |         }
+  19277 |         const int row = override.position.row;
+  19278 |         const int column = override.position.column;
+  19279 |         if (row < 0 || column < 0 || row >= static_cast<int>(modified.rows.size()) || column >= static_cast<int>(modified.rows[static_cast<size_t>(row)].size())) {
+  19280 |             continue;
+  19281 |         }
+  19282 | 
+  19283 |         auto& cell = modified.rows[static_cast<size_t>(row)][static_cast<size_t>(column)];
+  19284 |         switch (override.type) {
+  19285 |         case SchemaCellOverrideType::Label:
+  19286 |             cell.type = {CellKind::Label, 0.0, 0, {}};
+
+──────────────────────────────────────────────────────────────────────
+                         第 46 页 / 共 60 页
+======================================================================
+  软件名称：表表归一（xlsOne）                    第 47 页
+======================================================================
+
+  19287 |             cell.displayValue = commonPrefixDisplay(cell);
+  19288 |             break;
+  19289 |         case SchemaCellOverrideType::Sum: {
+  19290 |             const double total = sumSources(cell);
+  19291 |             cell.type = {CellKind::Sum, total, 0, {}};
+  19292 |             cell.displayValue = MergedCell::formatNumber(total, cell.formatCode);
+  19293 |             break;
+  19294 |         }
+  19295 |         case SchemaCellOverrideType::Mixed: {
+  19296 |             const int count = distinctSourceValueCount(cell);
+  19297 |             cell.type = {CellKind::Mixed, 0.0, count, {}};
+  19298 |             cell.displayValue = QStringLiteral("%1条").arg(count);
+  19299 |             break;
+  19300 |         }
+  19301 |         case SchemaCellOverrideType::Single:
+  19302 |             cell.type = {CellKind::Single, 0.0, 0, cell.displayValue};
+  19303 |             break;
+  19304 |         }
+  19305 |         cell.isOverridden = true;
+  19306 |         cell.decision.decisionReasons.append(QStringLiteral("已应用规则：%1").arg(schema.name));
+  19307 |     }
+  19308 |     return modified;
+  19309 | }
+  19310 | 
+  19311 | QJsonObject toJson(const MergeSchema& schema)
+  19312 | {
+  19313 |     QJsonArray overrides;
+  19314 |     for (const auto& override : schema.overrides) {
+  19315 |         QJsonObject object;
+  19316 |         object.insert(QStringLiteral("row"), override.position.row);
+  19317 |         object.insert(QStringLiteral("column"), override.position.column);
+  19318 |         object.insert(QStringLiteral("type"), static_cast<int>(override.type));
+  19319 |         object.insert(QStringLiteral("sheetName"), override.sheetName);
+  19320 |         overrides.append(object);
+  19321 |     }
+  19322 | 
+  19323 |     QJsonArray sheetFingerprints;
+  19324 |     for (const auto& sheet : schema.fingerprint.sheetFingerprints) {
+  19325 |         sheetFingerprints.append(sheetFingerprintToJson(sheet));
+  19326 |     }
+  19327 | 
+  19328 |     QJsonObject fingerprint;
+  19329 |     fingerprint.insert(QStringLiteral("fileCount"), schema.fingerprint.fileCount);
+  19330 |     fingerprint.insert(QStringLiteral("sheetNames"), QJsonArray::fromStringList(schema.fingerprint.sheetNames));
+  19331 |     fingerprint.insert(QStringLiteral("signature"), schema.fingerprint.signature);
+  19332 |     fingerprint.insert(QStringLiteral("sheetFingerprints"), sheetFingerprints);
+  19333 | 
+  19334 |     QJsonObject object;
+  19335 |     object.insert(QStringLiteral("id"), schema.id.toString(QUuid::WithoutBraces));
+  19336 |     object.insert(QStringLiteral("name"), schema.name);
+
+──────────────────────────────────────────────────────────────────────
+                         第 47 页 / 共 60 页
+======================================================================
+  软件名称：表表归一（xlsOne）                    第 48 页
+======================================================================
+
+  19337 |     object.insert(QStringLiteral("version"), schema.version);
+  19338 |     object.insert(QStringLiteral("fingerprint"), fingerprint);
+  19339 |     object.insert(QStringLiteral("overrides"), overrides);
+  19340 |     object.insert(QStringLiteral("createdAt"), schema.createdAt.toString(Qt::ISODate));
+  19341 |     object.insert(QStringLiteral("updatedAt"), schema.updatedAt.toString(Qt::ISODate));
+  19342 |     object.insert(QStringLiteral("matchCount"), schema.matchCount);
+  19343 |     return object;
+  19344 | }
+  19345 | 
+  19346 | MergeSchema schemaFromJson(const QJsonObject& object)
+  19347 | {
+  19348 |     MergeSchema schema;
+  19349 |     schema.id = QUuid(object.value(QStringLiteral("id")).toString());
+  19350 |     schema.name = object.value(QStringLiteral("name")).toString();
+  19351 |     schema.version = object.value(QStringLiteral("version")).toInt(1);
+  19352 |     const auto fingerprint = object.value(QStringLiteral("fingerprint")).toObject();
+  19353 |     schema.fingerprint.fileCount = fingerprint.value(QStringLiteral("fileCount")).toInt();
+  19354 |     for (const auto& value : fingerprint.value(QStringLiteral("sheetNames")).toArray()) {
+  19355 |         schema.fingerprint.sheetNames.append(value.toString());
+  19356 |     }
+  19357 |     schema.fingerprint.signature = fingerprint.value(QStringLiteral("signature")).toString();
+  19358 |     for (const auto& value : fingerprint.value(QStringLiteral("sheetFingerprints")).toArray()) {
+  19359 |         schema.fingerprint.sheetFingerprints.push_back(sheetFingerprintFromJson(value.toObject()));
+  19360 |     }
+  19361 |     for (const auto& value : object.value(QStringLiteral("overrides")).toArray()) {
+  19362 |         const auto item = value.toObject();
+  19363 |         schema.overrides.push_back({
+  19364 |             {item.value(QStringLiteral("row")).toInt(), item.value(QStringLiteral("column")).toInt()},
+  19365 |             static_cast<SchemaCellOverrideType>(item.value(QStringLiteral("type")).toInt()),
+  19366 |             item.value(QStringLiteral("sheetName")).toString()
+  19367 |         });
+  19368 |     }
+  19369 |     schema.createdAt = QDateTime::fromString(object.value(QStringLiteral("createdAt")).toString(), Qt::ISODate);
+  19370 |     schema.updatedAt = QDateTime::fromString(object.value(QStringLiteral("updatedAt")).toString(), Qt::ISODate);
+  19371 |     schema.matchCount = object.value(QStringLiteral("matchCount")).toInt();
+  19372 |     return schema;
+  19373 | }
+  19374 | 
+  19375 | } // namespace xlsone
+  19376 | 
+  19377 | /* ===== /home/ethan/xlsone/cpp/core/src/validator.cpp ===== */
+  19378 | #include "xlsone/core/validator.hpp"
+  19379 | 
+  19380 | #include <QFileInfo>
+  19381 | #include <QSet>
+  19382 | #include <algorithm>
+  19383 | #include <map>
+  19384 | #include <optional>
+  19385 | 
+  19386 | namespace xlsone {
+
+──────────────────────────────────────────────────────────────────────
+                         第 48 页 / 共 60 页
+======================================================================
+  软件名称：表表归一（xlsOne）                    第 49 页
+======================================================================
+
+  19387 | 
+  19388 | namespace {
+  19389 | 
+  19390 | struct SheetDimensions {
+  19391 |     int rows = 0;
+  19392 |     int columns = 0;
+  19393 | 
+  19394 |     bool operator==(const SheetDimensions& other) const
+  19395 |     {
+  19396 |         return rows == other.rows && columns == other.columns;
+  19397 |     }
+  19398 |     bool operator<(const SheetDimensions& other) const
+  19399 |     {
+  19400 |         return rows == other.rows ? columns < other.columns : rows < other.rows;
+  19401 |     }
+  19402 | };
+  19403 | 
+  19404 | struct TemplateScore {
+  19405 |     int sheetCount = 0;
+  19406 |     int totalRows = 0;
+  19407 |     int totalColumns = 0;
+  19408 |     int nonEmptyCellCount = 0;
+  19409 | 
+  19410 |     bool operator<(const TemplateScore& other) const
+  19411 |     {
+  19412 |         if (sheetCount != other.sheetCount) {
+  19413 |             return sheetCount < other.sheetCount;
+  19414 |         }
+  19415 |         if (totalRows != other.totalRows) {
+  19416 |             return totalRows < other.totalRows;
+  19417 |         }
+  19418 |         if (totalColumns != other.totalColumns) {
+  19419 |             return totalColumns < other.totalColumns;
+  19420 |         }
+  19421 |         return nonEmptyCellCount < other.nonEmptyCellCount;
+  19422 |     }
+  19423 | };
+  19424 | 
+  19425 | ValidationIssue issue(
+  19426 |     ValidationSeverity severity,
+  19427 |     ValidationIssueCode code,
+  19428 |     const ExcelFile& file,
+  19429 |     const QString& sheetName,
+  19430 |     const QString& message
+  19431 | )
+  19432 | {
+  19433 |     return {severity, code, file.filename, file.filepath, sheetName, message};
+  19434 | }
+  19435 | 
+  19436 | SheetDimensions effectiveDimensions(const SheetData& sheet)
+
+──────────────────────────────────────────────────────────────────────
+                         第 49 页 / 共 60 页
+======================================================================
+  软件名称：表表归一（xlsOne）                    第 50 页
+======================================================================
+
+  19437 | {
+  19438 |     return {sheet.effectiveRowCount(), sheet.effectiveColumnCount()};
+  19439 | }
+  19440 | 
+  19441 | int nonEmptyCellCount(const SheetData& sheet)
+  19442 | {
+  19443 |     int count = 0;
+  19444 |     for (const auto& row : sheet.rows) {
+  19445 |         for (const auto& cell : row) {
+  19446 |             if (!cell.value.isEmpty()) {
+  19447 |                 ++count;
+  19448 |             }
+  19449 |         }
+  19450 |     }
+  19451 |     return count;
+  19452 | }
+  19453 | 
+  19454 | TemplateScore templateScore(const ExcelFile& file, const QSet<QString>& relevantSheetNames)
+  19455 | {
+  19456 |     TemplateScore score;
+  19457 |     for (const auto& sheet : file.sheets) {
+  19458 |         if (!relevantSheetNames.contains(sheet.name)) {
+  19459 |             continue;
+  19460 |         }
+  19461 |         const auto dimensions = effectiveDimensions(sheet);
+  19462 |         ++score.sheetCount;
+  19463 |         score.totalRows += dimensions.rows;
+  19464 |         score.totalColumns += dimensions.columns;
+  19465 |         score.nonEmptyCellCount += nonEmptyCellCount(sheet);
+  19466 |     }
+  19467 |     return score;
+  19468 | }
+  19469 | 
+  19470 | QSet<QString> allSheetNames(const std::vector<ExcelFile>& files)
+  19471 | {
+  19472 |     QSet<QString> names;
+  19473 |     for (const auto& file : files) {
+  19474 |         for (const auto& sheet : file.sheets) {
+  19475 |             names.insert(sheet.name);
+  19476 |         }
+  19477 |     }
+  19478 |     return names;
+  19479 | }
+  19480 | 
+  19481 | int chooseRepresentativeTemplateIndex(const std::vector<ExcelFile>& files, const std::optional<QStringList>& mergeableSheetNames)
+  19482 | {
+  19483 |     if (files.empty()) {
+  19484 |         return -1;
+  19485 |     }
+  19486 | 
+
+──────────────────────────────────────────────────────────────────────
+                         第 50 页 / 共 60 页
+======================================================================
+  软件名称：表表归一（xlsOne）                    第 51 页
+======================================================================
+
+  19487 |     QSet<QString> relevantSheetNames;
+  19488 |     if (mergeableSheetNames.has_value()) {
+  19489 |         for (const auto& name : *mergeableSheetNames) {
+  19490 |             relevantSheetNames.insert(name);
+  19491 |         }
+  19492 |     } else {
+  19493 |         relevantSheetNames = allSheetNames(files);
+  19494 |     }
+  19495 | 
+  19496 |     int bestIndex = 0;
+  19497 |     TemplateScore bestScore = templateScore(files.front(), relevantSheetNames);
+  19498 |     for (int index = 1; index < static_cast<int>(files.size()); ++index) {
+  19499 |         const auto score = templateScore(files[static_cast<size_t>(index)], relevantSheetNames);
+  19500 |         if (bestScore < score) {
+  19501 |             bestIndex = index;
+  19502 |             bestScore = score;
+  19503 |         }
+  19504 |     }
+  19505 |     return bestIndex;
+  19506 | }
+  19507 | 
+  19508 | QStringList orderedSheetNames(const std::vector<ExcelFile>& files, int preferredIndex)
+  19509 | {
+  19510 |     QStringList names;
+  19511 |     QSet<QString> seen;
+  19512 |     std::vector<int> order;
+  19513 |     if (preferredIndex >= 0 && preferredIndex < static_cast<int>(files.size())) {
+  19514 |         order.push_back(preferredIndex);
+  19515 |     }
+  19516 |     for (int index = 0; index < static_cast<int>(files.size()); ++index) {
+  19517 |         if (index != preferredIndex) {
+  19518 |             order.push_back(index);
+  19519 |         }
+  19520 |     }
+  19521 | 
+  19522 |     for (const int index : order) {
+  19523 |         for (const auto& sheet : files[static_cast<size_t>(index)].sheets) {
+  19524 |             if (!seen.contains(sheet.name)) {
+  19525 |                 seen.insert(sheet.name);
+  19526 |                 names.append(sheet.name);
+  19527 |             }
+  19528 |         }
+  19529 |     }
+  19530 |     return names;
+  19531 | }
+  19532 | 
+  19533 | SheetDimensions chooseDominantDimensions(const std::vector<std::pair<int, SheetDimensions>>& dimensionsByFile)
+  19534 | {
+  19535 |     std::map<SheetDimensions, std::vector<int>> grouped;
+  19536 |     for (const auto& [index, dimensions] : dimensionsByFile) {
+
+──────────────────────────────────────────────────────────────────────
+                         第 51 页 / 共 60 页
+======================================================================
+  软件名称：表表归一（xlsOne）                    第 52 页
+======================================================================
+
+  19537 |         grouped[dimensions].push_back(index);
+  19538 |     }
+  19539 | 
+  19540 |     SheetDimensions best;
+  19541 |     std::vector<int> bestIndexes;
+  19542 |     bool hasBest = false;
+  19543 |     for (const auto& [dimensions, indexes] : grouped) {
+  19544 |         if (!hasBest
+  19545 |             || indexes.size() > bestIndexes.size()
+  19546 |             || (indexes.size() == bestIndexes.size() && best < dimensions)
+  19547 |             || (indexes.size() == bestIndexes.size() && !(dimensions < best) && !indexes.empty() && !bestIndexes.empty() && indexes.front() < bestIndexes.front())) {
+  19548 |             best = dimensions;
+  19549 |             bestIndexes = indexes;
+  19550 |             hasBest = true;
+  19551 |         }
+  19552 |     }
+  19553 |     return best;
+  19554 | }
+  19555 | 
+  19556 | QStringList reorderSheetNames(const QStringList& sheetNames, const std::vector<ExcelFile>& files, int preferredIndex, const QStringList& fallbackOrder)
+  19557 | {
+  19558 |     QSet<QString> target;
+  19559 |     for (const auto& sheetName : sheetNames) {
+  19560 |         target.insert(sheetName);
+  19561 |     }
+  19562 |     QSet<QString> seen;
+  19563 |     QStringList ordered;
+  19564 | 
+  19565 |     if (preferredIndex >= 0 && preferredIndex < static_cast<int>(files.size())) {
+  19566 |         for (const auto& sheet : files[static_cast<size_t>(preferredIndex)].sheets) {
+  19567 |             if (target.contains(sheet.name) && !seen.contains(sheet.name)) {
+  19568 |                 seen.insert(sheet.name);
+  19569 |                 ordered.append(sheet.name);
+  19570 |             }
+  19571 |         }
+  19572 |     }
+  19573 | 
+  19574 |     for (const auto& sheetName : fallbackOrder) {
+  19575 |         if (target.contains(sheetName) && !seen.contains(sheetName)) {
+  19576 |             seen.insert(sheetName);
+  19577 |             ordered.append(sheetName);
+  19578 |         }
+  19579 |     }
+  19580 |     return ordered;
+  19581 | }
+  19582 | 
+  19583 | std::vector<ExcelFile> orderedFiles(const std::vector<ExcelFile>& files, int preferredIndex)
+  19584 | {
+  19585 |     std::vector<ExcelFile> ordered;
+  19586 |     if (preferredIndex >= 0 && preferredIndex < static_cast<int>(files.size())) {
+
+──────────────────────────────────────────────────────────────────────
+                         第 52 页 / 共 60 页
+======================================================================
+  软件名称：表表归一（xlsOne）                    第 53 页
+======================================================================
+
+  19587 |         ordered.push_back(files[static_cast<size_t>(preferredIndex)]);
+  19588 |     }
+  19589 |     for (int index = 0; index < static_cast<int>(files.size()); ++index) {
+  19590 |         if (index != preferredIndex) {
+  19591 |             ordered.push_back(files[static_cast<size_t>(index)]);
+  19592 |         }
+  19593 |     }
+  19594 |     return ordered;
+  19595 | }
+  19596 | 
+  19597 | } // namespace
+  19598 | 
+  19599 | WorkbookValidationOutcome WorkbookValidator::validate(
+  19600 |     const std::vector<ExcelFile>& files,
+  19601 |     const std::vector<ExcelParseFailure>& parseFailures
+  19602 | ) const
+  19603 | {
+  19604 |     WorkbookValidationOutcome outcome;
+  19605 | 
+  19606 |     for (const auto& failure : parseFailures) {
+  19607 |         FileValidationReport report;
+  19608 |         report.filename = QFileInfo(failure.path).fileName();
+  19609 |         report.filepath = failure.path;
+  19610 |         report.status = FileValidationStatus::Warning;
+  19611 |         report.issues.push_back({
+  19612 |             ValidationSeverity::Warning,
+  19613 |             ValidationIssueCode::ParseFailure,
+  19614 |             report.filename,
+  19615 |             report.filepath,
+  19616 |             {},
+  19617 |             QStringLiteral("解析失败: %1").arg(failure.message)
+  19618 |         });
+  19619 |         outcome.report.files.push_back(std::move(report));
+  19620 |     }
+  19621 | 
+  19622 |     std::vector<ExcelFile> candidates;
+  19623 |     for (const auto& file : files) {
+  19624 |         FileValidationReport report;
+  19625 |         report.filename = file.filename;
+  19626 |         report.filepath = file.filepath;
+  19627 |         if (file.sheets.empty()) {
+  19628 |             report.status = FileValidationStatus::Warning;
+  19629 |             report.issues.push_back({
+  19630 |                 ValidationSeverity::Warning,
+  19631 |                 ValidationIssueCode::EmptyWorkbook,
+  19632 |                 file.filename,
+  19633 |                 file.filepath,
+  19634 |                 {},
+  19635 |                 QStringLiteral("工作簿中没有可用工作表，已跳过")
+  19636 |             });
+
+──────────────────────────────────────────────────────────────────────
+                         第 53 页 / 共 60 页
+======================================================================
+  软件名称：表表归一（xlsOne）                    第 54 页
+======================================================================
+
+  19637 |         } else {
+  19638 |             candidates.push_back(file);
+  19639 |             continue;
+  19640 |         }
+  19641 |         outcome.report.files.push_back(std::move(report));
+  19642 |     }
+  19643 | 
+  19644 |     if (candidates.empty()) {
+  19645 |         outcome.report.readiness = MergeReadiness::Blocked;
+  19646 |         return outcome;
+  19647 |     }
+  19648 | 
+  19649 |     const int preliminaryTemplateIndex = chooseRepresentativeTemplateIndex(candidates, std::nullopt);
+  19650 |     const QStringList orderedNames = orderedSheetNames(candidates, preliminaryTemplateIndex);
+  19651 |     std::map<QString, SheetDimensions> referenceDimensionsBySheet;
+  19652 | 
+  19653 |     for (const auto& sheetName : orderedNames) {
+  19654 |         bool mergeable = true;
+  19655 |         std::vector<ValidationIssue> sheetIssues;
+  19656 |         std::vector<std::pair<int, SheetDimensions>> dimensionsByFile;
+  19657 | 
+  19658 |         for (int fileIndex = 0; fileIndex < static_cast<int>(candidates.size()); ++fileIndex) {
+  19659 |             const auto& file = candidates[static_cast<size_t>(fileIndex)];
+  19660 |             const auto* sheet = file.sheetNamed(sheetName);
+  19661 |             if (sheet == nullptr) {
+  19662 |                 mergeable = false;
+  19663 |                 sheetIssues.push_back(issue(
+  19664 |                     ValidationSeverity::Warning,
+  19665 |                     ValidationIssueCode::MissingSheet,
+  19666 |                     file,
+  19667 |                     sheetName,
+  19668 |                     QStringLiteral("缺少工作表 %1，已跳过该工作表").arg(sheetName)
+  19669 |                 ));
+  19670 |                 continue;
+  19671 |             }
+  19672 |             dimensionsByFile.push_back({fileIndex, effectiveDimensions(*sheet)});
+  19673 |         }
+  19674 | 
+  19675 |         if (!mergeable) {
+  19676 |             outcome.report.skippedSheetNames.append(sheetName);
+  19677 |             outcome.report.skippedSheetIssues.insert(outcome.report.skippedSheetIssues.end(), sheetIssues.begin(), sheetIssues.end());
+  19678 |             continue;
+  19679 |         }
+  19680 | 
+  19681 |         const auto dominantDimensions = chooseDominantDimensions(dimensionsByFile);
+  19682 |         const bool allDimensionsMatch = std::all_of(dimensionsByFile.begin(), dimensionsByFile.end(), [&](const auto& item) {
+  19683 |             return item.second == dominantDimensions;
+  19684 |         });
+  19685 | 
+  19686 |         if (allDimensionsMatch) {
+
+──────────────────────────────────────────────────────────────────────
+                         第 54 页 / 共 60 页
+======================================================================
+  软件名称：表表归一（xlsOne）                    第 55 页
+======================================================================
+
+  19687 |             outcome.report.commonSheetNames.append(sheetName);
+  19688 |             referenceDimensionsBySheet.insert({sheetName, dominantDimensions});
+  19689 |         } else {
+  19690 |             outcome.report.skippedSheetNames.append(sheetName);
+  19691 |             for (const auto& [fileIndex, dimensions] : dimensionsByFile) {
+  19692 |                 if (dimensions == dominantDimensions) {
+  19693 |                     continue;
+  19694 |                 }
+  19695 |                 const auto& file = candidates[static_cast<size_t>(fileIndex)];
+  19696 |                 if (dimensions.rows != dominantDimensions.rows) {
+  19697 |                     outcome.report.skippedSheetIssues.push_back(issue(
+  19698 |                         ValidationSeverity::Warning,
+  19699 |                         ValidationIssueCode::RowCountMismatch,
+  19700 |                         file,
+  19701 |                         sheetName,
+  19702 |                         QStringLiteral("工作表“%1”有效行数不一致（忽略尾部空白后：多数文件为 %2 行，当前文件为 %3 行），已从本次汇总中排除")
+  19703 |                             .arg(sheetName)
+  19704 |                             .arg(dominantDimensions.rows)
+  19705 |                             .arg(dimensions.rows)
+  19706 |                     ));
+  19707 |                 }
+  19708 |                 if (dimensions.columns != dominantDimensions.columns) {
+  19709 |                     outcome.report.skippedSheetIssues.push_back(issue(
+  19710 |                         ValidationSeverity::Warning,
+  19711 |                         ValidationIssueCode::ColumnCountMismatch,
+  19712 |                         file,
+  19713 |                         sheetName,
+  19714 |                         QStringLiteral("工作表“%1”有效列数不一致（忽略尾部空白后：多数文件为 %2 列，当前文件为 %3 列），已从本次汇总中排除")
+  19715 |                             .arg(sheetName)
+  19716 |                             .arg(dominantDimensions.columns)
+  19717 |                             .arg(dimensions.columns)
+  19718 |                     ));
+  19719 |                 }
+  19720 |             }
+  19721 |         }
+  19722 |     }
+  19723 | 
+  19724 |     const int templateIndex = chooseRepresentativeTemplateIndex(candidates, std::optional<QStringList>{outcome.report.commonSheetNames});
+  19725 |     outcome.report.commonSheetNames = reorderSheetNames(outcome.report.commonSheetNames, candidates, templateIndex, orderedNames);
+  19726 |     outcome.report.skippedSheetNames = reorderSheetNames(outcome.report.skippedSheetNames, candidates, templateIndex, orderedNames);
+  19727 | 
+  19728 |     const auto mergeableFiles = orderedFiles(candidates, templateIndex);
+  19729 |     for (const auto& file : mergeableFiles) {
+  19730 |         FileValidationReport report;
+  19731 |         report.filename = file.filename;
+  19732 |         report.filepath = file.filepath;
+  19733 |         report.status = FileValidationStatus::Included;
+  19734 |         report.isTemplate = templateIndex >= 0 && file.filepath == candidates[static_cast<size_t>(templateIndex)].filepath;
+  19735 | 
+  19736 |         for (const auto& sheetName : orderedNames) {
+
+──────────────────────────────────────────────────────────────────────
+                         第 55 页 / 共 60 页
+======================================================================
+  软件名称：表表归一（xlsOne）                    第 56 页
+======================================================================
+
+  19737 |             const auto referenceIterator = referenceDimensionsBySheet.find(sheetName);
+  19738 |             const SheetDimensions referenceDimensions = referenceIterator == referenceDimensionsBySheet.end()
+  19739 |                 ? SheetDimensions{}
+  19740 |                 : referenceIterator->second;
+  19741 |             const auto* sheet = file.sheetNamed(sheetName);
+  19742 |             const SheetDimensions candidateDimensions = sheet == nullptr ? SheetDimensions{} : effectiveDimensions(*sheet);
+  19743 |             std::vector<ValidationIssue> issues;
+  19744 |             std::copy_if(
+  19745 |                 outcome.report.skippedSheetIssues.begin(),
+  19746 |                 outcome.report.skippedSheetIssues.end(),
+  19747 |                 std::back_inserter(issues),
+  19748 |                 [&](const auto& item) {
+  19749 |                     return item.filePath == file.filepath && item.sheetName == sheetName;
+  19750 |                 }
+  19751 |             );
+  19752 |             report.sheetReports.push_back({
+  19753 |                 sheetName,
+  19754 |                 outcome.report.commonSheetNames.contains(sheetName) ? MergeReadiness::Ready : MergeReadiness::Blocked,
+  19755 |                 issues,
+  19756 |                 referenceDimensions.rows,
+  19757 |                 referenceDimensions.columns,
+  19758 |                 candidateDimensions.rows,
+  19759 |                 candidateDimensions.columns
+  19760 |             });
+  19761 |         }
+  19762 |         outcome.report.files.push_back(std::move(report));
+  19763 |     }
+  19764 | 
+  19765 |     std::sort(outcome.report.files.begin(), outcome.report.files.end(), [](const auto& lhs, const auto& rhs) {
+  19766 |         if (lhs.isTemplate != rhs.isTemplate) {
+  19767 |             return lhs.isTemplate && !rhs.isTemplate;
+  19768 |         }
+  19769 |         if (lhs.status != rhs.status) {
+  19770 |             return static_cast<int>(lhs.status) < static_cast<int>(rhs.status);
+  19771 |         }
+  19772 |         return lhs.filename.localeAwareCompare(rhs.filename) < 0;
+  19773 |     });
+  19774 | 
+  19775 |     outcome.report.readiness = outcome.report.commonSheetNames.isEmpty()
+  19776 |         ? MergeReadiness::Blocked
+  19777 |         : MergeReadiness::Ready;
+  19778 |     if (outcome.report.readiness == MergeReadiness::Blocked) {
+  19779 |         outcome.report.commonSheetNames.clear();
+  19780 |     }
+  19781 |     outcome.mergeableFiles = outcome.report.readiness == MergeReadiness::Ready ? mergeableFiles : std::vector<ExcelFile>{};
+  19782 |     return outcome;
+  19783 | }
+  19784 | 
+  19785 | } // namespace xlsone
+  19786 | 
+
+──────────────────────────────────────────────────────────────────────
+                         第 56 页 / 共 60 页
+======================================================================
+  软件名称：表表归一（xlsOne）                    第 57 页
+======================================================================
+
+  19787 | /* ===== /home/ethan/xlsone/cpp/core/src/zip_archive.cpp ===== */
+  19788 | #include "zip_archive.hpp"
+  19789 | 
+  19790 | #include <QFile>
+  19791 | #include <QTextCodec>
+  19792 | #include <QtEndian>
+  19793 | #include <stdexcept>
+  19794 | #include <zlib.h>
+  19795 | 
+  19796 | namespace xlsone {
+  19797 | 
+  19798 | namespace {
+  19799 | 
+  19800 | constexpr quint32 EndOfCentralDirectorySignature = 0x06054b50;
+  19801 | constexpr quint32 CentralDirectoryHeaderSignature = 0x02014b50;
+  19802 | constexpr quint32 LocalFileHeaderSignature = 0x04034b50;
+  19803 | 
+  19804 | quint16 u16(const QByteArray& data, qsizetype offset)
+  19805 | {
+  19806 |     return qFromLittleEndian<quint16>(reinterpret_cast<const uchar*>(data.constData() + offset));
+  19807 | }
+  19808 | 
+  19809 | quint32 u32(const QByteArray& data, qsizetype offset)
+  19810 | {
+  19811 |     return qFromLittleEndian<quint32>(reinterpret_cast<const uchar*>(data.constData() + offset));
+  19812 | }
+  19813 | 
+  19814 | QString decodeFileName(const QByteArray& raw, quint16 flags)
+  19815 | {
+  19816 |     if ((flags & (1 << 11)) != 0) {
+  19817 |         return QString::fromUtf8(raw);
+  19818 |     }
+  19819 |     QTextCodec* codec = QTextCodec::codecForLocale();
+  19820 |     return codec->toUnicode(raw);
+  19821 | }
+  19822 | 
+  19823 | QByteArray inflateRawDeflate(const QByteArray& compressed, quint32 expectedSize)
+  19824 | {
+  19825 |     QByteArray output;
+  19826 |     output.resize(static_cast<qsizetype>(expectedSize));
+  19827 | 
+  19828 |     z_stream stream {};
+  19829 |     stream.next_in = reinterpret_cast<Bytef*>(const_cast<char*>(compressed.constData()));
+  19830 |     stream.avail_in = static_cast<uInt>(compressed.size());
+  19831 |     stream.next_out = reinterpret_cast<Bytef*>(output.data());
+  19832 |     stream.avail_out = static_cast<uInt>(output.size());
+  19833 | 
+  19834 |     if (inflateInit2(&stream, -MAX_WBITS) != Z_OK) {
+  19835 |         throw std::runtime_error("无法初始化 ZIP deflate 解压器");
+  19836 |     }
+
+──────────────────────────────────────────────────────────────────────
+                         第 57 页 / 共 60 页
+======================================================================
+  软件名称：表表归一（xlsOne）                    第 58 页
+======================================================================
+
+  19837 | 
+  19838 |     const int result = inflate(&stream, Z_FINISH);
+  19839 |     inflateEnd(&stream);
+  19840 |     if (result != Z_STREAM_END) {
+  19841 |         throw std::runtime_error("ZIP deflate 解压失败");
+  19842 |     }
+  19843 | 
+  19844 |     output.resize(static_cast<qsizetype>(stream.total_out));
+  19845 |     return output;
+  19846 | }
+  19847 | 
+  19848 | } // namespace
+  19849 | 
+  19850 | ZipArchive::ZipArchive(const QString& path)
+  19851 | {
+  19852 |     QFile file(path);
+  19853 |     if (!file.open(QIODevice::ReadOnly)) {
+  19854 |         throw std::runtime_error(QStringLiteral("无法打开 ZIP 文件: %1").arg(file.errorString()).toStdString());
+  19855 |     }
+  19856 |     data_ = file.readAll();
+  19857 |     parseCentralDirectory();
+  19858 | }
+  19859 | 
+  19860 | bool ZipArchive::contains(const QString& name) const
+  19861 | {
+  19862 |     return entries_.contains(name);
+  19863 | }
+  19864 | 
+  19865 | QStringList ZipArchive::entryNames() const
+  19866 | {
+  19867 |     QStringList names = entries_.keys();
+  19868 |     names.sort();
+  19869 |     return names;
+  19870 | }
+  19871 | 
+  19872 | QByteArray ZipArchive::read(const QString& name) const
+  19873 | {
+  19874 |     const auto iterator = entries_.constFind(name);
+  19875 |     if (iterator == entries_.constEnd()) {
+  19876 |         throw std::runtime_error(QStringLiteral("ZIP 条目不存在: %1").arg(name).toStdString());
+  19877 |     }
+  19878 | 
+  19879 |     const Entry entry = iterator.value();
+  19880 |     const qsizetype headerOffset = entry.localHeaderOffset;
+  19881 |     if (headerOffset < 0 || headerOffset + 30 > data_.size() || u32(data_, headerOffset) != LocalFileHeaderSignature) {
+  19882 |         throw std::runtime_error(QStringLiteral("ZIP 本地文件头无效: %1").arg(name).toStdString());
+  19883 |     }
+  19884 | 
+  19885 |     const quint16 fileNameLength = u16(data_, headerOffset + 26);
+  19886 |     const quint16 extraLength = u16(data_, headerOffset + 28);
+
+──────────────────────────────────────────────────────────────────────
+                         第 58 页 / 共 60 页
+======================================================================
+  软件名称：表表归一（xlsOne）                    第 59 页
+======================================================================
+
+  19887 |     const qsizetype payloadOffset = headerOffset + 30 + fileNameLength + extraLength;
+  19888 |     if (payloadOffset < 0 || payloadOffset + entry.compressedSize > data_.size()) {
+  19889 |         throw std::runtime_error(QStringLiteral("ZIP 条目数据越界: %1").arg(name).toStdString());
+  19890 |     }
+  19891 | 
+  19892 |     const QByteArray compressed = data_.mid(payloadOffset, entry.compressedSize);
+  19893 |     if (entry.method == 0) {
+  19894 |         return compressed;
+  19895 |     }
+  19896 |     if (entry.method == 8) {
+  19897 |         return inflateRawDeflate(compressed, entry.uncompressedSize);
+  19898 |     }
+  19899 | 
+  19900 |     throw std::runtime_error(QStringLiteral("暂不支持 ZIP 压缩方法 %1: %2").arg(entry.method).arg(name).toStdString());
+  19901 | }
+  19902 | 
+  19903 | QString ZipArchive::readText(const QString& name) const
+  19904 | {
+  19905 |     return QString::fromUtf8(read(name));
+  19906 | }
+  19907 | 
+  19908 | void ZipArchive::parseCentralDirectory()
+  19909 | {
+  19910 |     const qsizetype maxComment = 0xffff;
+  19911 |     const qsizetype searchStart = std::max<qsizetype>(0, data_.size() - maxComment - 22);
+  19912 |     qsizetype eocdOffset = -1;
+  19913 |     for (qsizetype offset = data_.size() - 22; offset >= searchStart; --offset) {
+  19914 |         if (u32(data_, offset) == EndOfCentralDirectorySignature) {
+  19915 |             eocdOffset = offset;
+  19916 |             break;
+  19917 |         }
+  19918 |     }
+  19919 |     if (eocdOffset < 0) {
+  19920 |         throw std::runtime_error("不是有效的 ZIP 文件：找不到中央目录");
+  19921 |     }
+  19922 | 
+  19923 |     const quint16 entryCount = u16(data_, eocdOffset + 10);
+  19924 |     const quint32 centralDirectoryOffset = u32(data_, eocdOffset + 16);
+  19925 |     qsizetype offset = centralDirectoryOffset;
+  19926 | 
+  19927 |     for (quint16 index = 0; index < entryCount; ++index) {
+  19928 |         if (offset + 46 > data_.size() || u32(data_, offset) != CentralDirectoryHeaderSignature) {
+  19929 |             throw std::runtime_error("ZIP 中央目录损坏");
+  19930 |         }
+  19931 | 
+  19932 |         Entry entry;
+  19933 |         entry.flags = u16(data_, offset + 8);
+  19934 |         entry.method = u16(data_, offset + 10);
+  19935 |         entry.compressedSize = u32(data_, offset + 20);
+  19936 |         entry.uncompressedSize = u32(data_, offset + 24);
+
+──────────────────────────────────────────────────────────────────────
+                         第 59 页 / 共 60 页
+======================================================================
+  软件名称：表表归一（xlsOne）                    第 60 页
+======================================================================
+
+  19937 |         const quint16 fileNameLength = u16(data_, offset + 28);
+  19938 |         const quint16 extraLength = u16(data_, offset + 30);
+  19939 |         const quint16 commentLength = u16(data_, offset + 32);
+  19940 |         entry.localHeaderOffset = u32(data_, offset + 42);
+  19941 | 
+  19942 |         const QByteArray rawName = data_.mid(offset + 46, fileNameLength);
+  19943 |         entries_.insert(decodeFileName(rawName, entry.flags), entry);
+  19944 | 
+  19945 |         offset += 46 + fileNameLength + extraLength + commentLength;
+  19946 |     }
+  19947 | }
+  19948 | 
+  19949 | } // namespace xlsone
+  19950 | 
+  19951 | /* ===== /home/ethan/xlsone/cpp/core/src/zip_archive.hpp ===== */
+  19952 | #pragma once
+  19953 | 
+  19954 | #include <QByteArray>
+  19955 | #include <QHash>
+  19956 | #include <QString>
+  19957 | #include <QStringList>
+  19958 | 
+  19959 | namespace xlsone {
+  19960 | 
+  19961 | class ZipArchive {
+  19962 | public:
+  19963 |     explicit ZipArchive(const QString& path);
+  19964 | 
+  19965 |     bool contains(const QString& name) const;
+  19966 |     QStringList entryNames() const;
+  19967 |     QByteArray read(const QString& name) const;
+  19968 |     QString readText(const QString& name) const;
+  19969 | 
+  19970 | private:
+  19971 |     struct Entry {
+  19972 |         quint16 flags = 0;
+  19973 |         quint16 method = 0;
+  19974 |         quint32 compressedSize = 0;
+  19975 |         quint32 uncompressedSize = 0;
+  19976 |         quint32 localHeaderOffset = 0;
+  19977 |     };
+  19978 | 
+  19979 |     QByteArray data_;
+  19980 |     QHash<QString, Entry> entries_;
+  19981 | 
+  19982 |     void parseCentralDirectory();
+  19983 | };
+  19984 | 
+  19985 | } // namespace xlsone
+  19986 | 
+
+──────────────────────────────────────────────────────────────────────
+                         第 60 页 / 共 60 页
+

@@ -272,7 +272,6 @@ void SchemaManagerDialog::importSchema()
         schema.name = schema.name.isEmpty() ? tr("导入规则") : schema.name + tr(" (导入)");
         schema.createdAt = QDateTime::currentDateTimeUtc();
         schema.updatedAt = schema.createdAt;
-        schema.matchCount = 0;
         repository_.save(schema);
     } catch (const std::exception& error) {
         QMessageBox::critical(this, tr("导入失败"), QString::fromUtf8(error.what()));
@@ -319,7 +318,6 @@ QString SchemaManagerDialog::describeSchema(const xlsone::MergeSchema& schema) c
     lines << tr("版本: %1").arg(schema.version);
     lines << tr("创建: %1").arg(formatDate(schema.createdAt));
     lines << tr("更新: %1").arg(formatDate(schema.updatedAt));
-    lines << tr("匹配次数: %1").arg(schema.matchCount);
     lines << tr("文件数: %1").arg(schema.fingerprint.fileCount);
     lines << tr("工作表: %1").arg(schema.fingerprint.sheetNames.join(QStringLiteral(", ")));
     lines << tr("签名: %1").arg(schema.fingerprint.signature);

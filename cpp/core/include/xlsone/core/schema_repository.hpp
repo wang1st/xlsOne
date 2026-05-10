@@ -45,7 +45,6 @@ struct MergeSchema {
     std::vector<SchemaCellOverride> overrides;
     QDateTime createdAt;
     QDateTime updatedAt;
-    int matchCount = 0;
 };
 
 struct SchemaMatchCandidate {

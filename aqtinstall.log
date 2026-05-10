@@ -1,0 +1,74 @@
+2026-05-07 11:48:30,353 - aqt.helper - DEBUG - helper 281473640277904 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/linux_arm64/desktop/qt6_663/Updates.xml.sha256
+2026-05-07 11:48:37,277 - aqt.helper - DEBUG - helper 281473640277904 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/linux_arm64/desktop/qt6_663/Updates.xml.sha256
+2026-05-07 11:48:43,246 - aqt.helper - DEBUG - helper 281473640277904 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/linux_arm64/desktop/qt6_663/Updates.xml.sha256
+2026-05-07 11:48:49,107 - aqt.helper - DEBUG - helper 281473640277904 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/linux_arm64/desktop/qt6_663/Updates.xml.sha256
+2026-05-07 11:48:55,029 - aqt.helper - DEBUG - helper 281473640277904 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/linux_arm64/desktop/qt6_663/Updates.xml.sha256
+2026-05-07 11:49:05,835 - aqt.main - WARNING - installer 281473343444880 The parameter 'extensions' with value '6.6.3' is deprecated and marked for removal in a future version of aqt.
+In the future, please omit this parameter.
+2026-05-07 11:49:05,836 - aqt.main - WARNING - installer 281473343444880 The '--extensions' flag will always return an empty list, because there are no useful arguments for the '--extension' flag.
+2026-05-07 11:49:22,368 - aqt.helper - DEBUG - helper 281473464539024 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/linux_arm64/desktop/qt6_663/Updates.xml.sha256
+2026-05-07 11:49:28,324 - aqt.helper - DEBUG - helper 281473464539024 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/linux_arm64/desktop/qt6_663/Updates.xml.sha256
+2026-05-07 11:49:34,103 - aqt.helper - DEBUG - helper 281473464539024 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/linux_arm64/desktop/qt6_663/Updates.xml.sha256
+2026-05-07 11:49:40,765 - aqt.helper - DEBUG - helper 281473464539024 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/linux_arm64/desktop/qt6_663/Updates.xml.sha256
+2026-05-07 11:49:46,703 - aqt.helper - DEBUG - helper 281473464539024 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/linux_arm64/desktop/qt6_663/Updates.xml.sha256
+2026-05-07 11:50:17,679 - aqt.helper - DEBUG - helper 281472956192656 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/linux_arm64/desktop/qt6_683/qt6_683/Updates.xml.sha256
+2026-05-07 12:17:18,503 - aqt.main - INFO - installer 281473448490896 aqtinstall(aqt) v3.3.0 on Python 3.13.2 [CPython GCC 11.2.0]
+2026-05-07 12:17:18,504 - aqt.helper - DEBUG - helper 281473448490896 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/linux_arm64/desktop/qt6_683/qt6_683/Updates.xml.sha256
+2026-05-07 12:17:30,640 - aqt.helper - DEBUG - helper 281473448490896 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/linux_arm64/extensions/qtwebengine/683/arm64/Updates.xml.sha256
+2026-05-07 12:17:42,390 - aqt.archives - INFO - archives 281473448490896 Found extension qtwebengine
+2026-05-07 12:17:42,391 - aqt.helper - DEBUG - helper 281473448490896 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/linux_arm64/extensions/qtpdf/683/arm64/Updates.xml.sha256
+2026-05-07 12:17:54,144 - aqt.archives - INFO - archives 281473448490896 Found extension qtpdf
+2026-05-07 12:17:54,164 - aqt.main - ERROR - installer 281473448490896 The packages ['qt_base'] were not found while parsing XML of package information!
+==============================Suggested follow-up:==============================
+* Please use 'aqt list-qt linux_arm64 desktop --arch 6.8.3' to show architectures available.
+2026-05-07 12:17:59,808 - aqt.helper - DEBUG - helper 281473760712592 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/linux_arm64/desktop/qt6_683/qt6_683/Updates.xml.sha256
+2026-05-07 12:18:18,338 - aqt.main - INFO - installer 281473501157264 aqtinstall(aqt) v3.3.0 on Python 3.13.2 [CPython GCC 11.2.0]
+2026-05-07 12:18:18,339 - aqt.helper - DEBUG - helper 281473501157264 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/linux_arm64/desktop/qt6_683/qt6_683/Updates.xml.sha256
+2026-05-07 12:18:30,139 - aqt.helper - DEBUG - helper 281473501157264 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/linux_arm64/extensions/qtwebengine/683/arm64/Updates.xml.sha256
+2026-05-07 12:18:44,280 - aqt.archives - INFO - archives 281473501157264 Found extension qtwebengine
+2026-05-07 12:18:44,281 - aqt.helper - DEBUG - helper 281473501157264 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/linux_arm64/extensions/qtpdf/683/arm64/Updates.xml.sha256
+2026-05-07 12:18:55,943 - aqt.archives - INFO - archives 281473501157264 Found extension qtpdf
+2026-05-07 12:18:57,037 - aqt.helper - DEBUG - helper 281472830547856 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/linux_arm64/desktop/qt6_683/qt6_683/qt.qt6.683.linux_gcc_arm64/6.8.3-0-202503201345qtbase-Linux-Ubuntu_24_04-GCC-Linux-Ubuntu_24_04-AARCH64.7z.sha256
+2026-05-07 12:18:57,128 - aqt.helper - DEBUG - helper 281473623340944 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/linux_arm64/desktop/qt6_683/qt6_683/qt.qt6.683.linux_gcc_arm64/6.8.3-0-202503201345qtsvg-Linux-Ubuntu_24_04-GCC-Linux-Ubuntu_24_04-AARCH64.7z.sha256
+2026-05-07 12:18:57,139 - aqt.helper - DEBUG - helper 281473882072976 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/linux_arm64/desktop/qt6_683/qt6_683/qt.qt6.683.linux_gcc_arm64/6.8.3-0-202503201345qtdeclarative-Linux-Ubuntu_24_04-GCC-Linux-Ubuntu_24_04-AARCH64.7z.sha256
+2026-05-07 12:18:57,237 - aqt.helper - DEBUG - helper 281473181706128 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/linux_arm64/desktop/qt6_683/qt6_683/qt.qt6.683.linux_gcc_arm64/6.8.3-0-202503201345qttools-Linux-Ubuntu_24_04-GCC-Linux-Ubuntu_24_04-AARCH64.7z.sha256
+2026-05-07 12:19:03,159 - aqt.helper - INFO - helper 281473181706128 Downloading qttools...
+2026-05-07 12:19:03,159 - aqt.installer - DEBUG - installer 281473181706128 Download URL: https://download.qt.io/online/qtsdkrepository/linux_arm64/desktop/qt6_683/qt6_683/qt.qt6.683.linux_gcc_arm64/6.8.3-0-202503201345qttools-Linux-Ubuntu_24_04-GCC-Linux-Ubuntu_24_04-AARCH64.7z
+2026-05-07 12:19:04,389 - aqt.helper - INFO - helper 281472830547856 Downloading qtbase...
+2026-05-07 12:19:04,389 - aqt.installer - DEBUG - installer 281472830547856 Download URL: https://download.qt.io/online/qtsdkrepository/linux_arm64/desktop/qt6_683/qt6_683/qt.qt6.683.linux_gcc_arm64/6.8.3-0-202503201345qtbase-Linux-Ubuntu_24_04-GCC-Linux-Ubuntu_24_04-AARCH64.7z
+2026-05-07 12:19:04,419 - aqt.helper - INFO - helper 281473623340944 Downloading qtsvg...
+2026-05-07 12:19:04,420 - aqt.installer - DEBUG - installer 281473623340944 Download URL: https://download.qt.io/online/qtsdkrepository/linux_arm64/desktop/qt6_683/qt6_683/qt.qt6.683.linux_gcc_arm64/6.8.3-0-202503201345qtsvg-Linux-Ubuntu_24_04-GCC-Linux-Ubuntu_24_04-AARCH64.7z
+2026-05-07 12:19:04,932 - aqt.helper - INFO - helper 281473882072976 Downloading qtdeclarative...
+2026-05-07 12:19:04,932 - aqt.installer - DEBUG - installer 281473882072976 Download URL: https://download.qt.io/online/qtsdkrepository/linux_arm64/desktop/qt6_683/qt6_683/qt.qt6.683.linux_gcc_arm64/6.8.3-0-202503201345qtdeclarative-Linux-Ubuntu_24_04-GCC-Linux-Ubuntu_24_04-AARCH64.7z
+2026-05-07 12:19:09,948 - aqt.helper - DEBUG - helper 281473181706128 Asked to redirect(302) to: https://mirrors.sau.edu.cn/qt/online/qtsdkrepository/linux_arm64/desktop/qt6_683/qt6_683/qt.qt6.683.linux_gcc_arm64/6.8.3-0-202503201345qttools-Linux-Ubuntu_24_04-GCC-Linux-Ubuntu_24_04-AARCH64.7z
+2026-05-07 12:19:09,948 - aqt.helper - INFO - helper 281473181706128 Redirected: mirrors.sau.edu.cn
+2026-05-07 12:19:10,294 - aqt.helper - DEBUG - helper 281473623340944 Asked to redirect(302) to: https://mirrors.sau.edu.cn/qt/online/qtsdkrepository/linux_arm64/desktop/qt6_683/qt6_683/qt.qt6.683.linux_gcc_arm64/6.8.3-0-202503201345qtsvg-Linux-Ubuntu_24_04-GCC-Linux-Ubuntu_24_04-AARCH64.7z
+2026-05-07 12:19:10,294 - aqt.helper - INFO - helper 281473623340944 Redirected: mirrors.sau.edu.cn
+2026-05-07 12:19:11,414 - aqt.helper - DEBUG - helper 281472830547856 Asked to redirect(302) to: https://mirrors.sau.edu.cn/qt/online/qtsdkrepository/linux_arm64/desktop/qt6_683/qt6_683/qt.qt6.683.linux_gcc_arm64/6.8.3-0-202503201345qtbase-Linux-Ubuntu_24_04-GCC-Linux-Ubuntu_24_04-AARCH64.7z
+2026-05-07 12:19:11,414 - aqt.helper - INFO - helper 281472830547856 Redirected: mirrors.sau.edu.cn
+2026-05-07 12:19:15,907 - aqt.installer - INFO - installer 281473623340944 Finished installation of qtsvg-Linux-Ubuntu_24_04-GCC-Linux-Ubuntu_24_04-AARCH64.7z in 18.79064386
+2026-05-07 12:19:15,974 - aqt.helper - DEBUG - helper 281473623340944 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/linux_arm64/desktop/qt6_683/qt6_683/qt.qt6.683.linux_gcc_arm64/6.8.3-0-202503201345qttranslations-Linux-Ubuntu_24_04-GCC-Linux-Ubuntu_24_04-AARCH64.7z.sha256
+2026-05-07 12:19:22,134 - aqt.helper - DEBUG - helper 281473882072976 Asked to redirect(302) to: https://mirrors.sau.edu.cn/qt/online/qtsdkrepository/linux_arm64/desktop/qt6_683/qt6_683/qt.qt6.683.linux_gcc_arm64/6.8.3-0-202503201345qtdeclarative-Linux-Ubuntu_24_04-GCC-Linux-Ubuntu_24_04-AARCH64.7z
+2026-05-07 12:19:22,135 - aqt.helper - INFO - helper 281473882072976 Redirected: mirrors.sau.edu.cn
+2026-05-07 12:19:22,793 - aqt.helper - INFO - helper 281473623340944 Downloading qttranslations...
+2026-05-07 12:19:22,793 - aqt.installer - DEBUG - installer 281473623340944 Download URL: https://download.qt.io/online/qtsdkrepository/linux_arm64/desktop/qt6_683/qt6_683/qt.qt6.683.linux_gcc_arm64/6.8.3-0-202503201345qttranslations-Linux-Ubuntu_24_04-GCC-Linux-Ubuntu_24_04-AARCH64.7z
+2026-05-07 12:19:28,922 - aqt.installer - INFO - installer 281472830547856 Finished installation of qtbase-Linux-Ubuntu_24_04-GCC-Linux-Ubuntu_24_04-AARCH64.7z in 31.90275352
+2026-05-07 12:19:28,998 - aqt.helper - DEBUG - helper 281472830547856 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/linux_arm64/desktop/qt6_683/qt6_683/qt.qt6.683.linux_gcc_arm64/6.8.3-0-202503201345qtwayland-Linux-Ubuntu_24_04-GCC-Linux-Ubuntu_24_04-AARCH64.7z.sha256
+2026-05-07 12:19:29,524 - aqt.helper - DEBUG - helper 281473623340944 Asked to redirect(302) to: https://mirrors.sau.edu.cn/qt/online/qtsdkrepository/linux_arm64/desktop/qt6_683/qt6_683/qt.qt6.683.linux_gcc_arm64/6.8.3-0-202503201345qttranslations-Linux-Ubuntu_24_04-GCC-Linux-Ubuntu_24_04-AARCH64.7z
+2026-05-07 12:19:29,524 - aqt.helper - INFO - helper 281473623340944 Redirected: mirrors.sau.edu.cn
+2026-05-07 12:19:34,945 - aqt.helper - INFO - helper 281472830547856 Downloading qtwayland...
+2026-05-07 12:19:34,945 - aqt.installer - DEBUG - installer 281472830547856 Download URL: https://download.qt.io/online/qtsdkrepository/linux_arm64/desktop/qt6_683/qt6_683/qt.qt6.683.linux_gcc_arm64/6.8.3-0-202503201345qtwayland-Linux-Ubuntu_24_04-GCC-Linux-Ubuntu_24_04-AARCH64.7z
+2026-05-07 12:19:35,972 - aqt.installer - INFO - installer 281473623340944 Finished installation of qttranslations-Linux-Ubuntu_24_04-GCC-Linux-Ubuntu_24_04-AARCH64.7z in 20.00717953
+2026-05-07 12:19:36,026 - aqt.helper - DEBUG - helper 281473623340944 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/linux_arm64/desktop/qt6_683/qt6_683/qt.qt6.683.linux_gcc_arm64/6.8.3-0-202503201345icu-linux-Debian11.6-arm64.7z.sha256
+2026-05-07 12:19:40,787 - aqt.helper - DEBUG - helper 281472830547856 Asked to redirect(302) to: https://mirrors.sau.edu.cn/qt/online/qtsdkrepository/linux_arm64/desktop/qt6_683/qt6_683/qt.qt6.683.linux_gcc_arm64/6.8.3-0-202503201345qtwayland-Linux-Ubuntu_24_04-GCC-Linux-Ubuntu_24_04-AARCH64.7z
+2026-05-07 12:19:40,788 - aqt.helper - INFO - helper 281472830547856 Redirected: mirrors.sau.edu.cn
+2026-05-07 12:19:41,748 - aqt.installer - INFO - installer 281473181706128 Finished installation of qttools-Linux-Ubuntu_24_04-GCC-Linux-Ubuntu_24_04-AARCH64.7z in 44.51869440
+2026-05-07 12:19:42,437 - aqt.helper - INFO - helper 281473623340944 Downloading icu...
+2026-05-07 12:19:42,437 - aqt.installer - DEBUG - installer 281473623340944 Download URL: https://download.qt.io/online/qtsdkrepository/linux_arm64/desktop/qt6_683/qt6_683/qt.qt6.683.linux_gcc_arm64/6.8.3-0-202503201345icu-linux-Debian11.6-arm64.7z
+2026-05-07 12:19:47,340 - aqt.installer - INFO - installer 281472830547856 Finished installation of qtwayland-Linux-Ubuntu_24_04-GCC-Linux-Ubuntu_24_04-AARCH64.7z in 18.35116936
+2026-05-07 12:19:48,377 - aqt.helper - DEBUG - helper 281473623340944 Asked to redirect(302) to: https://mirrors.sau.edu.cn/qt/online/qtsdkrepository/linux_arm64/desktop/qt6_683/qt6_683/qt.qt6.683.linux_gcc_arm64/6.8.3-0-202503201345icu-linux-Debian11.6-arm64.7z
+2026-05-07 12:19:48,377 - aqt.helper - INFO - helper 281473623340944 Redirected: mirrors.sau.edu.cn
+2026-05-07 12:20:01,673 - aqt.installer - INFO - installer 281473623340944 Finished installation of icu-linux-Debian11.6-arm64.7z in 25.65600098
+2026-05-07 12:21:17,560 - aqt.installer - INFO - installer 281473882072976 Finished installation of qtdeclarative-Linux-Ubuntu_24_04-GCC-Linux-Ubuntu_24_04-AARCH64.7z in 140.42922257
+2026-05-07 12:21:18,685 - aqt.main - INFO - installer 281473501157264 Finished installation
+2026-05-07 12:21:18,686 - aqt.main - INFO - installer 281473501157264 Time elapsed: 180.34770367 second

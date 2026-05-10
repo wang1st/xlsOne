@@ -113,8 +113,6 @@ struct SchemaRowView: View {
                         Label(schema.scopeSummary, systemImage: "rectangle.stack")
                         Text("•")
                         Label("\(schema.cellOverrides.count) 处已记住调整", systemImage: "pencil")
-                        Text("•")
-                        Label("沿用 \(schema.matchCount) 次", systemImage: "checkmark.circle")
                     }
                     .font(.caption)
                     .foregroundStyle(.secondary)
