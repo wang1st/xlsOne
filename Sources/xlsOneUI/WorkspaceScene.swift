@@ -25,7 +25,7 @@ public struct XlsOneWorkspaceScene: Scene {
             }
 
             CommandGroup(replacing: .appSettings) {
-                Button("调整记忆...") {
+                Button("查看规则") {
                     viewModel.showSchemaManagerWindow()
                 }
                 .keyboardShortcut(",", modifiers: .command)
