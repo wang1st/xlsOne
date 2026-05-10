@@ -141,7 +141,6 @@ public struct MergeSchema: Codable, Sendable, Identifiable {
     public var cellOverrides: [CellTypeOverride]
     public let createdAt: Date
     public var updatedAt: Date
-    public var matchCount: Int  // 匹配成功次数（用于排序推荐）
 
     public init(
         id: UUID = UUID(),
@@ -150,8 +149,7 @@ public struct MergeSchema: Codable, Sendable, Identifiable {
         workbookFingerprint: WorkbookRuleFingerprint? = nil,
         cellOverrides: [CellTypeOverride],
         createdAt: Date = Date(),
-        updatedAt: Date = Date(),
-        matchCount: Int = 0
+        updatedAt: Date = Date()
     ) {
         self.id = id
         self.name = name
@@ -160,7 +158,6 @@ public struct MergeSchema: Codable, Sendable, Identifiable {
         self.cellOverrides = cellOverrides
         self.createdAt = createdAt
         self.updatedAt = updatedAt
-        self.matchCount = matchCount
     }
 }
 

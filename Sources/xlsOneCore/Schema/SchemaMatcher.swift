@@ -82,9 +82,6 @@ public struct SchemaMatcher {
             if lhs.score != rhs.score {
                 return lhs.score > rhs.score
             }
-            if lhs.schema.matchCount != rhs.schema.matchCount {
-                return lhs.schema.matchCount > rhs.schema.matchCount
-            }
             return lhs.schema.updatedAt > rhs.schema.updatedAt
         }
 
