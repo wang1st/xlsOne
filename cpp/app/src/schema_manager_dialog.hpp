@@ -6,7 +6,6 @@
 
 #include <optional>
 
-class QListWidget;
 class QPushButton;
 class QTextEdit;
 
@@ -14,29 +13,29 @@ class SchemaManagerDialog final : public QDialog {
     Q_OBJECT
 
 public:
-    explicit SchemaManagerDialog(const xlsone::SchemaRepository& repository, QWidget* parent = nullptr);
+    explicit SchemaManagerDialog(const xlsone::SchemaRepository& repository,
+                                 const std::optional<xlsone::MergeSchema>& currentSchema,
+                                 QWidget* parent = nullptr);
 
-    std::optional<xlsone::MergeSchema> selectedSchema() const;
+    std::optional<xlsone::MergeSchema> importedSchema() const;
+    bool clearRequested() const;
 
 private slots:
-    void updateDetails();
-    void deleteSelected();
-    void applySelected();
     void importSchema();
-    void exportSelected();
+    void exportCurrent();
+    void clearCurrent();
 
 private:
-    void refresh();
+    void refreshDetails();
     QString describeSchema(const xlsone::MergeSchema& schema) const;
 
     const xlsone::SchemaRepository& repository_;
-    std::vector<xlsone::MergeSchema> schemas_;
-    std::optional<xlsone::MergeSchema> selectedSchema_;
+    std::optional<xlsone::MergeSchema> currentSchema_;
+    std::optional<xlsone::MergeSchema> importedSchema_;
+    bool clearRequested_ = false;
 
-    QListWidget* list_ = nullptr;
     QTextEdit* details_ = nullptr;
-    QPushButton* applyButton_ = nullptr;
-    QPushButton* deleteButton_ = nullptr;
-    QPushButton* importButton_ = nullptr;
     QPushButton* exportButton_ = nullptr;
+    QPushButton* importButton_ = nullptr;
+    QPushButton* clearButton_ = nullptr;
 };

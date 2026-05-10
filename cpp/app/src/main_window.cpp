@@ -363,7 +363,7 @@ void MainWindow::buildUi()
     auto* saveSchemaAction = new QAction(tr("保存规则"), this);
     connect(saveSchemaAction, &QAction::triggered, this, &MainWindow::saveCurrentSchema);
 
-    auto* manageSchemasAction = new QAction(tr("管理规则"), this);
+    auto* manageSchemasAction = new QAction(tr("查看规则"), this);
     connect(manageSchemasAction, &QAction::triggered, this, &MainWindow::manageSchemas);
 
     auto* undoOverrideAction = new QAction(tr("撤销修正"), this);
@@ -1371,33 +1371,49 @@ void MainWindow::saveCurrentSchema()
 
 void MainWindow::manageSchemas()
 {
-    SchemaManagerDialog dialog(schemaRepository_, this);
+    std::optional<xlsone::MergeSchema> currentSchema;
+    const auto schemaId = workspaceActiveSchemaId_.has_value()
+        ? workspaceActiveSchemaId_ : workspaceBaseSchemaId_;
+    if (schemaId.has_value()) {
+        currentSchema = schemaRepository_.find(*schemaId);
+    }
+
+    SchemaManagerDialog dialog(schemaRepository_, currentSchema, this);
     if (dialog.exec() != QDialog::Accepted) {
         return;
     }
 
-    const auto schema = dialog.selectedSchema();
-    if (!schema.has_value()) {
-        return;
-    }
-    if (results_.empty()) {
-        QMessageBox::information(this, tr("应用规则"), tr("当前没有可应用规则的汇总结果。"));
+    if (auto imported = dialog.importedSchema(); imported.has_value()) {
+        schemaRepository_.save(*imported);
+        syncWorkspaceSchemaBase(imported);
+        rebuildResultsWithCurrentOverrides();
+        const int resultIndex = currentResultIndex();
+        if (resultIndex >= 0) {
+            showResult(results_[static_cast<size_t>(resultIndex)]);
+        }
+        updateSheetStrip();
+        updateCorrectionBar();
+        statusLabel_->setText(tr("已导入规则“%1”。").arg(imported->name));
         return;
     }
 
-    currentOverrides_.clear();
-    forgottenOverrides_.clear();
-    overrideHistory_.clear();
-    syncWorkspaceSchemaBase(schema);
-    rebuildResultsWithCurrentOverrides();
-
-    const int resultIndex = currentResultIndex();
-    if (resultIndex >= 0) {
-        showResult(results_[static_cast<size_t>(resultIndex)]);
+    if (dialog.clearRequested() && schemaId.has_value()) {
+        schemaRepository_.remove(*schemaId);
+        workspaceActiveSchemaId_.reset();
+        workspaceBaseSchemaId_.reset();
+        workspaceBaseOverrides_.clear();
+        currentOverrides_.clear();
+        forgottenOverrides_.clear();
+        overrideHistory_.clear();
+        rebuildResultsWithCurrentOverrides();
+        const int resultIndex = currentResultIndex();
+        if (resultIndex >= 0) {
+            showResult(results_[static_cast<size_t>(resultIndex)]);
+        }
+        updateSheetStrip();
+        updateCorrectionBar();
+        statusLabel_->setText(tr("已清除规则。"));
     }
-    updateSheetStrip();
-    updateCorrectionBar();
-    statusLabel_->setText(tr("已应用规则“%1”。").arg(schema->name));
 }
 
 void MainWindow::exportResult()
