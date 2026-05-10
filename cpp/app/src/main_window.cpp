@@ -1284,38 +1284,78 @@ void MainWindow::saveCurrentSchema()
         return;
     }
 
-    bool accepted = false;
-    const QString name = QInputDialog::getText(
-        this,
-        tr("保存规则"),
-        tr("规则名称"),
-        QLineEdit::Normal,
-        tr("新规则"),
-        &accepted
-    ).trimmed();
-    if (!accepted || name.isEmpty()) {
-        return;
+    const auto fingerprint = xlsone::fingerprintFor(validation_.mergeableFiles, validation_.report.commonSheetNames);
+    const auto now = QDateTime::currentDateTimeUtc();
+    const auto effectiveOverrides = effectiveWorkspaceOverrides();
+
+    // 1. 如果已有活跃规则，直接更新
+    const auto schemaId = workspaceActiveSchemaId_.has_value()
+        ? workspaceActiveSchemaId_ : workspaceBaseSchemaId_;
+    if (schemaId.has_value()) {
+        auto schema = schemaRepository_.find(*schemaId);
+        if (schema.has_value()) {
+            schema->fingerprint = fingerprint;
+            schema->overrides = effectiveOverrides;
+            schema->updatedAt = now;
+            schemaRepository_.save(*schema);
+            workspaceActiveSchemaId_ = schema->id;
+            workspaceBaseOverrides_ = schema->overrides;
+            workspaceBaseSchemaId_ = schema->id;
+            currentOverrides_.clear();
+            forgottenOverrides_.clear();
+            overrideHistory_.clear();
+            rebuildResultsWithCurrentOverrides();
+            const int resultIndex = currentResultIndex();
+            if (resultIndex >= 0) {
+                showResult(results_[static_cast<size_t>(resultIndex)]);
+            }
+            updateSheetStrip();
+            updateCorrectionBar();
+            statusLabel_->setText(tr("已更新规则“%1”。").arg(schema->name));
+            return;
+        }
     }
 
-    xlsone::MergeSchema schema;
-    schema.id = QUuid::createUuid();
-    schema.name = name;
-    schema.version = 2;
-    schema.fingerprint = xlsone::fingerprintFor(validation_.mergeableFiles, validation_.report.commonSheetNames);
-    schema.overrides = effectiveWorkspaceOverrides();
-    schema.createdAt = QDateTime::currentDateTimeUtc();
-    schema.updatedAt = schema.createdAt;
-
-    try {
+    // 2. 按指纹查找已有规则
+    auto allSchemas = schemaRepository_.loadAll();
+    const auto match = xlsone::SchemaMatcher::match(fingerprint, allSchemas);
+    if (match.kind == xlsone::SchemaMatchKind::Exact) {
+        auto schema = match.candidates[0].schema;
+        schema.overrides = effectiveOverrides;
+        schema.updatedAt = now;
         schemaRepository_.save(schema);
-    } catch (const std::exception& error) {
-        QMessageBox::critical(this, tr("保存失败"), QString::fromUtf8(error.what()));
+        workspaceBaseOverrides_ = schema.overrides;
+        workspaceBaseSchemaId_ = schema.id;
+        workspaceActiveSchemaId_ = schema.id;
+        currentOverrides_.clear();
+        forgottenOverrides_.clear();
+        overrideHistory_.clear();
+        rebuildResultsWithCurrentOverrides();
+        const int resultIndex = currentResultIndex();
+        if (resultIndex >= 0) {
+            showResult(results_[static_cast<size_t>(resultIndex)]);
+        }
+        updateSheetStrip();
+        updateCorrectionBar();
+        statusLabel_->setText(tr("已更新规则“%1”。").arg(schema.name));
         return;
     }
 
-    workspaceBaseOverrides_ = schema.overrides;
-    workspaceBaseSchemaId_ = schema.id;
-    workspaceActiveSchemaId_ = schema.id;
+    // 3. 自动生成名称，新建规则
+    const QString name = suggestedAdjustmentMemoryName();
+    xlsone::MergeSchema newSchema;
+    newSchema.id = QUuid::createUuid();
+    newSchema.name = name;
+    newSchema.version = 2;
+    newSchema.fingerprint = fingerprint;
+    newSchema.overrides = effectiveOverrides;
+    newSchema.createdAt = now;
+    newSchema.updatedAt = now;
+    schemaRepository_.save(newSchema);
+
+    workspaceBaseOverrides_ = newSchema.overrides;
+    workspaceBaseSchemaId_ = newSchema.id;
+    workspaceActiveSchemaId_ = newSchema.id;
     currentOverrides_.clear();
     forgottenOverrides_.clear();
     overrideHistory_.clear();
@@ -1326,9 +1366,7 @@ void MainWindow::saveCurrentSchema()
     }
     updateSheetStrip();
     updateCorrectionBar();
-
-    statusLabel_->setText(tr("已保存规则“%1”，包含 %2 个修正。").arg(schema.name).arg(static_cast<int>(schema.overrides.size())));
-    QMessageBox::information(this, tr("保存规则"), tr("规则已保存，后续相同结构文件会自动匹配应用。"));
+    statusLabel_->setText(tr("已保存规则“%1”，包含 %2 个修正。").arg(newSchema.name).arg(static_cast<int>(newSchema.overrides.size())));
 }
 
 void MainWindow::manageSchemas()
