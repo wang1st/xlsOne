@@ -87,14 +87,14 @@ void EmptyWorkspaceView::paintEvent(QPaintEvent* event)
     titleFont.setPointSize(28);
     titleFont.setWeight(QFont::DemiBold);
     painter.setFont(titleFont);
-    painter.setPen(t.text);
+    painter.setPen(t.isDark ? QColor(31, 35, 40) : t.text);
     const QRect titleRect(card.left() + 40, card.top() + 186, card.width() - 80, 42);
     painter.drawText(titleRect, Qt::AlignHCenter | Qt::AlignVCenter, title);
 
     QFont subtitleFont = font();
     subtitleFont.setPointSize(13);
     painter.setFont(subtitleFont);
-    painter.setPen(t.textMuted);
+    painter.setPen(t.isDark ? QColor(100, 109, 122) : t.textMuted);
     const QRect subtitleRect(card.left() + 52, titleRect.bottom() + 4, card.width() - 104, 42);
     painter.drawText(subtitleRect, Qt::AlignHCenter | Qt::TextWordWrap, subtitle);
 }
