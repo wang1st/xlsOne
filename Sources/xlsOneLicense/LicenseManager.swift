@@ -10,6 +10,9 @@ import AppKit
 public final class LicenseManager: ObservableObject {
 
     public static let shared = LicenseManager()
+    public static var isAppStoreDistribution: Bool {
+        Bundle.main.object(forInfoDictionaryKey: "XLSONEDistributionChannel") as? String == "app-store"
+    }
 
     // MARK: - Published State
 
@@ -41,13 +44,24 @@ public final class LicenseManager: ObservableObject {
     // MARK: - Initialization
 
     private init() {
-        loadPersistedState()
+        if Self.isAppStoreDistribution {
+            licenseState = .activated
+            plan = .appStore
+        } else {
+            loadPersistedState()
+        }
     }
 
     // MARK: - Public API
 
     /// Start a free trial. Returns the remaining days.
     public func startTrial() -> Int {
+        if Self.isAppStoreDistribution {
+            licenseState = .activated
+            plan = .appStore
+            return Int.max
+        }
+
         let now = Date()
         UserDefaults.standard.set(now, forKey: Storage.trialStartKey)
         let remaining = Self.trialDurationDays
@@ -72,6 +86,10 @@ public final class LicenseManager: ObservableObject {
     @discardableResult
     @MainActor
     public func importOfflineLicenseFile() -> ActivationResult? {
+        guard !Self.isAppStoreDistribution else {
+            return .success(plan: .appStore, expiresAt: nil)
+        }
+
 #if os(macOS)
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [.data, .json]
@@ -120,6 +138,14 @@ public final class LicenseManager: ObservableObject {
 
     /// Activate with an activation key. Returns the result.
     public func activate(key: String) async -> ActivationResult {
+        if Self.isAppStoreDistribution {
+            await MainActor.run {
+                self.licenseState = .activated
+                self.plan = .appStore
+            }
+            return .success(plan: .appStore, expiresAt: nil)
+        }
+
         let deviceID = getOrCreateDeviceID()
         let normalizedKey = key.uppercased().trimmingCharacters(in: .whitespaces)
 
@@ -153,6 +179,15 @@ public final class LicenseManager: ObservableObject {
 
     /// Verify current license validity. Called on app launch.
     public func verifyOnLaunch() async {
+        if Self.isAppStoreDistribution {
+            await MainActor.run {
+                self.licenseState = .activated
+                self.plan = .appStore
+                self.showActivationSheet = false
+            }
+            return
+        }
+
         await MainActor.run { isVerifying = true }
         defer { Task { @MainActor in isVerifying = false } }
 
@@ -202,6 +237,8 @@ public final class LicenseManager: ObservableObject {
 
     /// Refresh subscription token. Called periodically.
     public func refreshIfNeeded() async {
+        guard !Self.isAppStoreDistribution else { return }
+
         guard case .activated = licenseState,
               let token = loadToken(),
               let payload = decodeTokenPayload(token),
@@ -222,6 +259,13 @@ public final class LicenseManager: ObservableObject {
 
     /// Reset license (for user logout / key change)
     public func reset() {
+        guard !Self.isAppStoreDistribution else {
+            licenseState = .activated
+            plan = .appStore
+            showActivationSheet = false
+            return
+        }
+
         Keychain.delete(key: Storage.tokenKey)
         UserDefaults.standard.removeObject(forKey: Storage.offlineLicenseKey)
         licenseState = .unactivated
@@ -417,6 +461,7 @@ public enum LicenseState: Equatable {
 }
 
 public enum LicensePlan: String {
+    case appStore = "app_store"
     case personalYearly = "personal_yearly"
     case personalLifetime = "personal_lifetime"
     case enterprise10 = "enterprise_10"
@@ -426,6 +471,7 @@ public enum LicensePlan: String {
 
     public var displayName: String {
         switch self {
+        case .appStore:           return "App Store"
         case .personalYearly:      return "个人年度订阅"
         case .personalLifetime:    return "个人永久授权"
         case .enterprise10:        return "企业版 (10台)"

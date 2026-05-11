@@ -2,8 +2,8 @@
   "latest_version": "0.3.0",
   "changelog": "v0.3.0: 规则管理简化 — 一个结构一个规则，去除matchCount，优化深色主题",
   "downloads": {
-    "macos": "http://z-pulse.cn/downloads/xlsOne-0.3.0-macos-arm64.dmg",
-    "windows": "http://z-pulse.cn/downloads/xlsOne-0.3.0-win64.exe",
-    "linux": "http://z-pulse.cn/downloads/xlsOne-0.3.0-linux-arm64.deb"
+    "macos": "https://z-pulse.cn/downloads/xlsOne-0.3.0-macos-arm64.dmg",
+    "windows": "https://z-pulse.cn/downloads/xlsOne-0.3.0-win64.exe",
+    "linux": "https://z-pulse.cn/downloads/xlsOne-0.3.0-linux-arm64.deb"
   }
 }
