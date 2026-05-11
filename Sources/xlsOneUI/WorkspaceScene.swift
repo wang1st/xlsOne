@@ -157,10 +157,12 @@ private struct WorkspaceLicenseCommands: Commands {
 
     var body: some Commands {
         CommandMenu("许可") {
-            Button("激活/导入许可证...") {
-                licenseManager.showActivationSheet = true
+            Button(LicenseManager.isAppStoreDistribution ? "App Store 已授权" : "激活/导入许可证...") {
+                if !LicenseManager.isAppStoreDistribution {
+                    licenseManager.showActivationSheet = true
+                }
             }
-            .disabled(licenseManager.licenseState == .activated)
+            .disabled(LicenseManager.isAppStoreDistribution || licenseManager.licenseState == .activated)
         }
     }
 }
@@ -169,9 +171,7 @@ private struct WorkspaceHelpCommands: Commands {
     var body: some Commands {
         CommandGroup(replacing: .help) {
             Button("检查更新") {
-                if let url = URL(string: "macappstore://apps.apple.com/app/id0000000000") {
-                    NSWorkspace.shared.open(url)
-                }
+                WorkspaceAppPresentation.showAppStoreUpdatePanel()
             }
 
             Divider()
@@ -418,6 +418,16 @@ enum WorkspaceAppPresentation {
         """
         alert.addButton(withTitle: "确定")
         WorkspaceDialogPresenter.runAlert(alert)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    @MainActor
+    static func showAppStoreUpdatePanel() {
+        WorkspaceDialogPresenter.runAlert(
+            title: "检查更新",
+            message: "App Store 版本请通过 Mac App Store 获取更新。",
+            style: .informational
+        )
         NSApp.activate(ignoringOtherApps: true)
     }
 }

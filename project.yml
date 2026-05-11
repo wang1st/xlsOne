@@ -17,6 +17,8 @@ targets:
     deploymentTarget: "12.0"
     sources:
       - path: App/xlsOneMacApp
+    resources:
+      - path: App/xlsOneMacApp/PrivacyInfo.xcprivacy
     settings:
       base:
         PRODUCT_NAME: xlsOne

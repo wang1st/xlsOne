@@ -58,6 +58,7 @@ struct ContentView: View {
     private var licenseActivationSheet: Binding<Bool> {
         Binding(
             get: {
+                if LicenseManager.isAppStoreDistribution { return false }
                 let state = licenseManager.licenseState
                 if state == .activated { return false }
                 if licenseManager.showActivationSheet {

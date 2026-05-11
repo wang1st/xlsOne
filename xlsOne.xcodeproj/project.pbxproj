@@ -10,9 +10,11 @@
 		171D64CF8CE8AC58A2B4D333 /* XlsOneMacApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7B6B8A5579C4273C903FACE /* XlsOneMacApp.swift */; };
 		3F740F0DDDB56C94CD13C15C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 8CD637D1C5D917EEFCBE3A6B /* Assets.xcassets */; };
 		B707DD5F3FF9707ED0B279D9 /* xlsOneUI in Frameworks */ = {isa = PBXBuildFile; productRef = 866161527D52B5620037F0BD /* xlsOneUI */; };
+		F9198FDE50AAF89DDF9BCA0A /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 19D059E496C3AB5B06D6C9E6 /* PrivacyInfo.xcprivacy */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		19D059E496C3AB5B06D6C9E6 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		1E40B63B8E5E650A73B8115D /* xlsOne */ = {isa = PBXFileReference; lastKnownFileType = folder; name = xlsOne; path = .; sourceTree = SOURCE_ROOT; };
 		824996CCCC896EE69D887E00 /* xlsOneMacApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = xlsOneMacApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		8265A8F45629C01AB30D53A3 /* xlsOneMacApp.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = xlsOneMacApp.entitlements; sourceTree = "<group>"; };
@@ -38,6 +40,7 @@
 			children = (
 				8CD637D1C5D917EEFCBE3A6B /* Assets.xcassets */,
 				9F8B4B78B857D0E0F96E4D24 /* Info.plist */,
+				19D059E496C3AB5B06D6C9E6 /* PrivacyInfo.xcprivacy */,
 				8265A8F45629C01AB30D53A3 /* xlsOneMacApp.entitlements */,
 				B7B6B8A5579C4273C903FACE /* XlsOneMacApp.swift */,
 			);
@@ -143,6 +146,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				3F740F0DDDB56C94CD13C15C /* Assets.xcassets in Resources */,
+				F9198FDE50AAF89DDF9BCA0A /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
