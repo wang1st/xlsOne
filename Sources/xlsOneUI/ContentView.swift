@@ -1,8 +1,10 @@
 import SwiftUI
 import xlsOneCore
+import xlsOneLicense
 
 struct ContentView: View {
     @EnvironmentObject var viewModel: AppViewModel
+    @StateObject private var licenseManager = LicenseManager.shared
     @State private var isDropTargeted = false
 
     var body: some View {
@@ -29,7 +31,20 @@ struct ContentView: View {
         .sheet(isPresented: $viewModel.showSchemaManager) {
             SchemaManagerView()
         }
+        .sheet(isPresented: licenseActivationSheet) {
+            LicenseActivationView()
+        }
         .onDrop(of: [.fileURL], delegate: DropDelegateView(viewModel: viewModel, isTargeted: $isDropTargeted))
+        .task {
+            await licenseManager.verifyOnLaunch()
+        }
+    }
+
+    private var licenseActivationSheet: Binding<Bool> {
+        Binding(
+            get: { licenseManager.licenseState == .unactivated || licenseManager.licenseState == .expired },
+            set: { _ in }
+        )
     }
 
     private var toolbar: some View {
