@@ -3,175 +3,318 @@
 import AppKit
 import Foundation
 
-struct IconSlot {
-    let filename: String
-    let pixels: Int
-}
+// MARK: - Config
 
 let scriptURL = URL(fileURLWithPath: CommandLine.arguments[0]).resolvingSymlinksInPath()
 let repoRoot = scriptURL.deletingLastPathComponent().deletingLastPathComponent()
-let outputDirectory: URL
 
-if CommandLine.arguments.count > 1 {
-    outputDirectory = URL(fileURLWithPath: CommandLine.arguments[1], isDirectory: true)
-} else {
-    outputDirectory = repoRoot
-        .appendingPathComponent("App", isDirectory: true)
-        .appendingPathComponent("xlsOneMacApp", isDirectory: true)
-        .appendingPathComponent("Assets.xcassets", isDirectory: true)
-        .appendingPathComponent("AppIcon.appiconset", isDirectory: true)
-}
+let assetsOutput = repoRoot
+    .appendingPathComponent("App/xlsOneMacApp/Assets.xcassets/AppIcon.appiconset")
 
-let slots: [IconSlot] = [
-    .init(filename: "icon_16x16.png", pixels: 16),
-    .init(filename: "icon_16x16@2x.png", pixels: 32),
-    .init(filename: "icon_32x32.png", pixels: 32),
-    .init(filename: "icon_32x32@2x.png", pixels: 64),
-    .init(filename: "icon_128x128.png", pixels: 128),
-    .init(filename: "icon_128x128@2x.png", pixels: 256),
-    .init(filename: "icon_256x256.png", pixels: 256),
-    .init(filename: "icon_256x256@2x.png", pixels: 512),
-    .init(filename: "icon_512x512.png", pixels: 512),
-    .init(filename: "icon_512x512@2x.png", pixels: 1024)
+let qtResources = repoRoot
+    .appendingPathComponent("cpp/app/resources")
+
+// MARK: - Icon Sizes
+
+let iconSizes: [(filename: String, pixels: Int)] = [
+    ("icon_16x16.png",      16),
+    ("icon_16x16@2x.png",   32),
+    ("icon_32x32.png",      32),
+    ("icon_32x32@2x.png",   64),
+    ("icon_128x128.png",    128),
+    ("icon_128x128@2x.png", 256),
+    ("icon_256x256.png",    256),
+    ("icon_256x256@2x.png", 512),
+    ("icon_512x512.png",    512),
+    ("icon_512x512@2x.png", 1024),
 ]
 
-func makeBitmap(size: Int) -> NSBitmapImageRep {
-    let rep = NSBitmapImageRep(
-        bitmapDataPlanes: nil,
-        pixelsWide: size,
-        pixelsHigh: size,
-        bitsPerSample: 8,
-        samplesPerPixel: 4,
-        hasAlpha: true,
-        isPlanar: false,
-        colorSpaceName: .deviceRGB,
-        bytesPerRow: 0,
-        bitsPerPixel: 0
-    )!
-    rep.size = NSSize(width: size, height: size)
-    return rep
-}
+// sizes for .icns iconset directory
+let iconsetSizes: [(name: String, pixels: Int)] = [
+    ("icon_16x16.png",       16),
+    ("icon_16x16@2x.png",    32),
+    ("icon_32x32.png",       32),
+    ("icon_32x32@2x.png",    64),
+    ("icon_128x128.png",     128),
+    ("icon_128x128@2x.png",  256),
+    ("icon_256x256.png",     256),
+    ("icon_256x256@2x.png",  512),
+    ("icon_512x512.png",     512),
+    ("icon_512x512@2x.png",  1024),
+]
+
+// Linux hicolor sizes
+let linuxSizes: [Int] = [16, 22, 24, 32, 48, 64, 96, 128, 256, 512]
+
+// ICO embed sizes
+let icoSizes: [Int] = [16, 32, 48, 256]
+
+// MARK: - Drawing
 
 func drawIcon(in rect: NSRect, scale: CGFloat) {
-    let background = NSBezierPath(
-        roundedRect: rect.insetBy(dx: rect.width * 0.06, dy: rect.height * 0.06),
-        xRadius: rect.width * 0.22,
-        yRadius: rect.height * 0.22
+    // Background rounded rect with blue gradient
+    let bg = rect.insetBy(dx: rect.width * 0.055, dy: rect.height * 0.055)
+    let bgPath = NSBezierPath(
+        roundedRect: bg,
+        xRadius: rect.width * 0.225,
+        yRadius: rect.height * 0.225
     )
     let gradient = NSGradient(
-        starting: NSColor(calibratedRed: 0.14, green: 0.45, blue: 0.93, alpha: 1),
-        ending: NSColor(calibratedRed: 0.47, green: 0.76, blue: 0.99, alpha: 1)
+        starting: NSColor(red: 0.10, green: 0.40, blue: 0.92, alpha: 1),
+        ending: NSColor(red: 0.35, green: 0.68, blue: 0.98, alpha: 1)
     )!
-    gradient.draw(in: background, angle: -90)
+    gradient.draw(in: bgPath, angle: -90)
 
-    let paperRect = rect.insetBy(dx: rect.width * 0.20, dy: rect.height * 0.18)
+    // White paper with shadow
+    let paper = rect.insetBy(dx: rect.width * 0.195, dy: rect.height * 0.175)
     let paperPath = NSBezierPath(
-        roundedRect: paperRect,
-        xRadius: rect.width * 0.08,
-        yRadius: rect.height * 0.08
+        roundedRect: paper,
+        xRadius: rect.width * 0.085,
+        yRadius: rect.height * 0.085
     )
     NSGraphicsContext.saveGraphicsState()
     let shadow = NSShadow()
-    shadow.shadowBlurRadius = 16 * scale
-    shadow.shadowOffset = NSSize(width: 0, height: -8 * scale)
-    shadow.shadowColor = NSColor.black.withAlphaComponent(0.16)
+    shadow.shadowBlurRadius = 14 * scale
+    shadow.shadowOffset = NSSize(width: 0, height: -7 * scale)
+    shadow.shadowColor = NSColor.black.withAlphaComponent(0.18)
     shadow.set()
     NSColor.white.setFill()
     paperPath.fill()
     NSGraphicsContext.restoreGraphicsState()
 
-    let accentRect = NSRect(
-        x: paperRect.minX,
-        y: paperRect.maxY - paperRect.height * 0.20,
-        width: paperRect.width,
-        height: paperRect.height * 0.20
+    // Blue header bar on paper
+    let headerH = paper.height * 0.19
+    let headerRect = NSRect(x: paper.minX, y: paper.maxY - headerH,
+                            width: paper.width, height: headerH)
+    let headerColor = NSColor(red: 0.12, green: 0.43, blue: 0.90, alpha: 1)
+    headerColor.setFill()
+    let headerPath = NSBezierPath(
+        roundedRect: headerRect,
+        xRadius: rect.width * 0.085,
+        yRadius: rect.height * 0.085
     )
-    NSColor(calibratedRed: 0.15, green: 0.45, blue: 0.92, alpha: 1).setFill()
-    NSBezierPath(
-        roundedRect: accentRect,
-        xRadius: rect.width * 0.08,
-        yRadius: rect.height * 0.08
-    ).fill()
-    NSColor.white.withAlphaComponent(0.92).setFill()
+    headerPath.fill()
+    // Bottom of header stays flat
+    NSColor(red: 0.12, green: 0.43, blue: 0.90, alpha: 1).setFill()
     NSBezierPath(rect: NSRect(
-        x: accentRect.minX,
-        y: accentRect.minY,
-        width: accentRect.width,
-        height: accentRect.height * 0.62
+        x: headerRect.minX,
+        y: headerRect.minY,
+        width: headerRect.width,
+        height: headerH * 0.55
     )).fill()
 
-    let gridInsetX = paperRect.width * 0.14
-    let gridInsetY = paperRect.height * 0.26
-    let gridRect = paperRect.insetBy(dx: gridInsetX, dy: gridInsetY)
-    let strokeColor = NSColor(calibratedRed: 0.34, green: 0.52, blue: 0.80, alpha: 1)
-    strokeColor.setStroke()
+    // Grid
+    let padX = paper.width * 0.13
+    let padY = paper.height * 0.26
+    let grid = paper.insetBy(dx: padX, dy: padY)
+    let lineColor = NSColor(red: 0.32, green: 0.55, blue: 0.82, alpha: 0.65)
+    lineColor.setStroke()
 
-    let columns = 3
-    let rows = 4
-    let cellWidth = gridRect.width / CGFloat(columns)
-    let cellHeight = gridRect.height / CGFloat(rows)
-    let lineWidth = max(1.0, rect.width * 0.018)
+    let cols = 3, rows = 4
+    let cw = grid.width / CGFloat(cols)
+    let ch = grid.height / CGFloat(rows)
+    let lw = max(0.8, rect.width * 0.016)
 
-    for index in 0...columns {
-        let x = gridRect.minX + CGFloat(index) * cellWidth
-        let path = NSBezierPath()
-        path.lineWidth = lineWidth
-        path.move(to: NSPoint(x: x, y: gridRect.minY))
-        path.line(to: NSPoint(x: x, y: gridRect.maxY))
-        path.stroke()
+    for i in 0...cols {
+        let x = grid.minX + CGFloat(i) * cw
+        let p = NSBezierPath()
+        p.lineWidth = lw
+        p.move(to: NSPoint(x: x, y: grid.minY))
+        p.line(to: NSPoint(x: x, y: grid.maxY))
+        p.stroke()
+    }
+    for i in 0...rows {
+        let y = grid.minY + CGFloat(i) * ch
+        let p = NSBezierPath()
+        p.lineWidth = lw
+        p.move(to: NSPoint(x: grid.minX, y: y))
+        p.line(to: NSPoint(x: grid.maxX, y: y))
+        p.stroke()
     }
 
-    for index in 0...rows {
-        let y = gridRect.minY + CGFloat(index) * cellHeight
-        let path = NSBezierPath()
-        path.lineWidth = lineWidth
-        path.move(to: NSPoint(x: gridRect.minX, y: y))
-        path.line(to: NSPoint(x: gridRect.maxX, y: y))
-        path.stroke()
-    }
-
-    let highlightRect = NSRect(
-        x: gridRect.minX + cellWidth,
-        y: gridRect.minY + cellHeight,
-        width: cellWidth,
-        height: cellHeight
-    ).insetBy(dx: lineWidth * 0.7, dy: lineWidth * 0.7)
-    NSColor(calibratedRed: 0.18, green: 0.58, blue: 0.95, alpha: 0.92).setFill()
+    // Highlighted cell
+    let hl = NSRect(
+        x: grid.minX + cw,
+        y: grid.minY + ch,
+        width: cw, height: ch
+    ).insetBy(dx: lw * 0.6, dy: lw * 0.6)
+    NSColor(red: 0.16, green: 0.55, blue: 0.94, alpha: 0.90).setFill()
     NSBezierPath(
-        roundedRect: highlightRect,
-        xRadius: rect.width * 0.02,
-        yRadius: rect.height * 0.02
+        roundedRect: hl,
+        xRadius: rect.width * 0.022,
+        yRadius: rect.height * 0.022
     ).fill()
 
-    let summaryBarRect = NSRect(
-        x: gridRect.minX,
-        y: paperRect.minY + paperRect.height * 0.10,
-        width: gridRect.width * 0.68,
-        height: max(2.0, rect.height * 0.03)
+    // Orange summary bar at bottom
+    let barW = grid.width * 0.70
+    let barH = max(2.0, rect.height * 0.032)
+    let bar = NSRect(
+        x: grid.midX - barW / 2,
+        y: paper.minY + paper.height * 0.10,
+        width: barW, height: barH
     )
-    NSColor(calibratedRed: 0.95, green: 0.59, blue: 0.18, alpha: 0.95).setFill()
+    NSColor(red: 0.96, green: 0.55, blue: 0.12, alpha: 0.92).setFill()
     NSBezierPath(
-        roundedRect: summaryBarRect,
-        xRadius: summaryBarRect.height / 2,
-        yRadius: summaryBarRect.height / 2
+        roundedRect: bar,
+        xRadius: barH / 2,
+        yRadius: barH / 2
     ).fill()
 }
 
-try FileManager.default.createDirectory(at: outputDirectory, withIntermediateDirectories: true)
+// MARK: - PNG generation
 
-for slot in slots {
-    let bitmap = makeBitmap(size: slot.pixels)
-    let context = NSGraphicsContext(bitmapImageRep: bitmap)!
+func renderPNG(pixels: Int) -> Data {
+    let bitmap = NSBitmapImageRep(
+        bitmapDataPlanes: nil,
+        pixelsWide: pixels, pixelsHigh: pixels,
+        bitsPerSample: 8, samplesPerPixel: 4,
+        hasAlpha: true, isPlanar: false,
+        colorSpaceName: .deviceRGB,
+        bytesPerRow: 0, bitsPerPixel: 0
+    )!
+    bitmap.size = NSSize(width: pixels, height: pixels)
+
+    let ctx = NSGraphicsContext(bitmapImageRep: bitmap)!
     NSGraphicsContext.saveGraphicsState()
-    NSGraphicsContext.current = context
+    NSGraphicsContext.current = ctx
     drawIcon(
-        in: NSRect(x: 0, y: 0, width: slot.pixels, height: slot.pixels),
-        scale: CGFloat(slot.pixels) / 1024.0
+        in: NSRect(x: 0, y: 0, width: pixels, height: pixels),
+        scale: CGFloat(pixels) / 1024.0
     )
     NSGraphicsContext.restoreGraphicsState()
 
-    let data = bitmap.representation(using: .png, properties: [:])!
-    let fileURL = outputDirectory.appendingPathComponent(slot.filename)
-    try data.write(to: fileURL)
-    print("Generated \(fileURL.path)")
+    return bitmap.representation(using: .png, properties: [:])!
 }
+
+// MARK: - ICO generation
+
+func writeICO(_ pngDataArray: [(size: Int, data: Data)], to url: URL) {
+    // ICO format: header (6 bytes) + icon dir entries (16 bytes each) + image data
+    let count = pngDataArray.count
+    var output = Data()
+
+    // Header
+    output.append(contentsOf: [0, 0])             // reserved
+    output.append(contentsOf: [1, 0])             // type: ICO
+    output.append(contentsOf: withUnsafeBytes(of: UInt16(count).littleEndian) { Data($0) })
+
+    // Calculate offset of first image data
+    let headerSize = 6
+    let dirSize = count * 16
+    var imageOffset = headerSize + dirSize
+
+    var dirEntries = Data()
+    var imageData = Data()
+
+    for (size, pngData) in pngDataArray {
+        let s = UInt8(min(size, 256) % 256) // 256 → 0 in ICO
+        dirEntries.append(contentsOf: [s, s, 0, 0, 1, 0, 0, 0]) // w, h, palette, reserved, color planes, bpp (placeholder)
+
+        let dataSize = UInt32(pngData.count)
+        dirEntries.append(contentsOf: withUnsafeBytes(of: dataSize.littleEndian) { Data($0) })
+        dirEntries.append(contentsOf: withUnsafeBytes(of: UInt32(imageOffset).littleEndian) { Data($0) })
+
+        imageData.append(pngData)
+        imageOffset += pngData.count
+    }
+
+    output.append(dirEntries)
+    output.append(imageData)
+
+    try! output.write(to: url)
+}
+
+// MARK: - Main execution
+
+let fm = FileManager.default
+
+// Ensure output directories exist
+try? fm.createDirectory(at: assetsOutput, withIntermediateDirectories: true)
+try? fm.createDirectory(at: qtResources, withIntermediateDirectories: true)
+
+// Step 1: Generate PNGs for macOS Assets.xcassets
+print("=== Generating PNG icons for macOS ===")
+for slot in iconSizes {
+    let data = renderPNG(pixels: slot.pixels)
+    let url = assetsOutput.appendingPathComponent(slot.filename)
+    try data.write(to: url)
+    print("  \(url.path)")
+}
+
+// Step 2: Generate .icns via iconutil
+print("\n=== Generating .icns for macOS Qt ===")
+let iconsetDir = qtResources.appendingPathComponent("xlsOne.iconset")
+try? fm.removeItem(at: iconsetDir)
+try fm.createDirectory(at: iconsetDir, withIntermediateDirectories: true)
+
+for entry in iconsetSizes {
+    let data = renderPNG(pixels: entry.pixels)
+    let url = iconsetDir.appendingPathComponent(entry.name)
+    try data.write(to: url)
+    print("  \(url.lastPathComponent)")
+}
+
+let icnsOutput = qtResources.appendingPathComponent("xlsOne.icns")
+try? fm.removeItem(at: icnsOutput)
+
+let task = Process()
+task.executableURL = URL(fileURLWithPath: "/usr/bin/iconutil")
+task.arguments = ["-c", "icns", "-o", icnsOutput.path, iconsetDir.path]
+try task.run()
+task.waitUntilExit()
+
+if task.terminationStatus == 0 {
+    try? fm.removeItem(at: iconsetDir) // cleanup
+    print("  -> \(icnsOutput.path)")
+} else {
+    // Fallback: copy largest PNG as .icns placeholder
+    let png256 = renderPNG(pixels: 256)
+    try png256.write(to: icnsOutput)
+    print("  iconutil failed, using PNG fallback")
+}
+try? fm.removeItem(at: iconsetDir)
+
+// Step 3: Generate .ico for Windows
+print("\n=== Generating .ico for Windows ===")
+var icoEntries: [(size: Int, data: Data)] = []
+for size in icoSizes {
+    icoEntries.append((size, renderPNG(pixels: size)))
+}
+let icoOutput = qtResources.appendingPathComponent("xlsOne.ico")
+writeICO(icoEntries, to: icoOutput)
+print("  \(icoOutput.path)")
+
+// Step 4: Generate multi-size PNGs for Linux hicolor
+print("\n=== Generating Linux hicolor PNGs ===")
+for size in linuxSizes {
+    let data = renderPNG(pixels: size)
+    let url = qtResources.appendingPathComponent("xlsOne_\(size)x\(size).png")
+    try data.write(to: url)
+}
+// Also create a generic name
+let mainPNG = renderPNG(pixels: 256)
+try mainPNG.write(to: qtResources.appendingPathComponent("xlsOne.png"))
+print("  \(linuxSizes.count) sizes generated in \(qtResources.path)")
+
+// Step 5: Update Assets.xcassets Contents.json
+let contentsJSON = """
+{
+  "images" : [
+    {"idiom" : "mac", "scale" : "1x", "size" : "16x16", "filename" : "icon_16x16.png"},
+    {"idiom" : "mac", "scale" : "2x", "size" : "16x16", "filename" : "icon_16x16@2x.png"},
+    {"idiom" : "mac", "scale" : "1x", "size" : "32x32", "filename" : "icon_32x32.png"},
+    {"idiom" : "mac", "scale" : "2x", "size" : "32x32", "filename" : "icon_32x32@2x.png"},
+    {"idiom" : "mac", "scale" : "1x", "size" : "128x128", "filename" : "icon_128x128.png"},
+    {"idiom" : "mac", "scale" : "2x", "size" : "128x128", "filename" : "icon_128x128@2x.png"},
+    {"idiom" : "mac", "scale" : "1x", "size" : "256x256", "filename" : "icon_256x256.png"},
+    {"idiom" : "mac", "scale" : "2x", "size" : "256x256", "filename" : "icon_256x256@2x.png"},
+    {"idiom" : "mac", "scale" : "1x", "size" : "512x512", "filename" : "icon_512x512.png"},
+    {"idiom" : "mac", "scale" : "2x", "size" : "512x512", "filename" : "icon_512x512@2x.png"}
+  ],
+  "info" : {"author" : "xcode", "version" : 1}
+}
+"""
+try contentsJSON.write(to: assetsOutput.appendingPathComponent("Contents.json"),
+                       atomically: true, encoding: .utf8)
+
+print("\n✅ All icons generated successfully!")

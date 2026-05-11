@@ -1,5 +1,6 @@
 #include "empty_workspace_view.hpp"
 
+#include "symbol_icons.hpp"
 #include "ui_theme.hpp"
 
 #include <QLinearGradient>
@@ -7,14 +8,14 @@
 #include <QPainter>
 #include <QPainterPath>
 #include <QResizeEvent>
-#include <QStyle>
 #include <algorithm>
 
 EmptyWorkspaceView::EmptyWorkspaceView(QWidget* parent) : QWidget(parent)
 {
     setAutoFillBackground(false);
     openButton_ = new QPushButton(tr("选择文件"), this);
-    openButton_->setIcon(style()->standardIcon(QStyle::SP_DirOpenIcon));
+    openButton_->setIcon(xlsone::ui::makeSymbolIcon(xlsone::ui::SymbolIcon::FolderPlus, Qt::white));
+    openButton_->setIconSize(QSize(16, 16));
     openButton_->setCursor(Qt::PointingHandCursor);
     openButton_->setObjectName(QStringLiteral("primaryImportButton"));
     const auto& t = xlsone::ui::theme();

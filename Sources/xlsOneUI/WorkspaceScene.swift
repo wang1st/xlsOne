@@ -2,9 +2,11 @@ import AppKit
 import SwiftUI
 import UniformTypeIdentifiers
 import xlsOneCore
+import xlsOneLicense
 
 public struct XlsOneWorkspaceScene: Scene {
     @StateObject private var viewModel = AppViewModel()
+    @StateObject private var licenseManager = LicenseManager.shared
 
     public init() {}
 
@@ -12,94 +14,274 @@ public struct XlsOneWorkspaceScene: Scene {
         WindowGroup {
             ContentView()
                 .environmentObject(viewModel)
+                .environmentObject(licenseManager)
                 .frame(minWidth: 800, minHeight: 600)
                 .onAppear {
                     WorkspaceMenuLocalizer.scheduleMainMenuLocalizationPasses()
                 }
+                .background(WorkspaceWindowTabDisabler())
         }
         .commands {
-            CommandGroup(replacing: .appInfo) {
-                Button("关于 \(WorkspaceAppPresentation.displayName)") {
-                    WorkspaceAppPresentation.showAboutPanel()
-                }
-            }
+            WorkspaceCommands(viewModel: viewModel, licenseManager: licenseManager)
+        }
+    }
+}
 
-            CommandGroup(replacing: .appSettings) {
-                Button("查看规则") {
-                    viewModel.showSchemaManagerWindow()
-                }
-                .keyboardShortcut(",", modifiers: .command)
-            }
+private struct WorkspaceCommands: Commands {
+    @ObservedObject var viewModel: AppViewModel
+    @ObservedObject var licenseManager: LicenseManager
 
-            CommandGroup(replacing: .newItem) {
-                Button("新建批次") {
-                    viewModel.closeAllFiles()
-                }
-                .keyboardShortcut("n", modifiers: .command)
-            }
+    var body: some Commands {
+        WorkspaceFileCommands(viewModel: viewModel)
+        WorkspaceEditCommands(viewModel: viewModel)
+        WorkspaceViewCommands(viewModel: viewModel)
+        WorkspaceWindowCommands()
+        WorkspaceLicenseCommands(licenseManager: licenseManager)
+        WorkspaceHelpCommands()
+    }
+}
 
-            CommandGroup(after: .newItem) {
-                Divider()
+private struct WorkspaceFileCommands: Commands {
+    @ObservedObject var viewModel: AppViewModel
 
-                Button("导入文件...") {
-                    viewModel.showOpenFileDialog()
-                }
-                .keyboardShortcut("o", modifiers: .command)
-
-                Button("追加文件...") {
-                    viewModel.showAddFileDialog()
-                }
-                .keyboardShortcut("o", modifiers: [.command, .shift])
-                .disabled(!viewModel.toolbarPresentation.appendEnabled)
-            }
-
-            CommandGroup(replacing: .saveItem) {
-                Button("导出 XLSX...") {
-                    viewModel.exportResult()
-                }
-                .keyboardShortcut("s", modifiers: .command)
-                .disabled(!viewModel.canExport)
-            }
-
-            CommandGroup(after: .saveItem) {
-                Divider()
-
-                Button("刷新") {
-                    viewModel.reloadFiles()
-                }
-                .keyboardShortcut("r", modifiers: .command)
-                .disabled(viewModel.selectedFilePaths.isEmpty)
-            }
-
-            CommandGroup(replacing: .undoRedo) {
-                Button("撤销上一步") {
-                    viewModel.undoLastOverride()
-                }
-                .keyboardShortcut("z", modifiers: .command)
-                .disabled(!viewModel.canUndoOverride)
-
-                Divider()
-
-                Button("清除所有修正") {
-                    viewModel.clearOverrides()
-                }
-                .disabled(viewModel.correctionCount == 0)
-            }
-
-            CommandGroup(after: .help) {
-                Button("在 App Store 中查看...") {
-                    if let url = URL(string: "macappstore://apps.apple.com/app/id0000000000") {
-                        NSWorkspace.shared.open(url)
-                    }
-                }
-
-                Divider()
-
-                Button("关于 \(WorkspaceAppPresentation.displayName)") {
-                    WorkspaceAppPresentation.showAboutPanel()
-                }
+    var body: some Commands {
+        CommandGroup(replacing: .appInfo) {
+            Button("关于 表表归一") {
+                WorkspaceAppPresentation.showAboutPanel()
             }
         }
+
+        CommandGroup(replacing: .newItem) {
+            Button("新建批次") {
+                viewModel.closeAllFiles()
+            }
+            .keyboardShortcut("n", modifiers: .command)
+        }
+
+        CommandGroup(after: .newItem) {
+            Divider()
+
+            Button("导入文件...") {
+                viewModel.showOpenFileDialog()
+            }
+            .keyboardShortcut("o", modifiers: .command)
+
+            Button("追加文件...") {
+                viewModel.showAddFileDialog()
+            }
+            .keyboardShortcut("o", modifiers: [.command, .shift])
+            .disabled(!viewModel.toolbarPresentation.appendEnabled)
+        }
+
+        CommandGroup(replacing: .saveItem) {
+            Button("导出 XLSX...") {
+                viewModel.exportResult()
+            }
+            .keyboardShortcut("s", modifiers: .command)
+            .disabled(!viewModel.canExport)
+        }
+
+        CommandGroup(after: .saveItem) {
+            Divider()
+
+            Button("刷新") {
+                viewModel.reloadFiles()
+            }
+            .keyboardShortcut("r", modifiers: .command)
+            .disabled(viewModel.selectedFilePaths.isEmpty)
+        }
+    }
+}
+
+private struct WorkspaceEditCommands: Commands {
+    @ObservedObject var viewModel: AppViewModel
+
+    var body: some Commands {
+        CommandGroup(replacing: .undoRedo) {
+            Button("撤销上一步") {
+                viewModel.undoLastOverride()
+            }
+            .keyboardShortcut("z", modifiers: .command)
+            .disabled(!viewModel.canUndoOverride)
+
+            Divider()
+
+            Button("清除所有修正") {
+                viewModel.clearOverrides()
+            }
+            .disabled(viewModel.correctionCount == 0)
+        }
+
+        CommandGroup(replacing: .pasteboard) {}
+    }
+}
+
+private struct WorkspaceViewCommands: Commands {
+    @ObservedObject var viewModel: AppViewModel
+
+    var body: some Commands {
+        CommandMenu("查看") {
+            Button("查看规则") {
+                viewModel.showSchemaManagerWindow()
+            }
+            .keyboardShortcut(",", modifiers: .command)
+        }
+
+        CommandGroup(replacing: .toolbar) {}
+    }
+}
+
+private struct WorkspaceWindowCommands: Commands {
+    var body: some Commands {
+        CommandGroup(replacing: .windowArrangement) {
+            Button("最小化") {
+                NSApp.keyWindow?.miniaturize(nil)
+            }
+            .keyboardShortcut("m", modifiers: .command)
+
+            Button("缩放") {
+                NSApp.keyWindow?.zoom(nil)
+            }
+
+            Divider()
+
+            Button("前置全部窗口") {
+                NSApp.arrangeInFront(nil)
+            }
+        }
+    }
+}
+
+private struct WorkspaceLicenseCommands: Commands {
+    @ObservedObject var licenseManager: LicenseManager
+
+    var body: some Commands {
+        CommandMenu("许可") {
+            Button("激活/导入许可证...") {
+                licenseManager.showActivationSheet = true
+            }
+            .disabled(licenseManager.licenseState == .activated)
+        }
+    }
+}
+
+private struct WorkspaceHelpCommands: Commands {
+    var body: some Commands {
+        CommandGroup(replacing: .help) {
+            Button("检查更新") {
+                if let url = URL(string: "macappstore://apps.apple.com/app/id0000000000") {
+                    NSWorkspace.shared.open(url)
+                }
+            }
+
+            Divider()
+
+            Button("使用帮助") {
+                WorkspaceAppPresentation.showHelpPanel()
+            }
+
+            Divider()
+
+            Button("关于 表表归一") {
+                WorkspaceAppPresentation.showAboutPanel()
+            }
+        }
+    }
+}
+
+private struct WorkspaceWindowTabDisabler: NSViewRepresentable {
+    func makeNSView(context: Context) -> WorkspaceWindowTabDisablingView {
+        WorkspaceWindowTabDisablingView()
+    }
+
+    func updateNSView(_ nsView: WorkspaceWindowTabDisablingView, context: Context) {
+        nsView.disableWindowTabs()
+    }
+}
+
+private final class WorkspaceWindowTabDisablingView: NSView {
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        disableWindowTabs()
+    }
+
+    func disableWindowTabs() {
+        DispatchQueue.main.async { [weak self] in
+            guard let window = self?.window else { return }
+            WorkspaceWindowTabController.disableTabs(for: window)
+        }
+    }
+}
+
+private enum WorkspaceWindowTabController {
+    @MainActor
+    static func disableAutomaticTabbing() {
+        NSWindow.allowsAutomaticWindowTabbing = false
+    }
+
+    @MainActor
+    static func disableTabs(for window: NSWindow) {
+        disableAutomaticTabbing()
+        window.title = WorkspaceAppPresentation.localizedCaption
+        window.tabbingMode = .disallowed
+        window.tabbingIdentifier = ""
+        if window.tabbedWindows != nil {
+            window.toggleTabBar(nil)
+        }
+    }
+}
+
+enum WorkspaceDialogPresenter {
+    @MainActor
+    private static var ownerWindow: NSWindow? {
+        NSApp.keyWindow ?? NSApp.mainWindow ?? NSApp.windows.first { $0.isVisible }
+    }
+
+    @MainActor
+    private static func center(_ dialogWindow: NSWindow, over owner: NSWindow?) {
+        guard let owner else {
+            dialogWindow.center()
+            return
+        }
+
+        let ownerFrame = owner.frame
+        let dialogFrame = dialogWindow.frame
+        let origin = NSPoint(
+            x: ownerFrame.midX - dialogFrame.width / 2,
+            y: ownerFrame.midY - dialogFrame.height / 2
+        )
+        dialogWindow.setFrameOrigin(origin)
+    }
+
+    @MainActor
+    @discardableResult
+    static func runModal(_ panel: NSSavePanel) -> NSApplication.ModalResponse {
+        let owner = ownerWindow
+        panel.contentView?.layoutSubtreeIfNeeded()
+        center(panel, over: owner)
+        return panel.runModal()
+    }
+
+    @MainActor
+    @discardableResult
+    static func runAlert(_ alert: NSAlert) -> NSApplication.ModalResponse {
+        let owner = ownerWindow
+        alert.layout()
+        center(alert.window, over: owner)
+        DispatchQueue.main.async {
+            center(alert.window, over: owner)
+        }
+        return alert.runModal()
+    }
+
+    @MainActor
+    static func runAlert(title: String, message: String, style: NSAlert.Style = .warning) {
+        let alert = NSAlert()
+        alert.alertStyle = style
+        alert.messageText = title
+        alert.informativeText = message
+        alert.addButton(withTitle: "确定")
+        runAlert(alert)
     }
 }
 
@@ -107,6 +289,7 @@ public final class WorkspaceAppDelegate: NSObject, NSApplicationDelegate {
     private var menuObserver: NSObjectProtocol?
 
     public func applicationDidFinishLaunching(_ notification: Notification) {
+        WorkspaceWindowTabController.disableAutomaticTabbing()
         menuObserver = NotificationCenter.default.addObserver(
             forName: NSMenu.didBeginTrackingNotification,
             object: nil,
@@ -138,7 +321,15 @@ public final class WorkspaceAppDelegate: NSObject, NSApplicationDelegate {
 }
 
 enum WorkspaceAppPresentation {
+    static var localizedCaption: String {
+        isPreferredLanguageChinese ? "xlsOne 表表归一" : "xlsOne"
+    }
+
     static var displayName: String {
+        localizedCaption
+    }
+
+    static var bundleDisplayName: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String ??
         Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String ??
         "xlsOne"
@@ -160,14 +351,73 @@ enum WorkspaceAppPresentation {
         }
     }
 
+    private static var marketingVersion: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0"
+    }
+
+    private static var isPreferredLanguageChinese: Bool {
+        Locale.preferredLanguages.first?.hasPrefix("zh") == true
+    }
+
     @MainActor
     static func showAboutPanel() {
-        let options: [NSApplication.AboutPanelOptionKey: Any] = [
-            .applicationName: displayName,
-            .applicationVersion: versionLabel,
-            .version: versionLabel
-        ]
-        NSApp.orderFrontStandardAboutPanel(options: options)
+        let alert = NSAlert()
+        alert.messageText = "关于 表表归一"
+        alert.informativeText = """
+        表表归一  V\(marketingVersion)
+
+        多张同格式 Excel 报表一键汇总
+
+        把多张格式一致的 Excel 表合成一份汇总表。金额、数量等能相加的数会自动合计；名称、编号等不该相加的信息，会保留各文件里最常见的共同前缀。
+
+        作者：王臻
+        技术：Swift / SwiftUI
+        邮箱：831261@qq.com
+
+        © 2026 王臻. 保留所有权利.
+        """
+        alert.addButton(withTitle: "确定")
+        WorkspaceDialogPresenter.runAlert(alert)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    @MainActor
+    static func showHelpPanel() {
+        let alert = NSAlert()
+        alert.messageText = "使用帮助"
+        alert.informativeText = """
+        表表归一  ·  多张同格式 Excel 报表一键汇总
+
+        1. 导入文件
+           拖拽 .xlsx 或 .xls 文件到窗口，或点击 [文件] → [导入文件]
+
+        2. 切换工作表
+           点击顶部的 Sheet 标签可切换要查看的报表页
+
+        3. 查看汇总
+           - 金额、数量等能相加的数自动合计
+           - 名称、编号等信息保留最常见的共同前缀
+           - 结构不一致的工作表会跳过，并提示原因
+
+        4. 穿透查阅
+           点击单元格可查看各文件原始值
+
+        5. 导出结果
+           点击 [导出 XLSX] 保存汇总结果
+
+        6. 单元格修正
+           在右侧面板可将单元格手动指定为标签或求和
+
+        快捷键:
+           Command+O  导入文件
+           Command+Shift+O  追加文件
+           Command+S  导出
+           Command+R  刷新
+           Command+N  清空
+           Command+Z  撤销修正
+        """
+        alert.addButton(withTitle: "确定")
+        WorkspaceDialogPresenter.runAlert(alert)
         NSApp.activate(ignoringOtherApps: true)
     }
 }
@@ -178,15 +428,44 @@ private enum WorkspaceMenuLocalizer {
         "Edit": "编辑",
         "View": "显示",
         "Window": "窗口",
+        "Windows": "窗口",
         "Help": "帮助"
+    ]
+
+    private static let removedTitles: Set<String> = [
+        "New Tab",
+        "Show Tab Bar",
+        "Hide Tab Bar",
+        "Show All Tabs",
+        "Show Previous Tab",
+        "Show Next Tab",
+        "Select Previous Tab",
+        "Select Next Tab",
+        "Show Tab Overview",
+        "Move Tab to New Window",
+        "Merge All Windows",
+        "新建标签页",
+        "显示标签页栏",
+        "隐藏标签页栏",
+        "显示所有标签页",
+        "显示上一个标签页",
+        "显示下一个标签页",
+        "选择上一个标签页",
+        "选择下一个标签页",
+        "显示标签页概览",
+        "退出标签页概览",
+        "将标签页移到新窗口",
+        "合并所有窗口"
     ]
 
     private static let directTitleMap: [String: String] = [
         "Services": "服务",
+        "Services Settings...": "服务设置...",
         "Services Settings…": "服务设置…",
         "Show All": "全部显示",
         "Hide Others": "隐藏其他",
         "Close": "关闭",
+        "Close Window": "关闭窗口",
         "Minimize": "最小化",
         "Zoom": "缩放",
         "Bring All to Front": "前置全部窗口",
@@ -196,28 +475,39 @@ private enum WorkspaceMenuLocalizer {
         "Cut": "剪切",
         "Copy": "复制",
         "Paste": "粘贴",
+        "Paste and Match Style": "粘贴并匹配样式",
         "Delete": "删除",
         "Select All": "全选",
+        "Start Dictation...": "开始听写...",
         "Start Dictation…": "开始听写…",
         "Emoji & Symbols": "表情与符号",
-        "Enter Full Screen": "进入全屏",
-        "Exit Full Screen": "退出全屏"
+        "Enter Full Screen": "进入全屏幕",
+        "Exit Full Screen": "退出全屏幕",
+        "Toggle Full Screen": "切换全屏幕",
+        "Show Toolbar": "显示工具栏",
+        "Hide Toolbar": "隐藏工具栏",
+        "Customize Toolbar...": "自定工具栏...",
+        "Customize Toolbar…": "自定工具栏…"
     ]
 
     @MainActor
     static func scheduleMainMenuLocalizationPasses() {
-        let delays: [TimeInterval] = [0, 0.2, 0.75, 1.5]
-        for delay in delays {
+        guard shouldUseChineseMenus else { return }
+
+        for delay in [0, 0.2, 0.75, 1.5] {
             DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-                localizeMainMenu()
+                Task { @MainActor in
+                    localizeMainMenu()
+                }
             }
         }
     }
 
     @MainActor
     static func localizeMainMenu() {
-        guard let mainMenu = NSApp.mainMenu else { return }
+        guard shouldUseChineseMenus, let mainMenu = NSApp.mainMenu else { return }
 
+        removeUnwantedItems(from: mainMenu)
         for item in mainMenu.items {
             localizeTopLevelItem(item)
         }
@@ -226,10 +516,35 @@ private enum WorkspaceMenuLocalizer {
 
     @MainActor
     static func localize(menu: NSMenu) {
+        guard shouldUseChineseMenus else { return }
+
+        removeUnwantedItems(from: menu)
         for item in menu.items {
             localizeMenuItem(item)
         }
         menu.update()
+    }
+
+    private static var shouldUseChineseMenus: Bool {
+        guard let preferredLanguage = Locale.preferredLanguages.first else { return false }
+        return preferredLanguage.hasPrefix("zh")
+    }
+
+    @MainActor
+    private static func removeUnwantedItems(from menu: NSMenu) {
+        for item in menu.items.reversed() {
+            if shouldRemove(item) {
+                menu.removeItem(item)
+            } else if let submenu = item.submenu {
+                removeUnwantedItems(from: submenu)
+            }
+        }
+    }
+
+    private static func shouldRemove(_ item: NSMenuItem) -> Bool {
+        guard !item.isSeparatorItem else { return false }
+        let normalizedTitle = item.title.replacingOccurrences(of: "…", with: "...")
+        return removedTitles.contains(normalizedTitle)
     }
 
     @MainActor
@@ -247,18 +562,27 @@ private enum WorkspaceMenuLocalizer {
 
     @MainActor
     private static func localizeMenuItem(_ item: NSMenuItem) {
-        let appName = WorkspaceAppPresentation.displayName
+        let appNames = [
+            WorkspaceAppPresentation.displayName,
+            WorkspaceAppPresentation.bundleDisplayName
+        ]
         let title = item.title
 
         if item.action == #selector(NSApplication.orderFrontStandardAboutPanel(_:)) ||
-            title == "About \(appName)" {
-            item.title = "关于 \(appName)"
+            appNames.contains(where: { title == "About \($0)" }) {
+            item.title = "关于 \(WorkspaceAppPresentation.displayName)"
         } else if item.action == #selector(NSApplication.hide(_:)) ||
-            title == "Hide \(appName)" {
-            item.title = "隐藏 \(appName)"
+            appNames.contains(where: { title == "Hide \($0)" }) {
+            item.title = "隐藏 \(WorkspaceAppPresentation.displayName)"
+        } else if item.action == #selector(NSApplication.hideOtherApplications(_:)) ||
+            title == "Hide Others" {
+            item.title = "隐藏其他"
+        } else if item.action == #selector(NSApplication.unhideAllApplications(_:)) ||
+            title == "Show All" {
+            item.title = "全部显示"
         } else if item.action == #selector(NSApplication.terminate(_:)) ||
-            title == "Quit \(appName)" {
-            item.title = "退出 \(appName)"
+            appNames.contains(where: { title == "Quit \($0)" }) {
+            item.title = "退出 \(WorkspaceAppPresentation.displayName)"
         } else if let localized = directTitleMap[title] {
             item.title = localized
         }
@@ -305,7 +629,7 @@ class AppViewModel: ObservableObject {
             UTType(filenameExtension: "xls")!
         ]
 
-        if panel.runModal() == .OK {
+        if WorkspaceDialogPresenter.runModal(panel) == .OK {
             let paths = panel.urls.map { $0.path }
             loadFiles(at: paths, append: !selectedFilePaths.isEmpty)
         }
@@ -322,7 +646,7 @@ class AppViewModel: ObservableObject {
             UTType(filenameExtension: "xls")!
         ]
 
-        if panel.runModal() == .OK {
+        if WorkspaceDialogPresenter.runModal(panel) == .OK {
             let paths = panel.urls.map { $0.path }
             loadFiles(at: paths, append: true)
         }
@@ -750,7 +1074,7 @@ class AppViewModel: ObservableObject {
         panel.nameFieldStringValue = exportName
         panel.allowedContentTypes = [UTType(filenameExtension: "xlsx")!]
 
-        if panel.runModal() == .OK, let url = panel.url {
+        if WorkspaceDialogPresenter.runModal(panel) == .OK, let url = panel.url {
             let results = availableSheets.compactMap { mergedResultsBySheet[$0] }
             let exporter = TemplateWorkbookExporter()
             Task {

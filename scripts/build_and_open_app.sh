@@ -106,15 +106,24 @@ cat > "$PLIST_PATH" <<EOF
 <plist version="1.0">
 <dict>
     <key>CFBundleDevelopmentRegion</key>
-    <string>en</string>
+    <string>zh-Hans</string>
+    <key>CFBundleLocalizations</key>
+    <array>
+        <string>zh-Hans</string>
+        <string>en</string>
+    </array>
     <key>CFBundleExecutable</key>
     <string>$PRODUCT_NAME</string>
+    <key>CFBundleIconFile</key>
+    <string>xlsOne.icns</string>
+    <key>CFBundleIconName</key>
+    <string>AppIcon</string>
     <key>CFBundleIdentifier</key>
     <string>$BUNDLE_ID</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
-    <string>$APP_NAME</string>
+    <string>$PRODUCT_NAME</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
@@ -130,6 +139,14 @@ cat > "$PLIST_PATH" <<EOF
 </dict>
 </plist>
 EOF
+
+mkdir -p "$APP_CONTENTS_PATH/Resources"
+if [[ -f "$REPO_ROOT/cpp/app/resources/xlsOne.icns" ]]; then
+    cp "$REPO_ROOT/cpp/app/resources/xlsOne.icns" "$APP_CONTENTS_PATH/Resources/"
+elif [[ -f "$REPO_ROOT/App/xlsOneMacApp/Assets.xcassets/AppIcon.appiconset/icon_256x256.png" ]]; then
+    # Fallback: copy largest PNG as temp icon
+    cp "$REPO_ROOT/App/xlsOneMacApp/Assets.xcassets/AppIcon.appiconset/icon_256x256.png" "$APP_CONTENTS_PATH/Resources/xlsOne.icns"
+fi
 
 cp "$BUILD_DIR/$PRODUCT_NAME" "$APP_EXEC_PATH"
 chmod +x "$APP_EXEC_PATH"

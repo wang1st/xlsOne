@@ -8,6 +8,7 @@ public struct LicenseActivationView: View {
     @State private var keyInput = ""
     @State private var isActivating = false
     @State private var errorMessage: String?
+    @State private var successMessage: String?
     @State private var showOfflineInfo = false
 
     public init(licenseManager: LicenseManager = .shared) {
@@ -84,6 +85,17 @@ public struct LicenseActivationView: View {
                 .padding(.top, 8)
             }
 
+            if let success = successMessage {
+                HStack(spacing: 6) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.caption)
+                    Text(success)
+                        .font(.caption)
+                }
+                .foregroundColor(.green)
+                .padding(.top, 8)
+            }
+
             // Spacer
             Spacer().frame(height: 20)
 
@@ -111,7 +123,12 @@ public struct LicenseActivationView: View {
             // Trial & Purchase
             HStack(spacing: 24) {
                 Button("免费试用 14 天") {
-                    // TODO: Implement trial mode
+                    let remaining = licenseManager.startTrial()
+                    if remaining > 0 {
+                        errorMessage = nil
+                        successMessage = nil
+                        licenseManager.showActivationSheet = false
+                    }
                 }
                 .buttonStyle(.link)
 
@@ -153,6 +170,15 @@ public struct LicenseActivationView: View {
                     Text("3. 下载授权文件并导入本程序")
                         .font(.caption)
                         .foregroundColor(.secondary)
+
+                    Button {
+                        importLicenseFile()
+                    } label: {
+                        Label("导入授权文件...", systemImage: "doc.badge.plus")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+                    .padding(.top, 8)
                 }
                 .padding(12)
                 .background(Color(nsColor: .controlBackgroundColor))
@@ -174,6 +200,7 @@ public struct LicenseActivationView: View {
         guard validInput else { return }
         isActivating = true
         errorMessage = nil
+        successMessage = nil
 
         Task {
             let result = await licenseManager.activate(key: keyInput)
@@ -181,11 +208,25 @@ public struct LicenseActivationView: View {
                 isActivating = false
                 switch result {
                 case .success:
-                    break // sheet dismisses automatically via state change
+                    licenseManager.showActivationSheet = false
                 case .failure(let error):
                     errorMessage = error.localizedDescription
                 }
             }
+        }
+    }
+
+    private func importLicenseFile() {
+        errorMessage = nil
+        successMessage = nil
+
+        guard let result = licenseManager.importOfflineLicenseFile() else { return }
+        switch result {
+        case .success(let plan, _):
+            successMessage = "授权文件已导入：\(plan.displayName)"
+            licenseManager.showActivationSheet = false
+        case .failure(let error):
+            errorMessage = error.localizedDescription
         }
     }
 }
@@ -217,6 +258,7 @@ public struct LicenseStatusBadge: View {
         case .expired,
              .unactivated:  return .red
         case .gracePeriod: return .orange
+        case .trial:       return .blue
         }
     }
 
@@ -226,6 +268,7 @@ public struct LicenseStatusBadge: View {
         case .unactivated: return "未激活"
         case .expired:     return "已过期"
         case .gracePeriod: return "离线模式"
+        case .trial(let remaining): return "试用 \(remaining) 天"
         }
     }
 }

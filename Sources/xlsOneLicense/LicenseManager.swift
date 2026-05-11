@@ -1,4 +1,7 @@
 import Foundation
+#if os(macOS)
+import AppKit
+#endif
 
 // MARK: - License Manager
 
@@ -13,6 +16,7 @@ public final class LicenseManager: ObservableObject {
     @Published public private(set) var licenseState: LicenseState = .unactivated
     @Published public private(set) var plan: LicensePlan = .unknown
     @Published public private(set) var isVerifying = false
+    @Published public var showActivationSheet = false
 
     // MARK: - Constants
 
@@ -29,7 +33,10 @@ public final class LicenseManager: ObservableObject {
         static let tokenKey = "com.xlsone.license.token"
         static let deviceIDKey = "com.xlsone.license.deviceID"
         static let offlineLicenseKey = "com.xlsone.license.offline"
+        static let trialStartKey = "com.xlsone.license.trialStart"
     }
+
+    private static let trialDurationDays = 14
 
     // MARK: - Initialization
 
@@ -38,6 +45,78 @@ public final class LicenseManager: ObservableObject {
     }
 
     // MARK: - Public API
+
+    /// Start a free trial. Returns the remaining days.
+    public func startTrial() -> Int {
+        let now = Date()
+        UserDefaults.standard.set(now, forKey: Storage.trialStartKey)
+        let remaining = Self.trialDurationDays
+        licenseState = .trial(remainingDays: remaining)
+        return remaining
+    }
+
+    /// Check trial status. Returns remaining days or -1 if trial expired/not started.
+    public func checkTrialStatus() -> Int {
+        guard let start = UserDefaults.standard.object(forKey: Storage.trialStartKey) as? Date else {
+            return -1
+        }
+        let elapsed = Calendar.current.dateComponents([.day], from: start, to: Date()).day ?? 0
+        let remaining = Self.trialDurationDays - elapsed
+        if remaining > 0 {
+            return remaining
+        }
+        return -1
+    }
+
+    /// Import an offline license file (JWT token).
+    @discardableResult
+    @MainActor
+    public func importOfflineLicenseFile() -> ActivationResult? {
+#if os(macOS)
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.data, .json]
+        panel.allowsMultipleSelection = false
+        panel.message = "选择授权文件"
+
+        guard Self.runCenteredModal(panel) == .OK, let url = panel.url else { return nil }
+
+        guard let token = try? String(contentsOf: url, encoding: .utf8).trimmingCharacters(in: .whitespacesAndNewlines),
+              !token.isEmpty
+        else {
+            DispatchQueue.main.async {
+                self.licenseState = .unactivated
+            }
+            return .failure(.invalidLicenseFile)
+        }
+
+        let deviceID = getOrCreateDeviceID()
+        guard let payload = decodeTokenPayload(token) else {
+            DispatchQueue.main.async {
+                self.licenseState = .unactivated
+            }
+            return .failure(.invalidLicenseFile)
+        }
+
+        guard payload.dev == deviceID else {
+            return .failure(.licenseDeviceMismatch)
+        }
+
+        guard isTokenValidLocally(payload, deviceID: deviceID) else {
+            return .failure(.invalidLicenseFile)
+        }
+
+        let plan = LicensePlan(rawValue: payload.plan) ?? .unknown
+        saveToken(token)
+        UserDefaults.standard.set(token, forKey: Storage.offlineLicenseKey)
+        DispatchQueue.main.async {
+            self.licenseState = .activated
+            self.plan = plan
+        }
+        return .success(plan: plan, expiresAt: nil)
+#else
+        return .failure(.serverError("当前平台不支持导入授权文件"))
+#endif
+    }
 
     /// Activate with an activation key. Returns the result.
     public func activate(key: String) async -> ActivationResult {
@@ -137,7 +216,7 @@ public final class LicenseManager: ObservableObject {
         if let data = await postJSON(to: "\(API.primary)/api/refresh", body: body),
            let result = try? JSONDecoder().decode(RefreshResponse.self, from: data),
            result.valid {
-            saveToken(result.token)
+            if let token = result.token { saveToken(token) }
         }
     }
 
@@ -188,7 +267,7 @@ public final class LicenseManager: ObservableObject {
             await setState(.activated)
             await setPlan(LicensePlan(rawValue: result.plan) ?? .unknown)
             UserDefaults.standard.set(Date(), forKey: "com.xlsone.license.lastValid")
-        } else if result.expired {
+        } else if result.expired == true {
             await setState(.expired)
         } else {
             await setState(.unactivated)
@@ -252,6 +331,11 @@ public final class LicenseManager: ObservableObject {
            isTokenValidLocally(payload, deviceID: getOrCreateDeviceID()) {
             licenseState = .activated
             plan = LicensePlan(rawValue: payload.plan) ?? .unknown
+            return
+        }
+        let remaining = checkTrialStatus()
+        if remaining > 0 {
+            licenseState = .trial(remainingDays: remaining)
         }
     }
 
@@ -293,6 +377,24 @@ public final class LicenseManager: ObservableObject {
     @MainActor private func setState(_ state: LicenseState) { self.licenseState = state }
     @MainActor private func setPlan(_ plan: LicensePlan) { self.plan = plan }
 
+#if os(macOS)
+    @MainActor
+    private static func runCenteredModal(_ panel: NSSavePanel) -> NSApplication.ModalResponse {
+        panel.contentView?.layoutSubtreeIfNeeded()
+        if let owner = NSApp.keyWindow ?? NSApp.mainWindow ?? NSApp.windows.first(where: { $0.isVisible }) {
+            let ownerFrame = owner.frame
+            let panelFrame = panel.frame
+            panel.setFrameOrigin(NSPoint(
+                x: ownerFrame.midX - panelFrame.width / 2,
+                y: ownerFrame.midY - panelFrame.height / 2
+            ))
+        } else {
+            panel.center()
+        }
+        return panel.runModal()
+    }
+#endif
+
     private func mapAPIError(_ error: APIError) -> ActivationError {
         switch error.error {
         case "KEY_NOT_FOUND":   return .keyNotFound
@@ -311,6 +413,7 @@ public enum LicenseState: Equatable {
     case activated
     case expired
     case gracePeriod     // Offline, token not verified recently but within grace window
+    case trial(remainingDays: Int)  // Free trial with N days remaining
 }
 
 public enum LicensePlan: String {
@@ -340,6 +443,8 @@ public enum ActivationResult: Equatable {
 
 public enum ActivationError: Error, Equatable {
     case invalidKeyFormat
+    case invalidLicenseFile
+    case licenseDeviceMismatch
     case keyNotFound
     case keyRevoked
     case deviceLimit
@@ -350,6 +455,8 @@ public enum ActivationError: Error, Equatable {
     public var localizedDescription: String {
         switch self {
         case .invalidKeyFormat: return "激活码格式不正确"
+        case .invalidLicenseFile: return "授权文件无效或已过期"
+        case .licenseDeviceMismatch: return "授权文件与当前设备不匹配"
         case .keyNotFound:      return "激活码不存在"
         case .keyRevoked:       return "激活码已被吊销"
         case .deviceLimit:      return "已达到最大设备数限制"

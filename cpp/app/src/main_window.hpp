@@ -7,6 +7,7 @@
 #include "sheet_strip.hpp"
 #include "workspace_chrome.hpp"
 #include "xlsone/core/excel_parser.hpp"
+#include "xlsone/core/license_manager.hpp"
 #include "xlsone/core/merger.hpp"
 #include "xlsone/core/schema_repository.hpp"
 #include "xlsone/core/validator.hpp"
@@ -51,11 +52,10 @@ private slots:
     void manageSchemas();
     void undoLastOverride();
     void clearOverrides();
-    void jumpToNextAnomaly();
-    void jumpToPreviousAnomaly();
     void selectSheet(const QString& sheetName, bool mergeable);
     void inspectCell(const QModelIndex& index);
     void checkForUpdates();
+    void showLicenseActivation();
 
 private:
     void buildUi();
@@ -121,5 +121,6 @@ private:
     QPushButton* clearOverridesButton_ = nullptr;
     QLabel* statusLabel_ = nullptr;
     xlsone::UpdateChecker* updateChecker_ = nullptr;
+    xlsone::LicenseManager* licenseManager_ = nullptr;
     bool firstShow_ = true;
 };

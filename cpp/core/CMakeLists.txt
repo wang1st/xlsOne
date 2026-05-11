@@ -5,12 +5,14 @@ add_library(xlsone_core STATIC
     src/compound_file_reader.cpp
     src/excel_parser.cpp
     src/exporter.cpp
+    src/license_manager.cpp
     src/merger.cpp
     src/models.cpp
     src/schema_repository.cpp
     src/update_checker.cpp
     src/validator.cpp
     src/zip_archive.cpp
+    include/xlsone/core/license_manager.hpp
     include/xlsone/core/update_checker.hpp
 )
 

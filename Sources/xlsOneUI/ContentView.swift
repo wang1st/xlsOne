@@ -4,7 +4,7 @@ import xlsOneLicense
 
 struct ContentView: View {
     @EnvironmentObject var viewModel: AppViewModel
-    @StateObject private var licenseManager = LicenseManager.shared
+    @EnvironmentObject var licenseManager: LicenseManager
     @State private var isDropTargeted = false
 
     var body: some View {
@@ -23,16 +23,31 @@ struct ContentView: View {
                 readyWorkspace
             }
         }
-        .alert("错误", isPresented: $viewModel.showError) {
-            Button("确定", role: .cancel) {}
-        } message: {
-            Text(viewModel.errorMessage ?? "未知错误")
+        .onChange(of: viewModel.showError) { isPresented in
+            guard isPresented else { return }
+            showErrorAlert()
         }
-        .sheet(isPresented: $viewModel.showSchemaManager) {
-            SchemaManagerView()
+        .background {
+            CenteredDialogWindow(
+                isPresented: $viewModel.showSchemaManager,
+                title: "调整记忆",
+                size: NSSize(width: 600, height: 400)
+            ) {
+                SchemaManagerView {
+                    viewModel.showSchemaManager = false
+                }
+            }
+            .frame(width: 0, height: 0)
         }
-        .sheet(isPresented: licenseActivationSheet) {
-            LicenseActivationView()
+        .background {
+            CenteredDialogWindow(
+                isPresented: licenseActivationSheet,
+                title: "激活 表表归一",
+                size: NSSize(width: 420, height: 520)
+            ) {
+                LicenseActivationView()
+            }
+            .frame(width: 0, height: 0)
         }
         .onDrop(of: [.fileURL], delegate: DropDelegateView(viewModel: viewModel, isTargeted: $isDropTargeted))
         .task {
@@ -42,9 +57,30 @@ struct ContentView: View {
 
     private var licenseActivationSheet: Binding<Bool> {
         Binding(
-            get: { licenseManager.licenseState == .unactivated || licenseManager.licenseState == .expired },
-            set: { _ in }
+            get: {
+                let state = licenseManager.licenseState
+                if state == .activated { return false }
+                if licenseManager.showActivationSheet {
+                    return true
+                }
+                if case .trial = state { return false }
+                return state == .unactivated || state == .expired
+            },
+            set: { newValue in
+                if !newValue {
+                    licenseManager.showActivationSheet = false
+                }
+            }
         )
+    }
+
+    private func showErrorAlert() {
+        WorkspaceDialogPresenter.runAlert(
+            title: "错误",
+            message: viewModel.errorMessage ?? "未知错误",
+            style: .warning
+        )
+        viewModel.showError = false
     }
 
     private var toolbar: some View {
@@ -1961,6 +1997,103 @@ private struct InspectorOverrideButton: View {
             return tint.opacity(0.28)
         }
         return Color.secondary.opacity(0.12)
+    }
+}
+
+private struct CenteredDialogWindow<DialogContent: View>: NSViewRepresentable {
+    @Binding var isPresented: Bool
+    let title: String
+    let size: NSSize
+    let content: () -> DialogContent
+
+    init(
+        isPresented: Binding<Bool>,
+        title: String,
+        size: NSSize,
+        @ViewBuilder content: @escaping () -> DialogContent
+    ) {
+        _isPresented = isPresented
+        self.title = title
+        self.size = size
+        self.content = content
+    }
+
+    func makeNSView(context: Context) -> NSView {
+        NSView(frame: .zero)
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        context.coordinator.parent = self
+        if isPresented {
+            context.coordinator.present(anchor: nsView)
+        } else {
+            context.coordinator.close()
+        }
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(parent: self)
+    }
+
+    final class Coordinator: NSObject, NSWindowDelegate {
+        var parent: CenteredDialogWindow
+        private var panel: NSPanel?
+
+        init(parent: CenteredDialogWindow) {
+            self.parent = parent
+        }
+
+        func present(anchor: NSView) {
+            if let panel {
+                panel.title = parent.title
+                panel.setContentSize(parent.size)
+                center(panel, anchor: anchor)
+                return
+            }
+
+            let rootView = parent.content()
+            let panel = NSPanel(
+                contentRect: NSRect(origin: .zero, size: parent.size),
+                styleMask: [.titled, .closable],
+                backing: .buffered,
+                defer: false
+            )
+            panel.title = parent.title
+            panel.isReleasedWhenClosed = false
+            panel.delegate = self
+            panel.contentViewController = NSHostingController(rootView: rootView)
+            panel.setContentSize(parent.size)
+            center(panel, anchor: anchor)
+            panel.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            self.panel = panel
+        }
+
+        func close() {
+            guard let panel else { return }
+            panel.delegate = nil
+            panel.close()
+            self.panel = nil
+        }
+
+        func windowWillClose(_ notification: Notification) {
+            parent.isPresented = false
+            panel = nil
+        }
+
+        private func center(_ panel: NSWindow, anchor: NSView) {
+            guard let owner = anchor.window ?? NSApp.keyWindow ?? NSApp.mainWindow ?? NSApp.windows.first(where: { $0.isVisible }) else {
+                panel.center()
+                return
+            }
+
+            let ownerFrame = owner.frame
+            let panelFrame = panel.frame
+            panel.setFrameOrigin(NSPoint(
+                x: ownerFrame.midX - panelFrame.width / 2,
+                y: ownerFrame.midY - panelFrame.height / 2
+            ))
+        }
     }
 }
 
