@@ -7,6 +7,7 @@ let package = Package(
     products: [
         .library(name: "xlsOneCore", targets: ["xlsOneCore"]),
         .library(name: "xlsOneUI", targets: ["xlsOneUI"]),
+        .library(name: "xlsOneLicense", targets: ["xlsOneLicense"]),
         .executable(name: "xlsOne", targets: ["xlsOne"]),
         .executable(name: "xlsOneSnapshot", targets: ["xlsOneSnapshot"])
     ],
@@ -19,8 +20,12 @@ let package = Package(
             dependencies: ["CoreXLSX"]
         ),
         .target(
+            name: "xlsOneLicense",
+            dependencies: []
+        ),
+        .target(
             name: "xlsOneUI",
-            dependencies: ["xlsOneCore"]
+            dependencies: ["xlsOneCore", "xlsOneLicense"]
         ),
         .executableTarget(
             name: "xlsOne",

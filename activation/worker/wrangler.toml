@@ -1,0 +1,18 @@
+name = "xlsone-activation-api"
+main = "src/index.ts"
+compatibility_date = "2025-04-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "xlsone-license"
+database_id = "xlsone-license-db"
+
+[vars]
+ACTIVATION_SECRET = ""  # 运行时通过 wrangler secret put 设置
+LEMON_SQUEEZY_SIGNING_SECRET = ""  # Lemon Squeezy webhook 签名密钥
+
+[env.production]
+routes = [
+  { pattern = "api.xlsone.com", custom_domain = true },
+  { pattern = "api.z-pulse.cn", custom_domain = true }
+]
