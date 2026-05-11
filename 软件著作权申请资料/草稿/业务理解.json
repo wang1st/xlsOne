@@ -1,0 +1,302 @@
+{
+  "software_name": "xlsOne Excel财务报表汇总工具",
+  "business_understanding_required": true,
+  "source_documents": [
+    {
+      "path": "PRD.md",
+      "size": 4714
+    },
+    {
+      "path": "README.md",
+      "size": 2098
+    },
+    {
+      "path": "cpp/CMakeLists.txt",
+      "size": 1736
+    },
+    {
+      "path": "cpp/README.md",
+      "size": 4182
+    },
+    {
+      "path": "docs/cloudflare-deployment-checklist.md",
+      "size": 3632
+    },
+    {
+      "path": "docs/release-phase-1.md",
+      "size": 2087
+    },
+    {
+      "path": "docs/release-phase-2-checklist.md",
+      "size": 4573
+    },
+    {
+      "path": "docs/xlsone-com-deployment-plan.md",
+      "size": 9671
+    },
+    {
+      "path": "site/README.md",
+      "size": 1279
+    },
+    {
+      "path": "site/robots.txt",
+      "size": 63
+    },
+    {
+      "path": "cpp/app/CMakeLists.txt",
+      "size": 1456
+    },
+    {
+      "path": "cpp/build-linux-release/CMakeCache.txt",
+      "size": 15584
+    },
+    {
+      "path": "cpp/build-linux-release/install_manifest.txt",
+      "size": 141
+    },
+    {
+      "path": "cpp/build-release/CMakeCache.txt",
+      "size": 15542
+    },
+    {
+      "path": "cpp/build-release/install_manifest.txt",
+      "size": 141
+    },
+    {
+      "path": "cpp/core/CMakeLists.txt",
+      "size": 815
+    },
+    {
+      "path": "cpp/packaging/README.md",
+      "size": 605
+    },
+    {
+      "path": "cpp/tests/CMakeLists.txt",
+      "size": 356
+    },
+    {
+      "path": "cpp/tools/CMakeLists.txt",
+      "size": 214
+    },
+    {
+      "path": "docs/plans/2026-04-20-grid-header-resize-fix.md",
+      "size": 12239
+    },
+    {
+      "path": "docs/软著材料/软件著作权登记申请表.txt",
+      "size": 5074
+    },
+    {
+      "path": "cpp/build-linux-release/CMakeFiles/TargetDirectories.txt",
+      "size": 4016
+    },
+    {
+      "path": "cpp/build-release/CMakeFiles/TargetDirectories.txt",
+      "size": 3698
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-08-auto-update.md",
+      "size": 20326
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-08-v0.3.0-schema.md",
+      "size": 21679
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-08-z-pulse-website.md",
+      "size": 24672
+    },
+    {
+      "path": "docs/superpowers/specs/2026-05-08-auto-update-design.md",
+      "size": 5345
+    },
+    {
+      "path": "docs/superpowers/specs/2026-05-08-v0.3.0-schema-redesign.md",
+      "size": 2827
+    },
+    {
+      "path": "docs/superpowers/specs/2026-05-08-z-pulse-website-design.md",
+      "size": 2839
+    },
+    {
+      "path": "docs/软著材料/源代码/源程序文档.txt",
+      "size": 162558
+    },
+    {
+      "path": "docs/软著材料/用户文档/用户操作手册.txt",
+      "size": 20180
+    },
+    {
+      "path": "cpp/build-linux-release/Testing/Temporary/CTestCostData.txt",
+      "size": 70
+    },
+    {
+      "path": "cpp/build-linux-release/app/CMakeFiles/xlsone_app_autogen.dir/AutogenUsed.txt",
+      "size": 138
+    },
+    {
+      "path": "cpp/build-linux-release/app/CMakeFiles/xlsone_app_autogen.dir/ParseCache.txt",
+      "size": 1363
+    },
+    {
+      "path": "cpp/build-linux-release/core/CMakeFiles/xlsone_core_autogen.dir/AutogenUsed.txt",
+      "size": 138
+    },
+    {
+      "path": "cpp/build-linux-release/core/CMakeFiles/xlsone_core_autogen.dir/ParseCache.txt",
+      "size": 779
+    },
+    {
+      "path": "cpp/build-linux-release/tests/CMakeFiles/xlsone_core_tests_autogen.dir/AutogenUsed.txt",
+      "size": 138
+    },
+    {
+      "path": "cpp/build-linux-release/tests/CMakeFiles/xlsone_core_tests_autogen.dir/ParseCache.txt",
+      "size": 129
+    },
+    {
+      "path": "cpp/build-linux-release/tools/CMakeFiles/xlsone_snapshot_autogen.dir/AutogenUsed.txt",
+      "size": 138
+    },
+    {
+      "path": "cpp/build-linux-release/tools/CMakeFiles/xlsone_snapshot_autogen.dir/ParseCache.txt",
+      "size": 98
+    }
+  ],
+  "project_evidence_file": "业务理解证据.md",
+  "product_positioning": "xlsOne 是一款桌面端 Excel 财务报表汇总工具，面向需要将多份格式相同的 Excel 报表合并为一份汇总表的财务审计场景。软件自动识别单元格类型（金额/编码/标签），对金额求和、标签保留原值，大幅减少人工汇总工作量。",
+  "industry": "政务财务管理、审计、企事业单位财务统计",
+  "target_users": [
+    "各级政府财政部门的统计人员",
+    "企事业单位的财务人员",
+    "会计师事务所的审计人员"
+  ],
+  "core_value": "将财务人员从逐表手动汇总 Excel 的重复劳动中解放出来。传统做法需要人工核对每一份报表的单元格位置，判断哪些列需要求和、哪些列是固定编码，既耗时又容易出错。xlsOne 自动完成文件导入、结构校验、列类型识别和单元格聚合，用户只需拖入文件即可获得汇总结果，并支持穿透查阅每个汇总值在各文件中的原始数据，确保汇总可追溯、可审计。",
+  "business_features": [
+    "文件导入",
+    "工作簿结构校验",
+    "工作表切换管理",
+    "智能单元格聚合",
+    "穿透查阅",
+    "类型修正与规则管理",
+    "导出汇总结果"
+  ],
+  "business_feature_details": {
+    "文件导入": "支持批量导入多个 Excel 文件（.xlsx 和 .xls），可通过拖拽或菜单打开文件方式导入。导入后显示文件列表，支持添加和关闭文件。",
+    "工作簿结构校验": "自动校验所有导入文件的结构是否一致，包括行数、列数、工作表名称等。对于结构不匹配的文件给出警告或排除提示，确保汇总结果的准确性。",
+    "工作表切换管理": "自动识别所有文件中的工作表名称，以标签页形式展示，用户可切换不同工作表查看对应的汇总数据。切换工作表时自动重新汇总。",
+    "智能单元格聚合": "核心功能。对每个单元格位置，自动判断类型并执行对应操作：所有文件值相同则显示标签（如科目代码'201'）；值不同且均为数字则显示求和结果；值不同且包含非数字则显示不同值的条数（如'3条'）。支持千分位、欧式小数、百分比等多种数字格式的自动识别和运算。",
+    "穿透查阅": "点击汇总表中的任一单元格，侧边栏展示该单元格位置在所有源文件中的原始值及对应文件名，方便核查汇总来源。",
+    "类型修正与规则管理": "当自动识别结果不准确时，用户可手动将单元格标记为金额（求和）、标签（保留）或混合类型。修正规则可保存为方案（Schema），下次导入同类文件时自动应用。",
+    "导出汇总结果": "将汇总后的表格导出为 .xlsx 格式的 Excel 工作簿，保留原始行列结构和表头信息，方便存档和分发。"
+  },
+  "operation_flow": [
+    "用户启动 xlsOne 应用，看到空白工作台界面",
+    "用户拖拽或通过菜单打开多个格式相同的 Excel 财务报表文件",
+    "软件自动解析文件，校验各文件结构是否一致，给出校验报告",
+    "通过校验后显示汇总表格，表格顶部为工作表标签页，可切换不同工作表",
+    "汇总表格中：金额列自动求和显示，科目代码等标签列显示原始值",
+    "用户可点击任意单元格查看其原始数据来源",
+    "如发现识别不准确，用户可手动修正单元格类型，并可保存修正规则为方案",
+    "用户确认汇总结果无误后，导出为 Excel 文件"
+  ],
+  "application_purpose": "本软件用于财务审计工作中将多份格式相同的 Excel 报表（如各单位财务报表、各项目经费报表、各乡镇决算报表等）快速合并为一份汇总工作簿，替代人工逐表核对和手工相加的传统做法，提高汇总效率和准确性，确保数据可追溯。",
+  "main_functions": "Excel 文件批量导入（拖拽、菜单、添加）；导入文件工作簿结构一致性校验；Sheet 页切换与对应页面汇总；智能单元格聚合（标签/求和/差异条数三态）；单元格来源穿透查阅与数据追溯；汇总类型人工修正与规则保存；汇总结果导出为 .xlsx 文件",
+  "technical_characteristics": "智能类型识别：基于多因子加权评分自动判断单元格类型（金额/代码/标签），无需用户预定义列类型；多格式支持：支持 .xlsx 和 .xls（BIFF8）两种 Excel 文件格式；结构化校验：自动检测文件结构一致性（行数列数、Sheet 名称），确保汇总准确；规则可复用：用户修正规则可保存为方案，批量处理同类报表时自动应用；数据可追溯：每个汇总值均可穿透查看源数据，满足审计要求",
+  "software_technical_option": "应用软件",
+  "software_category": "应用软件",
+  "manual_sections": [
+    {
+      "title": "软件概述",
+      "intent": "介绍 xlsOne 的用途、适用场景和核心能力",
+      "paragraphs": [],
+      "include_feature_overview": true,
+      "include_operation_modules": false,
+      "include_operation_flow": false
+    },
+    {
+      "title": "适用对象与运行环境",
+      "intent": "说明目标用户群体、操作系统和硬件要求",
+      "paragraphs": [],
+      "include_feature_overview": false,
+      "include_operation_modules": false,
+      "include_operation_flow": false
+    },
+    {
+      "title": "启动与主界面",
+      "intent": "如何启动软件、主界面布局说明",
+      "paragraphs": [],
+      "include_feature_overview": false,
+      "include_operation_modules": true,
+      "include_operation_flow": false
+    },
+    {
+      "title": "导入文件",
+      "intent": "拖拽导入和菜单导入两种方式的操作步骤",
+      "paragraphs": [],
+      "include_feature_overview": false,
+      "include_operation_modules": true,
+      "include_operation_flow": false
+    },
+    {
+      "title": "查看汇总结果",
+      "intent": "汇总表格的阅读方式（金额求和、标签保留、差异条数）和各工作表切换",
+      "paragraphs": [],
+      "include_feature_overview": false,
+      "include_operation_modules": true,
+      "include_operation_flow": false
+    },
+    {
+      "title": "穿透查阅原始数据",
+      "intent": "点击单元格查看各文件原始值的操作步骤",
+      "paragraphs": [],
+      "include_feature_overview": false,
+      "include_operation_modules": true,
+      "include_operation_flow": false
+    },
+    {
+      "title": "修正汇总类型",
+      "intent": "当自动识别不准确时，如何手动标记金额/标签/混合类型",
+      "paragraphs": [],
+      "include_feature_overview": false,
+      "include_operation_modules": true,
+      "include_operation_flow": false
+    },
+    {
+      "title": "保存与应用方案",
+      "intent": "如何保存修正规则为方案，以及如何在下一次批量汇总时应用方案",
+      "paragraphs": [],
+      "include_feature_overview": false,
+      "include_operation_modules": true,
+      "include_operation_flow": false
+    },
+    {
+      "title": "导出汇总结果",
+      "intent": "将汇总表导出为 Excel 文件的步骤",
+      "paragraphs": [],
+      "include_feature_overview": false,
+      "include_operation_modules": true,
+      "include_operation_flow": false
+    },
+    {
+      "title": "注意事项",
+      "intent": "文件格式要求、文件结构一致性要求等使用提示",
+      "paragraphs": [],
+      "include_feature_overview": false,
+      "include_operation_modules": false,
+      "include_operation_flow": false
+    }
+  ],
+  "model_authored": true,
+  "external_research_notes": "",
+  "confirmation_required": true,
+  "user_confirmed": true,
+  "confirmation_stage": "business",
+  "next_action": "请确认 草稿/业务理解.md 中的软件用途、行业、目标用户、核心功能、手册结构和申请口径；确认后运行 confirm_stage.py --stage business。",
+  "review_notes": [
+    "请确认模型判断的行业领域、目标用户和主要功能是否符合实际申报口径。",
+    "请确认操作手册结构是否适合当前项目，而不是套用范本文档。"
+  ],
+  "confirmation_note": "用户要求默认选项自动确认，业务理解基于PRD.md和README.md实际内容生成",
+  "confirmed_at": "2026-05-10T22:21:50+00:00"
+}

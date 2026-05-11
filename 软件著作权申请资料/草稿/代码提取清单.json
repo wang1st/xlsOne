@@ -1,0 +1,150 @@
+{
+  "software_name": "表表归一",
+  "version": "V1.0.0",
+  "project_root": "/home/ethan/xlsone",
+  "file_count": 14,
+  "material_line_count": 5605,
+  "source_line_count": 8207,
+  "selected_source_line_count": 5577,
+  "lines_per_page": 60,
+  "total_pages": 94,
+  "target_pages": 60,
+  "available_candidate_line_count": 28296,
+  "available_candidate_pages": 472,
+  "supplement_status": "候选源码可达到前30页/后30页要求",
+  "mode": "front30_back30",
+  "selection_file": "软件著作权申请资料/草稿/代码文件选择.json",
+  "outputs": [
+    "代码-前30页.md",
+    "代码-后30页.md"
+  ],
+  "files": [
+    {
+      "path": "Sources/xlsOne/XlsOneApp.swift",
+      "source_line_count": 11,
+      "selected_line_start": 1,
+      "selected_line_end": 11,
+      "selected_line_count": 11,
+      "material_line_start": 1,
+      "material_line_end": 13
+    },
+    {
+      "path": "Sources/xlsOneCore/ColumnTypeAnalyzer.swift",
+      "source_line_count": 379,
+      "selected_line_start": 1,
+      "selected_line_end": 200,
+      "selected_line_count": 200,
+      "material_line_start": 14,
+      "material_line_end": 215
+    },
+    {
+      "path": "Sources/xlsOneCore/ExcelParser.swift",
+      "source_line_count": 473,
+      "selected_line_start": 1,
+      "selected_line_end": 473,
+      "selected_line_count": 473,
+      "material_line_start": 216,
+      "material_line_end": 690
+    },
+    {
+      "path": "Sources/xlsOneCore/Models.swift",
+      "source_line_count": 1349,
+      "selected_line_start": 1,
+      "selected_line_end": 800,
+      "selected_line_count": 800,
+      "material_line_start": 691,
+      "material_line_end": 1492
+    },
+    {
+      "path": "Sources/xlsOneCore/Schema/SchemaMatcher.swift",
+      "source_line_count": 245,
+      "selected_line_start": 1,
+      "selected_line_end": 150,
+      "selected_line_count": 150,
+      "material_line_start": 1493,
+      "material_line_end": 1644
+    },
+    {
+      "path": "Sources/xlsOneCore/Schema/SchemaModels.swift",
+      "source_line_count": 206,
+      "selected_line_start": 1,
+      "selected_line_end": 206,
+      "selected_line_count": 206,
+      "material_line_start": 1645,
+      "material_line_end": 1852
+    },
+    {
+      "path": "Sources/xlsOneCore/SimpleMerger.swift",
+      "source_line_count": 555,
+      "selected_line_start": 1,
+      "selected_line_end": 555,
+      "selected_line_count": 555,
+      "material_line_start": 1853,
+      "material_line_end": 2409
+    },
+    {
+      "path": "Sources/xlsOneCore/SmartMerger.swift",
+      "source_line_count": 316,
+      "selected_line_start": 1,
+      "selected_line_end": 316,
+      "selected_line_count": 316,
+      "material_line_start": 2410,
+      "material_line_end": 2727
+    },
+    {
+      "path": "Sources/xlsOneCore/TemplateWorkbookExporter.swift",
+      "source_line_count": 201,
+      "selected_line_start": 1,
+      "selected_line_end": 201,
+      "selected_line_count": 201,
+      "material_line_start": 2728,
+      "material_line_end": 2930
+    },
+    {
+      "path": "Sources/xlsOneCore/WorkbookValidator.swift",
+      "source_line_count": 569,
+      "selected_line_start": 1,
+      "selected_line_end": 400,
+      "selected_line_count": 400,
+      "material_line_start": 2931,
+      "material_line_end": 3332
+    },
+    {
+      "path": "Sources/xlsOneUI/ContentView.swift",
+      "source_line_count": 2002,
+      "selected_line_start": 1,
+      "selected_line_end": 800,
+      "selected_line_count": 800,
+      "material_line_start": 3333,
+      "material_line_end": 4134
+    },
+    {
+      "path": "Sources/xlsOneUI/SchemaManagerView.swift",
+      "source_line_count": 229,
+      "selected_line_start": 1,
+      "selected_line_end": 229,
+      "selected_line_count": 229,
+      "material_line_start": 4135,
+      "material_line_end": 4365
+    },
+    {
+      "path": "Sources/xlsOneUI/WorkspaceModels.swift",
+      "source_line_count": 636,
+      "selected_line_start": 1,
+      "selected_line_end": 636,
+      "selected_line_count": 636,
+      "material_line_start": 4366,
+      "material_line_end": 5003
+    },
+    {
+      "path": "Sources/xlsOneUI/WorkspaceScene.swift",
+      "source_line_count": 1036,
+      "selected_line_start": 1,
+      "selected_line_end": 600,
+      "selected_line_count": 600,
+      "material_line_start": 5004,
+      "material_line_end": 5605
+    }
+  ],
+  "safe_software_filename": "表表归一"
+}
