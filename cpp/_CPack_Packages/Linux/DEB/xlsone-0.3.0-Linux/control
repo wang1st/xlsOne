@@ -5,5 +5,5 @@ Maintainer: xlsOne
 Package: xlsone
 Priority: optional
 Section: utils
-Version: 0.2.0
-Installed-Size: 879
+Version: 0.3.0
+Installed-Size: 861
