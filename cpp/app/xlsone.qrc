@@ -1,0 +1,7 @@
+<RCC>
+    <qresource prefix="/">
+        <file>resources/xlsOne.icns</file>
+        <file>resources/xlsOne.ico</file>
+        <file>resources/xlsOne.png</file>
+    </qresource>
+</RCC>

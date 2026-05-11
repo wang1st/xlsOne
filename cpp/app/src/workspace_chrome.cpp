@@ -1,17 +1,17 @@
 #include "workspace_chrome.hpp"
 
+#include "symbol_icons.hpp"
 #include "ui_theme.hpp"
 
-#include <QApplication>
 #include <QHBoxLayout>
-#include <QStyle>
 
 namespace {
 
-QPushButton* makeUtilityButton(QWidget* parent, const QString& text, QStyle::StandardPixmap icon)
+QPushButton* makeUtilityButton(QWidget* parent, const QString& text, xlsone::ui::SymbolIcon icon, const QColor& iconColor)
 {
     auto* button = new QPushButton(text, parent);
-    button->setIcon(qApp->style()->standardIcon(icon));
+    button->setIcon(xlsone::ui::makeSymbolIcon(icon, iconColor));
+    button->setIconSize(QSize(16, 16));
     button->setCursor(Qt::PointingHandCursor);
     button->setObjectName(QStringLiteral("workspaceUtilityButton"));
     button->setToolTip(text);
@@ -33,15 +33,17 @@ WorkspaceChrome::WorkspaceChrome(QWidget* parent) : QWidget(parent)
     groupLayout->setContentsMargins(4, 4, 4, 4);
     groupLayout->setSpacing(2);
 
-    appendButton_ = makeUtilityButton(group, tr("追加"), QStyle::SP_FileDialogNewFolder);
-    reloadButton_ = makeUtilityButton(group, tr("刷新"), QStyle::SP_BrowserReload);
-    clearButton_ = makeUtilityButton(group, tr("清空"), QStyle::SP_DialogCloseButton);
+    const auto& t = xlsone::ui::theme();
+    appendButton_ = makeUtilityButton(group, tr("追加"), xlsone::ui::SymbolIcon::Plus, t.textMuted);
+    reloadButton_ = makeUtilityButton(group, tr("刷新"), xlsone::ui::SymbolIcon::Refresh, t.textMuted);
+    clearButton_ = makeUtilityButton(group, tr("清空"), xlsone::ui::SymbolIcon::Xmark, t.textMuted);
     groupLayout->addWidget(appendButton_);
     groupLayout->addWidget(reloadButton_);
     groupLayout->addWidget(clearButton_);
 
     exportButton_ = new QPushButton(tr("导出 XLSX"), this);
-    exportButton_->setIcon(qApp->style()->standardIcon(QStyle::SP_DialogSaveButton));
+    exportButton_->setIcon(xlsone::ui::makeSymbolIcon(xlsone::ui::SymbolIcon::Export, Qt::white));
+    exportButton_->setIconSize(QSize(16, 16));
     exportButton_->setCursor(Qt::PointingHandCursor);
     exportButton_->setObjectName(QStringLiteral("workspacePrimaryButton"));
     exportButton_->setToolTip(tr("导出同构汇总 Excel"));
@@ -55,7 +57,6 @@ WorkspaceChrome::WorkspaceChrome(QWidget* parent) : QWidget(parent)
     connect(clearButton_, &QPushButton::clicked, this, &WorkspaceChrome::clearRequested);
     connect(exportButton_, &QPushButton::clicked, this, &WorkspaceChrome::exportRequested);
 
-    const auto& t = xlsone::ui::theme();
     setStyleSheet(QStringLiteral(
         "QWidget#workspaceChrome { background: %1; border-bottom: 1px solid %2; }"
         "QWidget#workspaceButtonGroup { background: %3; border: 1px solid %2; border-radius: 12px; }"

@@ -1,10 +1,16 @@
 import SwiftUI
+import UniformTypeIdentifiers
 import xlsOneCore
 
 /// 调整记忆管理视图
 struct SchemaManagerView: View {
     @StateObject private var viewModel = SchemaManagerViewModel()
     @Environment(\.dismiss) private var dismiss
+    private let onClose: (() -> Void)?
+
+    init(onClose: (() -> Void)? = nil) {
+        self.onClose = onClose
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -14,9 +20,7 @@ struct SchemaManagerView: View {
 
                 Spacer()
 
-                Button("关闭") {
-                    dismiss()
-                }
+                Button("关闭", action: close)
             }
             .padding()
 
@@ -62,9 +66,7 @@ struct SchemaManagerView: View {
             Divider()
 
             HStack {
-                Button("导入记忆...") {
-                    viewModel.showImportPanel = true
-                }
+                Button("导入记忆...", action: viewModel.showImportDialog)
 
                 Spacer()
 
@@ -78,20 +80,27 @@ struct SchemaManagerView: View {
         .task {
             await viewModel.loadSchemas()
         }
-        .fileImporter(
-            isPresented: $viewModel.showImportPanel,
-            allowedContentTypes: [.json],
-            allowsMultipleSelection: false
-        ) { result in
-            Task {
-                await viewModel.importSchema(from: result)
-            }
+        .onChange(of: viewModel.showError) { isPresented in
+            guard isPresented else { return }
+            showErrorAlert()
         }
-        .alert("错误", isPresented: $viewModel.showError) {
-            Button("确定", role: .cancel) {}
-        } message: {
-            Text(viewModel.errorMessage ?? "未知错误")
+    }
+
+    private func close() {
+        if let onClose {
+            onClose()
+        } else {
+            dismiss()
         }
+    }
+
+    private func showErrorAlert() {
+        WorkspaceDialogPresenter.runAlert(
+            title: "错误",
+            message: viewModel.errorMessage ?? "未知错误",
+            style: .warning
+        )
+        viewModel.showError = false
     }
 }
 
@@ -165,7 +174,6 @@ class SchemaManagerViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var showError = false
     @Published var errorMessage: String?
-    @Published var showImportPanel = false
 
     private let repository = SchemaRepository.shared
 
@@ -196,18 +204,33 @@ class SchemaManagerViewModel: ObservableObject {
             do {
                 let data = try await repository.exportSchema(id: id)
 
-                // 显示保存面板
-                let panel = NSSavePanel()
-                panel.nameFieldStringValue = "memory-\(id.uuidString.prefix(8)).json"
-                panel.allowedContentTypes = [.json]
+                let url = await MainActor.run {
+                    let panel = NSSavePanel()
+                    panel.nameFieldStringValue = "memory-\(id.uuidString.prefix(8)).json"
+                    panel.allowedContentTypes = [.json]
+                    return WorkspaceDialogPresenter.runModal(panel) == .OK ? panel.url : nil
+                }
 
-                if panel.runModal() == .OK, let url = panel.url {
+                if let url {
                     try data.write(to: url)
                 }
             } catch {
                 errorMessage = "导出失败: \(error.localizedDescription)"
                 showError = true
             }
+        }
+    }
+
+    func showImportDialog() {
+        let panel = NSOpenPanel()
+        panel.allowsMultipleSelection = false
+        panel.canChooseDirectories = false
+        panel.canChooseFiles = true
+        panel.allowedContentTypes = [UTType.json]
+
+        guard WorkspaceDialogPresenter.runModal(panel) == .OK else { return }
+        Task {
+            await importSchema(from: .success(panel.urls))
         }
     }
 

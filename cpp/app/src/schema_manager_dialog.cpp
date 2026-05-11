@@ -1,5 +1,7 @@
 #include "schema_manager_dialog.hpp"
 
+#include "dialog_utils.hpp"
+
 #include <QFile>
 #include <QFileDialog>
 #include <QHBoxLayout>
@@ -182,31 +184,31 @@ void SchemaManagerDialog::exportCurrent()
     const auto& schema = *currentSchema_;
     const QString safeName = schema.name.trimmed().isEmpty()
         ? QStringLiteral("schema") : schema.name.trimmed();
-    const auto path = QFileDialog::getSaveFileName(
+    const auto path = xlsone::ui::getSaveFileNameCentered(
         this, tr("导出规则"), safeName + QStringLiteral(".json"),
         tr("JSON Files (*.json);;All Files (*)"));
     if (path.isEmpty()) { return; }
 
     QSaveFile file(path);
     if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
-        QMessageBox::critical(this, tr("导出失败"), file.errorString());
+        xlsone::ui::showCritical(this, tr("导出失败"), file.errorString());
         return;
     }
     file.write(QJsonDocument(xlsone::toJson(schema)).toJson(QJsonDocument::Indented));
     if (!file.commit()) {
-        QMessageBox::critical(this, tr("导出失败"), file.errorString());
+        xlsone::ui::showCritical(this, tr("导出失败"), file.errorString());
     }
 }
 
 void SchemaManagerDialog::importSchema()
 {
-    const auto path = QFileDialog::getOpenFileName(
+    const auto path = xlsone::ui::getOpenFileNameCentered(
         this, tr("导入规则"), {}, tr("JSON Files (*.json);;All Files (*)"));
     if (path.isEmpty()) { return; }
 
     QFile file(path);
     if (!file.open(QIODevice::ReadOnly)) {
-        QMessageBox::critical(this, tr("导入失败"), file.errorString());
+        xlsone::ui::showCritical(this, tr("导入失败"), file.errorString());
         return;
     }
 
@@ -224,13 +226,13 @@ void SchemaManagerDialog::importSchema()
         refreshDetails();
         accept();
     } catch (const std::exception& error) {
-        QMessageBox::critical(this, tr("导入失败"), QString::fromUtf8(error.what()));
+        xlsone::ui::showCritical(this, tr("导入失败"), QString::fromUtf8(error.what()));
     }
 }
 
 void SchemaManagerDialog::clearCurrent()
 {
-    const auto choice = QMessageBox::question(
+    const auto choice = xlsone::ui::askQuestion(
         this, tr("清除规则"),
         tr("删除当前规则后，汇总表将恢复自动判断。确定清除？"));
     if (choice != QMessageBox::Yes) { return; }

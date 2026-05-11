@@ -1,10 +1,13 @@
 #include "main_window.hpp"
 
+#include "dialog_utils.hpp"
+#include "license_activation_dialog.hpp"
 #include "merged_table_delegate.hpp"
 #include "schema_manager_dialog.hpp"
 #include "update_dialog.hpp"
 #include "ui_theme.hpp"
 #include "xlsone/core/exporter.hpp"
+#include "xlsone/core/license_manager.hpp"
 
 #include <QAction>
 #include <QApplication>
@@ -18,7 +21,6 @@
 #include <QHash>
 #include <QHeaderView>
 #include <QHBoxLayout>
-#include <QInputDialog>
 #include <QItemSelectionModel>
 #include <QKeySequence>
 #include <QLineEdit>
@@ -331,11 +333,13 @@ void MainWindow::buildUi()
 {
     xlsone::ui::applyAppStyle(this);
 
-    auto* openAction = new QAction(tr("打开"), this);
+    licenseManager_ = new xlsone::LicenseManager(this);
+
+    auto* openAction = new QAction(tr("导入文件..."), this);
     openAction->setShortcut(QKeySequence::Open);
     connect(openAction, &QAction::triggered, this, &MainWindow::openFiles);
 
-    auto* appendAction = new QAction(tr("追加"), this);
+    auto* appendAction = new QAction(tr("追加文件..."), this);
     appendAction->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_O));
     connect(appendAction, &QAction::triggered, this, &MainWindow::appendFiles);
 
@@ -343,42 +347,32 @@ void MainWindow::buildUi()
     reloadAction->setShortcut(QKeySequence::Refresh);
     connect(reloadAction, &QAction::triggered, this, &MainWindow::reloadFiles);
 
-    auto* clearAction = new QAction(tr("清空"), this);
+    auto* clearAction = new QAction(tr("清空工作区"), this);
     clearAction->setShortcut(QKeySequence::New);
     connect(clearAction, &QAction::triggered, this, &MainWindow::clearWorkspace);
 
-    auto* exportAction = new QAction(tr("导出 XLSX"), this);
+    auto* exportAction = new QAction(tr("导出 XLSX..."), this);
     exportAction->setShortcut(QKeySequence::Save);
     connect(exportAction, &QAction::triggered, this, &MainWindow::exportResult);
-
-    auto* markLabelAction = new QAction(tr("标签"), this);
-    connect(markLabelAction, &QAction::triggered, this, &MainWindow::markSelectedAsLabel);
-
-    auto* markSumAction = new QAction(tr("求和"), this);
-    connect(markSumAction, &QAction::triggered, this, &MainWindow::markSelectedAsSum);
-
-    auto* restoreAutoAction = new QAction(tr("恢复自动"), this);
-    connect(restoreAutoAction, &QAction::triggered, this, &MainWindow::restoreAutomaticDecisionForSelection);
-
-    auto* saveSchemaAction = new QAction(tr("保存规则"), this);
-    connect(saveSchemaAction, &QAction::triggered, this, &MainWindow::saveCurrentSchema);
-
-    auto* manageSchemasAction = new QAction(tr("查看规则"), this);
-    connect(manageSchemasAction, &QAction::triggered, this, &MainWindow::manageSchemas);
 
     auto* undoOverrideAction = new QAction(tr("撤销修正"), this);
     undoOverrideAction->setShortcut(QKeySequence::Undo);
     connect(undoOverrideAction, &QAction::triggered, this, &MainWindow::undoLastOverride);
 
-    auto* clearOverridesAction = new QAction(tr("清除修正"), this);
+    auto* clearOverridesAction = new QAction(tr("清除所有修正"), this);
     connect(clearOverridesAction, &QAction::triggered, this, &MainWindow::clearOverrides);
 
-    auto* previousAnomalyAction = new QAction(tr("上一异常"), this);
-    connect(previousAnomalyAction, &QAction::triggered, this, &MainWindow::jumpToPreviousAnomaly);
+    auto* manageSchemasAction = new QAction(tr("查看规则"), this);
+    manageSchemasAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_Comma));
+    connect(manageSchemasAction, &QAction::triggered, this, &MainWindow::manageSchemas);
 
-    auto* nextAnomalyAction = new QAction(tr("下一异常"), this);
-    connect(nextAnomalyAction, &QAction::triggered, this, &MainWindow::jumpToNextAnomaly);
+    auto* saveSchemaAction = new QAction(tr("保存规则"), this);
+    connect(saveSchemaAction, &QAction::triggered, this, &MainWindow::saveCurrentSchema);
 
+    auto* licenseActivateAction = new QAction(tr("激活/导入许可证..."), this);
+    connect(licenseActivateAction, &QAction::triggered, this, &MainWindow::showLicenseActivation);
+
+    // ---- 文件 ----
     auto* fileMenu = menuBar()->addMenu(tr("文件"));
     fileMenu->addAction(openAction);
     fileMenu->addAction(appendAction);
@@ -392,32 +386,32 @@ void MainWindow::buildUi()
     connect(quitAction, &QAction::triggered, qApp, &QApplication::quit);
     fileMenu->addAction(quitAction);
 
-    auto* rulesMenu = menuBar()->addMenu(tr("规则"));
-    rulesMenu->addAction(markLabelAction);
-    rulesMenu->addAction(markSumAction);
-    rulesMenu->addAction(restoreAutoAction);
-    rulesMenu->addSeparator();
-    rulesMenu->addAction(saveSchemaAction);
-    rulesMenu->addAction(manageSchemasAction);
-    rulesMenu->addSeparator();
-    rulesMenu->addAction(undoOverrideAction);
-    rulesMenu->addAction(clearOverridesAction);
-    rulesMenu->addSeparator();
-    rulesMenu->addAction(previousAnomalyAction);
-    rulesMenu->addAction(nextAnomalyAction);
+    // ---- 编辑 ----
+    auto* editMenu = menuBar()->addMenu(tr("编辑"));
+    editMenu->addAction(undoOverrideAction);
+    editMenu->addAction(clearOverridesAction);
+
+    // ---- 查看 ----
+    auto* viewMenu = menuBar()->addMenu(tr("查看"));
+    viewMenu->addAction(manageSchemasAction);
+    viewMenu->addAction(saveSchemaAction);
+
+    // ---- 许可 ----
+    auto* licenseMenu = menuBar()->addMenu(tr("许可"));
+    licenseMenu->addAction(licenseActivateAction);
 
     auto* helpAction = new QAction(tr("使用帮助"), this);
     connect(helpAction, &QAction::triggered, this, [this] {
-        QMessageBox::information(this, tr("使用帮助"),
+        xlsone::ui::showInformation(this, tr("使用帮助"),
             tr("表表归一  ·  多张同格式 Excel 报表一键汇总\n\n"
                "1. 导入文件\n"
-               "   拖拽 .xlsx 或 .xls 文件到窗口，或点击 [文件] → [打开]\n\n"
+               "   拖拽 .xlsx 或 .xls 文件到窗口，或点击 [文件] → [导入文件]\n\n"
                "2. 切换工作表\n"
                "   点击顶部的 Sheet 标签可切换要查看的报表页\n\n"
                "3. 查看汇总\n"
-               "   - 金额列自动求和\n"
-               "   - 标签列显示原值\n"
-               "   - 混合列显示 X条\n\n"
+               "   - 金额、数量等能相加的数自动合计\n"
+               "   - 名称、编号等信息保留最常见的共同前缀\n"
+               "   - 结构不一致的工作表会跳过，并提示原因\n\n"
                "4. 穿透查阅\n"
                "   点击单元格可查看各文件原始值\n\n"
                "5. 导出结果\n"
@@ -425,7 +419,7 @@ void MainWindow::buildUi()
                "6. 单元格修正\n"
                "   在右侧面板可将单元格手动指定为标签或求和\n\n"
                "快捷键:\n"
-               "   Ctrl+O  打开文件\n"
+               "   Ctrl+O  导入文件\n"
                "   Ctrl+Shift+O  追加文件\n"
                "   Ctrl+S  导出\n"
                "   Ctrl+R  刷新\n"
@@ -439,11 +433,12 @@ void MainWindow::buildUi()
             .arg(XLSONE_VERSION_MAJOR)
             .arg(XLSONE_VERSION_MINOR)
             .arg(XLSONE_VERSION_PATCH);
-        QMessageBox::about(this, tr("关于 表表归一"),
+        xlsone::ui::showAbout(this, tr("关于 表表归一"),
             tr("<h3>表表归一  V%1</h3>"
                "<p>多张同格式 Excel 报表一键汇总</p>"
-               "<p>将多张结构相同的 Excel 表格智能合并为一张，"
-               "金额自动求和、标签原样保留、混合类型智能标注。</p>"
+               "<p>把多张格式一致的 Excel 表合成一份汇总表。"
+               "金额、数量等能相加的数会自动合计；"
+               "名称、编号等不该相加的信息，会保留各文件里最常见的共同前缀。</p>"
                "<p><b>作者：</b>王臻</p>"
                "<p><b>技术：</b>C++  /  Qt</p>"
                "<p><b>邮箱：</b>831261@qq.com</p>"
@@ -571,7 +566,7 @@ void MainWindow::buildUi()
                 QDesktopServices::openUrl(QUrl(
                     QStringLiteral(XLSONE_UPDATE_BASE_URL "/products/xlsone/download.html")));
             });
-            dialog->show();
+            xlsone::ui::showDialogCentered(dialog, this);
         });
 
     updateChromeState();
@@ -631,8 +626,8 @@ void MainWindow::dropEvent(QDropEvent* event)
 
 QStringList MainWindow::chooseInputFiles() const
 {
-    return QFileDialog::getOpenFileNames(
-        nullptr,
+    return xlsone::ui::getOpenFileNamesCentered(
+        const_cast<MainWindow*>(this),
         tr("选择工作簿"),
         {},
         tr("Excel Files (*.xlsx *.xls);;All Files (*)")
@@ -1060,7 +1055,7 @@ void MainWindow::applyOverrideForSelection(xlsone::SchemaCellOverrideType type)
     const int resultIndex = currentResultIndex();
     const auto indexes = selectedCellIndexes();
     if (resultIndex < 0 || indexes.isEmpty()) {
-        QMessageBox::information(this, tr("规则"), tr("请先选择一个或多个汇总单元格。"));
+        xlsone::ui::showInformation(this, tr("规则"), tr("请先选择一个或多个汇总单元格。"));
         return;
     }
 
@@ -1101,7 +1096,7 @@ void MainWindow::applyOverrideForSelection(xlsone::SchemaCellOverrideType type)
         persistAdjustmentMemory();
         statusLabel_->setText(statusLabel_->text() + tr(" 已记住调整。"));
     } catch (const std::exception& error) {
-        QMessageBox::warning(this, tr("记住调整失败"), QString::fromUtf8(error.what()));
+        xlsone::ui::showWarning(this, tr("记住调整失败"), QString::fromUtf8(error.what()));
     }
 }
 
@@ -1120,7 +1115,7 @@ void MainWindow::restoreAutomaticDecisionForSelection()
     const int resultIndex = currentResultIndex();
     const QModelIndex index = table_ == nullptr ? QModelIndex() : table_->currentIndex();
     if (resultIndex < 0 || !index.isValid()) {
-        QMessageBox::information(this, tr("恢复自动"), tr("请先选择一个汇总单元格。"));
+        xlsone::ui::showInformation(this, tr("恢复自动"), tr("请先选择一个汇总单元格。"));
         return;
     }
 
@@ -1135,7 +1130,7 @@ void MainWindow::restoreAutomaticDecisionForSelection()
     const bool hasRememberedOverride = containsOverrideCell(workspaceBaseOverrides_, key)
         && !containsOverrideCell(forgottenOverrides_, key);
     if (!hasManualOverride && !hasRememberedOverride) {
-        QMessageBox::information(this, tr("恢复自动"), tr("当前单元格没有手动或已记住的修正。"));
+        xlsone::ui::showInformation(this, tr("恢复自动"), tr("当前单元格没有手动或已记住的修正。"));
         return;
     }
 
@@ -1157,14 +1152,14 @@ void MainWindow::restoreAutomaticDecisionForSelection()
         persistAdjustmentMemory();
         statusLabel_->setText(statusLabel_->text() + tr(" 已记住调整。"));
     } catch (const std::exception& error) {
-        QMessageBox::warning(this, tr("记住调整失败"), QString::fromUtf8(error.what()));
+        xlsone::ui::showWarning(this, tr("记住调整失败"), QString::fromUtf8(error.what()));
     }
 }
 
 void MainWindow::undoLastOverride()
 {
     if (overrideHistory_.empty()) {
-        QMessageBox::information(this, tr("撤销修正"), tr("当前没有可撤销的修正。"));
+        xlsone::ui::showInformation(this, tr("撤销修正"), tr("当前没有可撤销的修正。"));
         return;
     }
 
@@ -1182,14 +1177,14 @@ void MainWindow::undoLastOverride()
     try {
         persistAdjustmentMemory();
     } catch (const std::exception& error) {
-        QMessageBox::warning(this, tr("记住调整失败"), QString::fromUtf8(error.what()));
+        xlsone::ui::showWarning(this, tr("记住调整失败"), QString::fromUtf8(error.what()));
     }
 }
 
 void MainWindow::clearOverrides()
 {
     if (currentOverrides_.empty() && forgottenOverrides_.empty()) {
-        QMessageBox::information(this, tr("清除修正"), tr("当前没有手动修正。"));
+        xlsone::ui::showInformation(this, tr("清除修正"), tr("当前没有手动修正。"));
         return;
     }
 
@@ -1207,25 +1202,15 @@ void MainWindow::clearOverrides()
     try {
         persistAdjustmentMemory();
     } catch (const std::exception& error) {
-        QMessageBox::warning(this, tr("记住调整失败"), QString::fromUtf8(error.what()));
+        xlsone::ui::showWarning(this, tr("记住调整失败"), QString::fromUtf8(error.what()));
     }
-}
-
-void MainWindow::jumpToNextAnomaly()
-{
-    jumpAcrossAnomalies(1);
-}
-
-void MainWindow::jumpToPreviousAnomaly()
-{
-    jumpAcrossAnomalies(-1);
 }
 
 void MainWindow::jumpAcrossAnomalies(int step)
 {
     const int resultIndex = currentResultIndex();
     if (resultIndex < 0) {
-        QMessageBox::information(this, tr("异常导航"), tr("当前没有可检查的汇总结果。"));
+        xlsone::ui::showInformation(this, tr("异常导航"), tr("当前没有可检查的汇总结果。"));
         return;
     }
 
@@ -1245,7 +1230,7 @@ void MainWindow::jumpAcrossAnomalies(int step)
     }
 
     if (positions.empty()) {
-        QMessageBox::information(this, tr("异常导航"), tr("当前工作表没有混合或可疑单元格。"));
+        xlsone::ui::showInformation(this, tr("异常导航"), tr("当前工作表没有混合或可疑单元格。"));
         return;
     }
 
@@ -1276,11 +1261,11 @@ void MainWindow::jumpAcrossAnomalies(int step)
 void MainWindow::saveCurrentSchema()
 {
     if (currentOverrides_.empty()) {
-        QMessageBox::information(this, tr("保存规则"), tr("当前还没有手动修正的单元格。"));
+        xlsone::ui::showInformation(this, tr("保存规则"), tr("当前还没有手动修正的单元格。"));
         return;
     }
     if (validation_.mergeableFiles.empty() || validation_.report.commonSheetNames.isEmpty()) {
-        QMessageBox::information(this, tr("保存规则"), tr("当前没有可用于生成规则指纹的同构工作簿。"));
+        xlsone::ui::showInformation(this, tr("保存规则"), tr("当前没有可用于生成规则指纹的同构工作簿。"));
         return;
     }
 
@@ -1379,7 +1364,7 @@ void MainWindow::manageSchemas()
     }
 
     SchemaManagerDialog dialog(schemaRepository_, currentSchema, this);
-    if (dialog.exec() != QDialog::Accepted) {
+    if (xlsone::ui::execDialogCentered(dialog, this) != QDialog::Accepted) {
         return;
     }
 
@@ -1419,11 +1404,11 @@ void MainWindow::manageSchemas()
 void MainWindow::exportResult()
 {
     if (results_.empty()) {
-        QMessageBox::information(this, tr("导出"), tr("当前没有可导出的汇总结果。"));
+        xlsone::ui::showInformation(this, tr("导出"), tr("当前没有可导出的汇总结果。"));
         return;
     }
 
-    const auto path = QFileDialog::getSaveFileName(
+    const auto path = xlsone::ui::getSaveFileNameCentered(
         this,
         tr("导出汇总"),
         suggestedWorkbookFileName(validation_.report, selectedPaths_),
@@ -1441,6 +1426,12 @@ void MainWindow::exportResult()
         const QString templatePath = selectedPaths_.isEmpty() ? QString() : selectedPaths_.front();
         xlsone::TemplateWorkbookExporter().exportWorkbook(templatePath, results_, outputPath);
     } catch (const std::exception& error) {
-        QMessageBox::critical(this, tr("导出失败"), QString::fromUtf8(error.what()));
+        xlsone::ui::showCritical(this, tr("导出失败"), QString::fromUtf8(error.what()));
     }
+}
+
+void MainWindow::showLicenseActivation()
+{
+    LicenseActivationDialog dialog(licenseManager_, this);
+    xlsone::ui::execDialogCentered(dialog, this);
 }

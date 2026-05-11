@@ -48,12 +48,16 @@ elseif(UNIX AND NOT APPLE)
         DESTINATION share/mime/packages
         RENAME xlsone.xml
     )
-    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../App/xlsOneMacApp/Assets.xcassets/AppIcon.appiconset/icon_256x256.png")
-        install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/../App/xlsOneMacApp/Assets.xcassets/AppIcon.appiconset/icon_256x256.png"
-            DESTINATION share/icons/hicolor/256x256/apps
-            RENAME xlsone.png
-        )
-    endif()
+    # Install app icon in multiple sizes for hicolor theme
+    set(HICOLOR_SIZES 16 22 24 32 48 64 96 128 256 512)
+    foreach(SIZE ${HICOLOR_SIZES})
+        set(ICON_FILE "${CMAKE_CURRENT_SOURCE_DIR}/app/resources/xlsOne_${SIZE}x${SIZE}.png")
+        if(EXISTS "${ICON_FILE}")
+            install(FILES "${ICON_FILE}"
+                DESTINATION "share/icons/hicolor/${SIZE}x${SIZE}/apps"
+                RENAME xlsone.png)
+        endif()
+    endforeach()
 endif()
 
 include(CPack)
