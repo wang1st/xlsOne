@@ -73,6 +73,15 @@ public final class LocaleManager: ObservableObject {
     }
 
     public static func loc(_ key: String) -> String {
-        Bundle.module.localizedString(forKey: key, value: key, table: nil)
+        let lang = shared.currentLanguage.localeIdentifier ?? "zh-Hans"
+        
+        // Lookup specific language bundle
+        if let path = Bundle.module.path(forResource: lang, ofType: "lproj"),
+           let langBundle = Bundle(path: path) {
+            return langBundle.localizedString(forKey: key, value: key, table: nil)
+        }
+        
+        // Fallback
+        return Bundle.module.localizedString(forKey: key, value: key, table: nil)
     }
 }
