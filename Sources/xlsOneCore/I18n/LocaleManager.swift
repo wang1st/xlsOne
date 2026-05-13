@@ -71,4 +71,8 @@ public final class LocaleManager: ObservableObject {
         }
         return .current
     }
+
+    public static func loc(_ key: String) -> String {
+        Bundle.module.localizedString(forKey: key, value: key, table: nil)
+    }
 }

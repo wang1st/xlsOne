@@ -17,7 +17,6 @@ public struct XlsOneWorkspaceScene: Scene {
                 .environmentObject(viewModel)
                 .environmentObject(licenseManager)
                 .environment(\.locale, localeManager.swiftUILocale)
-                .id(localeManager.currentLanguage.rawValue)
                 .frame(minWidth: 800, minHeight: 600)
                 .onAppear {
                     WorkspaceMenuLocalizer.scheduleMainMenuLocalizationPasses()
