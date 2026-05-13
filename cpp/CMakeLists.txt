@@ -18,6 +18,27 @@ find_package(Qt5 REQUIRED COMPONENTS Core Gui Widgets Network Test)
 
 enable_testing()
 
+# Translations — use lrelease to compile .ts → .qm
+find_program(LRELEASE_EXECUTABLE lrelease)
+if(LRELEASE_EXECUTABLE)
+    add_custom_target(translations ALL
+        COMMAND ${LRELEASE_EXECUTABLE}
+            "${CMAKE_CURRENT_SOURCE_DIR}/i18n/xlsone_zh_CN.ts"
+            "${CMAKE_CURRENT_SOURCE_DIR}/i18n/xlsone_en.ts"
+            -qm "${CMAKE_CURRENT_SOURCE_DIR}/i18n/xlsone_zh_CN.qm"
+            -qm "${CMAKE_CURRENT_SOURCE_DIR}/i18n/xlsone_en.qm"
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/i18n"
+        COMMENT "Compiling Qt translations"
+    )
+    # Install .qm files alongside the binary
+    install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/i18n/"
+        DESTINATION bin/i18n
+        FILES_MATCHING PATTERN "*.qm"
+    )
+else()
+    message(WARNING "lrelease not found — translations will not be compiled")
+endif()
+
 add_subdirectory(core)
 add_subdirectory(app)
 add_subdirectory(tests)
