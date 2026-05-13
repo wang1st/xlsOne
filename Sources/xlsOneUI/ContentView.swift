@@ -91,19 +91,19 @@ struct ContentView: View {
         return HStack(spacing: 10) {
             if hasWorkspace {
                 HStack(spacing: 2) {
-                    toolbarUtilityButton(title: String(localized: "追加"), systemImage: "plus", help: String(localized: "向当前批次追加文件")) {
+                    toolbarUtilityButton(label: LocLabel("追加", systemImage: "plus"), help: String(localized: "向当前批次追加文件")) {
                         viewModel.showAddFileDialog()
                     }
                     .disabled(!presentation.appendEnabled)
 
                     toolbarStripDivider
 
-                    toolbarUtilityButton(title: String(localized: "刷新"), systemImage: "arrow.clockwise", help: String(localized: "重新读取当前文件并刷新汇总结果")) {
+                    toolbarUtilityButton(label: LocLabel("刷新", systemImage: "arrow.clockwise"), help: String(localized: "重新读取当前文件并刷新汇总结果")) {
                         viewModel.reloadFiles()
                     }
                     .disabled(viewModel.selectedFilePaths.isEmpty)
 
-                    toolbarUtilityButton(title: String(localized: "清空"), systemImage: "xmark", help: String(localized: "清空当前工作区，不影响原始 Excel 文件")) {
+                    toolbarUtilityButton(label: LocLabel("清空", systemImage: "xmark"), help: String(localized: "清空当前工作区，不影响原始 Excel 文件")) {
                         viewModel.closeAllFiles()
                     }
                     .disabled(viewModel.selectedFilePaths.isEmpty)
@@ -121,8 +121,7 @@ struct ContentView: View {
 
             if hasWorkspace {
                 toolbarPrimaryButton(
-                    title: String(localized: "导出 XLSX"),
-                    systemImage: "square.and.arrow.up",
+                    label: LocLabel("导出 XLSX", systemImage: "square.and.arrow.up"),
                     prominent: presentation.exportIsProminent,
                     help: viewModel.canExport ? String(localized: "导出同构汇总 Excel") : String(localized: "当前没有可导出的汇总结果")
                 ) {
@@ -144,27 +143,25 @@ struct ContentView: View {
     }
 
     private func toolbarPrimaryButton(
-        title: String,
-        systemImage: String,
+        label: some View,
         prominent: Bool,
         help: String,
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
-            Label(title, systemImage: systemImage)
+            label
         }
         .buttonStyle(WorkspaceChromePrimaryButtonStyle(prominent: prominent))
         .help(help)
     }
 
     private func toolbarUtilityButton(
-        title: String,
-        systemImage: String,
+        label: some View,
         help: String,
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
-            Label(title, systemImage: systemImage)
+            label
         }
         .buttonStyle(WorkspaceChromeUtilityButtonStyle())
         .help(help)
