@@ -2,6 +2,7 @@
 #include "main_window.hpp"
 #include "dialog_utils.hpp"
 #include "xlsone/core/license_manager.hpp"
+#include "algorithm_keywords.hpp"
 
 #include <QApplication>
 #include <QTranslator>
@@ -14,6 +15,8 @@ int main(int argc, char* argv[])
     QApplication::setApplicationName(QStringLiteral("xlsOne"));
     QApplication::setOrganizationName(QStringLiteral("xlsOne"));
     QApplication::setWindowIcon(QIcon(QStringLiteral(":/resources/xlsOne.png")));
+
+    xlsone::AlgorithmKeywords::instance().load();
 
     // Install translations
     QTranslator qtTranslator;

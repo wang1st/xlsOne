@@ -3,5 +3,6 @@
         <file>resources/xlsOne.icns</file>
         <file>resources/xlsOne.ico</file>
         <file>resources/xlsOne.png</file>
+        <file alias="i18n/algorithm_keywords.json">../i18n/algorithm_keywords.json</file>
     </qresource>
 </RCC>

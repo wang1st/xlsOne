@@ -1,6 +1,7 @@
 find_package(ZLIB REQUIRED)
 
 add_library(xlsone_core STATIC
+    src/algorithm_keywords.cpp
     src/biff8_xls_parser.cpp
     src/compound_file_reader.cpp
     src/excel_parser.cpp

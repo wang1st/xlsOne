@@ -1,4 +1,5 @@
 #include "xlsone/core/models.hpp"
+#include "algorithm_keywords.hpp"
 
 #include <QRegularExpression>
 #include <algorithm>
@@ -206,68 +207,22 @@ bool matchesAnySemantic(const QString& text, const QStringList& patterns)
 
 QStringList amountSemanticPatterns()
 {
-    return {
-        QStringLiteral("合计"), QStringLiteral("总计"), QStringLiteral("小计"),
-        QStringLiteral("金额"), QStringLiteral("数额"), QStringLiteral("额度"),
-        QStringLiteral("数量"), QStringLiteral("单价"), QStringLiteral("总价"),
-        QStringLiteral("价格"), QStringLiteral("数值"), QStringLiteral("预算"),
-        QStringLiteral("收入"), QStringLiteral("支出"), QStringLiteral("成本"),
-        QStringLiteral("费用"), QStringLiteral("利润"), QStringLiteral("执行"),
-        QStringLiteral("决算"), QStringLiteral("款"), QStringLiteral("税金"),
-        QStringLiteral("人数"), QStringLiteral("人口"), QStringLiteral("户数"),
-        QStringLiteral("家数"), QStringLiteral("个数"), QStringLiteral("人员"),
-        QStringLiteral("编制"), QStringLiteral("职工"),
-        QStringLiteral("sum"), QStringLiteral("total"), QStringLiteral("subtotal"),
-        QStringLiteral("amount"), QStringLiteral("quantity"), QStringLiteral("qty"),
-        QStringLiteral("price"), QStringLiteral("value"), QStringLiteral("budget"),
-        QStringLiteral("revenue"), QStringLiteral("income"), QStringLiteral("expense"),
-        QStringLiteral("cost"), QStringLiteral("fee"), QStringLiteral("profit"),
-        QStringLiteral("tax"), QStringLiteral("fund"), QStringLiteral("population"),
-        QStringLiteral("headcount"), QStringLiteral("staff")
-    };
+    return AlgorithmKeywords::instance().amountPatterns();
 }
 
 QStringList weakAmountSemanticPatterns()
 {
-    return {
-        QStringLiteral("数"), QStringLiteral("额"), QStringLiteral("值"),
-        QStringLiteral("量"), QStringLiteral("价")
-    };
+    return AlgorithmKeywords::instance().weakAmountPatterns();
 }
 
 QStringList codeSemanticPatterns()
 {
-    return {
-        QStringLiteral("代码"), QStringLiteral("编码"), QStringLiteral("编号"),
-        QStringLiteral("序号"), QStringLiteral("号码"), QStringLiteral("证号"),
-        QStringLiteral("区划"), QStringLiteral("邮编"), QStringLiteral("邮政编码"),
-        QStringLiteral("身份证"), QStringLiteral("电话"), QStringLiteral("传真"),
-        QStringLiteral("期间"), QStringLiteral("年月"), QStringLiteral("年份"),
-        QStringLiteral("日期"), QStringLiteral("时间"), QStringLiteral("学号"),
-        QStringLiteral("工号"), QStringLiteral("账号"), QStringLiteral("户号"),
-        QStringLiteral("卡号"), QStringLiteral("单号"), QStringLiteral("订单号"),
-        QStringLiteral("票号"), QStringLiteral("发票号"), QStringLiteral("批号"),
-        QStringLiteral("条码"), QStringLiteral("档案号"), QStringLiteral("许可证号"),
-        QStringLiteral("code"), QStringLiteral("number"), QStringLiteral("no."),
-        QStringLiteral(" no "), QStringLiteral(" id"), QStringLiteral("index"),
-        QStringLiteral("serial"), QStringLiteral("zip"), QStringLiteral("postal code"),
-        QStringLiteral("phone"), QStringLiteral("tel"), QStringLiteral("fax"),
-        QStringLiteral("period"), QStringLiteral("date"), QStringLiteral("time"),
-        QStringLiteral("year"), QStringLiteral("month")
-    };
+    return AlgorithmKeywords::instance().codePatterns();
 }
 
 QStringList labelSemanticPatterns()
 {
-    return {
-        QStringLiteral("名称"), QStringLiteral("名字"), QStringLiteral("描述"),
-        QStringLiteral("说明"), QStringLiteral("备注"), QStringLiteral("标题"),
-        QStringLiteral("内容"), QStringLiteral("详情"), QStringLiteral("类型"),
-        QStringLiteral("性质"), QStringLiteral("状态"),
-        QStringLiteral("name"), QStringLiteral("desc"), QStringLiteral("description"),
-        QStringLiteral("title"), QStringLiteral("remark"), QStringLiteral("note"),
-        QStringLiteral("type"), QStringLiteral("kind"), QStringLiteral("status")
-    };
+    return AlgorithmKeywords::instance().labelPatterns();
 }
 
 std::vector<CellSourceEntry> buildSources(const std::vector<CellMergeInput>& inputs)

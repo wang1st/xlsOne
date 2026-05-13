@@ -60,6 +60,11 @@ target_link_libraries(xlsone_app
         Qt5::Widgets
 )
 
+target_include_directories(xlsone_app
+    PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/../core/src"
+)
+
 # XLSONE_UPDATE_BASE_URL: override with -D for local dev (http) vs release (https)
 if(NOT DEFINED XLSONE_UPDATE_BASE_URL)
     set(XLSONE_UPDATE_BASE_URL "https://z-pulse.cn")
