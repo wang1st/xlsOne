@@ -38,6 +38,7 @@ private struct WorkspaceCommands: Commands {
         WorkspaceViewCommands()
         WorkspaceWindowCommands()
         WorkspaceLicenseCommands(licenseManager: licenseManager)
+        WorkspaceLanguageCommands()
         WorkspaceHelpCommands()
     }
 }
@@ -174,6 +175,29 @@ private struct WorkspaceLicenseCommands: Commands {
                 }
             }
             .disabled(LicenseManager.isAppStoreDistribution || licenseManager.licenseState == .activated)
+        }
+    }
+}
+
+private struct WorkspaceLanguageCommands: Commands {
+    @ObservedObject private var localeManager = LocaleManager.shared
+
+    var body: some Commands {
+        CommandMenu("Language") {
+            ForEach(LocaleManager.AppLanguage.allCases) { language in
+                Button {
+                    localeManager.currentLanguage = language
+                    localeManager.applyToFoundation()
+                    AlgorithmI18n.shared.reload()
+                } label: {
+                    HStack {
+                        Text(language.displayName)
+                        if localeManager.currentLanguage == language {
+                            Image(systemName: "checkmark")
+                        }
+                    }
+                }
+            }
         }
     }
 }

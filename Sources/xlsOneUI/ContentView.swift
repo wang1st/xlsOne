@@ -130,8 +130,6 @@ struct ContentView: View {
                 }
                 .disabled(!viewModel.canExport)
             }
-
-            LanguagePickerView()
         }
         .padding(.horizontal)
         .padding(.vertical, 10)
