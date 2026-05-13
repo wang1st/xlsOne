@@ -14,12 +14,12 @@ struct SchemaManagerView: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                Text(String(localized: "当前调整记忆"))
+                Text(LocaleManager.loc("当前调整记忆"))
                     .font(.headline)
 
                 Spacer()
 
-                Button(String(localized: "关闭"), action: close)
+                Button(LocaleManager.loc("关闭"), action: close)
             }
             .padding()
 
@@ -37,12 +37,12 @@ struct SchemaManagerView: View {
             Divider()
 
             HStack {
-                Button(String(localized: "导入"), action: viewModel.showImportAdjustmentMemoryDialog)
+                Button(LocaleManager.loc("导入"), action: viewModel.showImportAdjustmentMemoryDialog)
                     .disabled(!viewModel.canManageAdjustmentMemory)
 
                 Spacer()
 
-                Button(String(localized: "导出")) {
+                Button(LocaleManager.loc("导出")) {
                     viewModel.exportCurrentAdjustmentMemory()
                 }
                 .disabled(viewModel.currentAdjustmentMemory == nil)

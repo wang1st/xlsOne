@@ -50,13 +50,13 @@ private struct WorkspaceFileCommands: Commands {
 
     var body: some Commands {
         CommandGroup(replacing: .appInfo) {
-            Button(String(localized: "关于 表表归一")) {
+            Button(LocaleManager.loc("关于 表表归一")) {
                 WorkspaceAppPresentation.showAboutPanel()
             }
         }
 
         CommandGroup(replacing: .newItem) {
-            Button(String(localized: "新建批次")) {
+            Button(LocaleManager.loc("新建批次")) {
                 viewModel.closeAllFiles()
             }
             .keyboardShortcut("n", modifiers: .command)
@@ -65,12 +65,12 @@ private struct WorkspaceFileCommands: Commands {
         CommandGroup(after: .newItem) {
             Divider()
 
-            Button(String(localized: "导入文件...")) {
+            Button(LocaleManager.loc("导入文件...")) {
                 viewModel.showOpenFileDialog()
             }
             .keyboardShortcut("o", modifiers: .command)
 
-            Button(String(localized: "追加文件...")) {
+            Button(LocaleManager.loc("追加文件...")) {
                 viewModel.showAddFileDialog()
             }
             .keyboardShortcut("o", modifiers: [.command, .shift])
@@ -78,7 +78,7 @@ private struct WorkspaceFileCommands: Commands {
         }
 
         CommandGroup(replacing: .saveItem) {
-            Button(String(localized: "导出 XLSX...")) {
+            Button(LocaleManager.loc("导出 XLSX...")) {
                 viewModel.exportResult()
             }
             .keyboardShortcut("s", modifiers: .command)
@@ -88,7 +88,7 @@ private struct WorkspaceFileCommands: Commands {
         CommandGroup(after: .saveItem) {
             Divider()
 
-            Button(String(localized: "刷新")) {
+            Button(LocaleManager.loc("刷新")) {
                 viewModel.reloadFiles()
             }
             .keyboardShortcut("r", modifiers: .command)
@@ -102,7 +102,7 @@ private struct WorkspaceEditCommands: Commands {
 
     var body: some Commands {
         CommandGroup(replacing: .undoRedo) {
-            Button(String(localized: "撤销上一步")) {
+            Button(LocaleManager.loc("撤销上一步")) {
                 viewModel.undoLastOverride()
             }
             .keyboardShortcut("z", modifiers: .command)
@@ -110,7 +110,7 @@ private struct WorkspaceEditCommands: Commands {
 
             Divider()
 
-            Button(String(localized: "清除本批次调整")) {
+            Button(LocaleManager.loc("清除本批次调整")) {
                 viewModel.clearOverrides()
             }
             .disabled(viewModel.correctionCount == 0)
@@ -124,14 +124,14 @@ private struct WorkspaceAdjustmentMemoryCommands: Commands {
     @ObservedObject var viewModel: AppViewModel
 
     var body: some Commands {
-        CommandMenu(String(localized: "调整记忆")) {
-            Button(String(localized: "查看当前调整记忆")) {
+        CommandMenu(LocaleManager.loc("调整记忆")) {
+            Button(LocaleManager.loc("查看当前调整记忆")) {
                 viewModel.showSchemaManagerWindow()
             }
             .keyboardShortcut(",", modifiers: .command)
             .disabled(!viewModel.canManageAdjustmentMemory)
 
-            Button(String(localized: "保存当前调整记忆")) {
+            Button(LocaleManager.loc("保存当前调整记忆")) {
                 viewModel.saveCurrentAdjustmentMemory()
             }
             .disabled(!viewModel.canManageAdjustmentMemory)
@@ -170,7 +170,7 @@ private struct WorkspaceLicenseCommands: Commands {
     @ObservedObject var licenseManager: LicenseManager
 
     var body: some Commands {
-        CommandMenu(String(localized: "许可")) {
+        CommandMenu(LocaleManager.loc("许可")) {
             Button(LicenseManager.isAppStoreDistribution ? "App Store 已授权" : "激活/导入许可证...") {
                 if !LicenseManager.isAppStoreDistribution {
                     licenseManager.showActivationSheet = true
@@ -207,19 +207,19 @@ private struct WorkspaceLanguageCommands: Commands {
 private struct WorkspaceHelpCommands: Commands {
     var body: some Commands {
         CommandGroup(replacing: .help) {
-            Button(String(localized: "检查更新")) {
+            Button(LocaleManager.loc("检查更新")) {
                 WorkspaceAppPresentation.showAppStoreUpdatePanel()
             }
 
             Divider()
 
-            Button(String(localized: "使用帮助")) {
+            Button(LocaleManager.loc("使用帮助")) {
                 WorkspaceAppPresentation.showHelpPanel()
             }
 
             Divider()
 
-            Button(String(localized: "关于 表表归一")) {
+            Button(LocaleManager.loc("关于 表表归一")) {
                 WorkspaceAppPresentation.showAboutPanel()
             }
         }
@@ -317,7 +317,7 @@ enum WorkspaceDialogPresenter {
         alert.alertStyle = style
         alert.messageText = title
         alert.informativeText = message
-        alert.addButton(withTitle: String(localized: "确定"))
+        alert.addButton(withTitle: LocaleManager.loc("确定"))
         runAlert(alert)
     }
 }
@@ -399,7 +399,7 @@ enum WorkspaceAppPresentation {
     @MainActor
     static func showAboutPanel() {
         let alert = NSAlert()
-        alert.messageText = String(localized: "关于 表表归一")
+        alert.messageText = LocaleManager.loc("关于 表表归一")
         alert.informativeText = """
         表表归一  V\(marketingVersion)
 
@@ -413,7 +413,7 @@ enum WorkspaceAppPresentation {
 
         © 2026 王臻. 保留所有权利.
         """
-        alert.addButton(withTitle: String(localized: "确定"))
+        alert.addButton(withTitle: LocaleManager.loc("确定"))
         WorkspaceDialogPresenter.runAlert(alert)
         NSApp.activate(ignoringOtherApps: true)
     }
@@ -421,7 +421,7 @@ enum WorkspaceAppPresentation {
     @MainActor
     static func showHelpPanel() {
         let alert = NSAlert()
-        alert.messageText = String(localized: "使用帮助")
+        alert.messageText = LocaleManager.loc("使用帮助")
         alert.informativeText = """
         表表归一  ·  多张同格式 Excel 报表一键汇总
 
@@ -453,7 +453,7 @@ enum WorkspaceAppPresentation {
            Command+N  清空
            Command+Z  撤销修正
         """
-        alert.addButton(withTitle: String(localized: "确定"))
+        alert.addButton(withTitle: LocaleManager.loc("确定"))
         WorkspaceDialogPresenter.runAlert(alert)
         NSApp.activate(ignoringOtherApps: true)
     }
@@ -461,7 +461,7 @@ enum WorkspaceAppPresentation {
     @MainActor
     static func showAppStoreUpdatePanel() {
         WorkspaceDialogPresenter.runAlert(
-            title: String(localized: "检查更新"),
+            title: LocaleManager.loc("检查更新"),
             message: "App Store 版本请通过 Mac App Store 获取更新。",
             style: .informational
         )
@@ -1087,7 +1087,7 @@ class AppViewModel: ObservableObject {
     func saveCurrentAdjustmentMemory() {
         guard canManageAdjustmentMemory else {
             WorkspaceDialogPresenter.runAlert(
-                title: String(localized: "保存当前调整记忆"),
+                title: LocaleManager.loc("保存当前调整记忆"),
                 message: "当前没有可保存调整记忆的同构工作区。",
                 style: .informational
             )
@@ -1129,7 +1129,7 @@ class AppViewModel: ObservableObject {
     func showImportAdjustmentMemoryDialog() {
         guard canManageAdjustmentMemory else {
             WorkspaceDialogPresenter.runAlert(
-                title: String(localized: "导入"),
+                title: LocaleManager.loc("导入"),
                 message: "当前没有可绑定调整记忆的同构工作区。",
                 style: .informational
             )
@@ -1155,8 +1155,8 @@ class AppViewModel: ObservableObject {
         alert.alertStyle = .warning
         alert.messageText = "清除当前调整记忆"
         alert.informativeText = "删除当前调整记忆后，当前同构工作区将恢复自动判断。确定清除？"
-        alert.addButton(withTitle: String(localized: "清除"))
-        alert.addButton(withTitle: String(localized: "取消"))
+        alert.addButton(withTitle: LocaleManager.loc("清除"))
+        alert.addButton(withTitle: LocaleManager.loc("取消"))
         guard WorkspaceDialogPresenter.runAlert(alert) == .alertFirstButtonReturn else { return }
 
         Task {

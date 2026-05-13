@@ -5,6 +5,7 @@ import xlsOneLicense
 struct ContentView: View {
     @EnvironmentObject var viewModel: AppViewModel
     @EnvironmentObject var licenseManager: LicenseManager
+    @ObservedObject private var localeManager = LocaleManager.shared
     @State private var isDropTargeted = false
 
     var body: some View {
@@ -23,6 +24,7 @@ struct ContentView: View {
                 readyWorkspace
             }
         }
+        .id(localeManager.currentLanguage.rawValue)
         .onChange(of: viewModel.showError) { isPresented in
             guard isPresented else { return }
             showErrorAlert()
@@ -30,22 +32,22 @@ struct ContentView: View {
         .background {
             CenteredDialogWindow(
                 isPresented: $viewModel.showSchemaManager,
-                title: "当前调整记忆",
+                title: LocaleManager.loc("当前调整记忆"),
                 size: NSSize(width: 600, height: 400)
             ) {
-                SchemaManagerView {
-                    viewModel.showSchemaManager = false
-                }
+                SchemaManagerView()
+                    .id(localeManager.currentLanguage.rawValue)
             }
             .frame(width: 0, height: 0)
         }
         .background {
             CenteredDialogWindow(
                 isPresented: licenseActivationSheet,
-                title: "激活 表表归一",
+                title: LocaleManager.loc("激活 表表归一"),
                 size: NSSize(width: 420, height: 520)
             ) {
                 LicenseActivationView()
+                    .id(localeManager.currentLanguage.rawValue)
             }
             .frame(width: 0, height: 0)
         }
@@ -77,7 +79,7 @@ struct ContentView: View {
 
     private func showErrorAlert() {
         WorkspaceDialogPresenter.runAlert(
-            title: String(localized: "错误"),
+            title: LocaleManager.loc("错误"),
             message: viewModel.errorMessage ?? "未知错误",
             style: .warning
         )
@@ -91,19 +93,19 @@ struct ContentView: View {
         return HStack(spacing: 10) {
             if hasWorkspace {
                 HStack(spacing: 2) {
-                    toolbarUtilityButton(label: LocLabel("追加", systemImage: "plus"), help: String(localized: "向当前批次追加文件")) {
+                    toolbarUtilityButton(label: LocLabel("追加", systemImage: "plus"), help: LocaleManager.loc("向当前批次追加文件")) {
                         viewModel.showAddFileDialog()
                     }
                     .disabled(!presentation.appendEnabled)
 
                     toolbarStripDivider
 
-                    toolbarUtilityButton(label: LocLabel("刷新", systemImage: "arrow.clockwise"), help: String(localized: "重新读取当前文件并刷新汇总结果")) {
+                    toolbarUtilityButton(label: LocLabel("刷新", systemImage: "arrow.clockwise"), help: LocaleManager.loc("重新读取当前文件并刷新汇总结果")) {
                         viewModel.reloadFiles()
                     }
                     .disabled(viewModel.selectedFilePaths.isEmpty)
 
-                    toolbarUtilityButton(label: LocLabel("清空", systemImage: "xmark"), help: String(localized: "清空当前工作区，不影响原始 Excel 文件")) {
+                    toolbarUtilityButton(label: LocLabel("清空", systemImage: "xmark"), help: LocaleManager.loc("清空当前工作区，不影响原始 Excel 文件")) {
                         viewModel.closeAllFiles()
                     }
                     .disabled(viewModel.selectedFilePaths.isEmpty)
@@ -123,7 +125,7 @@ struct ContentView: View {
                 toolbarPrimaryButton(
                     label: LocLabel("导出 XLSX", systemImage: "square.and.arrow.up"),
                     prominent: presentation.exportIsProminent,
-                    help: viewModel.canExport ? String(localized: "导出同构汇总 Excel") : String(localized: "当前没有可导出的汇总结果")
+                    help: viewModel.canExport ? LocaleManager.loc("导出同构汇总 Excel") : LocaleManager.loc("当前没有可导出的汇总结果")
                 ) {
                     viewModel.exportResult()
                 }
@@ -195,11 +197,11 @@ struct ContentView: View {
                         EmptyWorkspaceArtwork(isHighlighted: isDropTargeted)
 
                         VStack(spacing: 8) {
-                            Text(isDropTargeted ? String(localized: "松手即可导入") : String(localized: "拖入 Excel 文件"))
+                            Text(isDropTargeted ? LocaleManager.loc("松手即可导入") : LocaleManager.loc("拖入 Excel 文件"))
                                 .font(.system(size: 28, weight: .semibold))
                                 .foregroundStyle(.primary)
 
-                            Text(isDropTargeted ? String(localized: "支持多个 .xlsx / .xls") : String(localized: "支持多个 .xlsx / .xls"))
+                            Text(isDropTargeted ? LocaleManager.loc("支持多个 .xlsx / .xls") : LocaleManager.loc("支持多个 .xlsx / .xls"))
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
                         }
@@ -208,7 +210,7 @@ struct ContentView: View {
                         Button {
                             viewModel.showOpenFileDialog()
                         } label: {
-                            Label(String(localized: "选择文件"), systemImage: "folder.badge.plus")
+                            Label(LocaleManager.loc("选择文件"), systemImage: "folder.badge.plus")
                         }
                         .buttonStyle(WorkspaceChromePrimaryButtonStyle(prominent: true))
                         .controlSize(.large)
@@ -232,7 +234,7 @@ struct ContentView: View {
         VStack(spacing: 16) {
             ProgressView()
                 .scaleEffect(1.4)
-            Text(String(localized: "正在校验工作簿结构并准备汇总工作台…"))
+            Text(LocaleManager.loc("正在校验工作簿结构并准备汇总工作台…"))
                 .foregroundStyle(.secondary)
             Text("已选 \(viewModel.selectedFilePaths.count) 个文件")
                 .font(.caption)
@@ -250,7 +252,7 @@ struct ContentView: View {
                         .foregroundStyle(.orange)
                         .font(.title2)
                     VStack(alignment: .leading, spacing: 6) {
-                        Text(String(localized: "没有可参与汇总的同构工作表"))
+                        Text(LocaleManager.loc("没有可参与汇总的同构工作表"))
                             .font(.title3)
                             .fontWeight(.semibold)
                         Text("系统已忽略尾部空白行列后重试校验，但当前仍没有任何 sheet 能在所有文件间对齐。")
@@ -274,11 +276,11 @@ struct ContentView: View {
 
     private func validationSummary(_ report: WorkbookValidationReport) -> some View {
         HStack(spacing: 12) {
-            statCard(title: String(localized: "参与文件"), value: "\(report.includedFiles.count)", tint: .green)
-            statCard(title: String(localized: "阻断文件"), value: "\(report.blockedFiles.count)", tint: .red)
-            statCard(title: String(localized: "警告文件"), value: "\(report.warningFiles.count)", tint: .orange)
+            statCard(title: LocaleManager.loc("参与文件"), value: "\(report.includedFiles.count)", tint: .green)
+            statCard(title: LocaleManager.loc("阻断文件"), value: "\(report.blockedFiles.count)", tint: .red)
+            statCard(title: LocaleManager.loc("警告文件"), value: "\(report.warningFiles.count)", tint: .orange)
             if report.skippedSheetCount > 0 {
-                statCard(title: String(localized: "跳过工作表"), value: "\(report.skippedSheetCount)", tint: .orange)
+                statCard(title: LocaleManager.loc("跳过工作表"), value: "\(report.skippedSheetCount)", tint: .orange)
             }
         }
     }
@@ -416,7 +418,7 @@ struct ContentView: View {
                     Image(systemName: "tablecells")
                         .font(.largeTitle)
                         .foregroundStyle(.secondary)
-                    Text(String(localized: "当前没有可显示的汇总结果"))
+                    Text(LocaleManager.loc("当前没有可显示的汇总结果"))
                         .foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -476,14 +478,14 @@ struct ContentView: View {
 
             Spacer()
 
-            Button(String(localized: "撤销上一步")) {
+            Button(LocaleManager.loc("撤销上一步")) {
                 viewModel.undoLastOverride()
             }
             .font(.caption)
             .buttonStyle(.bordered)
             .controlSize(.small)
 
-            Button(String(localized: "清除本批次调整")) {
+            Button(LocaleManager.loc("清除本批次调整")) {
                 viewModel.clearOverrides()
             }
             .font(.caption)
@@ -507,9 +509,9 @@ private extension FileValidationReport {
 
     var statusLabel: String {
         switch status {
-        case .included: return String(localized: "参与合并")
-        case .warning: return String(localized: "已跳过")
-        case .blocked: return String(localized: "阻断")
+        case .included: return LocaleManager.loc("参与合并")
+        case .warning: return LocaleManager.loc("已跳过")
+        case .blocked: return LocaleManager.loc("阻断")
         }
     }
 }
@@ -1349,11 +1351,11 @@ struct ExcelGridView: View {
             handleCellTap(position: position)
         }
         .contextMenu {
-            Menu(String(localized: "修正为")) {
-                Button(String(localized: "标签")) {
+            Menu(LocaleManager.loc("修正为")) {
+                Button(LocaleManager.loc("标签")) {
                     onApplyOverride?(position.row, position.col, .label)
                 }
-                Button(String(localized: "求和")) {
+                Button(LocaleManager.loc("求和")) {
                     onApplyOverride?(position.row, position.col, .sum)
                 }
             }
@@ -1539,11 +1541,11 @@ struct SelectionToolbar: View {
             Divider()
                 .frame(height: 16)
 
-            Button(String(localized: "标签")) { onApply(.label) }
+            Button(LocaleManager.loc("标签")) { onApply(.label) }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.small)
 
-            Button(String(localized: "求和")) { onApply(.sum) }
+            Button(LocaleManager.loc("求和")) { onApply(.sum) }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.small)
 
@@ -1726,7 +1728,7 @@ struct InspectionSidebar: View {
                     cellDetailCard(cell: cell, reference: reference, correctionState: correctionState)
                     sourceDisclosure(for: cell)
                 } else {
-                    placeholderCard(String(localized: "选择单元格后查看结果与来源。"))
+                    placeholderCard(LocaleManager.loc("选择单元格后查看结果与来源。"))
                 }
             }
             .padding()
@@ -1745,7 +1747,7 @@ struct InspectionSidebar: View {
                     Text(reference)
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    Text(cell.displayValue.isEmpty ? String(localized: "空值") : cell.displayValue)
+                    Text(cell.displayValue.isEmpty ? LocaleManager.loc("空值") : cell.displayValue)
                         .font(.system(size: 18, weight: .semibold, design: .monospaced))
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -1763,16 +1765,16 @@ struct InspectionSidebar: View {
 
             VStack(alignment: .leading, spacing: 8) {
                 HStack(spacing: 8) {
-                    overrideButton(title: String(localized: "标签"), tint: .green, isActive: matches(cell.type, overrideType: .label)) {
+                    overrideButton(title: LocaleManager.loc("标签"), tint: .green, isActive: matches(cell.type, overrideType: .label)) {
                         applyOverride(.label)
                     }
-                    overrideButton(title: String(localized: "求和"), tint: .blue, isActive: matches(cell.type, overrideType: .sum)) {
+                    overrideButton(title: LocaleManager.loc("求和"), tint: .blue, isActive: matches(cell.type, overrideType: .sum)) {
                         applyOverride(.sum)
                     }
                 }
 
                 if viewModel.canRestoreSelectedCellAutomatic {
-                    Button(String(localized: "恢复自动判断")) {
+                    Button(LocaleManager.loc("恢复自动判断")) {
                         viewModel.restoreAutomaticDecisionForSelectedCell()
                     }
                     .buttonStyle(.borderless)
@@ -1848,7 +1850,7 @@ struct InspectionSidebar: View {
                     }
                 }
             } else {
-                placeholderCard(String(localized: "当前单元格没有可显示的来源。"))
+                placeholderCard(LocaleManager.loc("当前单元格没有可显示的来源。"))
             }
         }
         .padding()
@@ -1894,9 +1896,9 @@ struct InspectionSidebar: View {
     private func displayTypeName(for cellType: MergedCell.CellType) -> String {
         switch cellType {
         case .sum:
-            return String(localized: "求和")
+            return LocaleManager.loc("求和")
         default:
-            return String(localized: "标签")
+            return LocaleManager.loc("标签")
         }
     }
 
@@ -1905,9 +1907,9 @@ struct InspectionSidebar: View {
         case .value:
             return source.value
         case .empty:
-            return String(localized: "空值")
+            return LocaleManager.loc("空值")
         case .missing:
-            return String(localized: "缺失单元格")
+            return LocaleManager.loc("缺失单元格")
         }
     }
 
@@ -1916,9 +1918,9 @@ struct InspectionSidebar: View {
         case .value:
             return nil
         case .empty:
-            return String(localized: "空值")
+            return LocaleManager.loc("空值")
         case .missing:
-            return String(localized: "缺失")
+            return LocaleManager.loc("缺失")
         }
     }
 
