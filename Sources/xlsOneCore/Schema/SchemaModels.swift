@@ -31,9 +31,9 @@ public enum CellOverrideType: String, Codable, Sendable, CaseIterable {
 
     public var displayName: String {
         switch self {
-        case .label: return "标签"
-        case .sum: return "求和"
-        case .mixed: return "混合"
+        case .label: return String(localized: "标签")
+        case .sum: return String(localized: "求和")
+        case .mixed: return String(localized: "混合")
         }
     }
 

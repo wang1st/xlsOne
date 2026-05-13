@@ -471,13 +471,13 @@ public enum LicensePlan: String {
 
     public var displayName: String {
         switch self {
-        case .appStore:           return "App Store"
-        case .personalYearly:      return "个人年度订阅"
-        case .personalLifetime:    return "个人永久授权"
-        case .enterprise10:        return "企业版 (10台)"
-        case .enterprise25:        return "企业版 (25台)"
-        case .enterpriseUnlimited: return "企业版 (无限)"
-        case .unknown:             return "未知"
+        case .appStore:           return String(localized: "App Store")
+        case .personalYearly:      return String(localized: "个人年度订阅")
+        case .personalLifetime:    return String(localized: "个人永久授权")
+        case .enterprise10:        return String(localized: "企业版 (10台)")
+        case .enterprise25:        return String(localized: "企业版 (25台)")
+        case .enterpriseUnlimited: return String(localized: "企业版 (无限)")
+        case .unknown:             return String(localized: "未知")
         }
     }
 }
@@ -500,15 +500,15 @@ public enum ActivationError: Error, Equatable {
 
     public var localizedDescription: String {
         switch self {
-        case .invalidKeyFormat: return "激活码格式不正确"
-        case .invalidLicenseFile: return "授权文件无效或已过期"
-        case .licenseDeviceMismatch: return "授权文件与当前设备不匹配"
-        case .keyNotFound:      return "激活码不存在"
-        case .keyRevoked:       return "激活码已被吊销"
-        case .deviceLimit:      return "已达到最大设备数限制"
-        case .networkError:     return "无法连接激活服务器，请检查网络"
-        case .rateLimited:      return "请求过于频繁，请稍后再试"
-        case .serverError(let m): return "服务器错误: \(m)"
+        case .invalidKeyFormat: return String(localized: "激活码格式不正确")
+        case .invalidLicenseFile: return String(localized: "授权文件无效或已过期")
+        case .licenseDeviceMismatch: return String(localized: "授权文件与当前设备不匹配")
+        case .keyNotFound:      return String(localized: "激活码不存在")
+        case .keyRevoked:       return String(localized: "激活码已被吊销")
+        case .deviceLimit:      return String(localized: "已达到最大设备数限制")
+        case .networkError:     return String(localized: "无法连接激活服务器，请检查网络")
+        case .rateLimited:      return String(localized: "请求过于频繁，请稍后再试")
+        case .serverError(let m): return String(localized: "服务器错误: \(m)")
         }
     }
 }

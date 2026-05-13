@@ -294,7 +294,7 @@ public struct MergedCell: Equatable, Sendable {
                 formatCode: formatCode,
                 decision: defaultDecision(
                     for: type,
-                    reasons: ["所有来源单元格均为空或缺失，按空标签保留原始位置"],
+                    reasons: [String(localized: "所有来源单元格均为空或缺失，按空标签保留原始位置")],
                     confidence: 1.0,
                     isSuspicious: false
                 )
@@ -310,7 +310,7 @@ public struct MergedCell: Equatable, Sendable {
                 formatCode: formatCode,
                 decision: defaultDecision(
                     for: type,
-                    reasons: ["首行按表头处理，强制视为标签列"],
+                    reasons: [String(localized: "首行按表头处理，强制视为标签列")],
                     confidence: 1.0,
                     isSuspicious: Set(validCells.map(\.1.value)).count > 1
                 )
@@ -384,7 +384,7 @@ public struct MergedCell: Equatable, Sendable {
                 formatCode: formatCode,
                 decision: defaultDecision(
                     for: type,
-                    reasons: ["所有非空来源均为 0，按可累加单元格求和处理"],
+                    reasons: [String(localized: "所有非空来源均为 0，按可累加单元格求和处理")],
                     confidence: 0.9,
                     isSuspicious: false
                 )
@@ -400,7 +400,7 @@ public struct MergedCell: Equatable, Sendable {
                 formatCode: formatCode,
                 decision: defaultDecision(
                     for: type,
-                    reasons: ["所有来源为相同非零整数，且无明确可累加语义，按标签处理"],
+                    reasons: [String(localized: "所有来源为相同非零整数，且无明确可累加语义，按标签处理")],
                     confidence: 0.9,
                     isSuspicious: false
                 )
@@ -414,7 +414,7 @@ public struct MergedCell: Equatable, Sendable {
             "自身格式指纹: \(selfFP.descriptionText)"
         ]
         if blanksWithNumericValues {
-            decisionReasons.append("部分来源为空或缺失，非空来源均为数值，空值按 0 参与可累加判断")
+            decisionReasons.append(String(localized: "部分来源为空或缺失，非空来源均为数值，空值按 0 参与可累加判断"))
         }
 
         // 1. 自身格式 (40%)
@@ -495,7 +495,7 @@ public struct MergedCell: Equatable, Sendable {
                     formatCode: formatCode,
                     decision: defaultDecision(
                         for: type,
-                        reasons: decisionReasons + ["左邻列命中合计语义，强制按求和处理"],
+                        reasons: decisionReasons + [String(localized: "左邻列命中合计语义，强制按求和处理")],
                         confidence: 0.98,
                         isSuspicious: false
                     )
@@ -526,7 +526,7 @@ public struct MergedCell: Equatable, Sendable {
                     formatCode: formatCode,
                     decision: defaultDecision(
                         for: type,
-                        reasons: decisionReasons + ["综合得分偏向数值，且通过可累加性检查"],
+                        reasons: decisionReasons + [String(localized: "综合得分偏向数值，且通过可累加性检查")],
                         confidence: baseConfidence,
                         isSuspicious: isSuspicious
                     )
@@ -539,7 +539,7 @@ public struct MergedCell: Equatable, Sendable {
                     formatCode: formatCode,
                     decision: defaultDecision(
                         for: type,
-                        reasons: decisionReasons + ["数值得分较高，但可累加性检查失败，回退为标签"],
+                        reasons: decisionReasons + [String(localized: "数值得分较高，但可累加性检查失败，回退为标签")],
                         confidence: max(0.5, baseConfidence - 0.1),
                         isSuspicious: true
                     )
@@ -554,7 +554,7 @@ public struct MergedCell: Equatable, Sendable {
                 formatCode: formatCode,
                 decision: defaultDecision(
                     for: type,
-                    reasons: decisionReasons + ["综合得分偏向标签"],
+                    reasons: decisionReasons + [String(localized: "综合得分偏向标签")],
                     confidence: baseConfidence,
                     isSuspicious: uniqueCount > 1 || baseConfidence < 0.72
                 )
@@ -579,7 +579,7 @@ public struct MergedCell: Equatable, Sendable {
                         formatCode: formatCode,
                         decision: defaultDecision(
                             for: type,
-                            reasons: decisionReasons + ["边界场景下仍满足可累加性，按求和处理"],
+                            reasons: decisionReasons + [String(localized: "边界场景下仍满足可累加性，按求和处理")],
                             confidence: max(0.5, baseConfidence - 0.08),
                             isSuspicious: true
                         )
@@ -593,7 +593,7 @@ public struct MergedCell: Equatable, Sendable {
                 formatCode: formatCode,
                 decision: defaultDecision(
                     for: type,
-                    reasons: decisionReasons + ["分数接近，按保守策略作为标签处理"],
+                    reasons: decisionReasons + [String(localized: "分数接近，按保守策略作为标签处理")],
                     confidence: max(0.45, baseConfidence - 0.12),
                     isSuspicious: true
                 )
@@ -625,7 +625,7 @@ public struct MergedCell: Equatable, Sendable {
                 formatCode: formatCode,
                 decision: defaultDecision(
                     for: type,
-                    reasons: ["首列所有非空来源均为 0，按可累加单元格求和处理"],
+                    reasons: [String(localized: "首列所有非空来源均为 0，按可累加单元格求和处理")],
                     confidence: 0.9,
                     isSuspicious: false
                 )
@@ -640,7 +640,7 @@ public struct MergedCell: Equatable, Sendable {
                 formatCode: formatCode,
                 decision: defaultDecision(
                     for: type,
-                    reasons: ["首列所有来源为相同非零整数，按标签处理"],
+                    reasons: [String(localized: "首列所有来源为相同非零整数，按标签处理")],
                     confidence: 0.9,
                     isSuspicious: false
                 )
@@ -673,7 +673,7 @@ public struct MergedCell: Equatable, Sendable {
                     formatCode: formatCode,
                     decision: defaultDecision(
                         for: type,
-                        reasons: ["首列主导格式为整数编码，按标签处理"],
+                        reasons: [String(localized: "首列主导格式为整数编码，按标签处理")],
                         confidence: 0.95,
                         isSuspicious: Set(validCells.map(\.1.value)).count > 1
                     )
@@ -688,7 +688,7 @@ public struct MergedCell: Equatable, Sendable {
                         formatCode: formatCode,
                         decision: defaultDecision(
                             for: type,
-                            reasons: ["首列以数值格式为主且一致性高，按求和处理"],
+                            reasons: [String(localized: "首列以数值格式为主且一致性高，按求和处理")],
                             confidence: 0.84,
                             isSuspicious: false
                         )
@@ -705,7 +705,7 @@ public struct MergedCell: Equatable, Sendable {
             formatCode: formatCode,
             decision: defaultDecision(
                 for: type,
-                reasons: ["首列采用保守策略，按标签处理"],
+                reasons: [String(localized: "首列采用保守策略，按标签处理")],
                 confidence: 0.7,
                 isSuspicious: Set(validCells.map(\.1.value)).count > 1
             )
@@ -763,21 +763,21 @@ public struct MergedCell: Equatable, Sendable {
            !leftSuggestsLabel,
            (formatSuggestsNumeric || sameColumnSuggestsNumeric || leftSuggestsNumeric || metricSemantic || zeroWithBlankBias) {
             let type = CellType.sum(numericValue)
-            var reasons = ["仅有一个非空数值，未直接按单值处理"]
+            var reasons = [String(localized: "仅有一个非空数值，未直接按单值处理")]
             if formatSuggestsNumeric {
-                reasons.append("单元格格式倾向数值")
+                reasons.append(String(localized: "单元格格式倾向数值"))
             }
             if sameColumnSuggestsNumeric || weakSameColumnNumeric {
-                reasons.append("同列上下文倾向数值")
+                reasons.append(String(localized: "同列上下文倾向数值"))
             }
             if leftSuggestsNumeric {
-                reasons.append("左邻语义倾向可累加")
+                reasons.append(String(localized: "左邻语义倾向可累加"))
             }
             if metricSemantic {
-                reasons.append("计量语义与同列上下文共同支持求和")
+                reasons.append(String(localized: "计量语义与同列上下文共同支持求和"))
             }
             if zeroWithBlankBias {
-                reasons.append("零值与空值/缺失并存，按可求和单元格处理")
+                reasons.append(String(localized: "零值与空值/缺失并存，按可求和单元格处理"))
             }
 
             let confidence: Double
@@ -803,11 +803,11 @@ public struct MergedCell: Equatable, Sendable {
         }
 
         let type = CellType.single(cell.value)
-        var reasons = ["仅有一个非空来源值，按单值显示"]
+            var reasons = [String(localized: "仅有一个非空来源值，按单值显示")]
         if isCodeLike || leftSuggestsLabel || neighborContext.labelTendency > neighborContext.numericTendency {
-            reasons.append("格式或上下文更偏向标签/编码")
+            reasons.append(String(localized: "格式或上下文更偏向标签/编码"))
         } else if cell.numericValue != nil {
-            reasons.append("暂无足够格式或同列证据支持求和")
+            reasons.append(String(localized: "暂无足够格式或同列证据支持求和"))
         }
 
         return MergedCell(
@@ -1221,7 +1221,7 @@ public struct MergedCell: Equatable, Sendable {
         MergedCellDecision(
             autoDetectedType: type,
             confidence: confidence,
-            decisionReasons: reasons ?? ["未提供额外判定解释"],
+            decisionReasons: reasons ?? [String(localized: "未提供额外判定解释")],
             isSuspicious: isSuspicious
         )
     }
@@ -1257,23 +1257,23 @@ extension FormatFingerprint {
     var descriptionText: String {
         switch self {
         case .strongNumeric:
-            return "强数值"
+            return String(localized: "强数值")
         case .integerWide:
-            return "宽整数"
+            return String(localized: "宽整数")
         case .integerCode:
-            return "整数编码"
+            return String(localized: "整数编码")
         case .chineseText:
-            return "中文文本"
+            return String(localized: "中文文本")
         case .alphaText:
-            return "英文文本"
+            return String(localized: "英文文本")
         case .date:
-            return "日期"
+            return String(localized: "日期")
         case .dashMarker:
-            return "占位符"
+            return String(localized: "占位符")
         case .empty:
-            return "空值"
+            return String(localized: "空值")
         case .mixed:
-            return "混合格式"
+            return String(localized: "混合格式")
         }
     }
 }

@@ -23,7 +23,7 @@ public struct LicenseActivationView: View {
                     .font(.system(size: 40))
                     .foregroundColor(.accentColor)
 
-                Text("激活 表表归一")
+                Text(String(localized: "激活 表表归一"))
                     .font(.title2)
                     .fontWeight(.semibold)
 
