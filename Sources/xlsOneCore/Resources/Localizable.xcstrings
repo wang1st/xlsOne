@@ -456,6 +456,494 @@
         "zh-Hant": { "stringUnit": { "state": "translated", "value": "匯入" } },
         "en": { "stringUnit": { "state": "translated", "value": "Import" } }
       }
+    },
+    "激活码格式不正确": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "激活码格式不正确" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "激活碼格式不正確" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Invalid activation key format" } }
+      }
+    },
+    "授权文件无效或已过期": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "授权文件无效或已过期" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "授權檔案無效或已過期" } },
+        "en": { "stringUnit": { "state": "translated", "value": "License file is invalid or expired" } }
+      }
+    },
+    "授权文件与当前设备不匹配": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "授权文件与当前设备不匹配" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "授權檔案與目前裝置不相符" } },
+        "en": { "stringUnit": { "state": "translated", "value": "License file does not match this device" } }
+      }
+    },
+    "激活码不存在": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "激活码不存在" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "激活碼不存在" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Activation key not found" } }
+      }
+    },
+    "激活码已被吊销": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "激活码已被吊销" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "激活碼已被吊銷" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Activation key has been revoked" } }
+      }
+    },
+    "已达到最大设备数限制": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "已达到最大设备数限制" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "已達到最大裝置數限制" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Maximum device limit reached" } }
+      }
+    },
+    "无法连接激活服务器，请检查网络": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "无法连接激活服务器，请检查网络" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "無法連接激活伺服器，請檢查網路" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Cannot reach activation server. Check network." } }
+      }
+    },
+    "请求过于频繁，请稍后再试": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "请求过于频繁，请稍后再试" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "請求過於頻繁，請稍後再試" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Too many requests. Please try again later." } }
+      }
+    },
+    "服务器错误: %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "服务器错误: %@" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "伺服器錯誤: %@" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Server error: %@" } }
+      }
+    },
+    "未知错误": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "未知错误" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "未知錯誤" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Unknown error" } }
+      }
+    },
+    "App Store": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "App Store" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "App Store" } },
+        "en": { "stringUnit": { "state": "translated", "value": "App Store" } }
+      }
+    },
+    "个人年度订阅": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "个人年度订阅" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "個人年度訂閱" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Personal Annual" } }
+      }
+    },
+    "个人永久授权": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "个人永久授权" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "個人永久授權" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Personal Perpetual" } }
+      }
+    },
+    "企业版 (10台)": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "企业版 (10台)" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "企業版 (10台)" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Enterprise (10 seats)" } }
+      }
+    },
+    "企业版 (25台)": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "企业版 (25台)" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "企業版 (25台)" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Enterprise (25 seats)" } }
+      }
+    },
+    "企业版 (无限)": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "企业版 (无限)" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "企業版 (無限)" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Enterprise (Unlimited)" } }
+      }
+    },
+    "未知": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "未知" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "未知" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Unknown" } }
+      }
+    },
+    "强数值": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "强数值" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "強數值" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Strong Numeric" } }
+      }
+    },
+    "宽整数": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "宽整数" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "寬整數" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Wide Integer" } }
+      }
+    },
+    "整数编码": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "整数编码" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "整數編碼" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Integer Code" } }
+      }
+    },
+    "中文文本": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "中文文本" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "中文文本" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Chinese Text" } }
+      }
+    },
+    "英文文本": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "英文文本" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "英文文本" } },
+        "en": { "stringUnit": { "state": "translated", "value": "English Text" } }
+      }
+    },
+    "日期": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "日期" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "日期" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Date" } }
+      }
+    },
+    "占位符": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "占位符" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "佔位符" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Placeholder" } }
+      }
+    },
+    "混合格式": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "混合格式" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "混合格式" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Mixed Format" } }
+      }
+    },
+    "错误": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "错误" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "錯誤" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Error" } }
+      }
+    },
+    "全部": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "全部" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "全部" } },
+        "en": { "stringUnit": { "state": "translated", "value": "All" } }
+      }
+    },
+    "单值": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "单值" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "單值" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Single" } }
+      }
+    },
+    "可合并": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "可合并" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "可合併" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Ready" } }
+      }
+    },
+    "警告": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "警告" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "警告" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Warning" } }
+      }
+    },
+    "结构分组": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "结构分组" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "結構分組" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Structure Groups" } }
+      }
+    },
+    "主": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "主" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "主" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Main" } }
+      }
+    },
+    "当前调整记忆没有单元格修正。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "当前调整记忆没有单元格修正。" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "目前調整記憶沒有單元格修正。" } },
+        "en": { "stringUnit": { "state": "translated", "value": "No cell corrections in current rules." } }
+      }
+    },
+    "已调整 %lld 处": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "已调整 %lld 处" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "已調整 %lld 處" } },
+        "en": { "stringUnit": { "state": "translated", "value": "%lld corrections applied" } }
+      }
+    },
+    "所有来源单元格均为空或缺失，按空标签保留原始位置": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "所有来源单元格均为空或缺失，按空标签保留原始位置" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "所有來源單元格均為空或缺失，按空標籤保留原始位置" } },
+        "en": { "stringUnit": { "state": "translated", "value": "All source cells are empty or missing, keeping position as empty label" } }
+      }
+    },
+    "首行按表头处理，强制视为标签列": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "首行按表头处理，强制视为标签列" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "首行按表頭處理，強制視為標籤列" } },
+        "en": { "stringUnit": { "state": "translated", "value": "First row treated as header, forced as label column" } }
+      }
+    },
+    "所有非空来源均为 0，按可累加单元格求和处理": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "所有非空来源均为 0，按可累加单元格求和处理" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "所有非空來源均為 0，按可累加單元格求和處理" } },
+        "en": { "stringUnit": { "state": "translated", "value": "All non-empty sources are 0, treating as summable" } }
+      }
+    },
+    "所有来源为相同非零整数，且无明确可累加语义，按标签处理": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "所有来源为相同非零整数，且无明确可累加语义，按标签处理" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "所有來源為相同非零整數，且無明確可累加語義，按標籤處理" } },
+        "en": { "stringUnit": { "state": "translated", "value": "All sources are same non-zero integer, no clear sum semantics, treating as label" } }
+      }
+    },
+    "部分来源为空或缺失，非空来源均为数值，空值按 0 参与可累加判断": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "部分来源为空或缺失，非空来源均为数值，空值按 0 参与可累加判断" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "部分來源為空或缺失，非空來源均為數值，空值按 0 參與可累加判斷" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Some sources empty/missing, non-empty are numeric, empty treated as 0" } }
+      }
+    },
+    "左邻列命中合计语义，强制按求和处理": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "左邻列命中合计语义，强制按求和处理" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "左鄰列命中合計語義，強制按求和處理" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Left neighbor matches total semantics, forced sum" } }
+      }
+    },
+    "综合得分偏向数值，且通过可累加性检查": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "综合得分偏向数值，且通过可累加性检查" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "綜合得分偏向數值，且通過可累加性檢查" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Composite score favors numeric, passed summability check" } }
+      }
+    },
+    "数值得分较高，但可累加性检查失败，回退为标签": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "数值得分较高，但可累加性检查失败，回退为标签" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "數值得分較高，但可累加性檢查失敗，回退為標籤" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Numeric score high but summability check failed, fallback to label" } }
+      }
+    },
+    "综合得分偏向标签": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "综合得分偏向标签" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "綜合得分偏向標籤" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Composite score favors label" } }
+      }
+    },
+    "边界场景下仍满足可累加性，按求和处理": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "边界场景下仍满足可累加性，按求和处理" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "邊界場景下仍滿足可累加性，按求和處理" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Edge case still meets summability, treating as sum" } }
+      }
+    },
+    "分数接近，按保守策略作为标签处理": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "分数接近，按保守策略作为标签处理" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "分數接近，按保守策略作為標籤處理" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Scores close, conservative strategy as label" } }
+      }
+    },
+    "首列所有非空来源均为 0，按可累加单元格求和处理": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "首列所有非空来源均为 0，按可累加单元格求和处理" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "首列所有非空來源均為 0，按可累加單元格求和處理" } },
+        "en": { "stringUnit": { "state": "translated", "value": "First column all non-empty are 0, treating as summable" } }
+      }
+    },
+    "首列所有来源为相同非零整数，按标签处理": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "首列所有来源为相同非零整数，按标签处理" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "首列所有來源為相同非零整數，按標籤處理" } },
+        "en": { "stringUnit": { "state": "translated", "value": "First column all same non-zero integer, treating as label" } }
+      }
+    },
+    "首列主导格式为整数编码，按标签处理": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "首列主导格式为整数编码，按标签处理" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "首列主導格式為整數編碼，按標籤處理" } },
+        "en": { "stringUnit": { "state": "translated", "value": "First column dominant format is integer code, treating as label" } }
+      }
+    },
+    "首列以数值格式为主且一致性高，按求和处理": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "首列以数值格式为主且一致性高，按求和处理" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "首列以數值格式為主且一致性高，按求和處理" } },
+        "en": { "stringUnit": { "state": "translated", "value": "First column mainly numeric format with high consistency, sum" } }
+      }
+    },
+    "首列采用保守策略，按标签处理": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "首列采用保守策略，按标签处理" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "首列採用保守策略，按標籤處理" } },
+        "en": { "stringUnit": { "state": "translated", "value": "First column conservative strategy, treating as label" } }
+      }
+    },
+    "仅有一个非空数值，未直接按单值处理": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "仅有一个非空数值，未直接按单值处理" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "僅有一個非空數值，未直接按單值處理" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Only one non-empty numeric value, not treated as single" } }
+      }
+    },
+    "单元格格式倾向数值": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "单元格格式倾向数值" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "單元格格式傾向數值" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Cell format tends numeric" } }
+      }
+    },
+    "同列上下文倾向数值": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "同列上下文倾向数值" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "同列上下文傾向數值" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Column context tends numeric" } }
+      }
+    },
+    "左邻语义倾向可累加": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "左邻语义倾向可累加" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "左鄰語義傾向可累加" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Left neighbor semantics tend summable" } }
+      }
+    },
+    "计量语义与同列上下文共同支持求和": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "计量语义与同列上下文共同支持求和" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "計量語義與同列上下文共同支援求和" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Metric semantics and column context support sum" } }
+      }
+    },
+    "零值与空值/缺失并存，按可求和单元格处理": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "零值与空值/缺失并存，按可求和单元格处理" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "零值與空值/缺失並存，按可求和單元格處理" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Zeros with empty/missing coexist, treating as summable" } }
+      }
+    },
+    "仅有一个非空来源值，按单值显示": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "仅有一个非空来源值，按单值显示" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "僅有一個非空來源值，按單值顯示" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Only one non-empty source value, displaying as single" } }
+      }
+    },
+    "格式或上下文更偏向标签/编码": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "格式或上下文更偏向标签/编码" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "格式或上下文更偏向標籤/編碼" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Format or context leans toward label/code" } }
+      }
+    },
+    "暂无足够格式或同列证据支持求和": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "暂无足够格式或同列证据支持求和" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "暫無足夠格式或同列證據支援求和" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Insufficient format or column evidence for sum" } }
+      }
+    },
+    "未提供额外判定解释": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "未提供额外判定解释" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "未提供額外判定解釋" } },
+        "en": { "stringUnit": { "state": "translated", "value": "No additional explanation provided" } }
+      }
+    },
+    "已按类型调整显示为%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "已按类型调整显示为%@" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "已按類型調整顯示為%@" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Adjusted display as %@ per type" } }
+      }
     }
   },
   "version": "1.0"
