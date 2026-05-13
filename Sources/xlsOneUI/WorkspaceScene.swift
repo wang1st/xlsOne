@@ -414,19 +414,7 @@ enum WorkspaceAppPresentation {
     static func showAboutPanel() {
         let alert = NSAlert()
         alert.messageText = LocaleManager.loc("关于 表表归一")
-        alert.informativeText = """
-        表表归一  V\(marketingVersion)
-
-        多张同格式 Excel 报表一键汇总
-
-        把多张格式一致的 Excel 表合成一份汇总表。金额、数量等能相加的数会自动合计；名称、编号等不该相加的信息，会保留各文件里最常见的共同前缀。
-
-        作者：王臻
-        技术：Swift / SwiftUI
-        邮箱：831261@qq.com
-
-        © 2026 王臻. 保留所有权利.
-        """
+        alert.informativeText = WorkspaceAppPresentation.aboutText
         alert.addButton(withTitle: LocaleManager.loc("确定"))
         WorkspaceDialogPresenter.runAlert(alert)
         NSApp.activate(ignoringOtherApps: true)
@@ -436,40 +424,108 @@ enum WorkspaceAppPresentation {
     static func showHelpPanel() {
         let alert = NSAlert()
         alert.messageText = LocaleManager.loc("使用帮助")
-        alert.informativeText = """
-        表表归一  ·  多张同格式 Excel 报表一键汇总
-
-        1. 导入文件
-           拖拽 .xlsx 或 .xls 文件到窗口，或点击 [文件] → [导入文件]
-
-        2. 切换工作表
-           点击顶部的 Sheet 标签可切换要查看的报表页
-
-        3. 查看汇总
-           - 金额、数量等能相加的数自动合计
-           - 名称、编号等信息保留最常见的共同前缀
-           - 结构不一致的工作表会跳过，并提示原因
-
-        4. 穿透查阅
-           点击单元格可查看各文件原始值
-
-        5. 导出结果
-           点击 [导出 XLSX] 保存汇总结果
-
-        6. 单元格修正
-           在右侧面板可将单元格手动指定为标签或求和
-
-        快捷键:
-           Command+O  导入文件
-           Command+Shift+O  追加文件
-           Command+S  导出
-           Command+R  刷新
-           Command+N  清空
-           Command+Z  撤销修正
-        """
+        alert.informativeText = WorkspaceAppPresentation.helpText
         alert.addButton(withTitle: LocaleManager.loc("确定"))
         WorkspaceDialogPresenter.runAlert(alert)
         NSApp.activate(ignoringOtherApps: true)
+    }
+
+    static var aboutText: String {
+        if LocaleManager.shared.currentLanguage.isChineseLike() {
+            return """
+            表表归一  V\(marketingVersion)
+
+            多张同格式 Excel 报表一键汇总
+
+            把多张格式一致的 Excel 表合成一份汇总表。金额、数量等能相加的数会自动合计；名称、编号等不该相加的信息，会保留各文件里最常见的共同前缀。
+
+            作者：王臻
+            技术：Swift / SwiftUI
+            邮箱：831261@qq.com
+
+            © 2026 王臻. 保留所有权利.
+            """
+        }
+        return """
+            xlsOne  V\(marketingVersion)
+
+            One-click summary for multiple identically-formatted Excel reports.
+
+            Merge multiple Excel sheets with identical layouts into a single summary sheet. Amounts, quantities, and other summable values are automatically totaled. Names, codes, and other non-summable information retain the most common values across all files.
+
+            Author: Wang Zhen
+            Tech: Swift / SwiftUI
+            Email: 831261@qq.com
+
+            © 2026 Wang Zhen. All rights reserved.
+            """
+    }
+
+    static var helpText: String {
+        if LocaleManager.shared.currentLanguage.isChineseLike() {
+            return """
+            表表归一  ·  多张同格式 Excel 报表一键汇总
+
+            1. 导入文件
+               拖拽 .xlsx 或 .xls 文件到窗口，或点击 [文件] → [导入文件]
+
+            2. 切换工作表
+               点击顶部的 Sheet 标签可切换要查看的报表页
+
+            3. 查看汇总
+               - 金额、数量等能相加的数自动合计
+               - 名称、编号等信息保留最常见的共同前缀
+               - 结构不一致的工作表会跳过，并提示原因
+
+            4. 穿透查阅
+               点击单元格可查看各文件原始值
+
+            5. 导出结果
+               点击 [导出 XLSX] 保存汇总结果
+
+            6. 单元格修正
+               在右侧面板可将单元格手动指定为标签或求和
+
+            快捷键:
+               Command+O  导入文件
+               Command+Shift+O  追加文件
+               Command+S  导出
+               Command+R  刷新
+               Command+N  清空
+               Command+Z  撤销修正
+            """
+        }
+        return """
+            xlsOne  ·  One-click Excel Report Merger
+
+            1. Import Files
+               Drag .xlsx or .xls files into the window, or click [File] → [Import Files]
+
+            2. Switch Sheets
+               Click the Sheet tabs at the top to switch between report pages
+
+            3. View Summary
+               - Amounts, quantities, and summable numbers are automatically totaled
+               - Names, codes retain the most common values
+               - Sheets with inconsistent structure are skipped with a reason
+
+            4. Source Drilldown
+               Click any cell to view its raw values from each source file
+
+            5. Export Results
+               Click [Export XLSX] to save the summary
+
+            6. Cell Correction
+               Manually override cell type to Label or Sum in the right panel
+
+            Shortcuts:
+               Cmd+O  Import Files
+               Cmd+Shift+O  Add Files
+               Cmd+S  Export
+               Cmd+R  Refresh
+               Cmd+N  Clear
+               Cmd+Z  Undo Correction
+            """
     }
 
     @MainActor
