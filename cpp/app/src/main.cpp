@@ -4,6 +4,9 @@
 #include "xlsone/core/license_manager.hpp"
 
 #include <QApplication>
+#include <QTranslator>
+#include <QLocale>
+#include <QLibraryInfo>
 
 int main(int argc, char* argv[])
 {
@@ -11,6 +14,22 @@ int main(int argc, char* argv[])
     QApplication::setApplicationName(QStringLiteral("xlsOne"));
     QApplication::setOrganizationName(QStringLiteral("xlsOne"));
     QApplication::setWindowIcon(QIcon(QStringLiteral(":/resources/xlsOne.png")));
+
+    // Install translations
+    QTranslator qtTranslator;
+    if (qtTranslator.load(QLocale::system(), QStringLiteral("qt"), QStringLiteral("_"), QLibraryInfo::location(QLibraryInfo::TranslationsPath))) {
+        app.installTranslator(&qtTranslator);
+    }
+
+    QTranslator appTranslator;
+    const QStringList uiLanguages = QLocale::system().uiLanguages();
+    for (const QString& locale : uiLanguages) {
+        const QString baseName = QStringLiteral("xlsone_") + QLocale(locale).name();
+        if (appTranslator.load(baseName, QApplication::applicationDirPath() + QStringLiteral("/../i18n"))) {
+            app.installTranslator(&appTranslator);
+            break;
+        }
+    }
 
     // Domestic ARM64 Linux (UOS/Kylin/Phytium/Kunpeng) — always free, no license check
     if (xlsone::LicenseManager::isFreePlatform()) {
