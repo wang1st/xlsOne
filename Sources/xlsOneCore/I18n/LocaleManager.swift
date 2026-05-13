@@ -63,9 +63,12 @@ public final class LocaleManager: ObservableObject {
         }
         UserDefaults.standard.set([id], forKey: "AppleLanguages")
         UserDefaults.standard.synchronize()
+    }
 
-        Task { @MainActor in
-            Bundle.module.localizations
+    public var swiftUILocale: Locale {
+        if let id = currentLanguage.localeIdentifier {
+            return Locale(identifier: id)
         }
+        return .current
     }
 }

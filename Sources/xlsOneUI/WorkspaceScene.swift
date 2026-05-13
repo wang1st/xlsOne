@@ -7,6 +7,7 @@ import xlsOneLicense
 public struct XlsOneWorkspaceScene: Scene {
     @StateObject private var viewModel = AppViewModel()
     @StateObject private var licenseManager = LicenseManager.shared
+    @ObservedObject private var localeManager = LocaleManager.shared
 
     public init() {}
 
@@ -15,6 +16,8 @@ public struct XlsOneWorkspaceScene: Scene {
             ContentView()
                 .environmentObject(viewModel)
                 .environmentObject(licenseManager)
+                .environment(\.locale, localeManager.swiftUILocale)
+                .id(localeManager.currentLanguage.rawValue)
                 .frame(minWidth: 800, minHeight: 600)
                 .onAppear {
                     WorkspaceMenuLocalizer.scheduleMainMenuLocalizationPasses()
