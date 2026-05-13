@@ -170,7 +170,7 @@ public actor SmartMerger {
             let adjustedDecision = MergedCellDecision(
                 autoDetectedType: originalCell.decision.autoDetectedType,
                 confidence: originalCell.decision.confidence,
-                decisionReasons: originalCell.decision.decisionReasons + [String(localized: "已按类型调整显示为\(override.cellType.displayName)")],
+                decisionReasons: originalCell.decision.decisionReasons + [LocaleManager.loc("已按类型调整显示为\(override.cellType.displayName)")],
                 isSuspicious: originalCell.decision.isSuspicious
             )
 
