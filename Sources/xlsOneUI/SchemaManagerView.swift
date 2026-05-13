@@ -5,6 +5,7 @@ import xlsOneCore
 struct SchemaManagerView: View {
     @EnvironmentObject private var viewModel: AppViewModel
     @Environment(\.dismiss) private var dismiss
+    @ObservedObject private var localeManager = LocaleManager.shared
     private let onClose: (() -> Void)?
 
     init(onClose: (() -> Void)? = nil) {

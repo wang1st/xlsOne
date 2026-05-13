@@ -150,6 +150,14 @@ fi
 
 cp "$BUILD_DIR/$PRODUCT_NAME" "$APP_EXEC_PATH"
 chmod +x "$APP_EXEC_PATH"
+
+# Copy any SPM resource bundles that were built
+for bundle in "$BUILD_DIR"/*.bundle; do
+    if [[ -d "$bundle" ]]; then
+        cp -R "$bundle" "$APP_CONTENTS_PATH/Resources/"
+    fi
+done
+
 plutil -lint "$PLIST_PATH" >/dev/null
 
 echo "App bundle created:"
