@@ -485,7 +485,7 @@ public struct MergedCell: Equatable, Sendable {
         // 特殊覆盖：左邻含"合计/总计" + 自身可解析为数字 → 强制求和
         if let left = leftCell {
             let leftText = left.value.lowercased()
-            let isSummary = ["合计", "总计", "小计", "sum", "total"].contains { leftText.contains($0) }
+            let isSummary = AlgorithmI18n.shared.current.sumForcingPatterns.contains { leftText.contains($0) }
             if isSummary && selfFP.isNumeric {
                 let total = validCells.compactMap { $0.1.numericValue }.reduce(0, +)
                 let type = CellType.sum(total)
@@ -825,56 +825,12 @@ public struct MergedCell: Equatable, Sendable {
 
     // MARK: - 国际化语义模式
 
-    /// 左邻列语义模式（支持中/英/多语言）
+    /// 左邻列语义模式（通过 AlgorithmI18n 加载多语言关键词）
     private enum NeighborSemanticPatterns {
-        /// 金额/数值型模式（当前格应求和）
-        static let amountPatterns: [String] = [
-            // 中文
-            "合计", "总计", "小计", "金额", "数额", "额度",
-            "数量", "单价", "总价", "价格", "数值", "预算",
-            "收入", "支出", "成本", "费用", "利润", "执行",
-            "决算", "款", "税金",
-            "人数", "人口", "户数", "家数", "个数", "人员",
-            "编制", "职工",
-            // English
-            "sum", "total", "subtotal", "amount", "quantity", "qty",
-            "price", "unit price", "total price", "value", "budget",
-            "revenue", "income", "expense", "cost", "fee", "profit",
-            "tax", "fund",
-            "population", "headcount", "staff"
-        ]
-
-        /// 弱计量信号（必须叠加同列/邻域证据，不能单独触发求和）
-        static let weakAmountPatterns: [String] = [
-            "数", "额", "值", "量", "价"
-        ]
-
-        /// 编码/标识型模式（当前格应为标签，不可累加）
-        static let codePatterns: [String] = [
-            // 中文 - 核心编码词
-            "代码", "编码", "编号", "序号", "号码", "证号",
-            "区划", "邮编", "邮政编码", "身份证", "电话", "传真",
-            "期间", "年月", "年份", "日期", "时间",
-            // 中文 - 常见"X号"扩展（学号、工号、账号、卡号、单号、票号等）
-            "学号", "工号", "账号", "户号", "卡号", "单号", "订单号",
-            "票号", "发票号", "批号", "书号", "卷号", "册号", "期号",
-            "版号", "件号", "条码", "档案号", "准考证号", "资格证号",
-            "许可证号", "机号", "箱号", "包号", "袋号",
-            // English
-            "code", "number", "no.", "no ", " id", "index", "serial",
-            "zip", "zipcode", "postal code", "phone", "tel", "fax",
-            "period", "date", "time", "year", "month"
-        ]
-
-        /// 名称/描述型模式（当前格应为标签）
-        static let labelPatterns: [String] = [
-            // 中文
-            "名称", "名字", "描述", "说明", "备注", "标题",
-            "内容", "详情", "类型", "性质", "状态",
-            // English
-            "name", "desc", "description", "title", "remark", "note",
-            "type", "kind", "status", "content", "detail"
-        ]
+        static var amountPatterns: [String] { AlgorithmI18n.shared.current.amountPatterns }
+        static var weakAmountPatterns: [String] { AlgorithmI18n.shared.current.weakAmountPatterns }
+        static var codePatterns: [String] { AlgorithmI18n.shared.current.codePatterns }
+        static var labelPatterns: [String] { AlgorithmI18n.shared.current.labelPatterns }
 
         static func matchesAny(_ text: String, patterns: [String]) -> Bool {
             // 清洗常见末尾标点

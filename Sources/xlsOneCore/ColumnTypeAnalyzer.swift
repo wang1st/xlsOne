@@ -70,35 +70,19 @@ public struct ColumnTypeAnalyzer {
     // MARK: - 关键词权重表
 
     /// 金额类关键词 - 强信号（权重1.0）
-    private static let strongAmountKeywords = [
-        "金额", "总额", "合计", "总计", "小计",
-        "预算", "执行", "决算", "收入", "支出",
-        "费用", "成本", "资金", "付款", "收款"
-    ]
+    private static var strongAmountKeywords: [String] { AlgorithmI18n.shared.current.strongAmountKeywords }
 
     /// 金额类关键词 - 中信号（权重0.5，需要数据验证）
-    private static let mediumAmountKeywords = [
-        "数", "额", "值", "量", "价"
-    ]
+    private static var mediumAmountKeywords: [String] { AlgorithmI18n.shared.current.mediumAmountKeywords }
 
     /// 标签类关键词 - 强信号（权重1.0）
-    private static let strongLabelKeywords = [
-        "名称", "名字", "描述", "说明", "备注",
-        "标题", "内容", "详情", "注释"
-    ]
+    private static var strongLabelKeywords: [String] { AlgorithmI18n.shared.current.strongLabelKeywords }
 
     /// 编码类关键词 - 强信号（权重1.0，反信号：排除金额）
-    private static let strongCodeKeywords = [
-        "代码", "编码", "编号", "序号", "id", "code", "no",
-        "区划", "行政区划", "科目代码", "项目代码",
-        "邮编", "电话", "传真", "社会信用代码", "统一代码"
-    ]
+    private static var strongCodeKeywords: [String] { AlgorithmI18n.shared.current.strongCodeKeywords }
 
     /// 日期类关键词 - 强信号（权重1.0）
-    private static let strongDateKeywords = [
-        "日期", "时间", "年度", "年份", "月份", "年月",
-        "填报日期", "报送日期", "截止日期", "创建时间"
-    ]
+    private static var strongDateKeywords: [String] { AlgorithmI18n.shared.current.strongDateKeywords }
 
     // MARK: - 公共接口
 
