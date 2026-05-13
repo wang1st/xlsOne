@@ -259,32 +259,9 @@ public struct SimpleMerger {
         return cleaned.lowercased()
     }
 
-    private static let metricAnchorPatterns = [
-        "合计", "总计", "小计",
-        "金额", "数额", "额度",
-        "数量", "单价", "总价",
-        "价格", "数值", "预算",
-        "收入", "支出", "成本",
-        "费用", "利润", "执行",
-        "决算", "款", "税金",
-        "人数", "人口", "户数",
-        "家数", "个数", "人员",
-        "编制", "职工",
-        "数", "额", "值", "量", "价"
-    ]
+    private static var metricAnchorPatterns: [String] { AlgorithmI18n.shared.current.amountPatterns + AlgorithmI18n.shared.current.weakAmountPatterns }
 
-    private static let codeAnchorPatterns = [
-        "代码", "编码", "编号",
-        "序号", "号码", "证号",
-        "区划", "邮编", "邮政编码",
-        "身份证", "电话", "传真",
-        "期间", "年月", "年份",
-        "日期", "时间", "学号",
-        "工号", "账号", "户号",
-        "卡号", "单号", "订单号",
-        "票号", "发票号", "批号",
-        "条码", "档案号", "许可证号"
-    ]
+    private static var codeAnchorPatterns: [String] { AlgorithmI18n.shared.current.codePatterns }
 
     private func buildNeighborContext(
         sheetDataList: [(filename: String, filepath: String, sheet: SheetData)],
