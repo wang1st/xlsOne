@@ -30,7 +30,7 @@ struct ContentView: View {
         .background {
             CenteredDialogWindow(
                 isPresented: $viewModel.showSchemaManager,
-                title: "调整记忆",
+                title: "当前调整记忆",
                 size: NSSize(width: 600, height: 400)
             ) {
                 SchemaManagerView {

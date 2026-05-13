@@ -338,8 +338,8 @@ public struct MergedCell: Equatable, Sendable {
             )
         }
 
-        // 自身格式
-        let selfFP = FormatProfile.fingerprint(for: validCells.first?.1)
+        // 自身格式。使用所有来源的代表格式，避免导入顺序决定整数/小数混合列的判定。
+        let selfFP = representativeFingerprint(for: validCells.map(\.1))
         let blankSourceCount = sources.filter { $0.state == .empty || $0.state == .missing }.count
         let blanksWithNumericValues = blankSourceCount > 0 &&
             validCells.allSatisfy { $0.1.numericValue != nil }
@@ -513,7 +513,8 @@ public struct MergedCell: Equatable, Sendable {
                 leftCell: leftCell,
                 verticalProfile: verticalProfile,
                 validCells: validCells,
-                blankSourceCount: blankSourceCount
+                blankSourceCount: blankSourceCount,
+                metricSemantic: metricSemantic
             )
             if accumulable {
                 let total = validCells.compactMap { $0.1.numericValue }.reduce(0, +)
@@ -566,7 +567,8 @@ public struct MergedCell: Equatable, Sendable {
                     leftCell: leftCell,
                     verticalProfile: verticalProfile,
                     validCells: validCells,
-                    blankSourceCount: blankSourceCount
+                    blankSourceCount: blankSourceCount,
+                    metricSemantic: metricSemantic
                 )
                 if accumulable {
                     let total = validCells.compactMap { $0.1.numericValue }.reduce(0, +)
@@ -953,13 +955,32 @@ public struct MergedCell: Equatable, Sendable {
         return NeighborSemanticPatterns.matchesAny(text, patterns: NeighborSemanticPatterns.labelPatterns)
     }
 
+    private static func representativeFingerprint(for cells: [CellData]) -> FormatFingerprint {
+        let fingerprints = cells.map { FormatProfile.fingerprint(for: $0) }
+        guard !fingerprints.isEmpty else { return .empty }
+
+        if fingerprints.allSatisfy(\.isNumeric) {
+            if fingerprints.contains(.strongNumeric) {
+                return .strongNumeric
+            }
+            if fingerprints.contains(.integerWide) {
+                return .integerWide
+            }
+            return .integerCode
+        }
+
+        let profile = FormatProfile(cells: cells)
+        return profile.dominantFingerprint ?? .mixed
+    }
+
     /// 检查数值可累加性
     private static func checkAccumulable(
         selfFP: FormatFingerprint,
         leftCell: CellData?,
         verticalProfile: FormatProfile,
         validCells: [(CellMergeInput, CellData)],
-        blankSourceCount: Int = 0
+        blankSourceCount: Int = 0,
+        metricSemantic: Bool = false
     ) -> Bool {
         let numericValues = validCells.compactMap { $0.1.numericValue }
         guard !numericValues.isEmpty else { return false }
@@ -1020,6 +1041,11 @@ public struct MergedCell: Equatable, Sendable {
             if NeighborSemanticPatterns.matchesAny(leftText, patterns: NeighborSemanticPatterns.amountPatterns) {
                 return true
             }
+        }
+
+        // 同列表头或列级证据已证明是金额/数量类字段时，整数和小数混合也应稳定求和。
+        if metricSemantic, allNonEmptyValuesAreNumeric {
+            return true
         }
 
         // 4. 垂直穿透强数值 → 可累加

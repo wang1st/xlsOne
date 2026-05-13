@@ -94,6 +94,38 @@ LocalFingerprint fingerprint(const CellData* cell)
     return alpha ? LocalFingerprint::Label : LocalFingerprint::Mixed;
 }
 
+bool isNumericFingerprint(LocalFingerprint value)
+{
+    return value == LocalFingerprint::StrongNumeric
+        || value == LocalFingerprint::IntegerWide
+        || value == LocalFingerprint::IntegerCode;
+}
+
+int numericPreferenceRank(LocalFingerprint value)
+{
+    switch (value) {
+    case LocalFingerprint::StrongNumeric:
+        return 3;
+    case LocalFingerprint::IntegerWide:
+        return 2;
+    case LocalFingerprint::IntegerCode:
+        return 1;
+    case LocalFingerprint::Label:
+    case LocalFingerprint::Empty:
+    case LocalFingerprint::Mixed:
+        return 0;
+    }
+    return 0;
+}
+
+bool shouldPreferTiedFingerprint(LocalFingerprint candidate, LocalFingerprint current)
+{
+    if (isNumericFingerprint(candidate) && isNumericFingerprint(current)) {
+        return numericPreferenceRank(candidate) > numericPreferenceRank(current);
+    }
+    return false;
+}
+
 QString cleanSemanticText(QString text)
 {
     text = text.trimmed();
@@ -162,13 +194,6 @@ bool isMetricAnchor(const CellData* cell)
 
 const CellData* nearestLabelForFirstNumeric(const SheetData& sheet, int row, int column)
 {
-    for (int leftColumn = column - 1; leftColumn >= 0; --leftColumn) {
-        const auto* cell = sheet.cellAt(row, leftColumn);
-        if (cell != nullptr && !cell->value.isEmpty() && !cell->numericValue.has_value()) {
-            return cell;
-        }
-    }
-
     const int maxDistance = std::max(static_cast<int>(sheet.rows.size()), column + 1);
     for (int distance = 1; distance <= maxDistance; ++distance) {
         const int aboveRow = row - distance;
@@ -178,6 +203,16 @@ const CellData* nearestLabelForFirstNumeric(const SheetData& sheet, int row, int
                 return cell;
             }
         }
+    }
+
+    for (int leftColumn = column - 1; leftColumn >= 0; --leftColumn) {
+        const auto* cell = sheet.cellAt(row, leftColumn);
+        if (cell != nullptr && !cell->value.isEmpty() && !cell->numericValue.has_value()) {
+            return cell;
+        }
+    }
+
+    for (int distance = 1; distance <= maxDistance; ++distance) {
         const int aboveLeftRow = row - distance;
         if (aboveLeftRow >= 0 && column > 0) {
             const auto* cell = sheet.cellAt(aboveLeftRow, column - 1);
@@ -254,7 +289,9 @@ NeighborContext buildNeighborContext(
         int dominantCount = 0;
         for (const auto cellFingerprint : order) {
             const int count = counts[cellFingerprint];
-            if (!found || count > dominantCount) {
+            if (!found
+                || count > dominantCount
+                || (count == dominantCount && shouldPreferTiedFingerprint(cellFingerprint, dominant))) {
                 dominant = cellFingerprint;
                 dominantCount = count;
                 found = true;

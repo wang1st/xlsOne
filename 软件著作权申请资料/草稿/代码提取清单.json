@@ -1,19 +1,19 @@
 {
   "software_name": "表表归一",
   "version": "V1.0.0",
-  "project_root": "/home/ethan/xlsone",
-  "file_count": 14,
-  "material_line_count": 5605,
-  "source_line_count": 8207,
-  "selected_source_line_count": 5577,
+  "project_root": "/Users/ethan/xlsOne",
+  "file_count": 45,
+  "material_line_count": 16795,
+  "source_line_count": 16705,
+  "selected_source_line_count": 16705,
   "lines_per_page": 60,
-  "total_pages": 94,
+  "total_pages": 280,
   "target_pages": 60,
-  "available_candidate_line_count": 28296,
-  "available_candidate_pages": 472,
-  "supplement_status": "候选源码可达到前30页/后30页要求",
+  "available_candidate_line_count": 16795,
+  "available_candidate_pages": 280,
+  "supplement_status": "已选择当前 Swift/macOS 主实现与 C++/Qt 跨平台实现源码，满足前30页/后30页要求",
   "mode": "front30_back30",
-  "selection_file": "软件著作权申请资料/草稿/代码文件选择.json",
+  "selection_file": "/Users/ethan/xlsOne/软件著作权申请资料/草稿/代码文件选择.json",
   "outputs": [
     "代码-前30页.md",
     "代码-后30页.md"
@@ -21,111 +21,33 @@
   "files": [
     {
       "path": "Sources/xlsOne/XlsOneApp.swift",
-      "source_line_count": 11,
+      "source_line_count": 16,
       "selected_line_start": 1,
-      "selected_line_end": 11,
-      "selected_line_count": 11,
+      "selected_line_end": 16,
+      "selected_line_count": 16,
       "material_line_start": 1,
-      "material_line_end": 13
+      "material_line_end": 18,
+      "selection_reason": "macOS Swift 版应用入口，体现应用生命周期和主窗口装配。"
     },
     {
-      "path": "Sources/xlsOneCore/ColumnTypeAnalyzer.swift",
-      "source_line_count": 379,
+      "path": "Sources/xlsOneUI/WorkspaceScene.swift",
+      "source_line_count": 1370,
       "selected_line_start": 1,
-      "selected_line_end": 200,
-      "selected_line_count": 200,
-      "material_line_start": 14,
-      "material_line_end": 215
-    },
-    {
-      "path": "Sources/xlsOneCore/ExcelParser.swift",
-      "source_line_count": 473,
-      "selected_line_start": 1,
-      "selected_line_end": 473,
-      "selected_line_count": 473,
-      "material_line_start": 216,
-      "material_line_end": 690
-    },
-    {
-      "path": "Sources/xlsOneCore/Models.swift",
-      "source_line_count": 1349,
-      "selected_line_start": 1,
-      "selected_line_end": 800,
-      "selected_line_count": 800,
-      "material_line_start": 691,
-      "material_line_end": 1492
-    },
-    {
-      "path": "Sources/xlsOneCore/Schema/SchemaMatcher.swift",
-      "source_line_count": 245,
-      "selected_line_start": 1,
-      "selected_line_end": 150,
-      "selected_line_count": 150,
-      "material_line_start": 1493,
-      "material_line_end": 1644
-    },
-    {
-      "path": "Sources/xlsOneCore/Schema/SchemaModels.swift",
-      "source_line_count": 206,
-      "selected_line_start": 1,
-      "selected_line_end": 206,
-      "selected_line_count": 206,
-      "material_line_start": 1645,
-      "material_line_end": 1852
-    },
-    {
-      "path": "Sources/xlsOneCore/SimpleMerger.swift",
-      "source_line_count": 555,
-      "selected_line_start": 1,
-      "selected_line_end": 555,
-      "selected_line_count": 555,
-      "material_line_start": 1853,
-      "material_line_end": 2409
-    },
-    {
-      "path": "Sources/xlsOneCore/SmartMerger.swift",
-      "source_line_count": 316,
-      "selected_line_start": 1,
-      "selected_line_end": 316,
-      "selected_line_count": 316,
-      "material_line_start": 2410,
-      "material_line_end": 2727
-    },
-    {
-      "path": "Sources/xlsOneCore/TemplateWorkbookExporter.swift",
-      "source_line_count": 201,
-      "selected_line_start": 1,
-      "selected_line_end": 201,
-      "selected_line_count": 201,
-      "material_line_start": 2728,
-      "material_line_end": 2930
-    },
-    {
-      "path": "Sources/xlsOneCore/WorkbookValidator.swift",
-      "source_line_count": 569,
-      "selected_line_start": 1,
-      "selected_line_end": 400,
-      "selected_line_count": 400,
-      "material_line_start": 2931,
-      "material_line_end": 3332
+      "selected_line_end": 1370,
+      "selected_line_count": 1370,
+      "material_line_start": 19,
+      "material_line_end": 1390,
+      "selection_reason": "当前 Swift 主工作台实现，覆盖批量导入、校验、合并、导出、规则状态和工作区流程。"
     },
     {
       "path": "Sources/xlsOneUI/ContentView.swift",
-      "source_line_count": 2002,
+      "source_line_count": 2151,
       "selected_line_start": 1,
-      "selected_line_end": 800,
-      "selected_line_count": 800,
-      "material_line_start": 3333,
-      "material_line_end": 4134
-    },
-    {
-      "path": "Sources/xlsOneUI/SchemaManagerView.swift",
-      "source_line_count": 229,
-      "selected_line_start": 1,
-      "selected_line_end": 229,
-      "selected_line_count": 229,
-      "material_line_start": 4135,
-      "material_line_end": 4365
+      "selected_line_end": 2151,
+      "selected_line_count": 2151,
+      "material_line_start": 1391,
+      "material_line_end": 3543,
+      "selection_reason": "当前 Swift 主界面实现，覆盖工作台布局、网格呈现、侧栏、单元格交互和结果反馈。"
     },
     {
       "path": "Sources/xlsOneUI/WorkspaceModels.swift",
@@ -133,18 +55,421 @@
       "selected_line_start": 1,
       "selected_line_end": 636,
       "selected_line_count": 636,
-      "material_line_start": 4366,
-      "material_line_end": 5003
+      "material_line_start": 3544,
+      "material_line_end": 4181,
+      "selection_reason": "工作台展示模型和诊断数据结构，支撑文件、Sheet、差异、来源穿透等页面状态。"
     },
     {
-      "path": "Sources/xlsOneUI/WorkspaceScene.swift",
-      "source_line_count": 1036,
+      "path": "Sources/xlsOneUI/SchemaManagerView.swift",
+      "source_line_count": 252,
       "selected_line_start": 1,
-      "selected_line_end": 600,
-      "selected_line_count": 600,
-      "material_line_start": 5004,
-      "material_line_end": 5605
+      "selected_line_end": 252,
+      "selected_line_count": 252,
+      "material_line_start": 4182,
+      "material_line_end": 4435,
+      "selection_reason": "方案管理界面源码，体现规则/类型修正相关的用户操作界面。"
+    },
+    {
+      "path": "Sources/xlsOneUI/Grid/GridBodyCell.swift",
+      "source_line_count": 68,
+      "selected_line_start": 1,
+      "selected_line_end": 68,
+      "selected_line_count": 68,
+      "material_line_start": 4436,
+      "material_line_end": 4505,
+      "selection_reason": "表格主体单元格渲染与交互实现，体现合并结果网格的用户界面细节。"
+    },
+    {
+      "path": "Sources/xlsOneUI/Grid/GridHeaderCell.swift",
+      "source_line_count": 28,
+      "selected_line_start": 1,
+      "selected_line_end": 28,
+      "selected_line_count": 28,
+      "material_line_start": 4506,
+      "material_line_end": 4535,
+      "selection_reason": "表格列头渲染实现，体现批量数据汇总后的表头展示和选择反馈。"
+    },
+    {
+      "path": "Sources/xlsOneUI/Grid/CursorManager.swift",
+      "source_line_count": 180,
+      "selected_line_start": 1,
+      "selected_line_end": 180,
+      "selected_line_count": 180,
+      "material_line_start": 4536,
+      "material_line_end": 4717,
+      "selection_reason": "网格光标与交互管理，体现桌面端表格操作体验。"
+    },
+    {
+      "path": "Sources/xlsOneCore/Models.swift",
+      "source_line_count": 1349,
+      "selected_line_start": 1,
+      "selected_line_end": 1349,
+      "selected_line_count": 1349,
+      "material_line_start": 4718,
+      "material_line_end": 6068,
+      "selection_reason": "核心数据模型源码，覆盖工作簿、Sheet、单元格、合并值、诊断和来源信息。"
+    },
+    {
+      "path": "Sources/xlsOneCore/ColumnTypeAnalyzer.swift",
+      "source_line_count": 379,
+      "selected_line_start": 1,
+      "selected_line_end": 379,
+      "selected_line_count": 379,
+      "material_line_start": 6069,
+      "material_line_end": 6449,
+      "selection_reason": "列类型推断和修正相关核心逻辑，支撑金额、文本等字段识别。"
+    },
+    {
+      "path": "Sources/xlsOneCore/ExcelParser.swift",
+      "source_line_count": 473,
+      "selected_line_start": 1,
+      "selected_line_end": 473,
+      "selected_line_count": 473,
+      "material_line_start": 6450,
+      "material_line_end": 6924,
+      "selection_reason": "Excel 解析入口，体现 xlsx/xls 文件读取和工作簿结构转换。"
+    },
+    {
+      "path": "Sources/xlsOneCore/BIFF8XLSParser.swift",
+      "source_line_count": 681,
+      "selected_line_start": 1,
+      "selected_line_end": 681,
+      "selected_line_count": 681,
+      "material_line_start": 6925,
+      "material_line_end": 7607,
+      "selection_reason": "旧版 xls 解析实现，体现兼容不同 Excel 格式的核心处理能力。"
+    },
+    {
+      "path": "Sources/xlsOneCore/WorkbookValidator.swift",
+      "source_line_count": 569,
+      "selected_line_start": 1,
+      "selected_line_end": 569,
+      "selected_line_count": 569,
+      "material_line_start": 7608,
+      "material_line_end": 8178,
+      "selection_reason": "工作簿结构校验源码，体现文件一致性检查、Sheet 对齐和诊断输出。"
+    },
+    {
+      "path": "Sources/xlsOneCore/SimpleMerger.swift",
+      "source_line_count": 555,
+      "selected_line_start": 1,
+      "selected_line_end": 555,
+      "selected_line_count": 555,
+      "material_line_start": 8179,
+      "material_line_end": 8735,
+      "selection_reason": "基础合并引擎源码，体现相同结构表格的汇总、差异统计和来源保留。"
+    },
+    {
+      "path": "Sources/xlsOneCore/SmartMerger.swift",
+      "source_line_count": 316,
+      "selected_line_start": 1,
+      "selected_line_end": 316,
+      "selected_line_count": 316,
+      "material_line_start": 8736,
+      "material_line_end": 9053,
+      "selection_reason": "规则驱动合并源码，体现类型规则、方案匹配和智能汇总处理。"
+    },
+    {
+      "path": "Sources/xlsOneCore/ExcelExporter.swift",
+      "source_line_count": 126,
+      "selected_line_start": 1,
+      "selected_line_end": 126,
+      "selected_line_count": 126,
+      "material_line_start": 9054,
+      "material_line_end": 9181,
+      "selection_reason": "Excel 导出源码，体现导出汇总结果的能力。"
+    },
+    {
+      "path": "Sources/xlsOneCore/TemplateWorkbookExporter.swift",
+      "source_line_count": 201,
+      "selected_line_start": 1,
+      "selected_line_end": 201,
+      "selected_line_count": 201,
+      "material_line_start": 9182,
+      "material_line_end": 9384,
+      "selection_reason": "模板化工作簿导出源码，体现保留格式和输出汇总文件的实现。"
+    },
+    {
+      "path": "Sources/xlsOneCore/Schema/SchemaModels.swift",
+      "source_line_count": 206,
+      "selected_line_start": 1,
+      "selected_line_end": 206,
+      "selected_line_count": 206,
+      "material_line_start": 9385,
+      "material_line_end": 9592,
+      "selection_reason": "表结构方案数据模型，支撑规则保存、匹配和复用。"
+    },
+    {
+      "path": "Sources/xlsOneCore/Schema/SchemaMatcher.swift",
+      "source_line_count": 245,
+      "selected_line_start": 1,
+      "selected_line_end": 245,
+      "selected_line_count": 245,
+      "material_line_start": 9593,
+      "material_line_end": 9839,
+      "selection_reason": "表结构匹配逻辑，体现导入文件与已保存方案的自动识别。"
+    },
+    {
+      "path": "Sources/xlsOneCore/Schema/SchemaRepository.swift",
+      "source_line_count": 274,
+      "selected_line_start": 1,
+      "selected_line_end": 274,
+      "selected_line_count": 274,
+      "material_line_start": 9840,
+      "material_line_end": 10115,
+      "selection_reason": "方案仓库存储逻辑，体现规则持久化和管理。"
+    },
+    {
+      "path": "Sources/xlsOneCore/Schema/FingerprintGenerator.swift",
+      "source_line_count": 306,
+      "selected_line_start": 1,
+      "selected_line_end": 306,
+      "selected_line_count": 306,
+      "material_line_start": 10116,
+      "material_line_end": 10423,
+      "selection_reason": "表结构指纹生成逻辑，支撑跨文件结构识别。"
+    },
+    {
+      "path": "Sources/xlsOneLicense/DeviceFingerprint.swift",
+      "source_line_count": 96,
+      "selected_line_start": 1,
+      "selected_line_end": 96,
+      "selected_line_count": 96,
+      "material_line_start": 10424,
+      "material_line_end": 10521,
+      "selection_reason": "设备指纹生成源码，体现授权绑定基础能力。"
+    },
+    {
+      "path": "Sources/xlsOneLicense/Keychain.swift",
+      "source_line_count": 46,
+      "selected_line_start": 1,
+      "selected_line_end": 46,
+      "selected_line_count": 46,
+      "material_line_start": 10522,
+      "material_line_end": 10569,
+      "selection_reason": "本机安全存储封装源码，体现授权信息保存能力。"
+    },
+    {
+      "path": "Sources/xlsOneLicense/LicenseManager.swift",
+      "source_line_count": 571,
+      "selected_line_start": 1,
+      "selected_line_end": 571,
+      "selected_line_count": 571,
+      "material_line_start": 10570,
+      "material_line_end": 11142,
+      "selection_reason": "许可证状态、激活、校验逻辑源码，体现软件授权控制。"
+    },
+    {
+      "path": "Sources/xlsOneLicense/LicenseActivationView.swift",
+      "source_line_count": 274,
+      "selected_line_start": 1,
+      "selected_line_end": 274,
+      "selected_line_count": 274,
+      "material_line_start": 11143,
+      "material_line_end": 11418,
+      "selection_reason": "授权激活界面源码，体现许可证输入、反馈和状态展示。"
+    },
+    {
+      "path": "cpp/app/src/main.cpp",
+      "source_line_count": 45,
+      "selected_line_start": 1,
+      "selected_line_end": 45,
+      "selected_line_count": 45,
+      "material_line_start": 11419,
+      "material_line_end": 11465,
+      "selection_reason": "Qt 跨平台版本应用入口，作为 macOS Swift 版之外的跨平台实现证据。"
+    },
+    {
+      "path": "cpp/app/src/main_window.cpp",
+      "source_line_count": 1437,
+      "selected_line_start": 1,
+      "selected_line_end": 1437,
+      "selected_line_count": 1437,
+      "material_line_start": 11466,
+      "material_line_end": 12904,
+      "selection_reason": "Qt 主窗口实现，体现跨平台工作台、导入、汇总和导出界面流程。"
+    },
+    {
+      "path": "cpp/app/src/main_window.hpp",
+      "source_line_count": 126,
+      "selected_line_start": 1,
+      "selected_line_end": 126,
+      "selected_line_count": 126,
+      "material_line_start": 12905,
+      "material_line_end": 13032,
+      "selection_reason": "Qt 主窗口声明，体现跨平台界面层结构。"
+    },
+    {
+      "path": "cpp/app/src/merged_table_model.cpp",
+      "source_line_count": 84,
+      "selected_line_start": 1,
+      "selected_line_end": 84,
+      "selected_line_count": 84,
+      "material_line_start": 13033,
+      "material_line_end": 13118,
+      "selection_reason": "Qt 表格模型实现，体现跨平台汇总结果网格的数据绑定。"
+    },
+    {
+      "path": "cpp/app/src/merged_table_model.hpp",
+      "source_line_count": 28,
+      "selected_line_start": 1,
+      "selected_line_end": 28,
+      "selected_line_count": 28,
+      "material_line_start": 13119,
+      "material_line_end": 13148,
+      "selection_reason": "Qt 表格模型声明，体现跨平台网格数据接口。"
+    },
+    {
+      "path": "cpp/app/src/inspector_panel.cpp",
+      "source_line_count": 200,
+      "selected_line_start": 1,
+      "selected_line_end": 200,
+      "selected_line_count": 200,
+      "material_line_start": 13149,
+      "material_line_end": 13350,
+      "selection_reason": "Qt 来源/详情面板实现，体现来源穿透和单元格详情查看。"
+    },
+    {
+      "path": "cpp/app/src/diagnostics_view.cpp",
+      "source_line_count": 152,
+      "selected_line_start": 1,
+      "selected_line_end": 152,
+      "selected_line_count": 152,
+      "material_line_start": 13351,
+      "material_line_end": 13504,
+      "selection_reason": "Qt 诊断视图实现，体现校验结果和差异提示。"
+    },
+    {
+      "path": "cpp/app/src/schema_manager_dialog.cpp",
+      "source_line_count": 259,
+      "selected_line_start": 1,
+      "selected_line_end": 259,
+      "selected_line_count": 259,
+      "material_line_start": 13505,
+      "material_line_end": 13765,
+      "selection_reason": "Qt 方案管理对话框实现，体现跨平台规则管理。"
+    },
+    {
+      "path": "cpp/core/src/excel_parser.cpp",
+      "source_line_count": 638,
+      "selected_line_start": 1,
+      "selected_line_end": 638,
+      "selected_line_count": 638,
+      "material_line_start": 13766,
+      "material_line_end": 14405,
+      "selection_reason": "C++ 核心 Excel 解析实现，体现跨平台数据读取能力。"
+    },
+    {
+      "path": "cpp/core/src/validator.cpp",
+      "source_line_count": 408,
+      "selected_line_start": 1,
+      "selected_line_end": 408,
+      "selected_line_count": 408,
+      "material_line_start": 14406,
+      "material_line_end": 14815,
+      "selection_reason": "C++ 核心校验实现，体现跨平台结构一致性检查。"
+    },
+    {
+      "path": "cpp/core/src/merger.cpp",
+      "source_line_count": 401,
+      "selected_line_start": 1,
+      "selected_line_end": 401,
+      "selected_line_count": 401,
+      "material_line_start": 14816,
+      "material_line_end": 15218,
+      "selection_reason": "C++ 核心合并实现，体现跨平台汇总、差异和来源保留逻辑。"
+    },
+    {
+      "path": "cpp/core/src/exporter.cpp",
+      "source_line_count": 368,
+      "selected_line_start": 1,
+      "selected_line_end": 368,
+      "selected_line_count": 368,
+      "material_line_start": 15219,
+      "material_line_end": 15588,
+      "selection_reason": "C++ 核心导出实现，体现跨平台导出能力。"
+    },
+    {
+      "path": "cpp/core/src/schema_repository.cpp",
+      "source_line_count": 556,
+      "selected_line_start": 1,
+      "selected_line_end": 556,
+      "selected_line_count": 556,
+      "material_line_start": 15589,
+      "material_line_end": 16146,
+      "selection_reason": "C++ 方案仓库实现，体现跨平台规则保存和复用。"
+    },
+    {
+      "path": "cpp/core/src/license_manager.cpp",
+      "source_line_count": 239,
+      "selected_line_start": 1,
+      "selected_line_end": 239,
+      "selected_line_count": 239,
+      "material_line_start": 16147,
+      "material_line_end": 16387,
+      "selection_reason": "C++ 授权管理实现，体现跨平台许可校验能力。"
+    },
+    {
+      "path": "cpp/core/include/xlsone/core/models.hpp",
+      "source_line_count": 145,
+      "selected_line_start": 1,
+      "selected_line_end": 145,
+      "selected_line_count": 145,
+      "material_line_start": 16388,
+      "material_line_end": 16534,
+      "selection_reason": "C++ 核心模型声明，体现跨平台数据结构。"
+    },
+    {
+      "path": "cpp/core/include/xlsone/core/merger.hpp",
+      "source_line_count": 15,
+      "selected_line_start": 1,
+      "selected_line_end": 15,
+      "selected_line_count": 15,
+      "material_line_start": 16535,
+      "material_line_end": 16551,
+      "selection_reason": "C++ 合并接口声明，体现跨平台核心服务边界。"
+    },
+    {
+      "path": "cpp/core/include/xlsone/core/excel_parser.hpp",
+      "source_line_count": 22,
+      "selected_line_start": 1,
+      "selected_line_end": 22,
+      "selected_line_count": 22,
+      "material_line_start": 16552,
+      "material_line_end": 16575,
+      "selection_reason": "C++ Excel 解析接口声明，体现跨平台解析服务边界。"
+    },
+    {
+      "path": "cpp/core/include/xlsone/core/exporter.hpp",
+      "source_line_count": 17,
+      "selected_line_start": 1,
+      "selected_line_end": 17,
+      "selected_line_count": 17,
+      "material_line_start": 16576,
+      "material_line_end": 16594,
+      "selection_reason": "C++ 导出接口声明，体现跨平台输出服务边界。"
+    },
+    {
+      "path": "cpp/core/include/xlsone/core/validator.hpp",
+      "source_line_count": 92,
+      "selected_line_start": 1,
+      "selected_line_end": 92,
+      "selected_line_count": 92,
+      "material_line_start": 16595,
+      "material_line_end": 16688,
+      "selection_reason": "C++ 校验接口声明，体现跨平台校验服务边界。"
+    },
+    {
+      "path": "cpp/core/include/xlsone/core/schema_repository.hpp",
+      "source_line_count": 105,
+      "selected_line_start": 1,
+      "selected_line_end": 105,
+      "selected_line_count": 105,
+      "material_line_start": 16689,
+      "material_line_end": 16795,
+      "selection_reason": "C++ 方案仓库接口声明，体现跨平台规则存储服务边界。"
     }
   ],
-  "safe_software_filename": "表表归一"
+  "safe_software_filename": "表表归一",
+  "generation_note": "代码材料由当前仓库真实源码分页生成，测试 Excel 文件不参与代码材料来源。"
 }

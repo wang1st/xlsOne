@@ -191,34 +191,21 @@ public actor SchemaRepository: SchemaRepositoryProtocol {
 
     /// 从 JSON 数据导入 Schema
     public func importSchema(data: Data) async throws -> MergeSchema {
-        let decoder = JSONDecoder()
-
-        // 尝试解析导出的格式
-        if let wrapper = try? decoder.decode(ExportedSchema.self, from: data) {
-            let schema = wrapper.schema
-            // 生成新 ID 避免冲突
-            let newSchema = MergeSchema(
-                id: UUID(),
-                name: schema.name + " (导入)",
-                fingerprint: schema.fingerprint,
-                workbookFingerprint: schema.workbookFingerprint,
-                cellOverrides: schema.cellOverrides
-            )
-            try await saveSchema(newSchema)
-            return newSchema
-        }
-
-        // 尝试直接解析 Schema
-        let schema = try decoder.decode(MergeSchema.self, from: data)
-        let newSchema = MergeSchema(
-            id: UUID(),
-            name: schema.name + " (导入)",
-            fingerprint: schema.fingerprint,
-            workbookFingerprint: schema.workbookFingerprint,
-            cellOverrides: schema.cellOverrides
-        )
+        let newSchema = try Self.decodeImportableSchema(data: data)
         try await saveSchema(newSchema)
         return newSchema
+    }
+
+    /// 解析可导入的调整记忆，但不写入本地仓库。
+    public nonisolated static func decodeImportableSchema(data: Data) throws -> MergeSchema {
+        let decoder = JSONDecoder()
+
+        if let wrapper = try? decoder.decode(ExportedSchema.self, from: data) {
+            return importedCopy(of: wrapper.schema)
+        }
+
+        let schema = try decoder.decode(MergeSchema.self, from: data)
+        return importedCopy(of: schema)
     }
 
     // MARK: - 私有方法
@@ -256,6 +243,16 @@ public actor SchemaRepository: SchemaRepositoryProtocol {
         let url = baseDirectory.appendingPathComponent(indexFileName)
         let data = try JSONEncoder().encode(ids)
         try data.write(to: url)
+    }
+
+    private nonisolated static func importedCopy(of schema: MergeSchema) -> MergeSchema {
+        MergeSchema(
+            id: UUID(),
+            name: schema.name + " (导入)",
+            fingerprint: schema.fingerprint,
+            workbookFingerprint: schema.workbookFingerprint,
+            cellOverrides: schema.cellOverrides
+        )
     }
 }
 

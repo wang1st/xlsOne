@@ -1,6 +1,6 @@
 {
-  "screenshot_method": "skip",
+  "screenshot_method": "computer-use",
   "screenshot_method_confirmed": true,
-  "confirmation_note": "用户要求先出成果不截图，保留截图预留位",
-  "confirmed_at": "2026-05-10T22:26:27+00:00"
+  "confirmation_note": "用户要求由 Codex 运行 macOS Swift 版并自行截图",
+  "confirmed_at": "2026-05-12T13:50:43+00:00"
 }

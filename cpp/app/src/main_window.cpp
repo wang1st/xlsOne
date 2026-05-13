@@ -362,11 +362,11 @@ void MainWindow::buildUi()
     auto* clearOverridesAction = new QAction(tr("清除所有修正"), this);
     connect(clearOverridesAction, &QAction::triggered, this, &MainWindow::clearOverrides);
 
-    auto* manageSchemasAction = new QAction(tr("查看规则"), this);
+    auto* manageSchemasAction = new QAction(tr("查看当前调整记忆"), this);
     manageSchemasAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_Comma));
     connect(manageSchemasAction, &QAction::triggered, this, &MainWindow::manageSchemas);
 
-    auto* saveSchemaAction = new QAction(tr("保存规则"), this);
+    auto* saveSchemaAction = new QAction(tr("保存当前调整记忆"), this);
     connect(saveSchemaAction, &QAction::triggered, this, &MainWindow::saveCurrentSchema);
 
     auto* licenseActivateAction = new QAction(tr("激活/导入许可证..."), this);
@@ -391,10 +391,10 @@ void MainWindow::buildUi()
     editMenu->addAction(undoOverrideAction);
     editMenu->addAction(clearOverridesAction);
 
-    // ---- 查看 ----
-    auto* viewMenu = menuBar()->addMenu(tr("查看"));
-    viewMenu->addAction(manageSchemasAction);
-    viewMenu->addAction(saveSchemaAction);
+    // ---- 调整记忆 ----
+    auto* adjustmentMemoryMenu = menuBar()->addMenu(tr("调整记忆"));
+    adjustmentMemoryMenu->addAction(manageSchemasAction);
+    adjustmentMemoryMenu->addAction(saveSchemaAction);
 
     // ---- 许可 ----
     auto* licenseMenu = menuBar()->addMenu(tr("许可"));
@@ -725,11 +725,11 @@ void MainWindow::recomputeWorkspace()
     const auto exactSchema = match.exactSchema();
     syncWorkspaceSchemaBase(exactSchema);
     if (exactSchema.has_value()) {
-        statusLabel_->setText(statusLabel_->text() + tr(" 已应用规则：%1。").arg(exactSchema->name));
+        statusLabel_->setText(statusLabel_->text() + tr(" 已应用调整记忆：%1。").arg(exactSchema->name));
     } else if (match.kind == xlsone::SchemaMatchKind::Ambiguous) {
-        statusLabel_->setText(statusLabel_->text() + tr(" 检测到多套高置信规则，未自动应用。"));
+        statusLabel_->setText(statusLabel_->text() + tr(" 检测到多组高置信调整记忆，未自动应用。"));
     } else if (match.kind == xlsone::SchemaMatchKind::Similar) {
-        statusLabel_->setText(statusLabel_->text() + tr(" 发现相近规则，未自动应用。"));
+        statusLabel_->setText(statusLabel_->text() + tr(" 发现相近调整记忆，未自动应用。"));
     }
 
     rebuildResultsWithCurrentOverrides();
@@ -933,7 +933,7 @@ void MainWindow::rebuildResultsWithCurrentOverrides()
 {
     results_ = baseResults_;
     xlsone::MergeSchema transientSchema;
-    transientSchema.name = tr("当前手动规则");
+    transientSchema.name = tr("当前手动调整记忆");
     transientSchema.overrides = effectiveWorkspaceOverrides();
     for (auto& result : results_) {
         result = xlsone::applySchema(transientSchema, result);
@@ -1055,7 +1055,7 @@ void MainWindow::applyOverrideForSelection(xlsone::SchemaCellOverrideType type)
     const int resultIndex = currentResultIndex();
     const auto indexes = selectedCellIndexes();
     if (resultIndex < 0 || indexes.isEmpty()) {
-        xlsone::ui::showInformation(this, tr("规则"), tr("请先选择一个或多个汇总单元格。"));
+        xlsone::ui::showInformation(this, tr("调整记忆"), tr("请先选择一个或多个汇总单元格。"));
         return;
     }
 
@@ -1089,7 +1089,7 @@ void MainWindow::applyOverrideForSelection(xlsone::SchemaCellOverrideType type)
     const auto kind = type == xlsone::SchemaCellOverrideType::Label
         ? xlsone::CellKind::Label
         : type == xlsone::SchemaCellOverrideType::Sum ? xlsone::CellKind::Sum : xlsone::CellKind::Mixed;
-    statusLabel_->setText(tr("已将 %1 个单元格标记为 %2，可点击“保存规则”复用。")
+    statusLabel_->setText(tr("已将 %1 个单元格标记为 %2，可点击“保存当前调整记忆”复用。")
         .arg(indexes.size())
         .arg(xlsone::cellKindName(kind)));
     try {
@@ -1261,11 +1261,11 @@ void MainWindow::jumpAcrossAnomalies(int step)
 void MainWindow::saveCurrentSchema()
 {
     if (currentOverrides_.empty()) {
-        xlsone::ui::showInformation(this, tr("保存规则"), tr("当前还没有手动修正的单元格。"));
+        xlsone::ui::showInformation(this, tr("保存当前调整记忆"), tr("当前还没有手动修正的单元格。"));
         return;
     }
     if (validation_.mergeableFiles.empty() || validation_.report.commonSheetNames.isEmpty()) {
-        xlsone::ui::showInformation(this, tr("保存规则"), tr("当前没有可用于生成规则指纹的同构工作簿。"));
+        xlsone::ui::showInformation(this, tr("保存当前调整记忆"), tr("当前没有可用于生成调整记忆指纹的同构工作簿。"));
         return;
     }
 
@@ -1273,7 +1273,7 @@ void MainWindow::saveCurrentSchema()
     const auto now = QDateTime::currentDateTimeUtc();
     const auto effectiveOverrides = effectiveWorkspaceOverrides();
 
-    // 1. 如果已有活跃规则，直接更新
+    // 1. 如果已有活跃调整记忆，直接更新
     const auto schemaId = workspaceActiveSchemaId_.has_value()
         ? workspaceActiveSchemaId_ : workspaceBaseSchemaId_;
     if (schemaId.has_value()) {
@@ -1296,12 +1296,12 @@ void MainWindow::saveCurrentSchema()
             }
             updateSheetStrip();
             updateCorrectionBar();
-            statusLabel_->setText(tr("已更新规则“%1”。").arg(schema->name));
+            statusLabel_->setText(tr("已更新调整记忆“%1”。").arg(schema->name));
             return;
         }
     }
 
-    // 2. 按指纹查找已有规则
+    // 2. 按指纹查找已有调整记忆
     auto allSchemas = schemaRepository_.loadAll();
     const auto match = xlsone::SchemaMatcher::match(fingerprint, allSchemas);
     if (match.kind == xlsone::SchemaMatchKind::Exact) {
@@ -1322,11 +1322,11 @@ void MainWindow::saveCurrentSchema()
         }
         updateSheetStrip();
         updateCorrectionBar();
-        statusLabel_->setText(tr("已更新规则“%1”。").arg(schema.name));
+        statusLabel_->setText(tr("已更新调整记忆“%1”。").arg(schema.name));
         return;
     }
 
-    // 3. 自动生成名称，新建规则
+    // 3. 自动生成名称，新建调整记忆
     const QString name = suggestedAdjustmentMemoryName();
     xlsone::MergeSchema newSchema;
     newSchema.id = QUuid::createUuid();
@@ -1351,7 +1351,7 @@ void MainWindow::saveCurrentSchema()
     }
     updateSheetStrip();
     updateCorrectionBar();
-    statusLabel_->setText(tr("已保存规则“%1”，包含 %2 个修正。").arg(newSchema.name).arg(static_cast<int>(newSchema.overrides.size())));
+    statusLabel_->setText(tr("已保存调整记忆“%1”，包含 %2 个修正。").arg(newSchema.name).arg(static_cast<int>(newSchema.overrides.size())));
 }
 
 void MainWindow::manageSchemas()
@@ -1369,6 +1369,21 @@ void MainWindow::manageSchemas()
     }
 
     if (auto imported = dialog.importedSchema(); imported.has_value()) {
+        if (validation_.mergeableFiles.empty() || validation_.report.commonSheetNames.isEmpty()) {
+            xlsone::ui::showInformation(this, tr("导入调整记忆"), tr("当前没有可绑定调整记忆的同构工作簿。"));
+            return;
+        }
+
+        const auto fingerprint = xlsone::fingerprintFor(validation_.mergeableFiles, validation_.report.commonSheetNames);
+        const auto importMatch = xlsone::SchemaMatcher::match(fingerprint, {*imported});
+        if (importMatch.kind != xlsone::SchemaMatchKind::Exact) {
+            xlsone::ui::showWarning(this, tr("导入调整记忆"), tr("导入的调整记忆不属于当前同构结构。"));
+            return;
+        }
+
+        imported->fingerprint = fingerprint;
+        imported->createdAt = QDateTime::currentDateTimeUtc();
+        imported->updatedAt = imported->createdAt;
         schemaRepository_.save(*imported);
         syncWorkspaceSchemaBase(imported);
         rebuildResultsWithCurrentOverrides();
@@ -1378,7 +1393,7 @@ void MainWindow::manageSchemas()
         }
         updateSheetStrip();
         updateCorrectionBar();
-        statusLabel_->setText(tr("已导入规则“%1”。").arg(imported->name));
+        statusLabel_->setText(tr("已导入调整记忆“%1”。").arg(imported->name));
         return;
     }
 
@@ -1397,7 +1412,7 @@ void MainWindow::manageSchemas()
         }
         updateSheetStrip();
         updateCorrectionBar();
-        statusLabel_->setText(tr("已清除规则。"));
+        statusLabel_->setText(tr("已清除当前调整记忆。"));
     }
 }
 

@@ -369,6 +369,90 @@ final class SimpleMergerTests: XCTestCase {
         XCTAssertEqual(result.rows[8][2].type, .sum(3))
     }
 
+    func testAmountColumnWithMixedIntegerAndDecimalValuesIsOrderIndependent() {
+        func sheet(amounts: [Double]) -> SheetData {
+            SheetData(name: "费用汇总表", rows: [
+                [
+                    CellData(value: "费用编码"),
+                    CellData(value: "费用名称"),
+                    CellData(value: "归口部门"),
+                    CellData(value: "本期金额"),
+                    CellData(value: "备注")
+                ],
+                [
+                    CellData(value: "FY-001"),
+                    CellData(value: "人员经费"),
+                    CellData(value: "行政管理部"),
+                    amountCell(amounts[0]),
+                    CellData(value: "预算内")
+                ],
+                [
+                    CellData(value: "FY-002"),
+                    CellData(value: "办公耗材"),
+                    CellData(value: "综合保障部"),
+                    amountCell(amounts[1]),
+                    CellData(value: "预算内")
+                ],
+                [
+                    CellData(value: "FY-003"),
+                    CellData(value: "设备维护"),
+                    CellData(value: "信息技术部"),
+                    amountCell(amounts[2]),
+                    CellData(value: "维护批次")
+                ],
+                [
+                    CellData(value: "FY-004"),
+                    CellData(value: "培训会议"),
+                    CellData(value: "业务发展部"),
+                    amountCell(amounts[3]),
+                    CellData(value: "预算内")
+                ],
+                [
+                    CellData(value: "合计"),
+                    CellData(value: "合计"),
+                    CellData(value: ""),
+                    CellData(value: ""),
+                    CellData(value: "自动汇总")
+                ]
+            ])
+        }
+
+        let files = [
+            ExcelFile(filename: "测试单位A.xlsx", filepath: "/tmp/a.xlsx", sheets: [
+                sheet(amounts: [12800.5, 5400, 2300.75, 980])
+            ]),
+            ExcelFile(filename: "测试单位B.xlsx", filepath: "/tmp/b.xlsx", sheets: [
+                sheet(amounts: [15600, 6100.25, 1800, 1250])
+            ]),
+            ExcelFile(filename: "测试单位C.xlsx", filepath: "/tmp/c.xlsx", sheets: [
+                sheet(amounts: [9900, 4800, 2600, 870.5])
+            ]),
+            ExcelFile(filename: "测试单位D.xlsx", filepath: "/tmp/d.xlsx", sheets: [
+                sheet(amounts: [14200.75, 5900, 2100, 1100])
+            ])
+        ]
+
+        for orderedFiles in [files, files.reversed()] {
+            let result = SimpleMerger().merge(files: Array(orderedFiles), sheetName: "费用汇总表")
+
+            XCTAssertEqual(result.rows[1][3].type, .sum(52501.25))
+            XCTAssertEqual(result.rows[2][3].type, .sum(22200.25))
+            XCTAssertEqual(result.rows[3][3].type, .sum(8800.75))
+            XCTAssertEqual(result.rows[4][3].type, .sum(4200.5))
+            XCTAssertEqual(result.rows[5][3].type, .label)
+        }
+    }
+
+    private func amountCell(_ value: Double) -> CellData {
+        let display: String
+        if value == floor(value) {
+            display = String(format: "%.0f", value)
+        } else {
+            display = String(value)
+        }
+        return CellData(value: display, numericValue: value, formatCode: "General")
+    }
+
     func testNumericValuesWithBlankSourcesTreatBlanksAsZero() {
         let cells: [(filename: String, cell: CellData?)] = [
             (filename: "file1", cell: CellData(value: "123456")),

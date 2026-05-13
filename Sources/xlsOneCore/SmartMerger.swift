@@ -255,6 +255,47 @@ public actor SmartMerger {
         return try await schemaRepository.importSchema(data: data)
     }
 
+    /// 导入调整记忆，并限定只能绑定到当前同构工作区。
+    public func importSchema(
+        data: Data,
+        forCurrentWorkspaceFiles files: [ExcelFile],
+        sheetNames: [String]
+    ) async throws -> MergeSchema {
+        guard !files.isEmpty, !sheetNames.isEmpty else {
+            throw AdjustmentMemoryImportError.emptyWorkspace
+        }
+
+        let imported = try SchemaRepository.decodeImportableSchema(data: data)
+        let workbookFingerprint = FingerprintGenerator.generateWorkbook(
+            from: files,
+            sheetNames: sheetNames
+        )
+        let matchResult = SchemaMatcher.match(
+            workbookFingerprint: workbookFingerprint,
+            against: [imported]
+        )
+        guard case .exact = matchResult else {
+            throw AdjustmentMemoryImportError.incompatibleWorkspace
+        }
+
+        let legacyFingerprint = FingerprintGenerator.generateWorkspaceLegacyFingerprint(
+            from: files,
+            sheetNames: sheetNames
+        )
+        let now = Date()
+        let rebound = MergeSchema(
+            id: imported.id,
+            name: imported.name,
+            fingerprint: legacyFingerprint,
+            workbookFingerprint: workbookFingerprint,
+            cellOverrides: imported.cellOverrides,
+            createdAt: now,
+            updatedAt: now
+        )
+        try await schemaRepository.saveSchema(rebound)
+        return rebound
+    }
+
     // MARK: - 私有方法
 
     private func findAndApplySchema(
@@ -296,7 +337,21 @@ public actor SmartMerger {
         return total
     }
 
+}
+
+public enum AdjustmentMemoryImportError: LocalizedError, Sendable {
+    case emptyWorkspace
+    case incompatibleWorkspace
+
+    public var errorDescription: String? {
+        switch self {
+        case .emptyWorkspace:
+            return "当前没有可绑定调整记忆的同构工作区。"
+        case .incompatibleWorkspace:
+            return "导入的调整记忆不属于当前同构结构。"
+        }
     }
+}
 
 // MARK: - CellOverrideType 扩展
 

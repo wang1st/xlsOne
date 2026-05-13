@@ -47,6 +47,34 @@ bool isNumericFingerprint(FormatFingerprint fingerprint)
         || fingerprint == FormatFingerprint::IntegerCode;
 }
 
+int numericPreferenceRank(FormatFingerprint fingerprint)
+{
+    switch (fingerprint) {
+    case FormatFingerprint::StrongNumeric:
+        return 3;
+    case FormatFingerprint::IntegerWide:
+        return 2;
+    case FormatFingerprint::IntegerCode:
+        return 1;
+    case FormatFingerprint::ChineseText:
+    case FormatFingerprint::AlphaText:
+    case FormatFingerprint::Date:
+    case FormatFingerprint::DashMarker:
+    case FormatFingerprint::Empty:
+    case FormatFingerprint::Mixed:
+        return 0;
+    }
+    return 0;
+}
+
+bool shouldPreferTiedFingerprint(FormatFingerprint candidate, FormatFingerprint current)
+{
+    if (isNumericFingerprint(candidate) && isNumericFingerprint(current)) {
+        return numericPreferenceRank(candidate) > numericPreferenceRank(current);
+    }
+    return false;
+}
+
 bool formatCodeLooksNumeric(const std::optional<QString>& formatCode)
 {
     if (!formatCode.has_value()) {
@@ -378,7 +406,9 @@ DominantProfile dominantProfile(const std::vector<CellData>& cells)
     bool found = false;
     for (const auto fingerprint : order) {
         const int count = counts[fingerprint];
-        if (!found || count > bestCount) {
+        if (!found
+            || count > bestCount
+            || (count == bestCount && shouldPreferTiedFingerprint(fingerprint, best))) {
             best = fingerprint;
             bestCount = count;
             found = true;
@@ -388,6 +418,35 @@ DominantProfile dominantProfile(const std::vector<CellData>& cells)
         return {};
     }
     return {best, static_cast<double>(bestCount) / static_cast<double>(cells.size())};
+}
+
+FormatFingerprint representativeFingerprint(const std::vector<CellData>& cells)
+{
+    if (cells.empty()) {
+        return FormatFingerprint::Empty;
+    }
+
+    bool allNumeric = true;
+    bool hasStrongNumeric = false;
+    bool hasIntegerWide = false;
+    for (const auto& cell : cells) {
+        const auto fingerprint = fingerprintFor(&cell);
+        allNumeric = allNumeric && isNumericFingerprint(fingerprint);
+        hasStrongNumeric = hasStrongNumeric || fingerprint == FormatFingerprint::StrongNumeric;
+        hasIntegerWide = hasIntegerWide || fingerprint == FormatFingerprint::IntegerWide;
+    }
+    if (allNumeric) {
+        if (hasStrongNumeric) {
+            return FormatFingerprint::StrongNumeric;
+        }
+        if (hasIntegerWide) {
+            return FormatFingerprint::IntegerWide;
+        }
+        return FormatFingerprint::IntegerCode;
+    }
+
+    const auto profile = dominantProfile(cells);
+    return profile.fingerprint.value_or(FormatFingerprint::Mixed);
 }
 
 std::vector<CellData> sampledValidCellsForProfile(const std::vector<CellMergeInput>& cells)
@@ -450,7 +509,7 @@ SemanticScore classificationScores(
         return scores;
     }
 
-    switch (fingerprintFor(&validCells.front())) {
+    switch (representativeFingerprint(validCells)) {
     case FormatFingerprint::StrongNumeric:
         scores.numeric += 0.4;
         break;
@@ -869,7 +928,7 @@ MergedCell MergedCell::from(
         if (cell.numericValue.has_value()
             && !isCodeLike
             && !codeSemantic
-            && !labelSemantic
+            && (!labelSemantic || metricSemantic)
             && (formatCodeLooksNumeric(cell.formatCode)
                 || formatCodeLooksNumeric(formatCode)
                 || amountSemantic
@@ -995,7 +1054,7 @@ MergedCell MergedCell::from(
 
     if (allNumeric
         && !codeSemantic
-        && !labelSemantic
+        && (!labelSemantic || metricSemantic)
         && (!codeLikeSequence || blankSourceCount > 0 || metricSemantic)
         && (!sameValues || metricSemantic || blankSourceCount > 0 || firstFormatCode.has_value() || strongNumeric || contextNumeric)) {
         const bool isSuspicious = numericSumShouldBeSuspicious(validCells, cells, leftCells, neighborContext, blankSourceCount);

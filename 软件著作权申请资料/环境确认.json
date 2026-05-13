@@ -1,5 +1,5 @@
 {
   "environment_confirmed": true,
-  "confirmation_note": "用户选择安装完整DOCX环境，.NET SDK 8.0.420 已安装，DocxToolkit已构建",
-  "confirmed_at": "2026-05-10T22:13:30+00:00"
+  "confirmation_note": "用户要求执行完整更新计划；当前环境使用基础 DOCX/python-docx 兜底继续",
+  "confirmed_at": "2026-05-12T13:26:48+00:00"
 }

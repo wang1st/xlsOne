@@ -34,7 +34,8 @@ private struct WorkspaceCommands: Commands {
     var body: some Commands {
         WorkspaceFileCommands(viewModel: viewModel)
         WorkspaceEditCommands(viewModel: viewModel)
-        WorkspaceViewCommands(viewModel: viewModel)
+        WorkspaceAdjustmentMemoryCommands(viewModel: viewModel)
+        WorkspaceViewCommands()
         WorkspaceWindowCommands()
         WorkspaceLicenseCommands(licenseManager: licenseManager)
         WorkspaceHelpCommands()
@@ -116,17 +117,27 @@ private struct WorkspaceEditCommands: Commands {
     }
 }
 
-private struct WorkspaceViewCommands: Commands {
+private struct WorkspaceAdjustmentMemoryCommands: Commands {
     @ObservedObject var viewModel: AppViewModel
 
     var body: some Commands {
-        CommandMenu("查看") {
-            Button("查看规则") {
+        CommandMenu("调整记忆") {
+            Button("查看当前调整记忆") {
                 viewModel.showSchemaManagerWindow()
             }
             .keyboardShortcut(",", modifiers: .command)
-        }
+            .disabled(!viewModel.canManageAdjustmentMemory)
 
+            Button("保存当前调整记忆") {
+                viewModel.saveCurrentAdjustmentMemory()
+            }
+            .disabled(!viewModel.canManageAdjustmentMemory)
+        }
+    }
+}
+
+private struct WorkspaceViewCommands: Commands {
+    var body: some Commands {
         CommandGroup(replacing: .toolbar) {}
     }
 }
@@ -740,6 +751,14 @@ class AppViewModel: ObservableObject {
     /// 当前工作区的规则应用状态
     @Published var workspaceRuleState: WorkspaceRuleState = .none
 
+    var canManageAdjustmentMemory: Bool {
+        workspacePhase == .ready && !files.isEmpty && !availableSheets.isEmpty
+    }
+
+    var currentAdjustmentMemory: MergeSchema? {
+        matchedSchema
+    }
+
     var canExport: Bool {
         workspacePhase == .ready &&
         validationReport?.readiness == .ready &&
@@ -1039,6 +1058,104 @@ class AppViewModel: ObservableObject {
         showSchemaManager = true
     }
 
+    func saveCurrentAdjustmentMemory() {
+        guard canManageAdjustmentMemory else {
+            WorkspaceDialogPresenter.runAlert(
+                title: "保存当前调整记忆",
+                message: "当前没有可保存调整记忆的同构工作区。",
+                style: .informational
+            )
+            return
+        }
+
+        Task {
+            await persistAdjustmentMemoryAndRefresh()
+        }
+    }
+
+    func exportCurrentAdjustmentMemory() {
+        guard let schema = currentAdjustmentMemory else { return }
+
+        Task {
+            do {
+                let data = try await smartMerger.exportSchema(id: schema.id)
+                let url = await MainActor.run {
+                    let panel = NSSavePanel()
+                    let fallbackName = schema.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                        ? "adjustment-memory"
+                        : schema.name
+                    panel.nameFieldStringValue = "\(fallbackName).json"
+                    panel.allowedContentTypes = [.json]
+                    return WorkspaceDialogPresenter.runModal(panel) == .OK ? panel.url : nil
+                }
+                if let url {
+                    try data.write(to: url)
+                }
+            } catch {
+                await MainActor.run {
+                    errorMessage = "导出调整记忆失败: \(error.localizedDescription)"
+                    showError = true
+                }
+            }
+        }
+    }
+
+    func showImportAdjustmentMemoryDialog() {
+        guard canManageAdjustmentMemory else {
+            WorkspaceDialogPresenter.runAlert(
+                title: "导入调整记忆",
+                message: "当前没有可绑定调整记忆的同构工作区。",
+                style: .informational
+            )
+            return
+        }
+
+        let panel = NSOpenPanel()
+        panel.allowsMultipleSelection = false
+        panel.canChooseDirectories = false
+        panel.canChooseFiles = true
+        panel.allowedContentTypes = [UTType.json]
+
+        guard WorkspaceDialogPresenter.runModal(panel) == .OK, let url = panel.urls.first else { return }
+        Task {
+            await importCurrentAdjustmentMemory(from: url)
+        }
+    }
+
+    func clearCurrentAdjustmentMemory() {
+        guard let schemaID = workspaceActiveSchemaID ?? workspaceBaseSchemaID ?? matchedSchema?.id else { return }
+
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = "清除当前调整记忆"
+        alert.informativeText = "删除当前调整记忆后，当前同构工作区将恢复自动判断。确定清除？"
+        alert.addButton(withTitle: "清除")
+        alert.addButton(withTitle: "取消")
+        guard WorkspaceDialogPresenter.runAlert(alert) == .alertFirstButtonReturn else { return }
+
+        Task {
+            do {
+                try await smartMerger.deleteSchema(id: schemaID)
+                await MainActor.run {
+                    workspaceActiveSchemaID = nil
+                    workspaceBaseSchemaID = nil
+                    workspaceBaseOverrides.removeAll()
+                    userOverrides.removeAll()
+                    forgottenOverrideKeys.removeAll()
+                    overrideHistory.removeAll()
+                    matchedSchema = nil
+                    workspaceRuleState = .none
+                }
+                await refreshWorkspaceResults()
+            } catch {
+                await MainActor.run {
+                    errorMessage = "清除调整记忆失败: \(error.localizedDescription)"
+                    showError = true
+                }
+            }
+        }
+    }
+
     func selectCell(_ position: CellPosition?) {
         selectedCell = position
         refreshSelectionAndAnomalies()
@@ -1326,6 +1443,31 @@ class AppViewModel: ObservableObject {
                 overrides: effectiveOverrides
             )
             workspaceActiveSchemaID = schema.id
+        }
+    }
+
+    private func importCurrentAdjustmentMemory(from url: URL) async {
+        do {
+            let data = try Data(contentsOf: url)
+            let schema = try await smartMerger.importSchema(
+                data: data,
+                forCurrentWorkspaceFiles: files,
+                sheetNames: availableSheets
+            )
+            await MainActor.run {
+                workspaceBaseOverrides = schema.cellOverrides
+                workspaceBaseSchemaID = schema.id
+                workspaceActiveSchemaID = schema.id
+                userOverrides.removeAll()
+                forgottenOverrideKeys.removeAll()
+                overrideHistory.removeAll()
+            }
+            await refreshWorkspaceResults()
+        } catch {
+            await MainActor.run {
+                errorMessage = "导入调整记忆失败: \(error.localizedDescription)"
+                showError = true
+            }
         }
     }
 
