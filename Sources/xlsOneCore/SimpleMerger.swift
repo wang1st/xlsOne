@@ -203,6 +203,18 @@ public struct SimpleMerger {
     }
 
     private func nearestLabelForFirstNumeric(sheet: SheetData, rowIdx: Int, colIdx: Int) -> CellData? {
+        let maxDistance = max(sheet.rows.count, colIdx + 1)
+
+        for distance in 1...maxDistance {
+            let aboveRow = rowIdx - distance
+            if aboveRow >= 0,
+               let cell = sheet.cellAt(row: aboveRow, col: colIdx),
+               !cell.value.isEmpty,
+               cell.numericValue == nil {
+                return cell
+            }
+        }
+
         if colIdx > 0 {
             for leftCol in stride(from: colIdx - 1, through: 0, by: -1) {
                 if let cell = sheet.cellAt(row: rowIdx, col: leftCol),
@@ -213,15 +225,8 @@ public struct SimpleMerger {
             }
         }
 
-        let maxDistance = max(sheet.rows.count, colIdx + 1)
         for distance in 1...maxDistance {
             let aboveRow = rowIdx - distance
-            if aboveRow >= 0,
-               let cell = sheet.cellAt(row: aboveRow, col: colIdx),
-               !cell.value.isEmpty,
-               cell.numericValue == nil {
-                return cell
-            }
             if aboveRow >= 0, colIdx > 0,
                let cell = sheet.cellAt(row: aboveRow, col: colIdx - 1),
                !cell.value.isEmpty,
@@ -421,7 +426,9 @@ public struct FormatProfile {
         var dominantCount = 0
         for fp in order {
             let count = counts[fp] ?? 0
-            if dominant == nil || count > dominantCount {
+            if dominant == nil ||
+                count > dominantCount ||
+                (count == dominantCount && Self.shouldPreferTiedFingerprint(fp, over: dominant)) {
                 dominant = fp
                 dominantCount = count
             }
@@ -433,6 +440,28 @@ public struct FormatProfile {
         } else {
             self.dominantFingerprint = nil
             self.dominantRatio = 0
+        }
+    }
+
+    private static func shouldPreferTiedFingerprint(
+        _ candidate: FormatFingerprint,
+        over current: FormatFingerprint?
+    ) -> Bool {
+        guard let current else { return true }
+        guard candidate.isNumeric, current.isNumeric else { return false }
+        return numericTieRank(candidate) > numericTieRank(current)
+    }
+
+    private static func numericTieRank(_ fingerprint: FormatFingerprint) -> Int {
+        switch fingerprint {
+        case .strongNumeric:
+            return 3
+        case .integerWide:
+            return 2
+        case .integerCode:
+            return 1
+        default:
+            return 0
         }
     }
 

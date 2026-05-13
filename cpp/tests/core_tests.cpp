@@ -45,10 +45,13 @@ private slots:
     void keepsWeakMetricWordConservativeWithoutContext();
     void keepsCodeColumnsProtectedAgainstMetricColumnContext();
     void usesColumnMetricAnchorForTownFinanceCountRows();
+    void sumsAmountColumnIndependentOfFileOrder();
     void validatesCompatibleSheets();
     void choosesRepresentativeTemplate();
     void storesSchemas();
     void matchesWorkbookSchemas();
+    void matchesAdjustmentMemoryImportForSameArchitecture();
+    void rejectsAdjustmentMemoryImportForDifferentArchitecture();
     void matchesWorkbookSchemasByDominantDimensions();
     void appliesSchemaOverrides();
     void exportsCsvBaseline();
@@ -551,6 +554,97 @@ void CoreTests::usesColumnMetricAnchorForTownFinanceCountRows()
     QCOMPARE(result.rows[8][2].type.sum, 3.0);
 }
 
+void CoreTests::sumsAmountColumnIndependentOfFileOrder()
+{
+    struct AmountSpec {
+        QString display;
+        double value = 0.0;
+        QString formatCode;
+    };
+    auto amountCell = [](const AmountSpec& amount) {
+        return CellData(amount.display, std::nullopt, amount.value, amount.formatCode);
+    };
+    const auto makeFile = [&](const QString& filename, const std::vector<AmountSpec>& amounts) {
+        return ExcelFile{filename, QStringLiteral("/") + filename, {
+            SheetData{QStringLiteral("费用汇总表"), {
+                {
+                    CellData(QStringLiteral("项目编码")),
+                    CellData(QStringLiteral("项目名称")),
+                    CellData(QStringLiteral("本期金额")),
+                    CellData(QStringLiteral("备注"))
+                },
+                {
+                    CellData(QStringLiteral("XM001")),
+                    CellData(QStringLiteral("系统接入服务")),
+                    amountCell(amounts[0]),
+                    CellData(QStringLiteral("测试口径"))
+                },
+                {
+                    CellData(QStringLiteral("XM002")),
+                    CellData(QStringLiteral("数据清洗服务")),
+                    amountCell(amounts[1]),
+                    CellData(QStringLiteral("测试口径"))
+                },
+                {
+                    CellData(QStringLiteral("XM003")),
+                    CellData(QStringLiteral("报表核验服务")),
+                    amountCell(amounts[2]),
+                    CellData(QStringLiteral("测试口径"))
+                },
+                {
+                    CellData(QStringLiteral("XM004")),
+                    CellData(QStringLiteral("归档支持服务")),
+                    amountCell(amounts[3]),
+                    CellData(QStringLiteral("测试口径"))
+                },
+            }}
+        }};
+    };
+
+    std::vector<ExcelFile> files = {
+        makeFile(QStringLiteral("测试单位A_费用报表.xlsx"), {
+            {QStringLiteral("1200"), 1200.0, QStringLiteral("#,##0")},
+            {QStringLiteral("10500"), 10500.0, QStringLiteral("#,##0")},
+            {QStringLiteral("3000"), 3000.0, QStringLiteral("#,##0")},
+            {QStringLiteral("0"), 0.0, QStringLiteral("#,##0")},
+        }),
+        makeFile(QStringLiteral("测试单位B_费用报表.xlsx"), {
+            {QStringLiteral("1200"), 1200.0, QStringLiteral("#,##0")},
+            {QStringLiteral("10500.25"), 10500.25, QStringLiteral("#,##0.00")},
+            {QStringLiteral("3100"), 3100.0, QStringLiteral("#,##0")},
+            {QStringLiteral("0"), 0.0, QStringLiteral("#,##0")},
+        }),
+        makeFile(QStringLiteral("测试单位C_费用报表.xlsx"), {
+            {QStringLiteral("1200"), 1200.0, QStringLiteral("#,##0")},
+            {QStringLiteral("10500"), 10500.0, QStringLiteral("#,##0")},
+            {QStringLiteral("3000"), 3000.0, QStringLiteral("#,##0")},
+            {QStringLiteral("0"), 0.0, QStringLiteral("#,##0")},
+        }),
+        makeFile(QStringLiteral("测试单位D_费用报表.xlsx"), {
+            {QStringLiteral("1200"), 1200.0, QStringLiteral("#,##0")},
+            {QStringLiteral("10500.25"), 10500.25, QStringLiteral("#,##0.00")},
+            {QStringLiteral("3100"), 3100.0, QStringLiteral("#,##0")},
+            {QStringLiteral("0"), 0.0, QStringLiteral("#,##0")},
+        }),
+    };
+
+    for (int pass = 0; pass < 2; ++pass) {
+        if (pass == 1) {
+            std::reverse(files.begin(), files.end());
+        }
+
+        const auto result = SimpleMerger().merge(files, QStringLiteral("费用汇总表"));
+        QCOMPARE(result.rows[1][2].type.kind, CellKind::Sum);
+        QCOMPARE(result.rows[1][2].type.sum, 4800.0);
+        QCOMPARE(result.rows[2][2].type.kind, CellKind::Sum);
+        QCOMPARE(result.rows[2][2].type.sum, 42000.5);
+        QCOMPARE(result.rows[3][2].type.kind, CellKind::Sum);
+        QCOMPARE(result.rows[3][2].type.sum, 12200.0);
+        QCOMPARE(result.rows[4][2].type.kind, CellKind::Sum);
+        QCOMPARE(result.rows[4][2].type.sum, 0.0);
+    }
+}
+
 void CoreTests::validatesCompatibleSheets()
 {
     SheetData sheetA{QStringLiteral("Sheet1"), {{CellData(QStringLiteral("金额"))}, {CellData(QStringLiteral("1000"))}}};
@@ -640,6 +734,66 @@ void CoreTests::matchesWorkbookSchemas()
     QCOMPARE(match.kind, SchemaMatchKind::Exact);
     QVERIFY(match.exactSchema().has_value());
     QCOMPARE(match.exactSchema()->name, schema.name);
+}
+
+void CoreTests::matchesAdjustmentMemoryImportForSameArchitecture()
+{
+    SheetData savedSheet{QStringLiteral("汇总表"), {
+        {CellData(QStringLiteral("项目")), CellData(QStringLiteral("金额"))},
+        {CellData(QStringLiteral("A")), CellData(QStringLiteral("100"))},
+    }};
+    SheetData currentSheet{QStringLiteral("汇总表"), {
+        {CellData(QStringLiteral("项目")), CellData(QStringLiteral("金额"))},
+        {CellData(QStringLiteral("B")), CellData(QStringLiteral("230"))},
+    }};
+    const std::vector<ExcelFile> savedFiles = {
+        {QStringLiteral("saved.xlsx"), QStringLiteral("/saved.xlsx"), {savedSheet}},
+    };
+    const std::vector<ExcelFile> currentFiles = {
+        {QStringLiteral("current.xlsx"), QStringLiteral("/current.xlsx"), {currentSheet}},
+    };
+
+    MergeSchema imported;
+    imported.id = QUuid::createUuid();
+    imported.name = QStringLiteral("同构调整记忆");
+    imported.fingerprint = fingerprintFor(savedFiles, {QStringLiteral("汇总表")});
+    imported.overrides.push_back({{1, 1}, SchemaCellOverrideType::Sum, QStringLiteral("汇总表")});
+
+    const auto currentFingerprint = fingerprintFor(currentFiles, {QStringLiteral("汇总表")});
+    const auto match = SchemaMatcher::match(currentFingerprint, {imported});
+    QCOMPARE(match.kind, SchemaMatchKind::Exact);
+
+    imported.fingerprint = currentFingerprint;
+    QCOMPARE(imported.fingerprint.signature, currentFingerprint.signature);
+    QCOMPARE(imported.overrides.size(), static_cast<size_t>(1));
+}
+
+void CoreTests::rejectsAdjustmentMemoryImportForDifferentArchitecture()
+{
+    SheetData savedSheet{QStringLiteral("汇总表"), {
+        {CellData(QStringLiteral("项目")), CellData(QStringLiteral("金额"))},
+        {CellData(QStringLiteral("A")), CellData(QStringLiteral("100"))},
+    }};
+    SheetData differentSheet{QStringLiteral("明细表"), {
+        {CellData(QStringLiteral("项目")), CellData(QStringLiteral("金额")), CellData(QStringLiteral("备注"))},
+        {CellData(QStringLiteral("A")), CellData(QStringLiteral("100")), CellData(QStringLiteral("x"))},
+    }};
+    const std::vector<ExcelFile> savedFiles = {
+        {QStringLiteral("saved.xlsx"), QStringLiteral("/saved.xlsx"), {savedSheet}},
+    };
+    const std::vector<ExcelFile> currentFiles = {
+        {QStringLiteral("different.xlsx"), QStringLiteral("/different.xlsx"), {differentSheet}},
+    };
+
+    MergeSchema imported;
+    imported.id = QUuid::createUuid();
+    imported.name = QStringLiteral("其他结构调整记忆");
+    imported.fingerprint = fingerprintFor(savedFiles, {QStringLiteral("汇总表")});
+    imported.overrides.push_back({{1, 1}, SchemaCellOverrideType::Sum, QStringLiteral("汇总表")});
+
+    const auto currentFingerprint = fingerprintFor(currentFiles, {QStringLiteral("明细表")});
+    const auto match = SchemaMatcher::match(currentFingerprint, {imported});
+    QVERIFY(match.kind != SchemaMatchKind::Exact);
 }
 
 void CoreTests::matchesWorkbookSchemasByDominantDimensions()

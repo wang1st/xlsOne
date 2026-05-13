@@ -291,4 +291,136 @@ final class WorkspaceRuleTests: XCTestCase {
             XCTFail("Expected legacy rule to be similar only, got \(result)")
         }
     }
+
+    func testImportAdjustmentMemoryRebindsOnlyMatchingWorkspace() async throws {
+        let savedFile = ExcelFile(
+            filename: "saved.xlsx",
+            filepath: "/tmp/saved.xlsx",
+            sheets: [
+                SheetData(
+                    name: "汇总表",
+                    rows: [
+                        [CellData(value: "项目"), CellData(value: "金额")],
+                        [CellData(value: "A"), CellData(value: "100")]
+                    ]
+                )
+            ]
+        )
+        let currentFile = ExcelFile(
+            filename: "current.xlsx",
+            filepath: "/tmp/current.xlsx",
+            sheets: [
+                SheetData(
+                    name: "汇总表",
+                    rows: [
+                        [CellData(value: "项目"), CellData(value: "金额")],
+                        [CellData(value: "B"), CellData(value: "230")]
+                    ]
+                )
+            ]
+        )
+        let sourceSchema = MergeSchema(
+            name: "同构调整记忆",
+            fingerprint: FingerprintGenerator.generateWorkspaceLegacyFingerprint(
+                from: [savedFile],
+                sheetNames: ["汇总表"]
+            ),
+            workbookFingerprint: FingerprintGenerator.generateWorkbook(
+                from: [savedFile],
+                sheetNames: ["汇总表"]
+            ),
+            cellOverrides: [
+                CellTypeOverride(sheetName: "汇总表", rowIndex: 1, colIndex: 1, cellType: .sum)
+            ]
+        )
+
+        let repository = try makeTemporaryRepository()
+        let merger = SmartMerger(repository: repository)
+        let saved = try await merger.importSchema(
+            data: JSONEncoder().encode(sourceSchema),
+            forCurrentWorkspaceFiles: [currentFile],
+            sheetNames: ["汇总表"]
+        )
+
+        XCTAssertEqual(saved.cellOverrides, sourceSchema.cellOverrides)
+        XCTAssertEqual(
+            saved.workbookFingerprint,
+            FingerprintGenerator.generateWorkbook(from: [currentFile], sheetNames: ["汇总表"])
+        )
+        let schemas = try await repository.loadAllSchemas()
+        XCTAssertEqual(schemas.count, 1)
+        XCTAssertEqual(schemas.first?.id, saved.id)
+    }
+
+    func testImportAdjustmentMemoryRejectsDifferentWorkspaceWithoutSaving() async throws {
+        let savedFile = ExcelFile(
+            filename: "saved.xlsx",
+            filepath: "/tmp/saved.xlsx",
+            sheets: [
+                SheetData(
+                    name: "汇总表",
+                    rows: [
+                        [CellData(value: "项目"), CellData(value: "金额")],
+                        [CellData(value: "A"), CellData(value: "100")]
+                    ]
+                )
+            ]
+        )
+        let differentFile = ExcelFile(
+            filename: "different.xlsx",
+            filepath: "/tmp/different.xlsx",
+            sheets: [
+                SheetData(
+                    name: "明细表",
+                    rows: [
+                        [CellData(value: "项目"), CellData(value: "金额"), CellData(value: "备注")],
+                        [CellData(value: "A"), CellData(value: "100"), CellData(value: "x")]
+                    ]
+                )
+            ]
+        )
+        let sourceSchema = MergeSchema(
+            name: "其他结构调整记忆",
+            fingerprint: FingerprintGenerator.generateWorkspaceLegacyFingerprint(
+                from: [savedFile],
+                sheetNames: ["汇总表"]
+            ),
+            workbookFingerprint: FingerprintGenerator.generateWorkbook(
+                from: [savedFile],
+                sheetNames: ["汇总表"]
+            ),
+            cellOverrides: [
+                CellTypeOverride(sheetName: "汇总表", rowIndex: 1, colIndex: 1, cellType: .sum)
+            ]
+        )
+
+        let repository = try makeTemporaryRepository()
+        let merger = SmartMerger(repository: repository)
+
+        do {
+            _ = try await merger.importSchema(
+                data: JSONEncoder().encode(sourceSchema),
+                forCurrentWorkspaceFiles: [differentFile],
+                sheetNames: ["明细表"]
+            )
+            XCTFail("不同构调整记忆不应被导入")
+        } catch let error as AdjustmentMemoryImportError {
+            guard case .incompatibleWorkspace = error else {
+                return XCTFail("Expected incompatibleWorkspace, got \(error)")
+            }
+        }
+
+        let schemas = try await repository.loadAllSchemas()
+        XCTAssertTrue(schemas.isEmpty)
+    }
+
+    private func makeTemporaryRepository() throws -> SchemaRepository {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("xlsone-schema-tests-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+        addTeardownBlock {
+            try? FileManager.default.removeItem(at: url)
+        }
+        return SchemaRepository(baseDirectory: url)
+    }
 }

@@ -1,44 +1,186 @@
 {
-  "project_root": "/home/ethan/xlsone",
-  "project_name": "xlsone",
-  "software_name_candidate": "xlsone",
+  "project_root": "/Users/ethan/xlsOne",
+  "project_name": "xlsOne",
+  "software_name_candidate": "表表归一",
   "package": {
-    "name": "",
-    "path": "",
-    "version": "V1.0",
-    "scripts": {},
-    "dependency_names": []
+    "name": "xlsOne",
+    "path": "Package.swift",
+    "version": "V1.0.0",
+    "scripts": {
+      "build": "swift build -c release",
+      "test": "swift test",
+      "mac_app": "./scripts/build_and_open_app.sh --configuration release",
+      "qt_build": "cpp/scripts/build.sh release"
+    },
+    "dependency_names": [
+      "CoreXLSX",
+      "SwiftUI",
+      "AppKit",
+      "Qt 6"
+    ]
   },
-  "frameworks": [],
-  "language": "HTML、CSS",
+  "frameworks": [
+    "SwiftUI",
+    "AppKit",
+    "CoreXLSX",
+    "Qt 6"
+  ],
+  "language": "Swift、C++、TypeScript",
   "source": {
-    "file_count": 6,
-    "line_count": 649,
+    "file_count": 84,
+    "line_count": 22279,
     "extension_counts": {
-      ".css": 1,
-      ".html": 5
+      ".cpp": 26,
+      ".hpp": 25,
+      ".swift": 33
     },
     "category_counts": {
-      "source": 5,
-      "style": 1
+      "swift_entry": 2,
+      "swift_ui": 4,
+      "swift_grid": 8,
+      "swift_core": 11,
+      "swift_schema": 4,
+      "swift_license": 4,
+      "cpp_app": 29,
+      "cpp_core": 22
     },
     "categorized_files": {
-      "style": [
-        "site/css/style.css"
+      "swift_entry": [
+        "Sources/xlsOne/XlsOneApp.swift",
+        "App/xlsOneMacApp/XlsOneMacApp.swift"
       ],
-      "source": [
-        "site/index.html",
-        "site/privacy/index.html",
-        "site/support/index.html",
-        "site/products/xlsone/index.html",
-        "site/products/xlsone/download.html"
+      "swift_ui": [
+        "Sources/xlsOneUI/ContentView.swift",
+        "Sources/xlsOneUI/WorkspaceScene.swift",
+        "Sources/xlsOneUI/WorkspaceModels.swift",
+        "Sources/xlsOneUI/SchemaManagerView.swift"
+      ],
+      "swift_grid": [
+        "Sources/xlsOneUI/Grid/ColumnResizeHandle.swift",
+        "Sources/xlsOneUI/Grid/CursorManager.swift",
+        "Sources/xlsOneUI/Grid/GridBodyCell.swift",
+        "Sources/xlsOneUI/Grid/GridColumnFrame.swift",
+        "Sources/xlsOneUI/Grid/GridDebugLogger.swift",
+        "Sources/xlsOneUI/Grid/GridHeaderCell.swift",
+        "Sources/xlsOneUI/Grid/GridMetrics.swift",
+        "Sources/xlsOneUI/Grid/HeaderDividerCursorOverlay.swift"
+      ],
+      "swift_core": [
+        "Sources/xlsOneCore/BIFF8XLSParser.swift",
+        "Sources/xlsOneCore/ColumnTypeAnalyzer.swift",
+        "Sources/xlsOneCore/CompoundFileReader.swift",
+        "Sources/xlsOneCore/ExcelExporter.swift",
+        "Sources/xlsOneCore/ExcelParser.swift",
+        "Sources/xlsOneCore/ExcelStylesParser.swift",
+        "Sources/xlsOneCore/Models.swift",
+        "Sources/xlsOneCore/SimpleMerger.swift",
+        "Sources/xlsOneCore/SmartMerger.swift",
+        "Sources/xlsOneCore/TemplateWorkbookExporter.swift",
+        "Sources/xlsOneCore/WorkbookValidator.swift"
+      ],
+      "swift_schema": [
+        "Sources/xlsOneCore/Schema/FingerprintGenerator.swift",
+        "Sources/xlsOneCore/Schema/SchemaMatcher.swift",
+        "Sources/xlsOneCore/Schema/SchemaModels.swift",
+        "Sources/xlsOneCore/Schema/SchemaRepository.swift"
+      ],
+      "swift_license": [
+        "Sources/xlsOneLicense/DeviceFingerprint.swift",
+        "Sources/xlsOneLicense/Keychain.swift",
+        "Sources/xlsOneLicense/LicenseActivationView.swift",
+        "Sources/xlsOneLicense/LicenseManager.swift"
+      ],
+      "cpp_app": [
+        "cpp/app/src/diagnostics_view.cpp",
+        "cpp/app/src/dialog_utils.cpp",
+        "cpp/app/src/empty_workspace_view.cpp",
+        "cpp/app/src/inspector_panel.cpp",
+        "cpp/app/src/license_activation_dialog.cpp",
+        "cpp/app/src/main.cpp",
+        "cpp/app/src/main_window.cpp",
+        "cpp/app/src/merged_table_delegate.cpp",
+        "cpp/app/src/merged_table_model.cpp",
+        "cpp/app/src/schema_manager_dialog.cpp",
+        "cpp/app/src/sheet_strip.cpp",
+        "cpp/app/src/symbol_icons.cpp",
+        "cpp/app/src/ui_theme.cpp",
+        "cpp/app/src/update_dialog.cpp",
+        "cpp/app/src/workspace_chrome.cpp",
+        "cpp/app/src/diagnostics_view.hpp",
+        "cpp/app/src/dialog_utils.hpp",
+        "cpp/app/src/empty_workspace_view.hpp",
+        "cpp/app/src/inspector_panel.hpp",
+        "cpp/app/src/license_activation_dialog.hpp",
+        "cpp/app/src/main_window.hpp",
+        "cpp/app/src/merged_table_delegate.hpp",
+        "cpp/app/src/merged_table_model.hpp",
+        "cpp/app/src/schema_manager_dialog.hpp",
+        "cpp/app/src/sheet_strip.hpp",
+        "cpp/app/src/symbol_icons.hpp",
+        "cpp/app/src/ui_theme.hpp",
+        "cpp/app/src/update_dialog.hpp",
+        "cpp/app/src/workspace_chrome.hpp"
+      ],
+      "cpp_core": [
+        "cpp/core/src/biff8_xls_parser.cpp",
+        "cpp/core/src/compound_file_reader.cpp",
+        "cpp/core/src/excel_parser.cpp",
+        "cpp/core/src/exporter.cpp",
+        "cpp/core/src/license_manager.cpp",
+        "cpp/core/src/merger.cpp",
+        "cpp/core/src/models.cpp",
+        "cpp/core/src/schema_repository.cpp",
+        "cpp/core/src/update_checker.cpp",
+        "cpp/core/src/validator.cpp",
+        "cpp/core/src/zip_archive.cpp",
+        "cpp/core/src/biff8_xls_parser.hpp",
+        "cpp/core/src/compound_file_reader.hpp",
+        "cpp/core/src/zip_archive.hpp",
+        "cpp/core/include/xlsone/core/excel_parser.hpp",
+        "cpp/core/include/xlsone/core/exporter.hpp",
+        "cpp/core/include/xlsone/core/license_manager.hpp",
+        "cpp/core/include/xlsone/core/merger.hpp",
+        "cpp/core/include/xlsone/core/models.hpp",
+        "cpp/core/include/xlsone/core/schema_repository.hpp",
+        "cpp/core/include/xlsone/core/update_checker.hpp",
+        "cpp/core/include/xlsone/core/validator.hpp"
       ]
     }
   },
   "routes": [
-    "/"
+    "macOS 工作台",
+    "费用汇总表",
+    "项目明细表"
   ],
-  "readme_excerpt": "# xlsOne - Excel 财务报表汇总工具\n根据 PRD.md 开发的 macOS Excel 财务报表汇总工具。\n## 功能特性\n- **文件导入**: 支持拖拽导入多个 `.xlsx` 文件和常见 BIFF8 `.xls` 文件\n- **工作表管理**: 自动识别所有文件中的工作表名称，支持切换不同工作表\n- **智能单元格聚合**:\n- 所有文件值相同 → 显示标签（如\"201\"）\n- 值不同且都是数字 → 显示求和结果（如\"4500\"）\n- 值不同且包含非数字 → 显示混合数量（如\"3条\"）\n- **穿透查阅**: 点击单元格可查看该位置在所有文件中的原始值\n- **导出功能**: 将汇总结果导出为 `.xlsx` 工作簿\n## 技术架构\n```\nxlsOneCore/\n├── Models.swift                   # 数据模型（CellData, MergedCell, SheetData, ExcelFile, MergedResult）\n├── ExcelParser.swift              # Excel 解析（CoreXLSX + 原生 BIFF8 .xls）\n├── WorkbookValidator.swift        # 同构工作簿校验\n├── SmartMerger.swift              # 汇总与修正规则\n└── TemplateWorkbookExporter.swift # 导出 XLSX 工作簿\nxlsOneUI/\n├── WorkspaceScene.swift          # 应用场景与工作台状态\n└── ContentView.swift             # 主界面\n```\n## 构建与运行\n### 构建\n```bash\nswift build -c release\n```\n### 运行GUI应用\n```bash\n.build/release/xlsOne\n```\n### 构建并打开 macOS app\n```bash\n./run-app.sh\n```\n### 运行测试\n```bash\nswift test\n```\n## 验证结果\n使用仙居县13个乡镇的财务报表进行验证：\n- ✅ 成功解析 13 个 Excel 文件\n- ✅ 识别 11 个工作表\n- ✅ 金额列正确求和（如 ∑15467.63）\n- ✅ 标签列正确显示",
-  "run_command_candidates": [],
-  "feature_candidates": []
+  "readme_excerpt": "# xlsOne - Excel 财务报表汇总工具\n根据 PRD.md 开发的 macOS Excel 财务报表汇总工具。\n## 功能特性\n- **文件导入**: 支持拖拽导入多个 `.xlsx` 文件和常见 BIFF8 `.xls` 文件\n- **工作表管理**: 自动识别所有文件中的工作表名称，支持切换不同工作表\n- **智能单元格聚合**:\n- 所有文件值相同 → 显示标签（如\"201\"）\n- 值不同且都是数字 → 显示求和结果（如\"4500\"）\n- 值不同且包含非数字 → 显示混合数量（如\"3条\"）\n- **穿透查阅**: 点击单元格可查看该位置在所有文件中的原始值\n- **导出功能**: 将汇总结果导出为 `.xlsx` 工作簿\n## 技术架构\n```\nxlsOneCore/\n├── Models.swift                   # 数据模型（CellData, MergedCell, SheetData, ExcelFile, MergedResult）\n├── ExcelParser.swift              # Excel 解析（CoreXLSX + 原生 BIFF8 .xls）\n├── WorkbookValidator.swift        # 同构工作簿校验\n├── SmartMerger.swift              # 汇总与修正规则\n└── TemplateWorkbookExporter.swift # 导出 XLSX 工作簿\nxlsOneUI/\n├── WorkspaceScene.swift          # 应用场景与工作台状态\n└── ContentView.swift             # 主界面\n```\n## 构建与运行\n### 构建\n```bash\nswift build -c release\n```\n### 运行GUI应用\n```bash\n.build/release/xlsOne\n```\n### 构建并打开 macOS app\n```bash\n./run-app.sh\n```\n### 运行测试\n```bash\nswift test\n```\n## 验证结果\n使用仙居县13个乡镇的财务报表进行验证：\n- ✅ 成功解析 13 个 Excel 文件\n- ✅ 识别 11 个工作表\n- ✅ 金额列正确求和（如 ∑15467.63）\n- ✅ 名称、编号等信息保留最常见的共同前缀",
+  "run_command_candidates": [
+    "swift run xlsOne",
+    "./scripts/build_and_open_app.sh --configuration release"
+  ],
+  "feature_candidates": [
+    "批量导入Excel文件",
+    "工作簿结构校验",
+    "Sheet切换",
+    "智能单元格聚合",
+    "来源穿透查阅",
+    "类型修正与规则保存",
+    "汇总结果导出",
+    "许可证激活"
+  ],
+  "desktop_targets": {
+    "primary": "macOS SwiftUI App",
+    "secondary": "C++/Qt desktop port",
+    "primary_entry": "Sources/xlsOne/XlsOneApp.swift",
+    "bundle_entry": "App/xlsOneMacApp/XlsOneMacApp.swift"
+  },
+  "generated_test_data": {
+    "directory": "软件著作权申请资料/截图/测试数据",
+    "files": [
+      "软件著作权申请资料/截图/测试数据/测试单位A_费用报表.xlsx",
+      "软件著作权申请资料/截图/测试数据/测试单位B_费用报表.xlsx",
+      "软件著作权申请资料/截图/测试数据/测试单位C_费用报表.xlsx",
+      "软件著作权申请资料/截图/测试数据/测试单位D_费用报表.xlsx"
+    ],
+    "purpose": "仅用于本次操作手册截图演示，不作为代码材料或登记主体数据来源。"
+  }
 }
