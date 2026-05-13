@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import xlsOneCore
 import xlsOneUI
 
 @main
@@ -8,6 +9,7 @@ struct XlsOneApp: App {
 
     init() {
         NSWindow.allowsAutomaticWindowTabbing = false
+        LocaleManager.shared.applyToFoundation()
     }
 
     var body: some Scene {
