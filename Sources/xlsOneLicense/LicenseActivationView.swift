@@ -1,10 +1,12 @@
 import SwiftUI
+import xlsOneCore
 
 // MARK: - License Activation View
 
 /// Modal sheet shown when the app needs activation.
 public struct LicenseActivationView: View {
     @ObservedObject var licenseManager: LicenseManager
+    @ObservedObject private var localeManager = LocaleManager.shared
     @State private var keyInput = ""
     @State private var isActivating = false
     @State private var errorMessage: String?
@@ -23,7 +25,7 @@ public struct LicenseActivationView: View {
                     .font(.system(size: 40))
                     .foregroundColor(.accentColor)
 
-                Text(String(localized: "激活 表表归一"))
+                Text(LocaleManager.loc("激活 表表归一"))
                     .font(.title2)
                     .fontWeight(.semibold)
 

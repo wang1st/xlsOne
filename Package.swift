@@ -22,7 +22,7 @@ let package = Package(
         ),
         .target(
             name: "xlsOneLicense",
-            dependencies: []
+            dependencies: ["xlsOneCore"]
         ),
         .target(
             name: "xlsOneUI",

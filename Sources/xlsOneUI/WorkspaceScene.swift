@@ -24,7 +24,7 @@ public struct XlsOneWorkspaceScene: Scene {
                 .background(WorkspaceWindowTabDisabler())
         }
         .commands {
-            WorkspaceCommands(viewModel: viewModel, licenseManager: licenseManager)
+            WorkspaceCommands(viewModel: viewModel, licenseManager: licenseManager, localeManager: localeManager)
         }
     }
 }
@@ -32,21 +32,23 @@ public struct XlsOneWorkspaceScene: Scene {
 private struct WorkspaceCommands: Commands {
     @ObservedObject var viewModel: AppViewModel
     @ObservedObject var licenseManager: LicenseManager
+    @ObservedObject var localeManager: LocaleManager
 
     var body: some Commands {
-        WorkspaceFileCommands(viewModel: viewModel)
-        WorkspaceEditCommands(viewModel: viewModel)
-        WorkspaceAdjustmentMemoryCommands(viewModel: viewModel)
-        WorkspaceViewCommands()
-        WorkspaceWindowCommands()
-        WorkspaceLicenseCommands(licenseManager: licenseManager)
-        WorkspaceLanguageCommands()
-        WorkspaceHelpCommands()
+        WorkspaceFileCommands(viewModel: viewModel, localeManager: localeManager)
+        WorkspaceEditCommands(viewModel: viewModel, localeManager: localeManager)
+        WorkspaceAdjustmentMemoryCommands(viewModel: viewModel, localeManager: localeManager)
+        WorkspaceViewCommands(localeManager: localeManager)
+        WorkspaceWindowCommands(localeManager: localeManager)
+        WorkspaceLicenseCommands(licenseManager: licenseManager, localeManager: localeManager)
+        WorkspaceLanguageCommands(localeManager: localeManager)
+        WorkspaceHelpCommands(localeManager: localeManager)
     }
 }
 
 private struct WorkspaceFileCommands: Commands {
     @ObservedObject var viewModel: AppViewModel
+    @ObservedObject var localeManager: LocaleManager
 
     var body: some Commands {
         CommandGroup(replacing: .appInfo) {
@@ -99,6 +101,7 @@ private struct WorkspaceFileCommands: Commands {
 
 private struct WorkspaceEditCommands: Commands {
     @ObservedObject var viewModel: AppViewModel
+    @ObservedObject var localeManager: LocaleManager
 
     var body: some Commands {
         CommandGroup(replacing: .undoRedo) {
@@ -122,6 +125,7 @@ private struct WorkspaceEditCommands: Commands {
 
 private struct WorkspaceAdjustmentMemoryCommands: Commands {
     @ObservedObject var viewModel: AppViewModel
+    @ObservedObject var localeManager: LocaleManager
 
     var body: some Commands {
         CommandMenu(LocaleManager.loc("调整记忆")) {
@@ -140,12 +144,16 @@ private struct WorkspaceAdjustmentMemoryCommands: Commands {
 }
 
 private struct WorkspaceViewCommands: Commands {
+    @ObservedObject var localeManager: LocaleManager
+
     var body: some Commands {
         CommandGroup(replacing: .toolbar) {}
     }
 }
 
 private struct WorkspaceWindowCommands: Commands {
+    @ObservedObject var localeManager: LocaleManager
+
     var body: some Commands {
         CommandGroup(replacing: .windowArrangement) {
             Button("最小化") {
@@ -168,6 +176,7 @@ private struct WorkspaceWindowCommands: Commands {
 
 private struct WorkspaceLicenseCommands: Commands {
     @ObservedObject var licenseManager: LicenseManager
+    @ObservedObject var localeManager: LocaleManager
 
     var body: some Commands {
         CommandMenu(LocaleManager.loc("许可")) {
@@ -182,7 +191,7 @@ private struct WorkspaceLicenseCommands: Commands {
 }
 
 private struct WorkspaceLanguageCommands: Commands {
-    @ObservedObject private var localeManager = LocaleManager.shared
+    @ObservedObject var localeManager: LocaleManager
 
     var body: some Commands {
         CommandMenu("Language") {
@@ -191,6 +200,9 @@ private struct WorkspaceLanguageCommands: Commands {
                     localeManager.currentLanguage = language
                     localeManager.applyToFoundation()
                     AlgorithmI18n.shared.reload()
+                    Task { @MainActor in
+                        WorkspaceMenuLocalizer.scheduleMainMenuLocalizationPasses()
+                    }
                 } label: {
                     HStack {
                         Text(language.displayName)
@@ -205,6 +217,8 @@ private struct WorkspaceLanguageCommands: Commands {
 }
 
 private struct WorkspaceHelpCommands: Commands {
+    @ObservedObject var localeManager: LocaleManager
+
     var body: some Commands {
         CommandGroup(replacing: .help) {
             Button(LocaleManager.loc("检查更新")) {
@@ -393,7 +407,7 @@ enum WorkspaceAppPresentation {
     }
 
     private static var isPreferredLanguageChinese: Bool {
-        Locale.preferredLanguages.first?.hasPrefix("zh") == true
+        LocaleManager.shared.currentLanguage.isChineseLike()
     }
 
     @MainActor
@@ -573,8 +587,8 @@ private enum WorkspaceMenuLocalizer {
     }
 
     private static var shouldUseChineseMenus: Bool {
-        guard let preferredLanguage = Locale.preferredLanguages.first else { return false }
-        return preferredLanguage.hasPrefix("zh")
+        let identifier = LocaleManager.shared.currentLanguage.localeIdentifier ?? Locale.preferredLanguages.first ?? "en"
+        return identifier.hasPrefix("zh")
     }
 
     @MainActor
