@@ -16,7 +16,7 @@ public struct LanguagePickerView: View {
                     .tag(language)
             }
         } label: {
-            Label(String(localized: "语言"), systemImage: "globe")
+            Label(LocaleManager.loc("语言"), systemImage: "globe")
         }
         .pickerStyle(.menu)
         .onChange(of: selectedLanguage) { newLanguage in
