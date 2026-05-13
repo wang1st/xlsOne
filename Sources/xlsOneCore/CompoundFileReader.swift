@@ -10,15 +10,15 @@ enum CompoundFileError: Error, CustomStringConvertible {
     var description: String {
         switch self {
         case .invalidHeader:
-            return "不是有效的 OLE Compound File。"
+            return LocaleManager.loc("不是有效的 OLE Compound File。")
         case .unsupportedSectorSize(let size):
-            return "暂不支持的 OLE sector size: \(size)。"
+            return LocaleManager.loc("暂不支持的 OLE sector size: \(size)。")
         case .chainLoop(let sector):
-            return "OLE sector chain 出现循环: \(sector)。"
+            return LocaleManager.loc("OLE sector chain 出现循环: \(sector)。")
         case .sectorOutOfBounds(let sector):
-            return "OLE sector 越界: \(sector)。"
+            return LocaleManager.loc("OLE sector 越界: \(sector)。")
         case .streamNotFound(let names):
-            return "未找到工作簿数据流: \(names.joined(separator: ", "))。"
+            return LocaleManager.loc("未找到工作簿数据流: \(names.joined(separator: ", "))。")
         }
     }
 }

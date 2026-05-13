@@ -440,15 +440,15 @@ public enum ParserError: Error, CustomStringConvertible, LocalizedError {
     public var description: String {
         switch self {
         case .fileNotFound(let path):
-            return "文件未找到: \(path)"
+            return LocaleManager.loc("文件未找到: \(path)")
         case .cannotOpenFile(let path):
-            return "无法打开文件: \(path)"
+            return LocaleManager.loc("无法打开文件: \(path)")
         case .invalidFormat(let reason):
-            return "格式错误: \(reason)"
+            return LocaleManager.loc("格式错误: \(reason)")
         case .allFilesFailed(let errors):
-            return "所有文件解析失败:\n" + errors.map { "  - \($0.0): \($0.1)" }.joined(separator: "\n")
+            return LocaleManager.loc("所有文件解析失败:\n") + errors.map { "  - \($0.0): \($0.1)" }.joined(separator: "\n")
         case .unsupportedFileExtension(let ext):
-            return "暂不支持的文件类型: \(ext)。请选择 .xlsx 或 .xls 文件。"
+            return LocaleManager.loc("暂不支持的文件类型: \(ext)。请选择 .xlsx 或 .xls 文件。")
         }
     }
 

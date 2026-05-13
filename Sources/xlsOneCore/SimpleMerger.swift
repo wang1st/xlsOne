@@ -447,7 +447,7 @@ public struct FormatProfile {
         let text = cell.value.trimmingCharacters(in: .whitespacesAndNewlines)
 
         // 占位符
-        let markers = ["—", "-", "/", "NA", "N/A", "无", "null", "NULL", "~"]
+        let markers = AlgorithmI18n.shared.current.dashMarkers
         if markers.contains(text) || text == " " {
             return .dashMarker
         }
