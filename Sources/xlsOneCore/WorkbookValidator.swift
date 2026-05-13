@@ -186,7 +186,7 @@ public struct WorkbookValidator {
                         code: .parseFailure,
                         fileName: URL(fileURLWithPath: failure.path).lastPathComponent,
                         filePath: failure.path,
-                        message: "解析失败: \(failure.message)"
+                        message: LocaleManager.loc("解析失败: \(failure.message)")
                     )
                 ],
                 sheetReports: []
@@ -208,7 +208,7 @@ public struct WorkbookValidator {
                             code: .emptyWorkbook,
                             fileName: emptyFile.filename,
                             filePath: emptyFile.filepath,
-                            message: "工作簿中没有可用工作表，已跳过"
+                            message: LocaleManager.loc("工作簿中没有可用工作表，已跳过")
                         )
                     ],
                     sheetReports: []
@@ -260,7 +260,7 @@ public struct WorkbookValidator {
                             fileName: entry.file.filename,
                             filePath: entry.file.filepath,
                             sheetName: sheetName,
-                            message: "工作表“\(sheetName)”未在所有文件中同时出现，已从本次汇总中排除"
+                            message: LocaleManager.loc("工作表“\(sheetName)”未在所有文件中同时出现，已从本次汇总中排除")
                         )
                     )
                 }
@@ -289,7 +289,7 @@ public struct WorkbookValidator {
                                 fileName: item.file.filename,
                                 filePath: item.file.filepath,
                                 sheetName: sheetName,
-                                message: "工作表“\(sheetName)”有效行数不一致（忽略尾部空白后：多数文件为 \(dominantDimensions.rows) 行，当前文件为 \(item.dimensions.rows) 行），已从本次汇总中排除"
+                                message: LocaleManager.loc("工作表“\(sheetName)”有效行数不一致（忽略尾部空白后：多数文件为 \(dominantDimensions.rows) 行，当前文件为 \(item.dimensions.rows) 行），已从本次汇总中排除")
                             )
                         )
                     }
@@ -302,7 +302,7 @@ public struct WorkbookValidator {
                                 fileName: item.file.filename,
                                 filePath: item.file.filepath,
                                 sheetName: sheetName,
-                                message: "工作表“\(sheetName)”有效列数不一致（忽略尾部空白后：多数文件为 \(dominantDimensions.cols) 列，当前文件为 \(item.dimensions.cols) 列），已从本次汇总中排除"
+                                message: LocaleManager.loc("工作表“\(sheetName)”有效列数不一致（忽略尾部空白后：多数文件为 \(dominantDimensions.cols) 列，当前文件为 \(item.dimensions.cols) 列），已从本次汇总中排除")
                             )
                         )
                     }
