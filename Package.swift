@@ -17,7 +17,8 @@ let package = Package(
     targets: [
         .target(
             name: "xlsOneCore",
-            dependencies: ["CoreXLSX"]
+            dependencies: ["CoreXLSX"],
+            resources: [.process("Resources")]
         ),
         .target(
             name: "xlsOneLicense",
