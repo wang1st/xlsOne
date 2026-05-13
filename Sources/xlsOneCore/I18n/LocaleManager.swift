@@ -49,10 +49,36 @@ public final class LocaleManager: ObservableObject {
         }
     }
 
+    private var translations: [String: [String: String]] = [:]
+
     private init() {
         let stored = UserDefaults.standard.string(forKey: "AppLanguage") ?? ""
         currentLanguage = AppLanguage(rawValue: stored) ?? .system
         applyToFoundation()
+        loadTranslations()
+    }
+
+    private func loadTranslations() {
+        guard let url = Bundle.module.url(forResource: "Localizable", withExtension: "xcstrings"),
+              let data = try? Data(contentsOf: url),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let strings = json["strings"] as? [String: Any] else {
+            return
+        }
+
+        for (key, value) in strings {
+            guard let dict = value as? [String: Any],
+                  let localizations = dict["localizations"] as? [String: Any] else { continue }
+            
+            var langDict: [String: String] = [:]
+            for (lang, langData) in localizations {
+                guard let langDictData = langData as? [String: Any],
+                      let stringUnit = langDictData["stringUnit"] as? [String: Any],
+                      let val = stringUnit["value"] as? String else { continue }
+                langDict[lang] = val
+            }
+            translations[key] = langDict
+        }
     }
 
     public func applyToFoundation() {
@@ -73,15 +99,17 @@ public final class LocaleManager: ObservableObject {
     }
 
     public static func loc(_ key: String) -> String {
-        let lang = shared.currentLanguage.localeIdentifier ?? "zh-Hans"
+        let lang = LocaleManager.shared.currentLanguage.localeIdentifier ?? (Locale.preferredLanguages.first?.hasPrefix("zh") == true ? "zh-Hans" : "en")
         
-        // Lookup specific language bundle
-        if let path = Bundle.module.path(forResource: lang, ofType: "lproj"),
-           let langBundle = Bundle(path: path) {
-            return langBundle.localizedString(forKey: key, value: key, table: nil)
+        if let langDict = LocaleManager.shared.translations[key] {
+            if let text = langDict[lang] { return text }
+            if lang.hasPrefix("zh-Hant"), let text = langDict["zh-Hant"] { return text }
+            if lang.hasPrefix("zh"), let text = langDict["zh-Hans"] { return text }
+            if lang.hasPrefix("en"), let text = langDict["en"] { return text }
+            if let text = langDict["en"] { return text }
+            if let text = langDict["zh-Hans"] { return text }
         }
         
-        // Fallback
-        return Bundle.module.localizedString(forKey: key, value: key, table: nil)
+        return key
     }
 }
