@@ -413,9 +413,8 @@ enum WorkspaceAppPresentation {
     @MainActor
     static func showAboutPanel() {
         let alert = NSAlert()
-        let lang = LocaleManager.shared.currentLanguage
-        let isEnglish = lang == .english
-            || (lang == .system && !(Locale.preferredLanguages.first?.hasPrefix("zh") ?? true))
+        let storedLang = UserDefaults.standard.string(forKey: "AppLanguage") ?? ""
+        let isEnglish = storedLang == "en" || (storedLang.isEmpty && !(Locale.preferredLanguages.first?.hasPrefix("zh") ?? false))
         alert.messageText = isEnglish ? "About xlsOne" : "关于 表表归一"
         alert.informativeText = isEnglish ? """
             xlsOne  V\(marketingVersion)
@@ -450,9 +449,8 @@ enum WorkspaceAppPresentation {
     @MainActor
     static func showHelpPanel() {
         let alert = NSAlert()
-        let lang = LocaleManager.shared.currentLanguage
-        let isEnglish = lang == .english
-            || (lang == .system && !(Locale.preferredLanguages.first?.hasPrefix("zh") ?? true))
+        let storedLang = UserDefaults.standard.string(forKey: "AppLanguage") ?? ""
+        let isEnglish = storedLang == "en" || (storedLang.isEmpty && !(Locale.preferredLanguages.first?.hasPrefix("zh") ?? false))
         alert.messageText = isEnglish ? "Help" : "使用帮助"
         alert.informativeText = isEnglish ? """
             xlsOne  ·  One-click Excel Report Merger
