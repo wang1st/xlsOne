@@ -413,26 +413,23 @@ enum WorkspaceAppPresentation {
     @MainActor
     static func showAboutPanel() {
         let alert = NSAlert()
-        alert.messageText = LocaleManager.loc("关于 表表归一")
-        alert.informativeText = WorkspaceAppPresentation.aboutText
-        alert.addButton(withTitle: LocaleManager.loc("确定"))
-        WorkspaceDialogPresenter.runAlert(alert)
-        NSApp.activate(ignoringOtherApps: true)
-    }
+        let lang = LocaleManager.shared.currentLanguage
+        let isEnglish = lang == .english
+            || (lang == .system && !(Locale.preferredLanguages.first?.hasPrefix("zh") ?? true))
+        alert.messageText = isEnglish ? "About xlsOne" : "关于 表表归一"
+        alert.informativeText = isEnglish ? """
+            xlsOne  V\(marketingVersion)
 
-    @MainActor
-    static func showHelpPanel() {
-        let alert = NSAlert()
-        alert.messageText = LocaleManager.loc("使用帮助")
-        alert.informativeText = WorkspaceAppPresentation.helpText
-        alert.addButton(withTitle: LocaleManager.loc("确定"))
-        WorkspaceDialogPresenter.runAlert(alert)
-        NSApp.activate(ignoringOtherApps: true)
-    }
+            One-click summary for multiple identically-formatted Excel reports.
 
-    static var aboutText: String {
-        if LocaleManager.shared.currentLanguage.isChineseLike() {
-            return """
+            Merge multiple Excel sheets with identical layouts into a single summary sheet. Amounts, quantities, and other summable values are automatically totaled. Names, codes, and other non-summable information retain the most common values across all files.
+
+            Author: Wang Zhen
+            Tech: Swift / SwiftUI
+            Email: 831261@qq.com
+
+            © 2026 Wang Zhen. All rights reserved.
+            """ : """
             表表归一  V\(marketingVersion)
 
             多张同格式 Excel 报表一键汇总
@@ -445,25 +442,49 @@ enum WorkspaceAppPresentation {
 
             © 2026 王臻. 保留所有权利.
             """
-        }
-        return """
-            xlsOne  V\(marketingVersion)
-
-            One-click summary for multiple identically-formatted Excel reports.
-
-            Merge multiple Excel sheets with identical layouts into a single summary sheet. Amounts, quantities, and other summable values are automatically totaled. Names, codes, and other non-summable information retain the most common values across all files.
-
-            Author: Wang Zhen
-            Tech: Swift / SwiftUI
-            Email: 831261@qq.com
-
-            © 2026 Wang Zhen. All rights reserved.
-            """
+        alert.addButton(withTitle: isEnglish ? "OK" : "确定")
+        WorkspaceDialogPresenter.runAlert(alert)
+        NSApp.activate(ignoringOtherApps: true)
     }
 
-    static var helpText: String {
-        if LocaleManager.shared.currentLanguage.isChineseLike() {
-            return """
+    @MainActor
+    static func showHelpPanel() {
+        let alert = NSAlert()
+        let lang = LocaleManager.shared.currentLanguage
+        let isEnglish = lang == .english
+            || (lang == .system && !(Locale.preferredLanguages.first?.hasPrefix("zh") ?? true))
+        alert.messageText = isEnglish ? "Help" : "使用帮助"
+        alert.informativeText = isEnglish ? """
+            xlsOne  ·  One-click Excel Report Merger
+
+            1. Import Files
+               Drag .xlsx or .xls files into the window, or click [File] → [Import Files]
+
+            2. Switch Sheets
+               Click the Sheet tabs at the top to switch between report pages
+
+            3. View Summary
+               - Amounts, quantities, and summable numbers are automatically totaled
+               - Names, codes retain the most common values
+               - Sheets with inconsistent structure are skipped with a reason
+
+            4. Source Drilldown
+               Click any cell to view its raw values from each source file
+
+            5. Export Results
+               Click [Export XLSX] to save the summary
+
+            6. Cell Correction
+               Manually override cell type to Label or Sum in the right panel
+
+            Shortcuts:
+               Cmd+O  Import Files
+               Cmd+Shift+O  Add Files
+               Cmd+S  Export
+               Cmd+R  Refresh
+               Cmd+N  Clear
+               Cmd+Z  Undo Correction
+            """ : """
             表表归一  ·  多张同格式 Excel 报表一键汇总
 
             1. 导入文件
@@ -494,38 +515,9 @@ enum WorkspaceAppPresentation {
                Command+N  清空
                Command+Z  撤销修正
             """
-        }
-        return """
-            xlsOne  ·  One-click Excel Report Merger
-
-            1. Import Files
-               Drag .xlsx or .xls files into the window, or click [File] → [Import Files]
-
-            2. Switch Sheets
-               Click the Sheet tabs at the top to switch between report pages
-
-            3. View Summary
-               - Amounts, quantities, and summable numbers are automatically totaled
-               - Names, codes retain the most common values
-               - Sheets with inconsistent structure are skipped with a reason
-
-            4. Source Drilldown
-               Click any cell to view its raw values from each source file
-
-            5. Export Results
-               Click [Export XLSX] to save the summary
-
-            6. Cell Correction
-               Manually override cell type to Label or Sum in the right panel
-
-            Shortcuts:
-               Cmd+O  Import Files
-               Cmd+Shift+O  Add Files
-               Cmd+S  Export
-               Cmd+R  Refresh
-               Cmd+N  Clear
-               Cmd+Z  Undo Correction
-            """
+        alert.addButton(withTitle: isEnglish ? "OK" : "确定")
+        WorkspaceDialogPresenter.runAlert(alert)
+        NSApp.activate(ignoringOtherApps: true)
     }
 
     @MainActor
