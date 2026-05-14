@@ -29,6 +29,16 @@ public struct XlsOneWorkspaceScene: Scene {
     }
 }
 
+@objc private final class AppAboutHelpHandler: NSObject {
+    static let shared = AppAboutHelpHandler()
+
+    @objc func showCustomAbout() {
+        DispatchQueue.main.async {
+            WorkspaceAppPresentation.showAboutPanel()
+        }
+    }
+}
+
 private struct WorkspaceCommands: Commands {
     @ObservedObject var viewModel: AppViewModel
     @ObservedObject var licenseManager: LicenseManager
@@ -599,12 +609,30 @@ private enum WorkspaceMenuLocalizer {
 
     @MainActor
     static func scheduleMainMenuLocalizationPasses() {
-        guard shouldUseChineseMenus else { return }
+        if shouldUseChineseMenus {
+            for delay in [0, 0.2, 0.75, 1.5] {
+                DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                    Task { @MainActor in
+                        localizeMainMenu()
+                    }
+                }
+            }
+        }
+        DispatchQueue.main.async {
+            patchAboutMenuItem()
+        }
+    }
 
-        for delay in [0, 0.2, 0.75, 1.5] {
-            DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-                Task { @MainActor in
-                    localizeMainMenu()
+    @MainActor
+    private static func patchAboutMenuItem() {
+        guard let menu = NSApp.mainMenu else { return }
+        for item in menu.items {
+            guard let sub = item.submenu else { continue }
+            for mi in sub.items {
+                if mi.action == #selector(NSApplication.orderFrontStandardAboutPanel(_:)) {
+                    mi.action = #selector(AppAboutHelpHandler.showCustomAbout)
+                    mi.target = AppAboutHelpHandler.shared
+                    return
                 }
             }
         }
