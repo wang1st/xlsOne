@@ -25,8 +25,10 @@ if(LRELEASE_EXECUTABLE)
         COMMAND ${LRELEASE_EXECUTABLE}
             "${CMAKE_CURRENT_SOURCE_DIR}/i18n/xlsone_zh_CN.ts"
             "${CMAKE_CURRENT_SOURCE_DIR}/i18n/xlsone_en.ts"
+            "${CMAKE_CURRENT_SOURCE_DIR}/i18n/xlsone_ja.ts"
             -qm "${CMAKE_CURRENT_SOURCE_DIR}/i18n/xlsone_zh_CN.qm"
             -qm "${CMAKE_CURRENT_SOURCE_DIR}/i18n/xlsone_en.qm"
+            -qm "${CMAKE_CURRENT_SOURCE_DIR}/i18n/xlsone_ja.qm"
         WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/i18n"
         COMMENT "Compiling Qt translations"
     )

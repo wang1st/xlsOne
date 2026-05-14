@@ -30,12 +30,12 @@ public struct LicenseActivationView: View {
                     .fontWeight(.semibold)
 
                 if licenseManager.licenseState == .expired {
-                    Text("您的许可证已过期，请续费获取新的激活码")
+                    Text(LocaleManager.loc("您的许可证已过期，请续费获取新的激活码"))
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
                 } else {
-                    Text("输入激活码以解锁全部功能")
+                    Text(LocaleManager.loc("输入激活码以解锁全部功能"))
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
@@ -45,7 +45,7 @@ public struct LicenseActivationView: View {
 
             // Activation Key Input
             VStack(alignment: .leading, spacing: 8) {
-                Text("激活码")
+                Text(LocaleManager.loc("激活码"))
                     .font(.callout)
                     .fontWeight(.medium)
 
@@ -108,7 +108,7 @@ public struct LicenseActivationView: View {
                         ProgressView()
                             .scaleEffect(0.8)
                     }
-                    Text(isActivating ? "验证中..." : "激活")
+                    Text(isActivating ? LocaleManager.loc("验证中...") : LocaleManager.loc("激活"))
                         .fontWeight(.semibold)
                 }
                 .frame(maxWidth: .infinity)
@@ -124,7 +124,7 @@ public struct LicenseActivationView: View {
 
             // Trial & Purchase
             HStack(spacing: 24) {
-                Button("免费试用 14 天") {
+                Button(LocaleManager.loc("免费试用 14 天")) {
                     let remaining = licenseManager.startTrial()
                     if remaining > 0 {
                         errorMessage = nil
@@ -134,7 +134,7 @@ public struct LicenseActivationView: View {
                 }
                 .buttonStyle(.link)
 
-                Button("购买激活码 →") {
+                Button(LocaleManager.loc("购买激活码 →")) {
                     if let url = URL(string: "https://z-pulse.cn") {
                         NSWorkspace.shared.open(url)
                     }
@@ -151,7 +151,7 @@ public struct LicenseActivationView: View {
             } label: {
                 HStack(spacing: 4) {
                     Image(systemName: "wifi.slash")
-                    Text("离线激活")
+                    Text(LocaleManager.loc("离线激活"))
                 }
                 .font(.caption)
                 .foregroundColor(.secondary)
@@ -160,23 +160,23 @@ public struct LicenseActivationView: View {
 
             if showOfflineInfo {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("离线激活方式：")
+                    Text(LocaleManager.loc("离线激活方式："))
                         .font(.caption)
                         .fontWeight(.medium)
-                    Text("1. 在联网电脑上访问 z-pulse.cn/offline")
+                    Text(LocaleManager.loc("1. 在联网电脑上访问 z-pulse.cn/offline"))
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    Text("2. 输入购买邮箱和本机设备码")
+                    Text(LocaleManager.loc("2. 输入购买邮箱和本机设备码"))
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    Text("3. 下载授权文件并导入本程序")
+                    Text(LocaleManager.loc("3. 下载授权文件并导入本程序"))
                         .font(.caption)
                         .foregroundColor(.secondary)
 
                     Button {
                         importLicenseFile()
                     } label: {
-                        Label("导入授权文件...", systemImage: "doc.badge.plus")
+                        Label(LocaleManager.loc("导入授权文件..."), systemImage: "doc.badge.plus")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.bordered)
@@ -225,7 +225,7 @@ public struct LicenseActivationView: View {
         guard let result = licenseManager.importOfflineLicenseFile() else { return }
         switch result {
         case .success(let plan, _):
-            successMessage = "授权文件已导入：\(plan.displayName)"
+            successMessage = LocaleManager.loc("授权文件已导入：%@").replacingOccurrences(of: "%@", with: plan.displayName)
             licenseManager.showActivationSheet = false
         case .failure(let error):
             errorMessage = error.localizedDescription
@@ -267,10 +267,10 @@ public struct LicenseStatusBadge: View {
     private var label: String {
         switch licenseManager.licenseState {
         case .activated:   return licenseManager.plan.displayName
-        case .unactivated: return "未激活"
-        case .expired:     return "已过期"
-        case .gracePeriod: return "离线模式"
-        case .trial(let remaining): return "试用 \(remaining) 天"
+        case .unactivated: return LocaleManager.loc("未激活")
+        case .expired:     return LocaleManager.loc("已过期")
+        case .gracePeriod: return LocaleManager.loc("离线模式")
+        case .trial(let remaining): return String(format: LocaleManager.loc("试用 %lld 天"), remaining)
         }
     }
 }

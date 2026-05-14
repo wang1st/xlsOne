@@ -1,6 +1,11 @@
 import Foundation
 import SwiftUI
 
+extension Notification.Name {
+    /// Posted when the app language changes, carrying the new AppLanguage as the notification object.
+    public static let appLanguageDidChange = Notification.Name("xlsOneAppLanguageDidChange")
+}
+
 public final class LocaleManager: ObservableObject {
     public static let shared = LocaleManager()
 
@@ -8,6 +13,7 @@ public final class LocaleManager: ObservableObject {
         didSet {
             UserDefaults.standard.set(currentLanguage.rawValue, forKey: "AppLanguage")
             applyToFoundation()
+            NotificationCenter.default.post(name: .appLanguageDidChange, object: currentLanguage)
         }
     }
 
@@ -16,6 +22,7 @@ public final class LocaleManager: ObservableObject {
         case english = "en"
         case chineseSimplified = "zh-Hans"
         case chineseTraditional = "zh-Hant"
+        case japanese = "ja"
 
         public var id: String { rawValue }
 
@@ -25,6 +32,7 @@ public final class LocaleManager: ObservableObject {
             case .english: return "English"
             case .chineseSimplified: return "简体中文"
             case .chineseTraditional: return "繁體中文"
+            case .japanese: return "日本語"
             }
         }
 
@@ -34,6 +42,7 @@ public final class LocaleManager: ObservableObject {
             case .english: return "en"
             case .chineseSimplified: return "zh-Hans"
             case .chineseTraditional: return "zh-Hant"
+            case .japanese: return "ja"
             }
         }
 
@@ -43,7 +52,7 @@ public final class LocaleManager: ObservableObject {
                 return Locale.preferredLanguages.first?.hasPrefix("zh") ?? false
             case .chineseSimplified, .chineseTraditional:
                 return true
-            case .english:
+            case .english, .japanese:
                 return false
             }
         }
@@ -82,13 +91,16 @@ public final class LocaleManager: ObservableObject {
     }
 
     public func applyToFoundation() {
-        guard let id = currentLanguage.localeIdentifier else {
+        applyToFoundation(for: currentLanguage)
+    }
+
+    /// Persist a specific language to AppleLanguages without changing the current runtime language.
+    public func applyToFoundation(for language: AppLanguage) {
+        guard let id = language.localeIdentifier else {
             UserDefaults.standard.removeObject(forKey: "AppleLanguages")
-            UserDefaults.standard.synchronize()
             return
         }
         UserDefaults.standard.set([id], forKey: "AppleLanguages")
-        UserDefaults.standard.synchronize()
     }
 
     public var swiftUILocale: Locale {
@@ -99,8 +111,13 @@ public final class LocaleManager: ObservableObject {
     }
 
     public static func loc(_ key: String) -> String {
-        let lang = LocaleManager.shared.currentLanguage.localeIdentifier ?? (Locale.preferredLanguages.first?.hasPrefix("zh") == true ? "zh-Hans" : "en")
-        
+        loc(key, for: LocaleManager.shared.currentLanguage)
+    }
+
+    /// Look up a localized string for a specific language, ignoring current runtime language.
+    public static func loc(_ key: String, for language: AppLanguage) -> String {
+        let lang = language.localeIdentifier ?? (Locale.preferredLanguages.first?.hasPrefix("zh") == true ? "zh-Hans" : "en")
+
         if let langDict = LocaleManager.shared.translations[key] {
             if let text = langDict[lang] { return text }
             if lang.hasPrefix("zh-Hant"), let text = langDict["zh-Hant"] { return text }
@@ -109,7 +126,7 @@ public final class LocaleManager: ObservableObject {
             if let text = langDict["en"] { return text }
             if let text = langDict["zh-Hans"] { return text }
         }
-        
+
         return key
     }
 }

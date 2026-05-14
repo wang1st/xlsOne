@@ -7,6 +7,9 @@ struct ContentView: View {
     @EnvironmentObject var licenseManager: LicenseManager
     @ObservedObject private var localeManager = LocaleManager.shared
     @State private var isDropTargeted = false
+    @State private var showRestartToast = false
+    @State private var toastLanguage: LocaleManager.AppLanguage = .system
+    @State private var toastDismissTask: Task<Void, Never>?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -32,7 +35,7 @@ struct ContentView: View {
         .background {
             CenteredDialogWindow(
                 isPresented: $viewModel.showSchemaManager,
-                title: LocaleManager.loc("当前调整记忆"),
+                titleKey: "当前调整记忆",
                 size: NSSize(width: 600, height: 400)
             ) {
                 SchemaManagerView()
@@ -43,7 +46,7 @@ struct ContentView: View {
         .background {
             CenteredDialogWindow(
                 isPresented: licenseActivationSheet,
-                title: LocaleManager.loc("激活 表表归一"),
+                titleKey: "激活 表表归一",
                 size: NSSize(width: 420, height: 520)
             ) {
                 LicenseActivationView()
@@ -52,6 +55,29 @@ struct ContentView: View {
             .frame(width: 0, height: 0)
         }
         .onDrop(of: [.fileURL], delegate: DropDelegateView(viewModel: viewModel, isTargeted: $isDropTargeted))
+        .overlay {
+            if showRestartToast {
+                RestartToastView(language: toastLanguage)
+                    .transition(.opacity)
+            }
+        }
+        .animation(.easeInOut(duration: 0.35), value: showRestartToast)
+        .onReceive(NotificationCenter.default.publisher(for: .showRestartToast)) { notification in
+            if let lang = notification.object as? LocaleManager.AppLanguage {
+                toastLanguage = lang
+            }
+            toastDismissTask?.cancel()
+            withAnimation {
+                showRestartToast = true
+            }
+            toastDismissTask = Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 4_500_000_000)
+                guard !Task.isCancelled else { return }
+                withAnimation {
+                    showRestartToast = false
+                }
+            }
+        }
         .task {
             await licenseManager.verifyOnLaunch()
         }
@@ -80,7 +106,7 @@ struct ContentView: View {
     private func showErrorAlert() {
         WorkspaceDialogPresenter.runAlert(
             title: LocaleManager.loc("错误"),
-            message: viewModel.errorMessage ?? "未知错误",
+            message: viewModel.errorMessage ?? LocaleManager.loc("未知错误"),
             style: .warning
         )
         viewModel.showError = false
@@ -236,7 +262,7 @@ struct ContentView: View {
                 .scaleEffect(1.4)
             Text(LocaleManager.loc("正在校验工作簿结构并准备汇总工作台…"))
                 .foregroundStyle(.secondary)
-            Text("已选 \(viewModel.selectedFilePaths.count) 个文件")
+            Text(String(format: LocaleManager.loc("已选 %lld 个文件"), viewModel.selectedFilePaths.count))
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -255,7 +281,7 @@ struct ContentView: View {
                         Text(LocaleManager.loc("没有可参与汇总的同构工作表"))
                             .font(.title3)
                             .fontWeight(.semibold)
-                        Text("系统已忽略尾部空白行列后重试校验，但当前仍没有任何 sheet 能在所有文件间对齐。")
+                        Text(LocaleManager.loc("系统已忽略尾部空白行列后重试校验，但当前仍没有任何 sheet 能在所有文件间对齐。"))
                             .foregroundStyle(.secondary)
                     }
                 }
@@ -303,7 +329,7 @@ struct ContentView: View {
 
     private func fileParticipationList(_ reports: [FileValidationReport]) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("文件参与情况")
+            Text(LocaleManager.loc("文件参与情况"))
                 .font(.headline)
 
             ForEach(reports, id: \.filepath) { report in
@@ -341,7 +367,7 @@ struct ContentView: View {
 
     private func skippedSheetList(_ report: WorkbookValidationReport) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("已跳过的工作表")
+            Text(LocaleManager.loc("已跳过的工作表"))
                 .font(.headline)
 
             ForEach(report.skippedSheetNames, id: \.self) { sheetName in
@@ -355,7 +381,7 @@ struct ContentView: View {
                             Text(sheetName)
                                 .fontWeight(.medium)
                             Spacer()
-                            Text("不参与合并")
+                            Text(LocaleManager.loc("不参与合并"))
                                 .font(.caption)
                                 .foregroundStyle(.orange)
                         }
@@ -472,7 +498,7 @@ struct ContentView: View {
 
     private var correctionBar: some View {
         HStack {
-            Text("已调整 \(viewModel.correctionCount) 处")
+            Text(String(format: LocaleManager.loc("已调整 %lld 处"), viewModel.correctionCount))
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
@@ -839,20 +865,20 @@ struct SkippedSheetConsensusCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 8) {
-                Text("结构分组")
+                Text(LocaleManager.loc("结构分组"))
                     .font(.subheadline)
                     .fontWeight(.semibold)
                 Spacer()
-                Text("\(consensus.comparedFileCount) 个文件")
+                Text(String(format: LocaleManager.loc("%lld 个文件"), consensus.comparedFileCount))
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                Text("\(consensus.groupCount) 组")
+                Text(String(format: LocaleManager.loc("%lld 组"), consensus.groupCount))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
 
             if let dominant = consensus.dominantGroupDescription {
-                Text("主结构：\(dominant)")
+                Text(LocaleManager.loc("主结构：") + dominant)
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -864,11 +890,11 @@ struct SkippedSheetConsensusCard: View {
                             Text(group.title)
                                 .font(.caption)
                                 .fontWeight(.semibold)
-                            Text("\(group.detail) · \(group.fileCount) 个文件")
+                            Text(String(format: LocaleManager.loc("%@ · %lld 个文件"), group.detail, group.fileCount))
                                 .font(.caption)
                                 .foregroundStyle(group.isDominant ? .primary : .secondary)
                             if group.isDominant {
-                                Text("主")
+                                Text(LocaleManager.loc("主"))
                                     .font(.caption2)
                                     .padding(.horizontal, 6)
                                     .padding(.vertical, 2)
@@ -916,7 +942,7 @@ struct SkippedSheetWorkspaceView: View {
                         .font(.title3)
                         .fontWeight(.semibold)
 
-                    Text("未参与本次汇总")
+                    Text(LocaleManager.loc("未参与本次汇总"))
                         .font(.callout)
                         .fontWeight(.medium)
                         .foregroundStyle(.orange)
@@ -932,7 +958,7 @@ struct SkippedSheetWorkspaceView: View {
                 SkippedSheetConsensusCard(consensus: consensus)
                     .frame(maxWidth: 860)
 
-                Text("统一该 sheet 的有效行列范围后，可重新纳入合并。")
+                Text(LocaleManager.loc("统一该 sheet 的有效行列范围后，可重新纳入合并。"))
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: 720)
@@ -1534,7 +1560,7 @@ struct SelectionToolbar: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Text("已选 \(selectedCount) 个")
+            Text(String(format: LocaleManager.loc("已选 %lld 个"), selectedCount))
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
@@ -1782,7 +1808,7 @@ struct InspectionSidebar: View {
                     .foregroundStyle(.secondary)
                 }
 
-                Text("按 1 或 2")
+                Text(LocaleManager.loc("按 1 或 2"))
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
             }
@@ -1888,7 +1914,7 @@ struct InspectionSidebar: View {
         correctionState: CellCorrectionState
     ) -> String? {
         if correctionState != .none {
-            return "当前按\(displayTypeName(for: cell.type))显示"
+            return LocaleManager.loc("当前按%@显示").replacingOccurrences(of: "%@", with: displayTypeName(for: cell.type))
         }
         return WorkspaceDiagnostics.decisionSummary(for: cell)
     }
@@ -2000,20 +2026,22 @@ private struct InspectorOverrideButton: View {
     }
 }
 
+/// A reusable dialog window that presents SwiftUI content inside an NSPanel.
+/// Uses a localization key for the title so the window title stays in sync with the current language.
 private struct CenteredDialogWindow<DialogContent: View>: NSViewRepresentable {
     @Binding var isPresented: Bool
-    let title: String
+    let titleKey: String
     let size: NSSize
     let content: () -> DialogContent
 
     init(
         isPresented: Binding<Bool>,
-        title: String,
+        titleKey: String,
         size: NSSize,
         @ViewBuilder content: @escaping () -> DialogContent
     ) {
         _isPresented = isPresented
-        self.title = title
+        self.titleKey = titleKey
         self.size = size
         self.content = content
     }
@@ -2038,16 +2066,41 @@ private struct CenteredDialogWindow<DialogContent: View>: NSViewRepresentable {
     final class Coordinator: NSObject, NSWindowDelegate {
         var parent: CenteredDialogWindow
         private var panel: NSPanel?
+        private var langObserver: NSObjectProtocol?
 
         init(parent: CenteredDialogWindow) {
             self.parent = parent
+            super.init()
+            langObserver = NotificationCenter.default.addObserver(
+                forName: .appLanguageDidChange,
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in
+                guard let self else { return }
+                self.panel?.title = LocaleManager.loc(self.parent.titleKey)
+            }
+        }
+
+        deinit {
+            if let obs = langObserver {
+                NotificationCenter.default.removeObserver(obs)
+            }
         }
 
         func present(anchor: NSView) {
+            let resolvedTitle = LocaleManager.loc(parent.titleKey)
             if let panel {
-                panel.title = parent.title
+                // Panel exists but may be hidden/miniaturized — force it back to front.
+                if panel.isVisible, !panel.isMiniaturized {
+                    return // Already visible, skip redundant re-show
+                }
+                if panel.isMiniaturized { panel.deminiaturize(nil) }
+                panel.title = resolvedTitle
                 panel.setContentSize(parent.size)
                 center(panel, anchor: anchor)
+                panel.makeKeyAndOrderFront(nil)
+                panel.orderFrontRegardless()
+                NSApp.activate(ignoringOtherApps: true)
                 return
             }
 
@@ -2058,7 +2111,7 @@ private struct CenteredDialogWindow<DialogContent: View>: NSViewRepresentable {
                 backing: .buffered,
                 defer: false
             )
-            panel.title = parent.title
+            panel.title = resolvedTitle
             panel.isReleasedWhenClosed = false
             panel.delegate = self
             panel.contentViewController = NSHostingController(rootView: rootView)
@@ -2146,5 +2199,20 @@ struct DropDelegateView: DropDelegate {
             isTargeted = false
         }
         return isValid
+    }
+}
+
+// MARK: - Restart Toast
+
+private struct RestartToastView: View {
+    let language: LocaleManager.AppLanguage
+
+    var body: some View {
+        Text(LocaleManager.loc("restart_message", for: language))
+            .font(.callout)
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
     }
 }

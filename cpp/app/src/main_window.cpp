@@ -10,6 +10,7 @@
 #include "xlsone/core/license_manager.hpp"
 
 #include <QAction>
+#include <QActionGroup>
 #include <QApplication>
 #include <QDateTime>
 #include <QDesktopServices>
@@ -28,7 +29,9 @@
 #include <QMessageBox>
 #include <QMimeData>
 #include <QRegularExpression>
+#include <QRegularExpression>
 #include <QSet>
+#include <QSettings>
 #include <QShowEvent>
 #include <QSplitter>
 #include <QStatusBar>
@@ -347,9 +350,9 @@ void MainWindow::buildUi()
     reloadAction->setShortcut(QKeySequence::Refresh);
     connect(reloadAction, &QAction::triggered, this, &MainWindow::reloadFiles);
 
-    auto* clearAction = new QAction(tr("清空工作区"), this);
-    clearAction->setShortcut(QKeySequence::New);
-    connect(clearAction, &QAction::triggered, this, &MainWindow::clearWorkspace);
+    auto* newAction = new QAction(tr("新建批次"), this);
+    newAction->setShortcut(QKeySequence::New);
+    connect(newAction, &QAction::triggered, this, &MainWindow::clearWorkspace);
 
     auto* exportAction = new QAction(tr("导出 XLSX..."), this);
     exportAction->setShortcut(QKeySequence::Save);
@@ -374,31 +377,84 @@ void MainWindow::buildUi()
 
     // ---- 文件 ----
     auto* fileMenu = menuBar()->addMenu(tr("文件"));
+    fileMenu->addAction(newAction);
+    fileMenu->addSeparator();
     fileMenu->addAction(openAction);
     fileMenu->addAction(appendAction);
-    fileMenu->addAction(reloadAction);
-    fileMenu->addAction(clearAction);
     fileMenu->addSeparator();
     fileMenu->addAction(exportAction);
     fileMenu->addSeparator();
-    auto* quitAction = new QAction(tr("退出"), this);
-    quitAction->setShortcut(QKeySequence::Quit);
-    connect(quitAction, &QAction::triggered, qApp, &QApplication::quit);
-    fileMenu->addAction(quitAction);
+    fileMenu->addAction(reloadAction);
 
     // ---- 编辑 ----
     auto* editMenu = menuBar()->addMenu(tr("编辑"));
     editMenu->addAction(undoOverrideAction);
+    editMenu->addSeparator();
     editMenu->addAction(clearOverridesAction);
+
+    // ---- 视图 (placeholder, matches Swift empty View menu)
+    auto* viewMenu = menuBar()->addMenu(tr("显示"));
+    viewMenu->setEnabled(false);
 
     // ---- 调整记忆 ----
     auto* adjustmentMemoryMenu = menuBar()->addMenu(tr("调整记忆"));
     adjustmentMemoryMenu->addAction(manageSchemasAction);
     adjustmentMemoryMenu->addAction(saveSchemaAction);
 
+    // ---- 窗口 ----
+    auto* windowMenu = menuBar()->addMenu(tr("窗口"));
+    auto* minimizeAction = new QAction(tr("最小化"), this);
+    minimizeAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_M));
+    connect(minimizeAction, &QAction::triggered, this, [this] { showMinimized(); });
+    windowMenu->addAction(minimizeAction);
+    auto* zoomAction = new QAction(tr("缩放"), this);
+    connect(zoomAction, &QAction::triggered, this, [this] {
+        if (isMaximized()) showNormal(); else showMaximized();
+    });
+    windowMenu->addAction(zoomAction);
+    windowMenu->addSeparator();
+    auto* bringAllAction = new QAction(tr("前置全部窗口"), this);
+    connect(bringAllAction, &QAction::triggered, this, [this] { raise(); activateWindow(); });
+    windowMenu->addAction(bringAllAction);
+
     // ---- 许可 ----
     auto* licenseMenu = menuBar()->addMenu(tr("许可"));
     licenseMenu->addAction(licenseActivateAction);
+
+    // ---- 语言 (save-only — restart required) ----
+    auto* languageMenu = menuBar()->addMenu(tr("语言"));
+    languageGroup_ = new QActionGroup(this);
+    languageGroup_->setExclusive(true);
+
+    auto makeLangAction = [this, languageMenu](const QString& label, const QString& langCode) {
+        auto* action = languageMenu->addAction(label);
+        action->setCheckable(true);
+        action->setData(langCode);
+        languageGroup_->addAction(action);
+        connect(action, &QAction::triggered, this, &MainWindow::onLanguageSelected);
+        return action;
+    };
+
+    const QString currentLang = QSettings().value(QStringLiteral("AppLanguage")).toString();
+    makeLangAction(tr("跟随系统"), QString());
+    auto* enAction = makeLangAction(QStringLiteral("English"), QStringLiteral("en"));
+    auto* zhHansAction = makeLangAction(QStringLiteral("简体中文"), QStringLiteral("zh_CN"));
+    auto* zhHantAction = makeLangAction(QStringLiteral("繁體中文"), QStringLiteral("zh_TW"));
+    auto* jaAction = makeLangAction(QStringLiteral("日本語"), QStringLiteral("ja"));
+
+    // Check the current language
+    if (currentLang.isEmpty()) {
+        // System default — check the first action
+        languageGroup_->actions().first()->setChecked(true);
+    } else if (currentLang == QStringLiteral("en")) {
+        enAction->setChecked(true);
+    } else if (currentLang == QStringLiteral("zh_CN")) {
+        zhHansAction->setChecked(true);
+    } else if (currentLang == QStringLiteral("zh_TW")) {
+        zhHantAction->setChecked(true);
+    } else if (currentLang == QStringLiteral("ja")) {
+        jaAction->setChecked(true);
+    }
 
     auto* helpAction = new QAction(tr("使用帮助"), this);
     connect(helpAction, &QAction::triggered, this, [this] {
@@ -1443,6 +1499,25 @@ void MainWindow::exportResult()
     } catch (const std::exception& error) {
         xlsone::ui::showCritical(this, tr("导出失败"), QString::fromUtf8(error.what()));
     }
+}
+
+void MainWindow::onLanguageSelected()
+{
+    auto* action = qobject_cast<QAction*>(sender());
+    if (!action) return;
+
+    const QString langCode = action->data().toString();
+    QSettings settings;
+    if (langCode.isEmpty()) {
+        settings.remove(QStringLiteral("AppLanguage"));
+    } else {
+        settings.setValue(QStringLiteral("AppLanguage"), langCode);
+    }
+
+    // Show restart prompt using the CURRENT UI language.
+    xlsone::ui::showInformation(this,
+        tr("语言已更改"),
+        tr("语言已更改，重启后生效。"));
 }
 
 void MainWindow::showLicenseActivation()

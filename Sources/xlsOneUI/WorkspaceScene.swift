@@ -19,7 +19,7 @@ public struct XlsOneWorkspaceScene: Scene {
                 .environment(\.locale, localeManager.swiftUILocale)
                 .frame(minWidth: 800, minHeight: 600)
                 .onAppear {
-                    WorkspaceMenuLocalizer.scheduleMainMenuLocalizationPasses()
+                    // Menu localization is handled in applicationDidFinishLaunching
                 }
                 .background(WorkspaceWindowTabDisabler())
         }
@@ -166,18 +166,18 @@ private struct WorkspaceWindowCommands: Commands {
 
     var body: some Commands {
         CommandGroup(replacing: .windowArrangement) {
-            Button("最小化") {
+            Button(LocaleManager.loc("最小化")) {
                 NSApp.keyWindow?.miniaturize(nil)
             }
             .keyboardShortcut("m", modifiers: .command)
 
-            Button("缩放") {
+            Button(LocaleManager.loc("缩放")) {
                 NSApp.keyWindow?.zoom(nil)
             }
 
             Divider()
 
-            Button("前置全部窗口") {
+            Button(LocaleManager.loc("前置全部窗口")) {
                 NSApp.arrangeInFront(nil)
             }
         }
@@ -190,12 +190,10 @@ private struct WorkspaceLicenseCommands: Commands {
 
     var body: some Commands {
         CommandMenu(LocaleManager.loc("许可")) {
-            Button(LicenseManager.isAppStoreDistribution ? "App Store 已授权" : "激活/导入许可证...") {
-                if !LicenseManager.isAppStoreDistribution {
-                    licenseManager.showActivationSheet = true
-                }
+            Button(LocaleManager.loc("激活/导入许可证...")) {
+                licenseManager.showActivationSheet = true
             }
-            .disabled(LicenseManager.isAppStoreDistribution || licenseManager.licenseState == .activated)
+            .disabled(licenseManager.licenseState == .activated)
         }
     }
 }
@@ -204,15 +202,13 @@ private struct WorkspaceLanguageCommands: Commands {
     @ObservedObject var localeManager: LocaleManager
 
     var body: some Commands {
-        CommandMenu("Language") {
+        CommandMenu(LocaleManager.loc("language_menu")) {
             ForEach(LocaleManager.AppLanguage.allCases) { language in
                 Button {
-                    localeManager.currentLanguage = language
-                    localeManager.applyToFoundation()
-                    AlgorithmI18n.shared.reload()
-                    Task { @MainActor in
-                        WorkspaceMenuLocalizer.scheduleMainMenuLocalizationPasses()
-                    }
+                    // Save-only: UI and menus stay unchanged until next launch.
+                    UserDefaults.standard.set(language.rawValue, forKey: "AppLanguage")
+                    localeManager.applyToFoundation(for: language)
+                    showRestartToast(for: language)
                 } label: {
                     HStack {
                         Text(language.displayName)
@@ -346,38 +342,18 @@ enum WorkspaceDialogPresenter {
     }
 }
 
-public final class WorkspaceAppDelegate: NSObject, NSApplicationDelegate {
-    private var menuObserver: NSObjectProtocol?
+@MainActor
+func showRestartToast(for language: LocaleManager.AppLanguage) {
+    NotificationCenter.default.post(name: .showRestartToast, object: language)
+}
 
+extension Notification.Name {
+    static let showRestartToast = Notification.Name("showRestartToast")
+}
+
+public final class WorkspaceAppDelegate: NSObject, NSApplicationDelegate {
     public func applicationDidFinishLaunching(_ notification: Notification) {
         WorkspaceWindowTabController.disableAutomaticTabbing()
-        menuObserver = NotificationCenter.default.addObserver(
-            forName: NSMenu.didBeginTrackingNotification,
-            object: nil,
-            queue: .main
-        ) { notification in
-            guard let menu = notification.object as? NSMenu else { return }
-            Task { @MainActor in
-                WorkspaceMenuLocalizer.localize(menu: menu)
-            }
-        }
-        scheduleMenuLocalization()
-    }
-
-    public func applicationDidBecomeActive(_ notification: Notification) {
-        scheduleMenuLocalization()
-    }
-
-    public func applicationWillTerminate(_ notification: Notification) {
-        if let menuObserver {
-            NotificationCenter.default.removeObserver(menuObserver)
-        }
-    }
-
-    private func scheduleMenuLocalization() {
-        Task { @MainActor in
-            WorkspaceMenuLocalizer.scheduleMainMenuLocalizationPasses()
-        }
     }
 }
 
@@ -423,22 +399,9 @@ enum WorkspaceAppPresentation {
     @MainActor
     static func showAboutPanel() {
         let alert = NSAlert()
-        let storedLang = UserDefaults.standard.string(forKey: "AppLanguage") ?? ""
-        let isEnglish = storedLang == "en" || (storedLang.isEmpty && !(Locale.preferredLanguages.first?.hasPrefix("zh") ?? false))
-        alert.messageText = isEnglish ? "About xlsOne" : "关于 表表归一"
-        alert.informativeText = isEnglish ? """
-            xlsOne  V\(marketingVersion)
-
-            One-click summary for multiple identically-formatted Excel reports.
-
-            Merge multiple Excel sheets with identical layouts into a single summary sheet. Amounts, quantities, and other summable values are automatically totaled. Names, codes, and other non-summable information retain the most common values across all files.
-
-            Author: Wang Zhen
-            Tech: Swift / SwiftUI
-            Email: 831261@qq.com
-
-            © 2026 Wang Zhen. All rights reserved.
-            """ : """
+        let isChinese = isPreferredLanguageChinese
+        alert.messageText = isChinese ? "关于 表表归一" : "About xlsOne"
+        alert.informativeText = isChinese ? """
             表表归一  V\(marketingVersion)
 
             多张同格式 Excel 报表一键汇总
@@ -450,8 +413,20 @@ enum WorkspaceAppPresentation {
             邮箱：831261@qq.com
 
             © 2026 王臻. 保留所有权利.
+            """ : """
+            xlsOne  V\(marketingVersion)
+
+            One-click summary for multiple identically-formatted Excel reports.
+
+            Merge multiple Excel sheets with identical layouts into a single summary sheet. Amounts, quantities, and other summable values are automatically totaled. Names, codes, and other non-summable information retain the most common values across all files.
+
+            Author: Wang Zhen
+            Tech: Swift / SwiftUI
+            Email: 831261@qq.com
+
+            © 2026 Wang Zhen. All rights reserved.
             """
-        alert.addButton(withTitle: isEnglish ? "OK" : "确定")
+        alert.addButton(withTitle: LocaleManager.loc("确定"))
         WorkspaceDialogPresenter.runAlert(alert)
         NSApp.activate(ignoringOtherApps: true)
     }
@@ -459,40 +434,9 @@ enum WorkspaceAppPresentation {
     @MainActor
     static func showHelpPanel() {
         let alert = NSAlert()
-        let storedLang = UserDefaults.standard.string(forKey: "AppLanguage") ?? ""
-        let isEnglish = storedLang == "en" || (storedLang.isEmpty && !(Locale.preferredLanguages.first?.hasPrefix("zh") ?? false))
-        alert.messageText = isEnglish ? "Help" : "使用帮助"
-        alert.informativeText = isEnglish ? """
-            xlsOne  ·  One-click Excel Report Merger
-
-            1. Import Files
-               Drag .xlsx or .xls files into the window, or click [File] → [Import Files]
-
-            2. Switch Sheets
-               Click the Sheet tabs at the top to switch between report pages
-
-            3. View Summary
-               - Amounts, quantities, and summable numbers are automatically totaled
-               - Names, codes retain the most common values
-               - Sheets with inconsistent structure are skipped with a reason
-
-            4. Source Drilldown
-               Click any cell to view its raw values from each source file
-
-            5. Export Results
-               Click [Export XLSX] to save the summary
-
-            6. Cell Correction
-               Manually override cell type to Label or Sum in the right panel
-
-            Shortcuts:
-               Cmd+O  Import Files
-               Cmd+Shift+O  Add Files
-               Cmd+S  Export
-               Cmd+R  Refresh
-               Cmd+N  Clear
-               Cmd+Z  Undo Correction
-            """ : """
+        let isChinese = isPreferredLanguageChinese
+        alert.messageText = isChinese ? "使用帮助" : "Help"
+        alert.informativeText = isChinese ? """
             表表归一  ·  多张同格式 Excel 报表一键汇总
 
             1. 导入文件
@@ -522,8 +466,38 @@ enum WorkspaceAppPresentation {
                Command+R  刷新
                Command+N  清空
                Command+Z  撤销修正
+            """ : """
+            xlsOne  ·  One-click Excel Report Merger
+
+            1. Import Files
+               Drag .xlsx or .xls files into the window, or click [File] → [Import Files]
+
+            2. Switch Sheets
+               Click the Sheet tabs at the top to switch between report pages
+
+            3. View Summary
+               - Amounts, quantities, and summable numbers are automatically totaled
+               - Names, codes retain the most common values
+               - Sheets with inconsistent structure are skipped with a reason
+
+            4. Source Drilldown
+               Click any cell to view its raw values from each source file
+
+            5. Export Results
+               Click [Export XLSX] to save the summary
+
+            6. Cell Correction
+               Manually override cell type to Label or Sum in the right panel
+
+            Shortcuts:
+               Cmd+O  Import Files
+               Cmd+Shift+O  Add Files
+               Cmd+S  Export
+               Cmd+R  Refresh
+               Cmd+N  Clear
+               Cmd+Z  Undo Correction
             """
-        alert.addButton(withTitle: isEnglish ? "OK" : "确定")
+        alert.addButton(withTitle: LocaleManager.loc("确定"))
         WorkspaceDialogPresenter.runAlert(alert)
         NSApp.activate(ignoringOtherApps: true)
     }
@@ -532,202 +506,10 @@ enum WorkspaceAppPresentation {
     static func showAppStoreUpdatePanel() {
         WorkspaceDialogPresenter.runAlert(
             title: LocaleManager.loc("检查更新"),
-            message: "App Store 版本请通过 Mac App Store 获取更新。",
+            message: LocaleManager.loc("App Store 版本请通过 Mac App Store 获取更新。"),
             style: .informational
         )
         NSApp.activate(ignoringOtherApps: true)
-    }
-}
-
-private enum WorkspaceMenuLocalizer {
-    private static let topLevelTitles: [String: String] = [
-        "File": "文件",
-        "Edit": "编辑",
-        "View": "显示",
-        "Window": "窗口",
-        "Windows": "窗口",
-        "Help": "帮助"
-    ]
-
-    private static let removedTitles: Set<String> = [
-        "New Tab",
-        "Show Tab Bar",
-        "Hide Tab Bar",
-        "Show All Tabs",
-        "Show Previous Tab",
-        "Show Next Tab",
-        "Select Previous Tab",
-        "Select Next Tab",
-        "Show Tab Overview",
-        "Move Tab to New Window",
-        "Merge All Windows",
-        "新建标签页",
-        "显示标签页栏",
-        "隐藏标签页栏",
-        "显示所有标签页",
-        "显示上一个标签页",
-        "显示下一个标签页",
-        "选择上一个标签页",
-        "选择下一个标签页",
-        "显示标签页概览",
-        "退出标签页概览",
-        "将标签页移到新窗口",
-        "合并所有窗口"
-    ]
-
-    private static let directTitleMap: [String: String] = [
-        "Services": "服务",
-        "Services Settings...": "服务设置...",
-        "Services Settings…": "服务设置…",
-        "Show All": "全部显示",
-        "Hide Others": "隐藏其他",
-        "Close": "关闭",
-        "Close Window": "关闭窗口",
-        "Minimize": "最小化",
-        "Zoom": "缩放",
-        "Bring All to Front": "前置全部窗口",
-        "Quit and Keep Windows": "退出并保留窗口",
-        "Undo": "撤销",
-        "Redo": "重做",
-        "Cut": "剪切",
-        "Copy": "复制",
-        "Paste": "粘贴",
-        "Paste and Match Style": "粘贴并匹配样式",
-        "Delete": "删除",
-        "Select All": "全选",
-        "Start Dictation...": "开始听写...",
-        "Start Dictation…": "开始听写…",
-        "Emoji & Symbols": "表情与符号",
-        "Enter Full Screen": "进入全屏幕",
-        "Exit Full Screen": "退出全屏幕",
-        "Toggle Full Screen": "切换全屏幕",
-        "Show Toolbar": "显示工具栏",
-        "Hide Toolbar": "隐藏工具栏",
-        "Customize Toolbar...": "自定工具栏...",
-        "Customize Toolbar…": "自定工具栏…"
-    ]
-
-    @MainActor
-    static func scheduleMainMenuLocalizationPasses() {
-        if shouldUseChineseMenus {
-            for delay in [0, 0.2, 0.75, 1.5] {
-                DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-                    Task { @MainActor in
-                        localizeMainMenu()
-                    }
-                }
-            }
-        }
-        DispatchQueue.main.async {
-            patchAboutMenuItem()
-        }
-    }
-
-    @MainActor
-    private static func patchAboutMenuItem() {
-        guard let menu = NSApp.mainMenu else { return }
-        for item in menu.items {
-            guard let sub = item.submenu else { continue }
-            for mi in sub.items {
-                if mi.action == #selector(NSApplication.orderFrontStandardAboutPanel(_:)) {
-                    mi.action = #selector(AppAboutHelpHandler.showCustomAbout)
-                    mi.target = AppAboutHelpHandler.shared
-                    return
-                }
-            }
-        }
-    }
-
-    @MainActor
-    static func localizeMainMenu() {
-        guard shouldUseChineseMenus, let mainMenu = NSApp.mainMenu else { return }
-
-        removeUnwantedItems(from: mainMenu)
-        for item in mainMenu.items {
-            localizeTopLevelItem(item)
-        }
-        mainMenu.update()
-    }
-
-    @MainActor
-    static func localize(menu: NSMenu) {
-        guard shouldUseChineseMenus else { return }
-
-        removeUnwantedItems(from: menu)
-        for item in menu.items {
-            localizeMenuItem(item)
-        }
-        menu.update()
-    }
-
-    private static var shouldUseChineseMenus: Bool {
-        let identifier = LocaleManager.shared.currentLanguage.localeIdentifier ?? Locale.preferredLanguages.first ?? "en"
-        return identifier.hasPrefix("zh")
-    }
-
-    @MainActor
-    private static func removeUnwantedItems(from menu: NSMenu) {
-        for item in menu.items.reversed() {
-            if shouldRemove(item) {
-                menu.removeItem(item)
-            } else if let submenu = item.submenu {
-                removeUnwantedItems(from: submenu)
-            }
-        }
-    }
-
-    private static func shouldRemove(_ item: NSMenuItem) -> Bool {
-        guard !item.isSeparatorItem else { return false }
-        let normalizedTitle = item.title.replacingOccurrences(of: "…", with: "...")
-        return removedTitles.contains(normalizedTitle)
-    }
-
-    @MainActor
-    private static func localizeTopLevelItem(_ item: NSMenuItem) {
-        if let localizedTitle = topLevelTitles[item.title] {
-            item.title = localizedTitle
-            item.submenu?.title = localizedTitle
-        }
-
-        guard let submenu = item.submenu else { return }
-        for child in submenu.items {
-            localizeMenuItem(child)
-        }
-    }
-
-    @MainActor
-    private static func localizeMenuItem(_ item: NSMenuItem) {
-        let appNames = [
-            WorkspaceAppPresentation.displayName,
-            WorkspaceAppPresentation.bundleDisplayName
-        ]
-        let title = item.title
-
-        if item.action == #selector(NSApplication.orderFrontStandardAboutPanel(_:)) ||
-            appNames.contains(where: { title == "About \($0)" }) {
-            item.title = "关于 \(WorkspaceAppPresentation.displayName)"
-        } else if item.action == #selector(NSApplication.hide(_:)) ||
-            appNames.contains(where: { title == "Hide \($0)" }) {
-            item.title = "隐藏 \(WorkspaceAppPresentation.displayName)"
-        } else if item.action == #selector(NSApplication.hideOtherApplications(_:)) ||
-            title == "Hide Others" {
-            item.title = "隐藏其他"
-        } else if item.action == #selector(NSApplication.unhideAllApplications(_:)) ||
-            title == "Show All" {
-            item.title = "全部显示"
-        } else if item.action == #selector(NSApplication.terminate(_:)) ||
-            appNames.contains(where: { title == "Quit \($0)" }) {
-            item.title = "退出 \(WorkspaceAppPresentation.displayName)"
-        } else if let localized = directTitleMap[title] {
-            item.title = localized
-        }
-
-        if let submenu = item.submenu {
-            submenu.title = item.title
-            for child in submenu.items {
-                localizeMenuItem(child)
-            }
-        }
     }
 }
 
@@ -1176,7 +958,7 @@ class AppViewModel: ObservableObject {
         guard canManageAdjustmentMemory else {
             WorkspaceDialogPresenter.runAlert(
                 title: LocaleManager.loc("保存当前调整记忆"),
-                message: "当前没有可保存调整记忆的同构工作区。",
+                message: LocaleManager.loc("当前没有可保存调整记忆的同构工作区。"),
                 style: .informational
             )
             return
@@ -1218,7 +1000,7 @@ class AppViewModel: ObservableObject {
         guard canManageAdjustmentMemory else {
             WorkspaceDialogPresenter.runAlert(
                 title: LocaleManager.loc("导入"),
-                message: "当前没有可绑定调整记忆的同构工作区。",
+                message: LocaleManager.loc("当前没有可绑定调整记忆的同构工作区。"),
                 style: .informational
             )
             return
@@ -1241,8 +1023,8 @@ class AppViewModel: ObservableObject {
 
         let alert = NSAlert()
         alert.alertStyle = .warning
-        alert.messageText = "清除当前调整记忆"
-        alert.informativeText = "删除当前调整记忆后，当前同构工作区将恢复自动判断。确定清除？"
+        alert.messageText = LocaleManager.loc("清除当前调整记忆")
+        alert.informativeText = LocaleManager.loc("删除当前调整记忆后，当前同构工作区将恢复自动判断。确定清除？")
         alert.addButton(withTitle: LocaleManager.loc("清除"))
         alert.addButton(withTitle: LocaleManager.loc("取消"))
         guard WorkspaceDialogPresenter.runAlert(alert) == .alertFirstButtonReturn else { return }
