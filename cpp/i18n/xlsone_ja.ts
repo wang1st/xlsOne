@@ -1,16 +1,16 @@
 <?xml version='1.0' encoding='utf-8'?>
-<TS version="2.1" language="en">
+<TS version="2.1" language="ja">
 <context>
     <name>DiagnosticsView</name>
     <message>
         <location filename="../app/src/diagnostics_view.cpp" line="61" />
         <source>暂无诊断</source>
-        <translation>No diagnostics</translation>
+        <translation>診断なし</translation>
     </message>
     <message>
         <location filename="../app/src/diagnostics_view.cpp" line="61" />
         <source>导入文件后会在这里显示结构校验和跳过原因。</source>
-        <translation>Import files to see validation results and skip reasons.</translation>
+        <translation>ファイルをインポートすると検証結果とスキップ理由がここに表示されます。</translation>
     </message>
     <message>
         <location filename="../app/src/diagnostics_view.cpp" line="68" />
@@ -25,7 +25,7 @@ Skipped sheets: %3</translation>
         <location filename="../app/src/diagnostics_view.cpp" line="71" />
         <location filename="../app/src/diagnostics_view.cpp" line="72" />
         <source>无</source>
-        <translation>None</translation>
+        <translation>なし</translation>
     </message>
     <message>
         <location filename="../app/src/diagnostics_view.cpp" line="74" />
@@ -73,7 +73,7 @@ Skipped sheets: %3</translation>
     <message>
         <location filename="../app/src/empty_workspace_view.cpp" line="16" />
         <source>选择文件</source>
-        <translation>Select Files</translation>
+        <translation>ファイルを選択</translation>
     </message>
     <message>
         <location filename="../app/src/empty_workspace_view.cpp" line="82" />
@@ -124,13 +124,13 @@ Skipped sheets: %3</translation>
         <location filename="../app/src/inspector_panel.cpp" line="187" />
         <location filename="../app/src/inspector_panel.cpp" line="189" />
         <source>标签</source>
-        <translation>Label</translation>
+        <translation>ラベル</translation>
     </message>
     <message>
         <location filename="../app/src/inspector_panel.cpp" line="103" />
         <location filename="../app/src/inspector_panel.cpp" line="184" />
         <source>求和</source>
-        <translation>Sum</translation>
+        <translation>合計</translation>
     </message>
     <message>
         <location filename="../app/src/inspector_panel.cpp" line="113" />
@@ -150,12 +150,12 @@ Skipped sheets: %3</translation>
     <message>
         <location filename="../app/src/inspector_panel.cpp" line="185" />
         <source>混合</source>
-        <translation>Mixed</translation>
+        <translation>混合</translation>
     </message>
     <message>
         <location filename="../app/src/inspector_panel.cpp" line="186" />
         <source>单值</source>
-        <translation>Single</translation>
+        <translation>単一値</translation>
     </message>
     <message>
         <location filename="../app/src/inspector_panel.cpp" line="197" />
@@ -178,105 +178,105 @@ Skipped sheets: %3</translation>
     <message>
         <location filename="../app/src/license_activation_dialog.cpp" line="249" />
         <source>导入失败</source>
-        <translation>Import Failed</translation>
+        <translation>インポート失敗</translation>
     </message>
     <message>
         <location filename="../app/src/license_activation_dialog.cpp" line="253" />
         <source>导入成功</source>
-        <translation>Import Successful</translation>
+        <translation>インポート成功</translation>
     </message>
     <message>
         <location filename="../app/src/license_activation_dialog.cpp" line="253" />
         <source>授权文件已导入</source>
-        <translation>License file imported</translation>
+        <translation>ライセンスファイルがインポートされました</translation>
     </message>
-<message><location filename="" line="0" /><source>激活 表表归一</source><translation>Activate xlsOne</translation></message><message><location filename="" line="0" /><source>您的许可证已过期，请续费获取新的激活码</source><translation>Your license has expired. Please renew to get a new activation code.</translation></message><message><location filename="" line="0" /><source>输入激活码以解锁全部功能</source><translation>Enter activation code to unlock all features.</translation></message><message><location filename="" line="0" /><source>激活码</source><translation>Activation Code</translation></message><message><location filename="" line="0" /><source>激活</source><translation>Activate</translation></message><message><location filename="" line="0" /><source>免费试用 14 天</source><translation>Free 14-Day Trial</translation></message><message><location filename="" line="0" /><source>购买激活码 →</source><translation>Purchase License →</translation></message><message><location filename="" line="0" /><source>离线激活</source><translation>Offline Activation</translation></message><message><location filename="" line="0" /><source>离线激活方式：</source><translation>Offline activation:</translation></message><message><location filename="" line="0" /><source>1. 在联网电脑上访问 z-pulse.cn/offline</source><translation>1. On a connected computer, visit z-pulse.cn/offline</translation></message><message><location filename="" line="0" /><source>2. 输入购买邮箱和本机设备码</source><translation>2. Enter your purchase email and device code</translation></message><message><location filename="" line="0" /><source>3. 下载授权文件并导入本程序</source><translation>3. Download the license file and import it here</translation></message><message><location filename="" line="0" /><source>导入授权文件...</source><translation>Import License File...</translation></message><message><location filename="" line="0" /><source>验证中...</source><translation>Verifying...</translation></message></context>
+<message><location filename="" line="0" /><source>激活 表表归一</source><translation>xlsOne を有効化</translation></message><message><location filename="" line="0" /><source>您的许可证已过期，请续费获取新的激活码</source><translation>ライセンスの有効期限が切れました。新しいコードを取得してください</translation></message><message><location filename="" line="0" /><source>输入激活码以解锁全部功能</source><translation>アクティベーションコードを入力して全機能を解除</translation></message><message><location filename="" line="0" /><source>激活码</source><translation>アクティベーションコード</translation></message><message><location filename="" line="0" /><source>激活</source><translation>有効化</translation></message><message><location filename="" line="0" /><source>免费试用 14 天</source><translation>14日間無料トライアル</translation></message><message><location filename="" line="0" /><source>购买激活码 →</source><translation>ライセンスを購入 →</translation></message><message><location filename="" line="0" /><source>离线激活</source><translation>オフライン有効化</translation></message><message><location filename="" line="0" /><source>离线激活方式：</source><translation>オフライン有効化方法：</translation></message><message><location filename="" line="0" /><source>1. 在联网电脑上访问 z-pulse.cn/offline</source><translation>1. ネット接続PCで z-pulse.cn/offline にアクセス</translation></message><message><location filename="" line="0" /><source>2. 输入购买邮箱和本机设备码</source><translation>2. 購入メールアドレスとデバイスコードを入力</translation></message><message><location filename="" line="0" /><source>3. 下载授权文件并导入本程序</source><translation>3. ライセンスファイルをダウンロードしてインポート</translation></message><message><location filename="" line="0" /><source>导入授权文件...</source><translation>ライセンスファイルをインポート...</translation></message><message><location filename="" line="0" /><source>验证中...</source><translation>検証中...</translation></message></context>
 <context>
     <name>MainWindow</name>
     <message>
         <location filename="../app/src/main_window.cpp" line="338" />
         <source>导入文件...</source>
-        <translation>Import Files...</translation>
+        <translation>ファイルをインポート...</translation>
     </message>
     <message>
         <location filename="../app/src/main_window.cpp" line="342" />
         <source>追加文件...</source>
-        <translation>Add Files...</translation>
+        <translation>ファイルを追加...</translation>
     </message>
     <message>
         <location filename="../app/src/main_window.cpp" line="346" />
         <source>刷新</source>
-        <translation>Refresh</translation>
+        <translation>更新</translation>
     </message>
     <message>
         <location filename="../app/src/main_window.cpp" line="350" />
         <source>清空工作区</source>
-        <translation>Clear Workspace</translation>
+        <translation>ワークスペースをクリア</translation>
     </message>
     <message>
         <location filename="../app/src/main_window.cpp" line="354" />
         <source>导出 XLSX...</source>
-        <translation>Export XLSX...</translation>
+        <translation>XLSX をエクスポート...</translation>
     </message>
     <message>
         <location filename="../app/src/main_window.cpp" line="358" />
         <location filename="../app/src/main_window.cpp" line="1162" />
         <source>撤销修正</source>
-        <translation>Undo Correction</translation>
+        <translation>修正を元に戻す</translation>
     </message>
     <message>
         <location filename="../app/src/main_window.cpp" line="362" />
         <source>清除所有修正</source>
-        <translation>Clear All Corrections</translation>
+        <translation>すべての修正をクリア</translation>
     </message>
     <message>
         <location filename="../app/src/main_window.cpp" line="365" />
         <source>查看当前调整记忆</source>
-        <translation>View Current Rules</translation>
+        <translation>現在の調整メモリを表示</translation>
     </message>
     <message>
         <location filename="../app/src/main_window.cpp" line="369" />
         <location filename="../app/src/main_window.cpp" line="1264" />
         <location filename="../app/src/main_window.cpp" line="1268" />
         <source>保存当前调整记忆</source>
-        <translation>Save Current Rules</translation>
+        <translation>現在の調整メモリを保存</translation>
     </message>
     <message>
         <location filename="../app/src/main_window.cpp" line="372" />
         <source>激活/导入许可证...</source>
-        <translation>Activate/Import License...</translation>
+        <translation>ライセンスを有効化/インポート...</translation>
     </message>
     <message>
         <location filename="../app/src/main_window.cpp" line="376" />
         <source>文件</source>
-        <translation>File</translation>
+        <translation>ファイル</translation>
     </message>
     <message>
         <location filename="../app/src/main_window.cpp" line="384" />
         <source>退出</source>
-        <translation>Quit</translation>
+        <translation>終了</translation>
     </message>
     <message>
         <location filename="../app/src/main_window.cpp" line="390" />
         <source>编辑</source>
-        <translation>Edit</translation>
+        <translation>編集</translation>
     </message>
     <message>
         <location filename="../app/src/main_window.cpp" line="395" />
         <location filename="../app/src/main_window.cpp" line="1058" />
         <source>调整记忆</source>
-        <translation>Correction Rules</translation>
+        <translation>調整メモリ</translation>
     </message>
     <message>
         <location filename="../app/src/main_window.cpp" line="400" />
         <source>许可</source>
-        <translation>License</translation>
+        <translation>ライセンス</translation>
     </message>
     <message>
         <location filename="../app/src/main_window.cpp" line="403" />
         <location filename="../app/src/main_window.cpp" line="405" />
         <source>使用帮助</source>
-        <translation>Help</translation>
+        <translation>ヘルプ</translation>
     </message>
     <message>
         <location filename="../app/src/main_window.cpp" line="406" />
@@ -343,7 +343,7 @@ Shortcuts:
         <location filename="../app/src/main_window.cpp" line="430" />
         <location filename="../app/src/main_window.cpp" line="436" />
         <source>关于 表表归一</source>
-        <translation>About xlsOne</translation>
+        <translation>xlsOne について</translation>
     </message>
     <message>
         <location filename="../app/src/main_window.cpp" line="437" />
@@ -353,12 +353,12 @@ Shortcuts:
     <message>
         <location filename="../app/src/main_window.cpp" line="448" />
         <source>检查更新</source>
-        <translation>Check for Updates</translation>
+        <translation>アップデートを確認</translation>
     </message>
     <message>
         <location filename="../app/src/main_window.cpp" line="451" />
         <source>帮助</source>
-        <translation>Help</translation>
+        <translation>ヘルプ</translation>
     </message>
     <message>
         <location filename="../app/src/main_window.cpp" line="525" />
@@ -628,7 +628,7 @@ Shortcuts:
         <source>导出失败</source>
         <translation>Export failed</translation>
     </message>
-<message><location filename="" line="0" /><source>新建批次</source><translation>New Document</translation></message><message><location filename="" line="0" /><source>显示</source><translation>View</translation></message><message><location filename="" line="0" /><source>窗口</source><translation>Window</translation></message><message><location filename="" line="0" /><source>最小化</source><translation>Minimize</translation></message><message><location filename="" line="0" /><source>缩放</source><translation>Zoom</translation></message><message><location filename="" line="0" /><source>前置全部窗口</source><translation>Bring All to Front</translation></message><message><location filename="" line="0" /><source>语言</source><translation>Language</translation></message><message><location filename="" line="0" /><source>语言已更改</source><translation>Language Changed</translation></message><message><location filename="" line="0" /><source>语言已更改，重启后生效。</source><translation>Language changed. Restart to apply.</translation></message></context>
+<message><location filename="" line="0" /><source>新建批次</source><translation>新規バッチ</translation></message><message><location filename="" line="0" /><source>显示</source><translation>表示</translation></message><message><location filename="" line="0" /><source>窗口</source><translation>ウィンドウ</translation></message><message><location filename="" line="0" /><source>最小化</source><translation>最小化</translation></message><message><location filename="" line="0" /><source>缩放</source><translation>ズーム</translation></message><message><location filename="" line="0" /><source>前置全部窗口</source><translation>すべてを前面に</translation></message><message><location filename="" line="0" /><source>语言</source><translation>言語</translation></message><message><location filename="" line="0" /><source>语言已更改</source><translation>言語変更</translation></message><message><location filename="" line="0" /><source>语言已更改，重启后生效。</source><translation>言語が変更されました。再起動後に適用されます。</translation></message></context>
 <context>
     <name>QObject</name>
     <message>
@@ -659,27 +659,27 @@ Shortcuts:
         <location filename="../app/src/schema_manager_dialog.cpp" line="34" />
         <location filename="../app/src/schema_manager_dialog.cpp" line="40" />
         <source>未知</source>
-        <translation>Unknown</translation>
+        <translation>不明</translation>
     </message>
     <message>
         <location filename="../app/src/schema_manager_dialog.cpp" line="26" />
         <source>标签</source>
-        <translation>Label</translation>
+        <translation>ラベル</translation>
     </message>
     <message>
         <location filename="../app/src/schema_manager_dialog.cpp" line="28" />
         <source>求和</source>
-        <translation>Sum</translation>
+        <translation>合計</translation>
     </message>
     <message>
         <location filename="../app/src/schema_manager_dialog.cpp" line="30" />
         <source>混合</source>
-        <translation>Mixed</translation>
+        <translation>混合</translation>
     </message>
     <message>
         <location filename="../app/src/schema_manager_dialog.cpp" line="32" />
         <source>单值</source>
-        <translation>Single</translation>
+        <translation>単一値</translation>
     </message>
     <message>
         <location filename="../app/src/schema_manager_dialog.cpp" line="59" />
@@ -755,7 +755,7 @@ Manually correct cells in the merged result, then save via the &amp;quot;Correct
         <location filename="../app/src/schema_manager_dialog.cpp" line="211" />
         <location filename="../app/src/schema_manager_dialog.cpp" line="229" />
         <source>导入失败</source>
-        <translation>Import Failed</translation>
+        <translation>インポート失敗</translation>
     </message>
     <message>
         <location filename="../app/src/schema_manager_dialog.cpp" line="237" />
@@ -826,27 +826,27 @@ Manually correct cells in the merged result, then save via the &amp;quot;Correct
     <message>
         <location filename="../app/src/workspace_chrome.cpp" line="37" />
         <source>追加</source>
-        <translation>Add</translation>
+        <translation>追加</translation>
     </message>
     <message>
         <location filename="../app/src/workspace_chrome.cpp" line="38" />
         <source>刷新</source>
-        <translation>Refresh</translation>
+        <translation>更新</translation>
     </message>
     <message>
         <location filename="../app/src/workspace_chrome.cpp" line="39" />
         <source>清空</source>
-        <translation>Clear</translation>
+        <translation>クリア</translation>
     </message>
     <message>
         <location filename="../app/src/workspace_chrome.cpp" line="44" />
         <source>导出 XLSX</source>
-        <translation>Export XLSX</translation>
+        <translation>XLSX をエクスポート</translation>
     </message>
     <message>
         <location filename="../app/src/workspace_chrome.cpp" line="49" />
         <source>导出同构汇总 Excel</source>
-        <translation>Export merged Excel workbook</translation>
+        <translation>同構造の集計 Excel をエクスポート</translation>
     </message>
 </context>
 </TS>

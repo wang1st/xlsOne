@@ -26,6 +26,7 @@ class QDragEnterEvent;
 class QDragLeaveEvent;
 class QDropEvent;
 class QShowEvent;
+class QActionGroup;
 
 class MainWindow final : public QMainWindow {
     Q_OBJECT
@@ -56,6 +57,7 @@ private slots:
     void inspectCell(const QModelIndex& index);
     void checkForUpdates();
     void showLicenseActivation();
+    void onLanguageSelected();
 
 private:
     void buildUi();
@@ -122,5 +124,6 @@ private:
     QLabel* statusLabel_ = nullptr;
     xlsone::UpdateChecker* updateChecker_ = nullptr;
     xlsone::LicenseManager* licenseManager_ = nullptr;
+    QActionGroup* languageGroup_ = nullptr;
     bool firstShow_ = true;
 };

@@ -26,7 +26,7 @@ LicenseActivationDialog::LicenseActivationDialog(xlsone::LicenseManager* mgr,
 
 void LicenseActivationDialog::buildUi()
 {
-    setWindowTitle(QStringLiteral("激活 表表归一"));
+    setWindowTitle(tr("激活 表表归一"));
     setFixedSize(420, 580);
     setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
 
@@ -43,7 +43,7 @@ void LicenseActivationDialog::buildUi()
     root->addSpacing(12);
 
     // Title
-    auto* titleLabel = new QLabel(QStringLiteral("激活 表表归一"));
+    auto* titleLabel = new QLabel(tr("激活 表表归一"));
     titleLabel->setAlignment(Qt::AlignCenter);
     titleLabel->setStyleSheet("font-size: 18px; font-weight: 600;");
     root->addWidget(titleLabel);
@@ -53,8 +53,8 @@ void LicenseActivationDialog::buildUi()
     // Subtitle (dynamic)
     auto* subtitleLabel = new QLabel(
         licenseManager_->state() == xlsone::LicenseState::Expired
-            ? QStringLiteral("您的许可证已过期，请续费获取新的激活码")
-            : QStringLiteral("输入激活码以解锁全部功能"));
+            ? tr("您的许可证已过期，请续费获取新的激活码")
+            : tr("输入激活码以解锁全部功能"));
     subtitleLabel->setAlignment(Qt::AlignCenter);
     subtitleLabel->setWordWrap(true);
     subtitleLabel->setStyleSheet("color: #8e8e93; font-size: 13px;");
@@ -63,7 +63,7 @@ void LicenseActivationDialog::buildUi()
     root->addSpacing(24);
 
     // Key label
-    auto* keyLabel = new QLabel(QStringLiteral("激活码"));
+    auto* keyLabel = new QLabel(tr("激活码"));
     keyLabel->setStyleSheet("font-size: 13px; font-weight: 500;");
     root->addWidget(keyLabel);
 
@@ -115,7 +115,7 @@ void LicenseActivationDialog::buildUi()
     root->addSpacing(20);
 
     // Activate button
-    activateButton_ = new QPushButton(QStringLiteral("激活"));
+    activateButton_ = new QPushButton(tr("激活"));
     activateButton_->setEnabled(false);
     activateButton_->setCursor(Qt::PointingHandCursor);
     activateButton_->setMinimumHeight(44);
@@ -137,7 +137,7 @@ void LicenseActivationDialog::buildUi()
     auto* linkRow = new QHBoxLayout;
     linkRow->setSpacing(24);
 
-    trialButton_ = new QPushButton(QStringLiteral("免费试用 14 天"));
+    trialButton_ = new QPushButton(tr("免费试用 14 天"));
     trialButton_->setFlat(true);
     trialButton_->setCursor(Qt::PointingHandCursor);
     trialButton_->setStyleSheet(
@@ -147,7 +147,7 @@ void LicenseActivationDialog::buildUi()
             this, &LicenseActivationDialog::onTrialClicked);
     linkRow->addWidget(trialButton_);
 
-    auto* buyButton = new QPushButton(QStringLiteral("购买激活码 →"));
+    auto* buyButton = new QPushButton(tr("购买激活码 →"));
     buyButton->setFlat(true);
     buyButton->setCursor(Qt::PointingHandCursor);
     buyButton->setStyleSheet(
@@ -163,7 +163,7 @@ void LicenseActivationDialog::buildUi()
     root->addSpacing(12);
 
     // Offline activation
-    offlineToggle_ = new QPushButton(QStringLiteral("\xE2\x9C\x93 离线激活"));
+    offlineToggle_ = new QPushButton(tr("离线激活"));
     offlineToggle_->setFlat(true);
     offlineToggle_->setCursor(Qt::PointingHandCursor);
     offlineToggle_->setStyleSheet(
@@ -182,23 +182,23 @@ void LicenseActivationDialog::buildUi()
     offlineLayout->setSpacing(4);
     offlineLayout->setContentsMargins(12, 12, 12, 12);
 
-    auto* offlineTitle = new QLabel(QStringLiteral("离线激活方式："));
+    auto* offlineTitle = new QLabel(tr("离线激活方式："));
     offlineTitle->setStyleSheet("font-size: 11px; font-weight: 500;");
     offlineLayout->addWidget(offlineTitle);
 
-    auto* step1 = new QLabel(QStringLiteral("1. 在联网电脑上访问 z-pulse.cn/offline"));
+    auto* step1 = new QLabel(tr("1. 在联网电脑上访问 z-pulse.cn/offline"));
     step1->setStyleSheet("color: #8e8e93; font-size: 11px;");
     offlineLayout->addWidget(step1);
 
-    auto* step2 = new QLabel(QStringLiteral("2. 输入购买邮箱和本机设备码"));
+    auto* step2 = new QLabel(tr("2. 输入购买邮箱和本机设备码"));
     step2->setStyleSheet("color: #8e8e93; font-size: 11px;");
     offlineLayout->addWidget(step2);
 
-    auto* step3 = new QLabel(QStringLiteral("3. 下载授权文件并导入本程序"));
+    auto* step3 = new QLabel(tr("3. 下载授权文件并导入本程序"));
     step3->setStyleSheet("color: #8e8e93; font-size: 11px;");
     offlineLayout->addWidget(step3);
 
-    auto* importButton = new QPushButton(QStringLiteral("导入授权文件..."));
+    auto* importButton = new QPushButton(tr("导入授权文件..."));
     importButton->setCursor(Qt::PointingHandCursor);
     importButton->setMinimumHeight(32);
     importButton->setStyleSheet(
@@ -224,7 +224,7 @@ void LicenseActivationDialog::onActivateClicked()
     if (key.length() != 12) return;
 
     activateButton_->setEnabled(false);
-    activateButton_->setText(QStringLiteral("验证中..."));
+    activateButton_->setText(tr("验证中..."));
     errorLabel_->hide();
 
     const QString deviceId = QSysInfo::machineUniqueId();
@@ -263,7 +263,7 @@ void LicenseActivationDialog::onTrialClicked()
 void LicenseActivationDialog::onActivationFinished(const xlsone::ActivationResult& result)
 {
     activateButton_->setEnabled(true);
-    activateButton_->setText(QStringLiteral("激活"));
+    activateButton_->setText(tr("激活"));
 
     if (result.success) {
         accept();

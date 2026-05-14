@@ -8,6 +8,8 @@
 #include <QTranslator>
 #include <QLocale>
 #include <QLibraryInfo>
+#include <QSettings>
+#include <QMessageBox>
 
 int main(int argc, char* argv[])
 {
@@ -18,14 +20,20 @@ int main(int argc, char* argv[])
 
     xlsone::AlgorithmKeywords::instance().load();
 
-    // Install translations
+    // Install Qt base translations
     QTranslator qtTranslator;
     if (qtTranslator.load(QLocale::system(), QStringLiteral("qt"), QStringLiteral("_"), QLibraryInfo::location(QLibraryInfo::TranslationsPath))) {
         app.installTranslator(&qtTranslator);
     }
 
+    // Load saved language preference; fall back to system locale.
+    QSettings settings;
+    const QString savedLang = settings.value(QStringLiteral("AppLanguage")).toString();
+    const QStringList uiLanguages = savedLang.isEmpty()
+        ? QLocale::system().uiLanguages()
+        : QStringList{savedLang};
+
     QTranslator appTranslator;
-    const QStringList uiLanguages = QLocale::system().uiLanguages();
     for (const QString& locale : uiLanguages) {
         const QString baseName = QStringLiteral("xlsone_") + QLocale(locale).name();
         if (appTranslator.load(baseName, QApplication::applicationDirPath() + QStringLiteral("/../i18n"))) {
@@ -42,26 +50,20 @@ int main(int argc, char* argv[])
         return app.exec();
     }
 
-    // License check for other platforms
-    xlsone::LicenseManager licenseManager;
-
-    const auto state = licenseManager.state();
-    if (state == xlsone::LicenseState::Activated ||
-        state == xlsone::LicenseState::Trial) {
-        MainWindow window;
-        window.resize(1180, 760);
-        window.show();
-        return app.exec();
-    }
-
-    // Show activation dialog
-    LicenseActivationDialog dialog(&licenseManager);
-    if (xlsone::ui::execDialogCentered(dialog) != QDialog::Accepted) {
-        return 0; // User cancelled — quit
-    }
-
+    // Always show the main window first.
+    // If unactivated, the activation dialog appears on top after the window is shown.
     MainWindow window;
     window.resize(1180, 760);
     window.show();
+
+    xlsone::LicenseManager licenseManager;
+    const auto state = licenseManager.state();
+    if (state != xlsone::LicenseState::Activated &&
+        state != xlsone::LicenseState::Trial) {
+        LicenseActivationDialog dialog(&licenseManager, &window);
+        xlsone::ui::execDialogCentered(dialog, &window);
+        // Don't quit — user can dismiss and use the app in limited mode.
+    }
+
     return app.exec();
 }

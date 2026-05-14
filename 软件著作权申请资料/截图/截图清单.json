@@ -4,43 +4,49 @@
       "title": "空白工作台",
       "path": "01-empty-workspace.png",
       "description": "应用启动后的空白导入工作台。",
-      "size_bytes": 428002
+      "size_bytes": 327512
     },
     {
       "title": "批量导入测试文件",
       "path": "02-batch-import-test-files.png",
       "description": "打开面板中选中 4 个虚构测试 Excel 文件。",
-      "size_bytes": 408571
+      "size_bytes": 241108
     },
     {
       "title": "汇总表格",
       "path": "03-summary-grid.png",
       "description": "导入后显示汇总结果、Sheet 标签和来源入口。",
-      "size_bytes": 410732
+      "size_bytes": 122510
     },
     {
       "title": "来源穿透",
       "path": "04-source-drilldown.png",
       "description": "展开单元格来源，显示来自各测试单位的原始值。",
-      "size_bytes": 425907
+      "size_bytes": 131897
     },
     {
       "title": "类型修正",
       "path": "05-type-correction.png",
       "description": "将单元格从求和修正为标签，并显示本批次调整记录。",
-      "size_bytes": 415953
+      "size_bytes": 138273
     },
     {
       "title": "Sheet 切换与校验",
       "path": "06-sheet-switch-validation.png",
       "description": "切换到第二个 Sheet，显示参与文件数量和汇总结果。",
-      "size_bytes": 417151
+      "size_bytes": 136463
     },
     {
       "title": "导出保存对话框",
       "path": "07-export-save-dialog.png",
       "description": "点击导出 XLSX 后出现保存对话框。",
-      "size_bytes": 373753
+      "size_bytes": 105548
+    },
+    {
+      "title": "英文界面",
+      "path": "08-english-interface.png",
+      "description": "切换到英文后的主界面，展示多语言支持。",
+      "size_bytes": 339765
     }
   ]
 }
