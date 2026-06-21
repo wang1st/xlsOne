@@ -1,0 +1,32 @@
+#!/bin/sh
+set -e
+
+ln -sf /usr/bin/xlsone.sh /usr/bin/xlsone
+
+DESKTOP_SRC="/usr/share/applications/xlsone.desktop"
+
+if [ ! -f "$DESKTOP_SRC" ]; then
+    exit 0
+fi
+
+for home in /home/*/; do
+    user=$(basename "$home")
+    if id -u "$user" >/dev/null 2>&1; then
+        desktop_dir=""
+        if command -v xdg-user-dir >/dev/null 2>&1; then
+            desktop_dir=$(su - "$user" -c "xdg-user-dir DESKTOP" 2>/dev/null || true)
+        fi
+        if [ -z "$desktop_dir" ] || [ ! -d "$desktop_dir" ]; then
+            for fallback in "$home/Desktop" "$home/桌面"; do
+                if [ -d "$fallback" ]; then
+                    desktop_dir="$fallback"
+                    break
+                fi
+            done
+        fi
+        if [ -n "$desktop_dir" ] && [ -d "$desktop_dir" ]; then
+            cp "$DESKTOP_SRC" "$desktop_dir/"
+            chown "$user:$user" "$desktop_dir/xlsone.desktop"
+        fi
+    fi
+done
