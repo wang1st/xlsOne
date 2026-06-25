@@ -463,7 +463,7 @@ void MainWindow::buildUi()
     rootLayout->setContentsMargins(0, 0, 0, 0);
     rootLayout->setSpacing(0);
 
-    chrome_ = new WorkspaceChrome(root);
+    chrome_ = new WorkspaceChrome(licenseManager_, root);
     rootLayout->addWidget(chrome_);
     connect(chrome_, &WorkspaceChrome::appendRequested, this, &MainWindow::appendFiles);
     connect(chrome_, &WorkspaceChrome::reloadRequested, this, &MainWindow::reloadFiles);
