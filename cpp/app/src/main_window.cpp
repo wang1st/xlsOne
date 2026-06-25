@@ -397,8 +397,12 @@ void MainWindow::buildUi()
     adjustmentMemoryMenu->addAction(saveSchemaAction);
 
     // ---- 许可 ----
+#if !defined(__aarch64__) && !defined(__arm64__)
     auto* licenseMenu = menuBar()->addMenu(tr("许可"));
     licenseMenu->addAction(licenseActivateAction);
+#else
+    delete licenseActivateAction;
+#endif
 
     auto* helpAction = new QAction(tr("使用帮助"), this);
     connect(helpAction, &QAction::triggered, this, [this] {
@@ -438,9 +442,8 @@ void MainWindow::buildUi()
                "<p>多张同格式 Excel 报表一键汇总</p>"
                "<p>把多张格式一致的 Excel 表合成一份汇总表。"
                "金额、数量等能相加的数会自动合计；"
-               "名称、编号等不该相加的信息，会保留各文件里最常见的共同前缀。</p>"
-               "<p><b>作者：</b>王臻</p>"
-               "<p><b>技术：</b>C++  /  Qt</p>"
+               "名称、编号等不该相加的信息，会保留共同内容。</p>"
+                "<p><b>技术：</b>C++  /  Qt</p>"
                "<p><b>邮箱：</b>831261@qq.com</p>"
                 "<p>&copy; 2026 王臻. 保留所有权利.</p>").arg(ver));
     });

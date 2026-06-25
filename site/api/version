@@ -1,1 +1,9 @@
-version.json
+{
+  "latest_version": "1.0.0",
+  "changelog": "v1.0.0: 正式版发布，支持统信UOS和麒麟Kylin双平台DEB包",
+  "downloads": {
+    "macos": "https://z-pulse.cn/downloads/xlsOne-1.0.0-macos-arm64.dmg",
+    "windows": "https://z-pulse.cn/downloads/xlsOne-1.0.0-win64.exe",
+    "linux": "https://z-pulse.cn/downloads/xlsOne-1.0.0-linux-arm64.deb"
+  }
+}
