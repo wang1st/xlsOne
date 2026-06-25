@@ -5,6 +5,8 @@ add_executable(xlsone_app
     src/diagnostics_view.hpp
     src/empty_workspace_view.cpp
     src/empty_workspace_view.hpp
+    src/help_dialog.cpp
+    src/help_dialog.hpp
     src/inspector_panel.cpp
     src/inspector_panel.hpp
     src/license_activation_dialog.cpp

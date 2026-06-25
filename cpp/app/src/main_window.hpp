@@ -15,6 +15,7 @@
 #include <QLabel>
 #include <QMainWindow>
 #include <QModelIndex>
+#include <QProgressBar>
 #include <QPushButton>
 #include <QStackedWidget>
 #include <QTableView>
@@ -68,6 +69,8 @@ private:
     void updateChromeState();
     void updateSheetStrip();
     void updateCorrectionBar();
+    void setProgress(int value, const QString& text);
+    void clearProgress();
     QStringList chooseInputFiles() const;
     void applyOverrideForSelection(xlsone::SchemaCellOverrideType type);
     void rebuildResultsWithCurrentOverrides();
@@ -120,6 +123,7 @@ private:
     QPushButton* undoButton_ = nullptr;
     QPushButton* clearOverridesButton_ = nullptr;
     QLabel* statusLabel_ = nullptr;
+    QProgressBar* statusProgress_ = nullptr;
     xlsone::UpdateChecker* updateChecker_ = nullptr;
     xlsone::LicenseManager* licenseManager_ = nullptr;
     bool firstShow_ = true;
