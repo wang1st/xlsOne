@@ -1,6 +1,7 @@
 #include "main_window.hpp"
 
 #include "dialog_utils.hpp"
+#include "help_dialog.hpp"
 #include "license_activation_dialog.hpp"
 #include "merged_table_delegate.hpp"
 #include "schema_manager_dialog.hpp"
@@ -27,6 +28,7 @@
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QMimeData>
+#include <QProgressBar>
 #include <QRegularExpression>
 #include <QSet>
 #include <QShowEvent>
@@ -404,31 +406,12 @@ void MainWindow::buildUi()
     delete licenseActivateAction;
 #endif
 
-    auto* helpAction = new QAction(tr("使用帮助"), this);
+    auto* helpAction = new QAction(tr("快速参考指南"), this);
+    helpAction->setShortcut(QKeySequence(Qt::Key_F1));
     connect(helpAction, &QAction::triggered, this, [this] {
-        xlsone::ui::showInformation(this, tr("使用帮助"),
-            tr("表表归一  ·  多张同格式 Excel 报表一键汇总\n\n"
-               "1. 导入文件\n"
-               "   拖拽 .xlsx 或 .xls 文件到窗口，或点击 [文件] → [导入文件]\n\n"
-               "2. 切换工作表\n"
-               "   点击顶部的 Sheet 标签可切换要查看的报表页\n\n"
-               "3. 查看汇总\n"
-               "   - 金额、数量等能相加的数自动合计\n"
-               "   - 名称、编号等信息保留最常见的共同前缀\n"
-               "   - 结构不一致的工作表会跳过，并提示原因\n\n"
-               "4. 穿透查阅\n"
-               "   点击单元格可查看各文件原始值\n\n"
-               "5. 导出结果\n"
-               "   点击 [导出 XLSX] 保存汇总结果\n\n"
-               "6. 单元格修正\n"
-               "   在右侧面板可将单元格手动指定为标签或求和\n\n"
-               "快捷键:\n"
-               "   Ctrl+O  导入文件\n"
-               "   Ctrl+Shift+O  追加文件\n"
-               "   Ctrl+S  导出\n"
-               "   Ctrl+R  刷新\n"
-               "   Ctrl+N  清空\n"
-               "   Ctrl+Z  撤销修正"));
+        auto* dialog = new HelpDialog(this);
+        dialog->setAttribute(Qt::WA_DeleteOnClose);
+        xlsone::ui::showDialogCentered(dialog, this);
     });
 
     auto* aboutAction = new QAction(tr("关于 表表归一"), this);
@@ -442,10 +425,10 @@ void MainWindow::buildUi()
                "<p>多张同格式 Excel 报表一键汇总</p>"
                "<p>把多张格式一致的 Excel 表合成一份汇总表。"
                "金额、数量等能相加的数会自动合计；"
-               "名称、编号等不该相加的信息，会保留共同内容。</p>"
-                "<p><b>技术：</b>C++  /  Qt</p>"
+               "名称、编号等不该相加的信息，会保留各文件里最常见的共同前缀。</p>"
+               "<p><b>技术：</b>C++  /  Qt</p>"
                "<p><b>邮箱：</b>831261@qq.com</p>"
-                "<p>&copy; 2026 王臻. 保留所有权利.</p>").arg(ver));
+               "<p>&copy; 2026 王臻. 保留所有权利.</p>").arg(ver));
     });
 
     auto* checkUpdateAction = new QAction(tr("检查更新"), this);
@@ -555,8 +538,17 @@ void MainWindow::buildUi()
     connect(inspector_, &InspectorPanel::markSumRequested, this, &MainWindow::markSelectedAsSum);
     connect(inspector_, &InspectorPanel::restoreAutomaticRequested, this, &MainWindow::restoreAutomaticDecisionForSelection);
 
-    statusLabel_ = new QLabel(tr("拖入 Excel 文件，或点击打开开始。"), this);
+    statusLabel_ = new QLabel(tr("拖入 Excel 文件，开始智能汇总。"), this);
     statusBar()->addPermanentWidget(statusLabel_, 1);
+
+    statusProgress_ = new QProgressBar(this);
+    statusProgress_->setMaximumWidth(180);
+    statusProgress_->setMaximumHeight(14);
+    statusProgress_->setTextVisible(false);
+    statusProgress_->setRange(0, 100);
+    statusProgress_->setValue(0);
+    statusProgress_->hide();
+    statusBar()->addPermanentWidget(statusProgress_);
 
     updateChecker_ = new xlsone::UpdateChecker(this);
     connect(updateChecker_, &xlsone::UpdateChecker::updateAvailable, this,
@@ -699,6 +691,7 @@ void MainWindow::loadFiles(const QStringList& paths, bool append)
 
 void MainWindow::recomputeWorkspace()
 {
+    setProgress(5, tr("正在校验文件结构..."));
     validation_ = validator_.validate(parsedFiles_, parseFailures_);
     showValidationSummary();
     updateDiagnostics();
@@ -706,6 +699,7 @@ void MainWindow::recomputeWorkspace()
     baseResults_.clear();
     results_.clear();
     if (validation_.report.readiness != xlsone::MergeReadiness::Ready) {
+        clearProgress();
         tableModel_->setResult({});
         selectedSheetName_.clear();
         selectedSheetMergeable_ = true;
@@ -717,25 +711,38 @@ void MainWindow::recomputeWorkspace()
         return;
     }
 
-    for (const auto& sheetName : validation_.report.commonSheetNames) {
+    const int totalSheets = static_cast<int>(validation_.report.commonSheetNames.size());
+    for (int i = 0; i < totalSheets; ++i) {
+        const QString& sheetName = validation_.report.commonSheetNames[i];
+        const int progress = 20 + (60 * i / std::max(1, totalSheets));
+        setProgress(progress, tr("正在汇总“%1”... (%2/%3)")
+            .arg(sheetName)
+            .arg(i + 1)
+            .arg(totalSheets));
         baseResults_.push_back(merger_.merge(validation_.mergeableFiles, sheetName));
     }
 
+    setProgress(85, tr("正在应用调整记忆..."));
     const auto match = xlsone::SchemaMatcher::match(
         xlsone::fingerprintFor(validation_.mergeableFiles, validation_.report.commonSheetNames),
         schemaRepository_.loadAll()
     );
     const auto exactSchema = match.exactSchema();
     syncWorkspaceSchemaBase(exactSchema);
+
+    setProgress(90, tr("正在生成最终结果..."));
+    rebuildResultsWithCurrentOverrides();
+
+    QString schemaMessage;
     if (exactSchema.has_value()) {
-        statusLabel_->setText(statusLabel_->text() + tr(" 已应用调整记忆：%1。").arg(exactSchema->name));
+        schemaMessage = tr(" 已应用调整记忆：%1。").arg(exactSchema->name);
     } else if (match.kind == xlsone::SchemaMatchKind::Ambiguous) {
-        statusLabel_->setText(statusLabel_->text() + tr(" 检测到多组高置信调整记忆，未自动应用。"));
+        schemaMessage = tr(" 检测到多组高置信调整记忆，未自动应用。");
     } else if (match.kind == xlsone::SchemaMatchKind::Similar) {
-        statusLabel_->setText(statusLabel_->text() + tr(" 发现相近调整记忆，未自动应用。"));
+        schemaMessage = tr(" 发现相近调整记忆，未自动应用。");
     }
 
-    rebuildResultsWithCurrentOverrides();
+    clearProgress();
 
     QString nextSheet = selectedSheetName_;
     const auto resultIterator = std::find_if(results_.begin(), results_.end(), [&](const auto& result) {
@@ -749,6 +756,11 @@ void MainWindow::recomputeWorkspace()
     updateSheetStrip();
     updateCorrectionBar();
     updateChromeState();
+
+    if (!schemaMessage.isEmpty() && statusLabel_ != nullptr) {
+        statusLabel_->setText(statusLabel_->text() + schemaMessage);
+    }
+
     if (!selectedSheetName_.isEmpty()) {
         selectSheet(selectedSheetName_, true);
     } else if (!validation_.report.skippedSheetNames.isEmpty()) {
@@ -782,6 +794,26 @@ void MainWindow::updateChromeState()
     }
     if (contentStack_ != nullptr) {
         contentStack_->setCurrentWidget(hasWorkspace ? workspaceView_ : emptyView_);
+    }
+}
+
+void MainWindow::setProgress(int value, const QString& text)
+{
+    if (statusLabel_ != nullptr) {
+        statusLabel_->setText(text);
+    }
+    if (statusProgress_ != nullptr) {
+        statusProgress_->setValue(qBound(0, value, 100));
+        statusProgress_->show();
+    }
+    QApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
+}
+
+void MainWindow::clearProgress()
+{
+    if (statusProgress_ != nullptr) {
+        statusProgress_->setValue(0);
+        statusProgress_->hide();
     }
 }
 

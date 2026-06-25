@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>表表归一 快速参考指南</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="guide-header">
+    <h1>表表归一 快速参考指南</h1>
+    <p class="subtitle">多张同格式 Excel 报表一键汇总 — 工业级操作手册</p>
+    <p class="version">版本 1.x &middot; 适用于 Linux / Windows / macOS</p>
+</header>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!--  快速开始                                                     -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<section id="topic-quickstart">
+    <h2>快速开始</h2>
+    <p>首次使用？按以下 5 步即可完成第一次汇总：</p>
+    <ol class="steps">
+        <li>
+            <strong>启动应用</strong>
+            <span class="step-desc">打开表表归一，进入空白工作台。支持 Linux、Windows、macOS 三大平台。</span>
+        </li>
+        <li>
+            <strong>导入文件</strong>
+            <span class="step-desc">将多个 <code>.xlsx</code> 或 <code>.xls</code> 文件拖入窗口，或通过 <kbd>文件 → 导入文件…</kbd> 选择。支持文件夹批量导入。</span>
+        </li>
+        <li>
+            <strong>自动校验</strong>
+            <span class="step-desc">程序自动分析文件结构，识别可合并的工作表，并在底部状态栏报告校验摘要。</span>
+        </li>
+        <li>
+            <strong>查看结果</strong>
+            <span class="step-desc">点击顶部 Sheet 标签切换汇总页，主表格显示合并后的数据。蓝色单元格为可求和数值，点击任意单元格可在右侧面板查看来源明细。</span>
+        </li>
+        <li>
+            <strong>导出保存</strong>
+            <span class="step-desc">确认无误后，点击工具栏 <kbd>导出 XLSX</kbd>（或 <kbd>Ctrl+E</kbd>），选择保存路径即完成。</span>
+        </li>
+    </ol>
+    <div class="tip">
+        <strong>提示：</strong> 导入前请确保所有 Excel 文件使用相同的表头结构和行列布局。结构不一致的工作表会被自动跳过并给出诊断原因。
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!--  导入文件                                                     -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<section id="topic-import">
+    <h2>导入文件</h2>
+    <p>支持三种导入方式，适用于不同工作场景：</p>
+    <table class="feature-table">
+        <thead>
+            <tr><th>方式</th><th>操作</th><th>适用场景</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>拖拽导入</strong></td>
+                <td>将文件或文件夹直接拖入窗口空白区</td>
+                <td>从文件管理器快速选取</td>
+            </tr>
+            <tr>
+                <td><strong>菜单导入</strong></td>
+                <td><kbd>文件 → 导入文件…</kbd>（<kbd>Ctrl+O</kbd>）</td>
+                <td>新建工作区、替换当前文件列表</td>
+            </tr>
+            <tr>
+                <td><strong>追加导入</strong></td>
+                <td>点击工具栏 <kbd>追加</kbd>（<kbd>Ctrl+Shift+O</kbd>）</td>
+                <td>在已有工作区基础上补充更多文件</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>导入要求</h3>
+    <ul>
+        <li>文件格式：支持 <code>.xlsx</code>（Office 2007+）和 <code>.xls</code>（BIFF8, Office 97–2003）。</li>
+        <li>结构一致：所有待合并文件必须包含<strong>同名工作表</strong>，且该工作表的表头行列必须完全对齐。</li>
+        <li>编码兼容：支持中文、英文等 Unicode 内容，无需额外配置。</li>
+    </ul>
+
+    <div class="note">
+        <strong>注意：</strong> 如果导入时出现"解析失败"，请检查文件是否已损坏或被其他程序独占打开。已加密（带密码保护）的 Excel 文件暂不支持。
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!--  查看汇总                                                     -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<section id="topic-merge">
+    <h2>查看汇总结果</h2>
+    <p>导入成功后，窗口上方会显示所有检测到的工作表标签页：</p>
+
+    <h3>合并策略</h3>
+    <div class="card-grid">
+        <div class="card">
+            <h4>数值列 — 自动合计</h4>
+            <p>金额、数量、百分比等纯数值列，程序自动识别并对所有源文件进行<strong>求和汇总</strong>。汇总单元格以蓝色字体高亮显示。</p>
+        </div>
+        <div class="card">
+            <h4>文本列 — 公共前缀</h4>
+            <p>名称、编号、项目代码等文本信息，程序取所有源文件的<strong>最长公共前缀</strong>作为汇总值。若各文件值不同，则标记为可审核。</p>
+        </div>
+        <div class="card">
+            <h4>空值处理</h4>
+            <p>若部分源文件在某单元格无数据，程序默认以非空值汇总。可在右侧面板查看每个源文件的实际值。</p>
+        </div>
+    </div>
+
+    <div class="tip">
+        <strong>提示：</strong> 双击任意汇总单元格可展开该单元格在<strong>所有源文件中的原始值</strong>，方便审计和校对。
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!--  工作表状态                                                   -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<section id="topic-sheetstatus">
+    <h2>工作表状态</h2>
+    <p>每个工作表标签都会显示其合并状态：</p>
+
+    <table class="feature-table">
+        <thead>
+            <tr><th>状态</th><th>含义</th><th>操作</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><span class="badge badge-ready">可合并</span></td>
+                <td>该工作表在所有源文件中结构一致，已成功参与汇总</td>
+                <td>点击标签查看汇总数据</td>
+            </tr>
+            <tr>
+                <td><span class="badge badge-skipped">已跳过</span></td>
+                <td>结构不一致，该工作表未能参与合并</td>
+                <td>点击标签查看诊断原因</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>常见跳过原因</h3>
+    <ol>
+        <li><strong>表头行数不一致：</strong>不同源文件的标题行数不同，导致数据区域无法对齐。</li>
+        <li><strong>列数不匹配：</strong>同一工作表的列数在不同源文件中存在差异。</li>
+        <li><strong>表头内容不一致：</strong>列标题文字不同，程序无法确定列对应关系。</li>
+    </ol>
+
+    <div class="note">
+        <strong>建议：</strong> 使用统一的 Excel 模板规范各分支机构/部门的数据填报格式，可大幅减少"已跳过"情况。预定义的模板文件可用于后续导入校验。
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!--  穿透查阅                                                     -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<section id="topic-drilldown">
+    <h2>穿透查阅</h2>
+    <p>汇总表的每个单元格都支持<strong>穿透查阅</strong>（Drill-down），帮助追溯数据来源：</p>
+
+    <ol class="steps">
+        <li><strong>点击单元格：</strong>在汇总表格中单击任意单元格。</li>
+        <li><strong>查看来源面板：</strong>右侧面板列出该单元格在各源文件中的原始值，标注文件名和具体数值。</li>
+        <li><strong>识别异常：</strong>若某个文件的值与其他文件差异较大，可快速定位该文件进行核实。</li>
+    </ol>
+
+    <div class="tip">
+        <strong>审计场景：</strong> 财务审计中，可逐个单元格穿透查看各子公司的原始填报数据，验证汇总结果的正确性。
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!--  导出结果                                                     -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<section id="topic-export">
+    <h2>导出结果</h2>
+    <p>汇总校验完毕后，将结果保存为标准 Excel 文件：</p>
+
+    <ol class="steps">
+        <li>确认汇总表数据无误（必要时可进行单元格修正后导出）。</li>
+        <li>点击工具栏 <kbd>导出 XLSX</kbd> 或使用快捷键 <kbd>Ctrl+E</kbd>。</li>
+        <li>在文件对话框中选择保存路径和文件名。</li>
+        <li>导出的 <code>.xlsx</code> 文件可用 Excel / WPS / LibreOffice 打开。</li>
+    </ol>
+
+    <h3>导出内容说明</h3>
+    <ul>
+        <li>每个可合并的工作表在导出文件中保留为独立 Sheet。</li>
+        <li>数值格式（千分位、小数位、百分比等）尽可能保留原始样式。</li>
+        <li>单元格修正结果会反映在最终导出文件中。</li>
+        <li>已跳过的 Sheet 不出现在导出文件中。</li>
+    </ul>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!--  单元格修正                                                   -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<section id="topic-correction">
+    <h2>单元格修正</h2>
+    <p>如果程序的自动判定与预期不符，可以手动修正单元格的聚合方式：</p>
+
+    <h3>修正类型</h3>
+    <table class="feature-table">
+        <thead>
+            <tr><th>类型</th><th>快捷键</th><th>行为</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>标签</strong>（Label）</td>
+                <td><kbd>1</kbd></td>
+                <td>强制以文本方式合并（取公共前缀），不进行求和</td>
+            </tr>
+            <tr>
+                <td><strong>求和</strong>（Sum）</td>
+                <td><kbd>2</kbd></td>
+                <td>强制以数值方式合并（累加），即使内容包含文本</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>操作步骤</h3>
+    <ol>
+        <li>在汇总表中选中一个或多个需要修正的单元格。</li>
+        <li>在右侧面板点击 <kbd>标签</kbd> 或 <kbd>求和</kbd>，或直接按键盘 <kbd>1</kbd> / <kbd>2</kbd>。</li>
+        <li>底部状态栏显示已调整数量，可随时 <kbd>撤销</kbd>（<kbd>Ctrl+Z</kbd>）或 <kbd>清除所有修正</kbd>。</li>
+        <li>点击 <kbd>恢复自动</kbd> 可将单个单元格恢复为程序的原始判定。</li>
+    </ol>
+
+    <div class="tip">
+        <strong>最佳实践：</strong> 修正完成后，建议将修正规则保存为<strong>调整记忆</strong>，下次导入相同结构的文件时可自动应用。
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!--  调整记忆                                                     -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<section id="topic-schema">
+    <h2>调整记忆</h2>
+    <p>调整记忆（Schema）是一组可复用的单元格修正规则。特别适用于<strong>周期性重复汇总</strong>的场景（如月度/季度财务报表合并）。</p>
+
+    <h3>核心功能</h3>
+    <div class="card-grid">
+        <div class="card">
+            <h4>自动匹配</h4>
+            <p>导入文件时，程序自动检测是否存在匹配的调整记忆。若文件结构与已保存的记忆高度吻合，自动应用已有修正规则。</p>
+        </div>
+        <div class="card">
+            <h4>保存记忆</h4>
+            <p>通过 <kbd>调整记忆 → 保存当前调整记忆</kbd>（<kbd>Ctrl+S</kbd>）将当前工作区的所有修正规则持久化保存。</p>
+        </div>
+        <div class="card">
+            <h4>管理记忆</h4>
+            <p>通过 <kbd>调整记忆 → 查看当前调整记忆</kbd> 管理已保存的规则：查看修正明细、导入/导出 JSON 文件、清除过时规则。</p>
+        </div>
+    </div>
+
+    <h3>最佳实践</h3>
+    <ul>
+        <li>为每个报表模板创建独立的调整记忆，命名规则如"华东区月度销售报表"。</li>
+        <li>使用 <code>.json</code> 格式导出/导入调整记忆，便于团队共享和版本管理。</li>
+        <li>结构发生变化时，及时更新调整记忆以避免旧规则错误应用。</li>
+    </ul>
+
+    <div class="note">
+        <strong>技术说明：</strong> 调整记忆基于"结构指纹"（列名 + 行位置 + 数据类型）进行匹配，而非文件名。因此即使文件来源不同，只要结构一致即可复用规则。
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!--  快捷键                                                       -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<section id="topic-shortcuts">
+    <h2>快捷键</h2>
+    <table class="shortcut-table">
+        <thead>
+            <tr><th>快捷键</th><th>功能</th><th>菜单路径</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><kbd>Ctrl+O</kbd></td><td>导入文件（替换当前）</td><td>文件 → 导入文件…</td></tr>
+            <tr><td><kbd>Ctrl+Shift+O</kbd></td><td>追加文件到当前工作区</td><td>文件 → 追加文件…</td></tr>
+            <tr><td><kbd>Ctrl+E</kbd></td><td>导出汇总结果</td><td>文件 → 导出 XLSX…</td></tr>
+            <tr><td><kbd>Ctrl+R</kbd></td><td>刷新当前工作区</td><td>文件 → 刷新</td></tr>
+            <tr><td><kbd>Ctrl+N</kbd></td><td>清空工作区</td><td>文件 → 清空工作区</td></tr>
+            <tr><td><kbd>Ctrl+S</kbd></td><td>保存当前调整记忆</td><td>调整记忆 → 保存当前调整记忆</td></tr>
+            <tr><td><kbd>Ctrl+Z</kbd></td><td>撤销上一步单元格修正</td><td>编辑 → 撤销修正</td></tr>
+            <tr><td><kbd>1</kbd></td><td>将选中单元格标记为标签</td><td>右侧面板 → 标签</td></tr>
+            <tr><td><kbd>2</kbd></td><td>将选中单元格标记为求和</td><td>右侧面板 → 求和</td></tr>
+            <tr><td><kbd>Ctrl+Q</kbd></td><td>退出程序</td><td>文件 → 退出</td></tr>
+            <tr><td><kbd>F1</kbd></td><td>打开快速参考指南</td><td>快速参考指南 → 快速参考指南</td></tr>
+        </tbody>
+    </table>
+
+    <div class="tip">
+        <strong>macOS 用户注意：</strong> macOS 版本使用 <kbd>&#8984;</kbd>（Command）键替代 <kbd>Ctrl</kbd>。例如 <kbd>&#8984;+O</kbd> 导入文件。
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!--  常见问题                                                     -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<section id="topic-faq">
+    <h2>常见问题</h2>
+
+    <div class="faq-item">
+        <h3>Q: 导入后所有工作表都显示"已跳过"？</h3>
+        <p>说明源文件之间结构差异较大。请检查：</p>
+        <ul>
+            <li>各文件的 Sheet 名称是否完全一致。</li>
+            <li>表头区域（前几行）的行数是否相同。</li>
+            <li>数据列的列数和列标题是否匹配。</li>
+            <li>是否混入了不同模板生成的文件。</li>
+        </ul>
+    </div>
+
+    <div class="faq-item">
+        <h3>Q: 数值没有被正确求和？</h3>
+        <p>可能原因：</p>
+        <ul>
+            <li>单元格内数值被识别为文本格式（如包含空格、货币符号）。</li>
+            <li>该列在模板中被定义为文本标签列。</li>
+            <li>解决方法：选中该单元格后按 <kbd>2</kbd> 强制标记为"求和"。</li>
+        </ul>
+    </div>
+
+    <div class="faq-item">
+        <h3>Q: 如何批量调整多个单元格？</h3>
+        <p>在汇总表中按住 <kbd>Ctrl</kbd> 点击可多选单元格，然后统一按 <kbd>1</kbd> 或 <kbd>2</kbd> 进行批量修正。批量修正后建议保存为调整记忆。</p>
+    </div>
+
+    <div class="faq-item">
+        <h3>Q: 调整记忆如何共享给同事？</h3>
+        <p>通过 <kbd>调整记忆 → 查看当前调整记忆</kbd> → <kbd>导出</kbd> 将规则保存为 <code>.json</code> 文件。同事通过 <kbd>导入</kbd> 按钮加载该文件即可。</p>
+    </div>
+
+    <div class="faq-item">
+        <h3>Q: 支持的最大文件数量和大小？</h3>
+        <p>理论上无硬性限制，实际取决于可用内存。实测单次导入 100 个文件（每个约 5MB）可流畅运行。建议单次不超过 200 个文件以保证交互响应速度。</p>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!--  系统要求与支持                                               -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<section id="topic-support">
+    <h2>系统要求与支持</h2>
+
+    <h3>系统要求</h3>
+    <table class="feature-table">
+        <thead>
+            <tr><th>平台</th><th>最低要求</th><th>推荐配置</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Linux</strong></td>
+                <td>Ubuntu 20.04+ / Debian 11+ 或等效发行版，glibc 2.31+</td>
+                <td>Ubuntu 22.04+, 8 GB RAM, SSD 存储</td>
+            </tr>
+            <tr>
+                <td><strong>Windows</strong></td>
+                <td>Windows 10 1809+ (x64)</td>
+                <td>Windows 11, 8 GB RAM</td>
+            </tr>
+            <tr>
+                <td><strong>macOS</strong></td>
+                <td>macOS 12 Monterey+</td>
+                <td>macOS 14+, Apple Silicon 原生支持</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>技术支持</h3>
+    <ul>
+        <li><strong>官方网站：</strong><a href="https://z-pulse.cn">https://z-pulse.cn</a></li>
+        <li><strong>技术邮箱：</strong><a href="mailto:831261@qq.com">831261@qq.com</a></li>
+        <li><strong>在线文档：</strong><a href="https://z-pulse.cn/support/">https://z-pulse.cn/support/</a></li>
+    </ul>
+
+    <h3>版本信息</h3>
+    <ul>
+        <li>当前版本：1.x（C++ / Qt 实现）</li>
+        <li>许可协议：ZENITH PULSE 专有授权</li>
+        <li>&copy; 2026 王臻. 保留所有权利。</li>
+    </ul>
+</section>
+
+</body>
+</html>
