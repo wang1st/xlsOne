@@ -10,7 +10,7 @@ struct ContentView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            toolbar
+            WorkspaceToolbar()
             Divider()
 
             switch viewModel.workspacePhase {
@@ -44,7 +44,7 @@ struct ContentView: View {
             CenteredDialogWindow(
                 isPresented: licenseActivationSheet,
                 title: LocaleManager.loc("激活 表表归一"),
-                size: NSSize(width: 420, height: 520)
+                size: NSSize(width: 720, height: 520)
             ) {
                 LicenseActivationView()
                     .id(localeManager.currentLanguage.rawValue)
@@ -86,308 +86,30 @@ struct ContentView: View {
         viewModel.showError = false
     }
 
-    private var toolbar: some View {
-        let presentation = viewModel.toolbarPresentation
-        let hasWorkspace = !viewModel.selectedFilePaths.isEmpty
-
-        return HStack(spacing: 10) {
-            if hasWorkspace {
-                HStack(spacing: 2) {
-                    toolbarUtilityButton(label: LocLabel("追加", systemImage: "plus"), help: LocaleManager.loc("向当前批次追加文件")) {
-                        viewModel.showAddFileDialog()
-                    }
-                    .disabled(!presentation.appendEnabled)
-
-                    toolbarStripDivider
-
-                    toolbarUtilityButton(label: LocLabel("刷新", systemImage: "arrow.clockwise"), help: LocaleManager.loc("重新读取当前文件并刷新汇总结果")) {
-                        viewModel.reloadFiles()
-                    }
-                    .disabled(viewModel.selectedFilePaths.isEmpty)
-
-                    toolbarUtilityButton(label: LocLabel("清空", systemImage: "xmark"), help: LocaleManager.loc("清空当前工作区，不影响原始 Excel 文件")) {
-                        viewModel.closeAllFiles()
-                    }
-                    .disabled(viewModel.selectedFilePaths.isEmpty)
-                }
-                .padding(4)
-                .background(Color(NSColor.controlBackgroundColor))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .stroke(Color.secondary.opacity(0.12), lineWidth: 1)
-                )
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-            }
-
-            Spacer()
-
-            if hasWorkspace {
-                toolbarPrimaryButton(
-                    label: LocLabel("导出 XLSX", systemImage: "square.and.arrow.up"),
-                    prominent: presentation.exportIsProminent,
-                    help: viewModel.canExport ? LocaleManager.loc("导出同构汇总 Excel") : LocaleManager.loc("当前没有可导出的汇总结果")
-                ) {
-                    viewModel.exportResult()
-                }
-                .disabled(!viewModel.canExport)
-            }
-        }
-        .padding(.horizontal)
-        .padding(.vertical, 10)
-        .background(Color(NSColor.windowBackgroundColor))
-    }
-
-    private var toolbarStripDivider: some View {
-        Rectangle()
-            .fill(Color.secondary.opacity(0.10))
-            .frame(width: 1, height: 18)
-            .padding(.horizontal, 2)
-    }
-
-    private func toolbarPrimaryButton(
-        label: some View,
-        prominent: Bool,
-        help: String,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            label
-        }
-        .buttonStyle(WorkspaceChromePrimaryButtonStyle(prominent: prominent))
-        .help(help)
-    }
-
-    private func toolbarUtilityButton(
-        label: some View,
-        help: String,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            label
-        }
-        .buttonStyle(WorkspaceChromeUtilityButtonStyle())
-        .help(help)
-    }
 
     private var emptyView: some View {
-        ZStack {
-            LinearGradient(
-                colors: [
-                    Color(NSColor.controlBackgroundColor),
-                    Color.white.opacity(0.92)
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .fill(Color.white.opacity(isDropTargeted ? 0.94 : 0.72))
-                .frame(maxWidth: 560, maxHeight: 360)
-                .overlay {
-                    EmptyWorkspaceBackdrop()
-                        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-                }
-                .overlay {
-                    RoundedRectangle(cornerRadius: 28, style: .continuous)
-                        .strokeBorder(dropZoneBorderColor, lineWidth: isDropTargeted ? 2 : 1)
-                }
-                .shadow(color: Color.black.opacity(isDropTargeted ? 0.08 : 0.04), radius: 24, y: 12)
-                .overlay {
-                    VStack(spacing: 18) {
-                        EmptyWorkspaceArtwork(isHighlighted: isDropTargeted)
-
-                        VStack(spacing: 8) {
-                            Text(isDropTargeted ? LocaleManager.loc("松手即可导入") : LocaleManager.loc("拖入 Excel 文件"))
-                                .font(.system(size: 28, weight: .semibold))
-                                .foregroundStyle(.primary)
-
-                            Text(isDropTargeted ? LocaleManager.loc("支持多个 .xlsx / .xls") : LocaleManager.loc("支持多个 .xlsx / .xls"))
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                        }
-                        .multilineTextAlignment(.center)
-
-                        Button {
-                            viewModel.showOpenFileDialog()
-                        } label: {
-                            Label(LocaleManager.loc("选择文件"), systemImage: "folder.badge.plus")
-                        }
-                        .buttonStyle(WorkspaceChromePrimaryButtonStyle(prominent: true))
-                        .controlSize(.large)
-                    }
-                    .padding(.horizontal, 40)
-                    .padding(.vertical, 36)
-                }
-                .padding(40)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .animation(.easeInOut(duration: 0.18), value: isDropTargeted)
-    }
-
-    private var dropZoneBorderColor: Color {
-        isDropTargeted
-            ? Color.accentColor.opacity(0.45)
-            : Color.secondary.opacity(0.14)
+        WorkspaceEmptyState(isDropTargeted: isDropTargeted)
     }
 
     private var loadingView: some View {
-        VStack(spacing: 16) {
-            ProgressView()
-                .scaleEffect(1.4)
-            Text(LocaleManager.loc("正在校验工作簿结构并准备汇总工作台…"))
-                .foregroundStyle(.secondary)
-            Text("已选 \(viewModel.selectedFilePaths.count) 个文件")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(NSColor.controlBackgroundColor))
+        WorkspaceLoadingView(fileCount: viewModel.selectedFilePaths.count)
     }
 
     private var blockedView: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                HStack(alignment: .top, spacing: 12) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.orange)
-                        .font(.title2)
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(LocaleManager.loc("没有可参与汇总的同构工作表"))
-                            .font(.title3)
-                            .fontWeight(.semibold)
-                        Text("系统已忽略尾部空白行列后重试校验，但当前仍没有任何 sheet 能在所有文件间对齐。")
-                            .foregroundStyle(.secondary)
-                    }
+        Group {
+            if let report = viewModel.validationReport {
+                WorkspaceBlockedView(report: report)
+            } else {
+                VStack(spacing: 12) {
+                    Image(systemName: "exclamationmark.triangle")
+                        .font(.largeTitle)
+                        .foregroundColor(XColor.warning)
+                    Text(LocaleManager.loc("无法加载校验报告"))
+                        .foregroundColor(XColor.secondaryLabel)
                 }
-
-                if let report = viewModel.validationReport {
-                    validationSummary(report)
-                    if report.skippedSheetCount > 0 {
-                        skippedSheetList(report)
-                    }
-                    fileParticipationList(report.files)
-                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(XColor.background)
             }
-            .padding(24)
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .background(Color(NSColor.controlBackgroundColor))
-    }
-
-    private func validationSummary(_ report: WorkbookValidationReport) -> some View {
-        HStack(spacing: 12) {
-            statCard(title: LocaleManager.loc("参与文件"), value: "\(report.includedFiles.count)", tint: .green)
-            statCard(title: LocaleManager.loc("阻断文件"), value: "\(report.blockedFiles.count)", tint: .red)
-            statCard(title: LocaleManager.loc("警告文件"), value: "\(report.warningFiles.count)", tint: .orange)
-            if report.skippedSheetCount > 0 {
-                statCard(title: LocaleManager.loc("跳过工作表"), value: "\(report.skippedSheetCount)", tint: .orange)
-            }
-        }
-    }
-
-    private func statCard(title: String, value: String, tint: Color) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(title)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            Text(value)
-                .font(.title3)
-                .fontWeight(.semibold)
-                .foregroundStyle(tint)
-        }
-        .padding()
-        .frame(maxWidth: 140, alignment: .leading)
-        .background(tint.opacity(0.1))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-    }
-
-    private func fileParticipationList(_ reports: [FileValidationReport]) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("文件参与情况")
-                .font(.headline)
-
-            ForEach(reports, id: \.filepath) { report in
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack(spacing: 10) {
-                        statusDot(for: report.status)
-                        Text(report.filename)
-                            .fontWeight(.medium)
-                        Spacer()
-                        Text(report.statusLabel)
-                            .font(.caption)
-                            .foregroundStyle(report.statusColor)
-                    }
-
-                    if !report.issues.isEmpty {
-                        VStack(alignment: .leading, spacing: 6) {
-                            ForEach(report.issues) { issue in
-                                Text(issue.message)
-                                    .font(.caption)
-                                    .foregroundStyle(issue.severity == .blocking ? .red : .orange)
-                            }
-                        }
-                    }
-                }
-                .padding()
-                .background(Color.white)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(report.statusColor.opacity(0.2), lineWidth: 1)
-                )
-            }
-        }
-    }
-
-    private func skippedSheetList(_ report: WorkbookValidationReport) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("已跳过的工作表")
-                .font(.headline)
-
-            ForEach(report.skippedSheetNames, id: \.self) { sheetName in
-                if let consensus = WorkspaceDiagnostics.buildSkippedSheetConsensus(report: report, sheetName: sheetName) {
-                    SkippedSheetConsensusCard(consensus: consensus)
-                } else {
-                    VStack(alignment: .leading, spacing: 6) {
-                        HStack {
-                            Image(systemName: "exclamationmark.triangle.fill")
-                                .foregroundStyle(.orange)
-                            Text(sheetName)
-                                .fontWeight(.medium)
-                            Spacer()
-                            Text("不参与合并")
-                                .font(.caption)
-                                .foregroundStyle(.orange)
-                        }
-
-                        ForEach(report.skippedSheetIssues.filter { $0.sheetName == sheetName }) { issue in
-                            Text(issue.message)
-                                .font(.caption)
-                                .foregroundStyle(.orange)
-                        }
-                    }
-                    .padding()
-                    .background(Color.orange.opacity(0.08))
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                }
-            }
-        }
-    }
-
-    private func statusDot(for status: FileValidationStatus) -> some View {
-        Circle()
-            .fill(statusColor(for: status))
-            .frame(width: 8, height: 8)
-    }
-
-    private func statusColor(for status: FileValidationStatus) -> Color {
-        switch status {
-        case .included:
-            return .green
-        case .warning:
-            return .orange
-        case .blocked:
-            return .red
         }
     }
 
@@ -643,193 +365,6 @@ struct SheetCapsuleStrip: View {
         default:
             return false
         }
-    }
-}
-
-private struct WorkspaceChromePrimaryButtonStyle: ButtonStyle {
-    let prominent: Bool
-
-    func makeBody(configuration: Configuration) -> some View {
-        WorkspaceChromePrimaryButton(configuration: configuration, prominent: prominent)
-    }
-}
-
-private struct WorkspaceChromePrimaryButton: View {
-    let configuration: WorkspaceChromePrimaryButtonStyle.Configuration
-    let prominent: Bool
-
-    @Environment(\.isEnabled) private var isEnabled
-
-    var body: some View {
-        configuration.label
-            .font(.system(size: 13, weight: .semibold))
-            .padding(.horizontal, 14)
-            .padding(.vertical, 8)
-            .foregroundStyle(foregroundColor)
-            .background(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(backgroundColor)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .stroke(borderColor, lineWidth: 1)
-            )
-            .shadow(color: shadowColor, radius: 8, y: 1)
-            .scaleEffect(configuration.isPressed ? 0.985 : 1)
-            .opacity(isEnabled ? 1 : 0.48)
-            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
-    }
-
-    private var foregroundColor: Color {
-        prominent && isEnabled ? .white : .primary
-    }
-
-    private var backgroundColor: Color {
-        if prominent {
-            let opacity = configuration.isPressed ? 0.82 : 0.94
-            return Color.accentColor.opacity(isEnabled ? opacity : 0.18)
-        }
-        return Color.white.opacity(configuration.isPressed ? 0.88 : 0.96)
-    }
-
-    private var borderColor: Color {
-        if prominent {
-            return Color.accentColor.opacity(isEnabled ? 0.18 : 0.10)
-        }
-        return Color.secondary.opacity(0.14)
-    }
-
-    private var shadowColor: Color {
-        guard prominent, isEnabled, !configuration.isPressed else { return .clear }
-        return Color.black.opacity(0.08)
-    }
-}
-
-private struct WorkspaceChromeUtilityButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        WorkspaceChromeUtilityButton(configuration: configuration)
-    }
-}
-
-private struct EmptyWorkspaceBackdrop: View {
-    var body: some View {
-        ZStack {
-            LinearGradient(
-                colors: [
-                    Color.white.opacity(0.72),
-                    Color(red: 0.95, green: 0.96, blue: 0.98).opacity(0.88)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-
-            VStack(spacing: 18) {
-                ForEach(0..<5, id: \.self) { _ in
-                    Rectangle()
-                        .fill(Color.secondary.opacity(0.055))
-                        .frame(height: 1)
-                }
-            }
-            .padding(.horizontal, 32)
-
-            HStack(spacing: 18) {
-                ForEach(0..<6, id: \.self) { _ in
-                    Rectangle()
-                        .fill(Color.secondary.opacity(0.038))
-                        .frame(width: 1)
-                }
-            }
-            .padding(.vertical, 26)
-        }
-    }
-}
-
-private struct EmptyWorkspaceArtwork: View {
-    let isHighlighted: Bool
-
-    var body: some View {
-        ZStack {
-            sheet(width: 118, height: 92, x: -26, y: -10, opacity: 0.42)
-            sheet(width: 126, height: 98, x: 24, y: -4, opacity: 0.5)
-
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color.white.opacity(0.95))
-                .frame(width: 138, height: 106)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .stroke(
-                            isHighlighted ? Color.accentColor.opacity(0.38) : Color.primary.opacity(0.14),
-                            lineWidth: 1.2
-                        )
-                )
-                .overlay(alignment: .topLeading) {
-                    VStack(spacing: 8) {
-                        Rectangle()
-                            .fill(isHighlighted ? Color.accentColor.opacity(0.22) : Color.primary.opacity(0.08))
-                            .frame(height: 10)
-                            .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
-
-                        ForEach(0..<3, id: \.self) { _ in
-                            HStack(spacing: 6) {
-                                ForEach(0..<3, id: \.self) { _ in
-                                    RoundedRectangle(cornerRadius: 4, style: .continuous)
-                                        .fill(Color.primary.opacity(0.07))
-                                        .frame(width: 32, height: 14)
-                                }
-                            }
-                        }
-                    }
-                    .padding(14)
-                }
-        }
-        .frame(width: 190, height: 124)
-    }
-
-    private func sheet(width: CGFloat, height: CGFloat, x: CGFloat, y: CGFloat, opacity: Double) -> some View {
-        RoundedRectangle(cornerRadius: 14, style: .continuous)
-            .fill(Color.white.opacity(0.7))
-            .frame(width: width, height: height)
-            .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(Color.primary.opacity(0.08), lineWidth: 1)
-            )
-            .overlay {
-                VStack(spacing: 9) {
-                    ForEach(0..<3, id: \.self) { _ in
-                        Rectangle()
-                            .fill(Color.primary.opacity(0.05))
-                            .frame(height: 1)
-                    }
-                }
-                .padding(.horizontal, 14)
-            }
-            .offset(x: x, y: y)
-            .opacity(opacity)
-    }
-}
-
-private struct WorkspaceChromeUtilityButton: View {
-    let configuration: WorkspaceChromeUtilityButtonStyle.Configuration
-
-    @Environment(\.isEnabled) private var isEnabled
-
-    var body: some View {
-        configuration.label
-            .font(.system(size: 13, weight: .medium))
-            .padding(.horizontal, 10)
-            .padding(.vertical, 7)
-            .foregroundStyle(isEnabled ? Color.primary : Color.secondary)
-            .background(
-                RoundedRectangle(cornerRadius: 9, style: .continuous)
-                    .fill(backgroundColor)
-            )
-            .opacity(isEnabled ? 1 : 0.5)
-            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
-    }
-
-    private var backgroundColor: Color {
-        guard isEnabled else { return .clear }
-        return configuration.isPressed ? Color.secondary.opacity(0.10) : .clear
     }
 }
 
