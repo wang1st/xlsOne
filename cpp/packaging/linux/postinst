@@ -2,13 +2,15 @@
 
 ln -sf /usr/bin/xlsone.sh /usr/bin/xlsone || true
 
-# Clean up broken qt.conf from v1.0.0 that was installed to /usr/bin/.
-# /usr/bin/qt.conf overrides system Qt plugin path for every Qt app in
-# /usr/bin/, which breaks dde-desktop xcb platform plugin loading and
-# prevents users from logging into their DDE desktop.
+# Clean up a broken qt.conf that may have been installed to /usr/bin/ by an
+# earlier xlsOne package. A qt.conf in /usr/bin/ overrides the system Qt plugin
+# path for every Qt application in /usr/bin/ and can break the DDE desktop.
+# We only remove files that clearly belong to xlsOne (contain our lib path).
 for f in /usr/bin/qt.conf /usr/bin/qt.conf.bak; do
     if [ -f "$f" ]; then
-        rm -f "$f" || true
+        if grep -q "/usr/lib/xlsone" "$f" 2>/dev/null; then
+            rm -f "$f" || true
+        fi
     fi
 done
 
