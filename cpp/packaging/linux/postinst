@@ -1,8 +1,18 @@
 #!/bin/sh
-set -e
 
-ln -sf /usr/bin/xlsone.sh /usr/bin/xlsone
+ln -sf /usr/bin/xlsone.sh /usr/bin/xlsone || true
 
+# Clean up broken qt.conf from v1.0.0 that was installed to /usr/bin/.
+# /usr/bin/qt.conf overrides system Qt plugin path for every Qt app in
+# /usr/bin/, which breaks dde-desktop xcb platform plugin loading and
+# prevents users from logging into their DDE desktop.
+for f in /usr/bin/qt.conf /usr/bin/qt.conf.bak; do
+    if [ -f "$f" ]; then
+        rm -f "$f" || true
+    fi
+done
+
+# Install desktop shortcut for every human user
 DESKTOP_SRC="/usr/share/applications/xlsone.desktop"
 
 if [ ! -f "$DESKTOP_SRC" ]; then
@@ -10,11 +20,22 @@ if [ ! -f "$DESKTOP_SRC" ]; then
 fi
 
 for home in /home/*/; do
+    [ -d "$home" ] || continue
     user=$(basename "$home")
     if id -u "$user" >/dev/null 2>&1; then
         desktop_dir=""
-        if command -v xdg-user-dir >/dev/null 2>&1; then
-            desktop_dir=$(su - "$user" -c "xdg-user-dir DESKTOP" 2>/dev/null || true)
+        # Read the user's XDG desktop dir configuration directly so we don't
+        # need to spawn a login shell (which can hang or fail in some installers).
+        user_dirs="$home/.config/user-dirs.dirs"
+        if [ -f "$user_dirs" ]; then
+            desktop_dir=$(grep '^XDG_DESKTOP_DIR=' "$user_dirs" 2>/dev/null \
+                | sed -n 's/^XDG_DESKTOP_DIR="\(.*\)"$/\1/p')
+            case "$desktop_dir" in
+                '$HOME'/*) desktop_dir="$home/${desktop_dir#'$HOME/'}" ;;
+                "$home"/*|'/'*) : ;;
+                "") : ;;
+                *) desktop_dir="$home/$desktop_dir" ;;
+            esac
         fi
         if [ -z "$desktop_dir" ] || [ ! -d "$desktop_dir" ]; then
             for fallback in "$home/Desktop" "$home/桌面"; do
@@ -25,8 +46,23 @@ for home in /home/*/; do
             done
         fi
         if [ -n "$desktop_dir" ] && [ -d "$desktop_dir" ]; then
-            cp "$DESKTOP_SRC" "$desktop_dir/"
-            chown "$user:$user" "$desktop_dir/xlsone.desktop"
+            cp "$DESKTOP_SRC" "$desktop_dir/" || true
+            chown "$user" "$desktop_dir/xlsone.desktop" 2>/dev/null || true
+            chmod +x "$desktop_dir/xlsone.desktop" 2>/dev/null || true
         fi
     fi
 done
+
+# Refresh freedesktop caches so MIME associations, desktop entries and
+# icons take effect immediately after install / upgrade.
+if command -v update-mime-database >/dev/null 2>&1; then
+    update-mime-database /usr/share/mime || true
+fi
+if command -v update-desktop-database >/dev/null 2>&1; then
+    update-desktop-database /usr/share/applications || true
+fi
+if command -v gtk-update-icon-cache >/dev/null 2>&1; then
+    gtk-update-icon-cache -f /usr/share/icons/hicolor || true
+fi
+
+exit 0

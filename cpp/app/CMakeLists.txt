@@ -60,6 +60,8 @@ target_link_libraries(xlsone_app
         Qt5::Widgets
 )
 
+target_link_options(xlsone_app PRIVATE "-Wl,--disable-new-dtags")
+
 target_include_directories(xlsone_app
     PRIVATE
         "${CMAKE_CURRENT_SOURCE_DIR}/../core/src"
