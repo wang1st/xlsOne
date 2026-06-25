@@ -426,9 +426,7 @@ void MainWindow::buildUi()
                "<p>把多张格式一致的 Excel 表合成一份汇总表。"
                "金额、数量等能相加的数会自动合计；"
                "名称、编号等不该相加的信息，会保留各文件里最常见的共同前缀。</p>"
-               "<p><b>技术：</b>C++  /  Qt</p>"
-               "<p><b>邮箱：</b>831261@qq.com</p>"
-               "<p>&copy; 2026 王臻. 保留所有权利.</p>").arg(ver));
+               "<p><b>联系方式：</b>831261@qq.com</p>").arg(ver));
     });
 
     auto* checkUpdateAction = new QAction(tr("检查更新"), this);

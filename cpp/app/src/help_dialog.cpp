@@ -12,8 +12,6 @@
 #include <QHeaderView>
 #include <QFont>
 #include <QPushButton>
-#include <QUrl>
-#include <QDesktopServices>
 
 HelpDialog::HelpDialog(QWidget* parent)
     : QDialog(parent)
@@ -75,7 +73,7 @@ void HelpDialog::buildUi()
 
     addTopic(tr("快捷键"),          QStringLiteral("shortcuts"), refHeader);
     addTopic(tr("常见问题"),        QStringLiteral("faq"),       refHeader);
-    addTopic(tr("系统要求与支持"),   QStringLiteral("support"),   refHeader);
+    addTopic(tr("联系方式"),         QStringLiteral("support"),   refHeader);
 
     // Expand all groups by default
     tree_->expandAll();
@@ -97,12 +95,6 @@ void HelpDialog::buildUi()
     // ── Button Box ──
     auto* buttonBox = new QDialogButtonBox(QDialogButtonBox::Close, Qt::Horizontal, this);
     connect(buttonBox, &QDialogButtonBox::rejected, this, &QDialog::close);
-
-    auto* onlineHelpBtn = new QPushButton(tr("在线文档"), this);
-    connect(onlineHelpBtn, &QPushButton::clicked, this, [] {
-        QDesktopServices::openUrl(QUrl(QStringLiteral("https://z-pulse.cn/support/")));
-    });
-    buttonBox->addButton(onlineHelpBtn, QDialogButtonBox::HelpRole);
 
     // ── Layout ──
     auto* mainLayout = new QVBoxLayout(this);
