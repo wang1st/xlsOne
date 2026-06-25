@@ -86,16 +86,16 @@ if(UNIX AND NOT APPLE)
         xlsone_bundle_qt_lib("libQt5XcbQpa.so")
 
         # Bundle ICU (required by QtCore; version must match the bundled Qt)
-        set(_icu_dir "/lib/${CMAKE_LIBRARY_ARCHITECTURE}")
+        set(_icu_dir "/usr/lib/${CMAKE_LIBRARY_ARCHITECTURE}")
         file(GLOB _icu_files
-            "${_icu_dir}/libicudata.so.63*"
-            "${_icu_dir}/libicui18n.so.63*"
-            "${_icu_dir}/libicuuc.so.63*"
+            "${_icu_dir}/libicudata.so.[0-9]*"
+            "${_icu_dir}/libicui18n.so.[0-9]*"
+            "${_icu_dir}/libicuuc.so.[0-9]*"
         )
         if(_icu_files)
             install(FILES ${_icu_files} DESTINATION ${XLSONE_BUNDLE_LIB_DEST})
         else()
-            message(WARNING "ICU 63 libraries not found under ${_icu_dir} — target may need system ICU")
+            message(WARNING "ICU libraries not found under ${_icu_dir} — target may need system ICU")
         endif()
 
         # Bundle Qt platform, image, and input-method plugins
