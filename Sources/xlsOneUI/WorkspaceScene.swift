@@ -52,7 +52,7 @@ private struct WorkspaceCommands: Commands {
         WorkspaceWindowCommands(localeManager: localeManager)
         WorkspaceLicenseCommands(licenseManager: licenseManager, localeManager: localeManager)
         WorkspaceLanguageCommands(localeManager: localeManager)
-        WorkspaceHelpCommands(localeManager: localeManager)
+        WorkspaceHelpCommands(viewModel: viewModel, localeManager: localeManager)
     }
 }
 
@@ -227,6 +227,7 @@ private struct WorkspaceLanguageCommands: Commands {
 }
 
 private struct WorkspaceHelpCommands: Commands {
+    @ObservedObject var viewModel: AppViewModel
     @ObservedObject var localeManager: LocaleManager
 
     var body: some Commands {
@@ -237,9 +238,10 @@ private struct WorkspaceHelpCommands: Commands {
 
             Divider()
 
-            Button(LocaleManager.loc("使用帮助")) {
-                WorkspaceAppPresentation.showHelpPanel()
+            Button(LocaleManager.loc("快速参考指南")) {
+                viewModel.showHelpPanel = true
             }
+            .keyboardShortcut(KeyEquivalent("?"), modifiers: .command)
 
             Divider()
 
@@ -450,78 +452,6 @@ enum WorkspaceAppPresentation {
             邮箱：831261@qq.com
 
             © 2026 王臻. 保留所有权利.
-            """
-        alert.addButton(withTitle: isEnglish ? "OK" : "确定")
-        WorkspaceDialogPresenter.runAlert(alert)
-        NSApp.activate(ignoringOtherApps: true)
-    }
-
-    @MainActor
-    static func showHelpPanel() {
-        let alert = NSAlert()
-        let storedLang = UserDefaults.standard.string(forKey: "AppLanguage") ?? ""
-        let isEnglish = storedLang == "en" || (storedLang.isEmpty && !(Locale.preferredLanguages.first?.hasPrefix("zh") ?? false))
-        alert.messageText = isEnglish ? "Help" : "使用帮助"
-        alert.informativeText = isEnglish ? """
-            xlsOne  ·  One-click Excel Report Merger
-
-            1. Import Files
-               Drag .xlsx or .xls files into the window, or click [File] → [Import Files]
-
-            2. Switch Sheets
-               Click the Sheet tabs at the top to switch between report pages
-
-            3. View Summary
-               - Amounts, quantities, and summable numbers are automatically totaled
-               - Names, codes retain the most common values
-               - Sheets with inconsistent structure are skipped with a reason
-
-            4. Source Drilldown
-               Click any cell to view its raw values from each source file
-
-            5. Export Results
-               Click [Export XLSX] to save the summary
-
-            6. Cell Correction
-               Manually override cell type to Label or Sum in the right panel
-
-            Shortcuts:
-               Cmd+O  Import Files
-               Cmd+Shift+O  Add Files
-               Cmd+S  Export
-               Cmd+R  Refresh
-               Cmd+N  Clear
-               Cmd+Z  Undo Correction
-            """ : """
-            表表归一  ·  多张同格式 Excel 报表一键汇总
-
-            1. 导入文件
-               拖拽 .xlsx 或 .xls 文件到窗口，或点击 [文件] → [导入文件]
-
-            2. 切换工作表
-               点击顶部的 Sheet 标签可切换要查看的报表页
-
-            3. 查看汇总
-               - 金额、数量等能相加的数自动合计
-               - 名称、编号等信息保留最常见的共同前缀
-               - 结构不一致的工作表会跳过，并提示原因
-
-            4. 穿透查阅
-               点击单元格可查看各文件原始值
-
-            5. 导出结果
-               点击 [导出 XLSX] 保存汇总结果
-
-            6. 单元格修正
-               在右侧面板可将单元格手动指定为标签或求和
-
-            快捷键:
-               Command+O  导入文件
-               Command+Shift+O  追加文件
-               Command+S  导出
-               Command+R  刷新
-               Command+N  清空
-               Command+Z  撤销修正
             """
         alert.addButton(withTitle: isEnglish ? "OK" : "确定")
         WorkspaceDialogPresenter.runAlert(alert)
@@ -747,6 +677,7 @@ class AppViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var showError = false
     @Published var selectedSheetSelection: WorkspaceSheetSelection?
+    @Published var showHelpPanel = false
 
     private let parser = ExcelParser()
     private let validator = WorkbookValidator()
