@@ -59,6 +59,15 @@ struct WorkspaceToolbar: View {
             Spacer()
 
             HStack(spacing: XSpacing.md) {
+                Button {
+                    viewModel.showHelpPanel = true
+                } label: {
+                    Image(systemName: "questionmark.circle")
+                        .font(XFont.toolbarButton)
+                }
+                .buttonStyle(.xLink)
+                .help(LocaleManager.loc("快速参考指南"))
+
                 LicenseStatusBadge()
 
                 if hasWorkspace {

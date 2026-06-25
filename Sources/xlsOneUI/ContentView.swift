@@ -51,6 +51,17 @@ struct ContentView: View {
             }
             .frame(width: 0, height: 0)
         }
+        .background {
+            CenteredDialogWindow(
+                isPresented: $viewModel.showHelpPanel,
+                title: LocaleManager.loc("快速参考指南"),
+                size: NSSize(width: 1000, height: 700)
+            ) {
+                HelpView()
+                    .id(localeManager.currentLanguage.rawValue)
+            }
+            .frame(width: 0, height: 0)
+        }
         .onDrop(of: [.fileURL], delegate: DropDelegateView(viewModel: viewModel, isTargeted: $isDropTargeted))
         .task {
             await licenseManager.verifyOnLaunch()
