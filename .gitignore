@@ -22,3 +22,11 @@ output_*.html
 
 # Test files
 test_*.swift
+
+# Agent / tool artifacts
+.opencode/
+opencode.json
+
+# Linux packaging artifacts
+cpp/_CPack_Packages/
+*.deb

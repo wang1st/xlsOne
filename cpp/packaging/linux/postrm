@@ -1,0 +1,27 @@
+#!/bin/sh
+
+rm -f /usr/bin/xlsone || true
+
+for home in /home/*/; do
+    [ -d "$home" ] || continue
+    for name in "xlsone.desktop"; do
+        for dir in "$home/Desktop" "$home/桌面"; do
+            shortcut="$dir/$name"
+            if [ -f "$shortcut" ]; then
+                rm -f "$shortcut" || true
+            fi
+        done
+    done
+done
+
+# Refresh freedesktop caches so removed MIME types, desktop entries
+# and icons are no longer visible.
+if command -v update-mime-database >/dev/null 2>&1; then
+    update-mime-database /usr/share/mime || true
+fi
+if command -v update-desktop-database >/dev/null 2>&1; then
+    update-desktop-database /usr/share/applications || true
+fi
+if command -v gtk-update-icon-cache >/dev/null 2>&1; then
+    gtk-update-icon-cache -f /usr/share/icons/hicolor || true
+fi
