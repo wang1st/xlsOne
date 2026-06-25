@@ -4,7 +4,6 @@
 #include "xlsone/core/license_manager.hpp"
 
 #include <QApplication>
-#include <QDesktopServices>
 #include <QFileDialog>
 #include <QFrame>
 #include <QHBoxLayout>
@@ -13,7 +12,6 @@
 #include <QMessageBox>
 #include <QPushButton>
 #include <QSysInfo>
-#include <QUrl>
 #include <QVBoxLayout>
 
 namespace {
@@ -257,17 +255,6 @@ void LicenseActivationDialog::buildFormPanel(QWidget* container)
             this, &LicenseActivationDialog::onTrialClicked);
     linkRow->addWidget(trialButton_);
 
-    buyButton_ = new QPushButton(tr("购买激活码 →"), container);
-    buyButton_->setFlat(true);
-    buyButton_->setCursor(Qt::PointingHandCursor);
-    buyButton_->setStyleSheet(QStringLiteral(
-        "QPushButton { color: %1; font-size: 13px; border: none; background: transparent; }"
-        "QPushButton:hover { text-decoration: underline; }"
-    ).arg(t.accent.name()));
-    connect(buyButton_, &QPushButton::clicked, this, [] {
-        QDesktopServices::openUrl(QUrl(QStringLiteral("https://z-pulse.cn")));
-    });
-    linkRow->addWidget(buyButton_);
     linkRow->addStretch();
     root->addLayout(linkRow);
 
@@ -311,7 +298,7 @@ void LicenseActivationDialog::buildFormPanel(QWidget* container)
         offlineLayout->addLayout(row);
     };
 
-    addStep(1, tr("在联网电脑上访问 z-pulse.cn/offline"));
+    addStep(1, tr("联系 831261@qq.com 获取离线授权页面地址"));
     addStep(2, tr("输入购买邮箱和本机设备码"));
     addStep(3, tr("下载授权文件并导入本程序"));
 

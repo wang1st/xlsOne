@@ -41,7 +41,6 @@ private:
     QPushButton* activateButton_ = nullptr;
     QPushButton* trialButton_ = nullptr;
     QPushButton* offlineToggle_ = nullptr;
-    QPushButton* buyButton_ = nullptr;
     QWidget* offlineInfo_ = nullptr;
     QLabel* messageLabel_ = nullptr;
     bool showOffline_ = false;
