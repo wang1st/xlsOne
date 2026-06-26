@@ -78,11 +78,11 @@ enum WorkspaceRuleState: Equatable {
         case .none:
             return nil
         case .applied(let name, let correctionCount):
-            return correctionCount > 0 ? "已应用调整记忆：\(name)" : "已匹配调整记忆：\(name)"
+            return correctionCount > 0 ? "已应用修正规则：\(name)" : "已匹配修正规则：\(name)"
         case .ambiguous(let count):
-            return "检测到 \(count) 组调整记忆，未自动应用"
+            return "检测到 \(count) 组修正规则，未自动应用"
         case .similar(let count):
-            return "发现 \(count) 组相近调整记忆，未自动应用"
+            return "发现 \(count) 组相近修正规则，未自动应用"
         }
     }
 

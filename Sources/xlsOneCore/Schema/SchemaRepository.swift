@@ -196,7 +196,7 @@ public actor SchemaRepository: SchemaRepositoryProtocol {
         return newSchema
     }
 
-    /// 解析可导入的调整记忆，但不写入本地仓库。
+    /// 解析可导入的修正规则，但不写入本地仓库。
     public nonisolated static func decodeImportableSchema(data: Data) throws -> MergeSchema {
         let decoder = JSONDecoder()
 

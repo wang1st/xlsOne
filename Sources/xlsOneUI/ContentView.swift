@@ -10,8 +10,10 @@ struct ContentView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            WorkspaceToolbar()
-            Divider()
+            if !viewModel.selectedFilePaths.isEmpty {
+                WorkspaceToolbar()
+                Divider()
+            }
 
             switch viewModel.workspacePhase {
             case .idle:

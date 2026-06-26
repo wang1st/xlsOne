@@ -63,7 +63,7 @@ void HelpDialog::buildUi()
     advHeader->setData(0, Qt::ForegroundRole, QColor(0x59, 0x63, 0x6e));
 
     addTopic(tr("单元格修正"),   QStringLiteral("correction"), advHeader);
-    addTopic(tr("调整记忆"),   QStringLiteral("schema"),     advHeader);
+    addTopic(tr("修正规则"),   QStringLiteral("schema"),     advHeader);
 
     // ── Reference ──
     auto* refHeader = new QTreeWidgetItem(tree_, {tr("参考信息")});

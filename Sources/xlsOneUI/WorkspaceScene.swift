@@ -1107,7 +1107,7 @@ class AppViewModel: ObservableObject {
         guard canManageAdjustmentMemory else {
             WorkspaceDialogPresenter.runAlert(
                 title: LocaleManager.loc("保存当前调整记忆"),
-                message: "当前没有可保存调整记忆的同构工作区。",
+                message: "当前没有可保存修正规则的同构工作区。",
                 style: .informational
             )
             return
@@ -1127,7 +1127,7 @@ class AppViewModel: ObservableObject {
                 let url = await MainActor.run {
                     let panel = NSSavePanel()
                     let fallbackName = schema.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                        ? "adjustment-memory"
+                        ? "correction-rules"
                         : schema.name
                     panel.nameFieldStringValue = "\(fallbackName).json"
                     panel.allowedContentTypes = [.json]
@@ -1138,7 +1138,7 @@ class AppViewModel: ObservableObject {
                 }
             } catch {
                 await MainActor.run {
-                    errorMessage = "导出调整记忆失败: \(error.localizedDescription)"
+                    errorMessage = "导出修正规则失败: \(error.localizedDescription)"
                     showError = true
                 }
             }
@@ -1149,7 +1149,7 @@ class AppViewModel: ObservableObject {
         guard canManageAdjustmentMemory else {
             WorkspaceDialogPresenter.runAlert(
                 title: LocaleManager.loc("导入"),
-                message: "当前没有可绑定调整记忆的同构工作区。",
+                message: "当前没有可绑定修正规则的同构工作区。",
                 style: .informational
             )
             return
@@ -1172,8 +1172,8 @@ class AppViewModel: ObservableObject {
 
         let alert = NSAlert()
         alert.alertStyle = .warning
-        alert.messageText = "清除当前调整记忆"
-        alert.informativeText = "删除当前调整记忆后，当前同构工作区将恢复自动判断。确定清除？"
+        alert.messageText = "清除当前修正规则"
+        alert.informativeText = "删除当前修正规则后，当前同构工作区将恢复自动判断。确定清除？"
         alert.addButton(withTitle: LocaleManager.loc("清除"))
         alert.addButton(withTitle: LocaleManager.loc("取消"))
         guard WorkspaceDialogPresenter.runAlert(alert) == .alertFirstButtonReturn else { return }
@@ -1194,7 +1194,7 @@ class AppViewModel: ObservableObject {
                 await refreshWorkspaceResults()
             } catch {
                 await MainActor.run {
-                    errorMessage = "清除调整记忆失败: \(error.localizedDescription)"
+                    errorMessage = "清除修正规则失败: \(error.localizedDescription)"
                     showError = true
                 }
             }
@@ -1510,7 +1510,7 @@ class AppViewModel: ObservableObject {
             await refreshWorkspaceResults()
         } catch {
             await MainActor.run {
-                errorMessage = "导入调整记忆失败: \(error.localizedDescription)"
+                errorMessage = "导入修正规则失败: \(error.localizedDescription)"
                 showError = true
             }
         }
@@ -1523,12 +1523,12 @@ class AppViewModel: ObservableObject {
         )
 
         if exportName.hasSuffix("_汇总") {
-            return String(exportName.dropLast("_汇总".count)) + "_调整记忆"
+            return String(exportName.dropLast("_汇总".count)) + "_修正规则"
         }
         if exportName.hasSuffix("汇总") {
-            return String(exportName.dropLast("汇总".count)) + "调整记忆"
+            return String(exportName.dropLast("汇总".count)) + "修正规则"
         }
-        return "\(exportName)_调整记忆"
+        return "\(exportName)_修正规则"
     }
 }
 

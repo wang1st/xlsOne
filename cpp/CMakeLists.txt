@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.22)
 
 project(xlsOneQt
-    VERSION 1.0.1
+    VERSION 1.0.2
     DESCRIPTION "Cross-platform C++/Qt port of xlsOne"
     LANGUAGES CXX
 )
@@ -54,17 +54,24 @@ set(XLSONE_QT_BUNDLE_DIR "/opt/deepin-shared-libs/Qt5.15.10gles/lib"
 set(XLSONE_QT_PLUGIN_DIR "/opt/deepin-shared-libs/Qt5.15.10gles/plugins"
     CACHE PATH "Directory containing Qt plugins to bundle")
 set(XLSONE_BUNDLE_LIB_DEST "lib/xlsone")
+option(XLSONE_BUNDLE_QT "Bundle Qt libraries into a self-contained DEB" ON)
 
 if(UNIX AND NOT APPLE)
-    # Decide whether we are producing a self-contained bundle (UOS/Deepin build
-    # environment) or a distro-native package that uses the system Qt.
-    set(XLSONE_BUNDLE_QT OFF)
-    if(IS_DIRECTORY "${XLSONE_QT_BUNDLE_DIR}"
-       AND EXISTS "${XLSONE_QT_BUNDLE_DIR}/libQt5Core.so")
-        set(XLSONE_BUNDLE_QT ON)
-        message(STATUS "Qt bundle directory found; producing self-contained .deb")
+    # Decide whether we are producing a self-contained bundle or a distro-native
+    # package that uses the system Qt.  Set -DXLSONE_BUNDLE_QT=OFF to force
+    # system Qt mode (useful when building on the same OS as the target, e.g.
+    # building on UOS for UOS).
+    if(XLSONE_BUNDLE_QT)
+        if(IS_DIRECTORY "${XLSONE_QT_BUNDLE_DIR}"
+           AND EXISTS "${XLSONE_QT_BUNDLE_DIR}/libQt5Core.so")
+            message(STATUS "Qt bundle directory found; producing self-contained .deb")
+        else()
+            message(WARNING "Qt bundle requested but Qt libraries not found in ${XLSONE_QT_BUNDLE_DIR}")
+            message(STATUS "Falling back to system Qt packages")
+            set(XLSONE_BUNDLE_QT OFF)
+        endif()
     else()
-        message(STATUS "Qt bundle directory not available; .deb will use system Qt packages")
+        message(STATUS "Qt bundling disabled (XLSONE_BUNDLE_QT=OFF); .deb will use system Qt packages")
     endif()
 
     if(XLSONE_BUNDLE_QT)
@@ -96,6 +103,38 @@ if(UNIX AND NOT APPLE)
             install(FILES ${_icu_files} DESTINATION ${XLSONE_BUNDLE_LIB_DEST})
         else()
             message(WARNING "ICU libraries not found under ${_icu_dir} — target may need system ICU")
+        endif()
+
+        # Bundle libdouble-conversion (required by Qt5Core for string↔number conversion)
+        # Check both the system lib dir and the Qt bundle dir (KylinOS may have it in either)
+        set(_dc_search_dirs "${_icu_dir}" "${XLSONE_QT_BUNDLE_DIR}")
+        set(_dc_found OFF)
+        foreach(_dir ${_dc_search_dirs})
+            if(NOT _dc_found)
+                file(GLOB _dc_files "${_dir}/libdouble-conversion.so.*")
+                if(_dc_files)
+                    install(FILES ${_dc_files} DESTINATION ${XLSONE_BUNDLE_LIB_DEST})
+                    set(_dc_found ON)
+                endif()
+            endif()
+        endforeach()
+        if(NOT _dc_found)
+            message(WARNING "libdouble-conversion not found in ${_dc_search_dirs} — target may need it from system")
+        endif()
+
+        # Bundle libpcre2-16 (required by Qt5Core >= 5.14 for QRegularExpression)
+        set(_pcre_found OFF)
+        foreach(_dir ${_dc_search_dirs})
+            if(NOT _pcre_found)
+                file(GLOB _pcre_files "${_dir}/libpcre2-16.so.*")
+                if(_pcre_files)
+                    install(FILES ${_pcre_files} DESTINATION ${XLSONE_BUNDLE_LIB_DEST})
+                    set(_pcre_found ON)
+                endif()
+            endif()
+        endforeach()
+        if(NOT _pcre_found)
+            message(WARNING "libpcre2-16 not found — Qt may require it for regex support")
         endif()
 
         # Bundle Qt platform, image, and input-method plugins
