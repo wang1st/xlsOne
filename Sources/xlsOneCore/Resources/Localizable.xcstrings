@@ -536,19 +536,19 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "撤销上一步"
+            "value": "撤销修正"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "撤銷上一步"
+            "value": "撤銷修正"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Undo"
+            "value": "Undo Correction"
           }
         }
       }
@@ -559,13 +559,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "清除本批次调整"
+            "value": "清除所有修正"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "清除本批次調整"
+            "value": "清除所有修正"
           }
         },
         "en": {
@@ -927,13 +927,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "调整记忆"
+            "value": "修正规则"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "調整記憶"
+            "value": "修正規則"
           }
         },
         "en": {
@@ -1088,13 +1088,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "查看当前调整记忆"
+            "value": "查看当前修正规则"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "檢視目前調整記憶"
+            "value": "檢視目前修正規則"
           }
         },
         "en": {
@@ -1111,13 +1111,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "保存当前调整记忆"
+            "value": "保存当前修正规则"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "儲存目前調整記憶"
+            "value": "儲存目前修正規則"
           }
         },
         "en": {
@@ -2054,13 +2054,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "当前调整记忆没有单元格修正。"
+            "value": "当前修正规则没有单元格修正。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "目前調整記憶沒有單元格修正。"
+            "value": "目前修正規則沒有單元格修正。"
           }
         },
         "en": {
@@ -3825,19 +3825,19 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "调整记忆"
+            "value": "修正规则"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "調整記憶"
+            "value": "修正規則"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Adjustment Memory"
+            "value": "Correction Rules"
           }
         }
       }
@@ -3848,19 +3848,19 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "调整记忆会记住您对单元格类型的修正，以便在下次处理相似结构的工作簿时自动应用。"
+            "value": "修正规则会记住您对单元格类型的修正，以便在下次处理相似结构的工作簿时自动应用。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "調整記憶會記住您對儲存格類型的修正，以便在下次處理相似結構的工作簿時自動套用。"
+            "value": "修正規則會記住您對儲存格類型的修正，以便在下次處理相似結構的工作簿時自動套用。"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Adjustment Memory remembers your cell-type corrections so they can be applied automatically the next time you process workbooks with a similar structure."
+            "value": "Correction rules remember your cell-type corrections so they can be applied automatically the next time you process workbooks with a similar structure."
           }
         }
       }
@@ -3940,19 +3940,19 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "可随时查看、保存或清除已记住的调整。"
+            "value": "可随时查看、保存或清除已记住的修正规则。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "可隨時查看、儲存或清除已記住的調整。"
+            "value": "可隨時檢視、儲存或清除已記住的修正規則。"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "You can view, save, or clear remembered adjustments at any time."
+            "value": "You can view, save, or clear remembered correction rules at any time."
           }
         }
       }
@@ -3963,19 +3963,19 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "管理调整记忆"
+            "value": "管理修正规则"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "管理調整記憶"
+            "value": "管理修正規則"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Managing Memory"
+            "value": "Managing Rules"
           }
         }
       }
@@ -3986,19 +3986,19 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "通过菜单“调整记忆”→“查看当前调整记忆”可以打开管理面板。您可以为当前批次保存一份记忆文件，也可以从之前保存的记忆文件导入。"
+            "value": "通过菜单“修正规则”→“查看当前修正规则”可以打开管理面板。您可以为当前批次保存一份规则文件，也可以从之前保存的规则文件导入。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "透過選單「調整記憶」→「查看目前調整記憶」可以開啟管理面板。您可以為目前批次儲存一份記憶檔案，也可以從之前儲存的記憶檔案匯入。"
+            "value": "透過選單「修正規則」→「檢視目前修正規則」可以開啟管理面板。您可以為目前批次儲存一份規則檔案，也可以從之前儲存的規則檔案匯入。"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Open the management panel via Adjustment Memory → View Current Adjustment Memory. You can save a memory file for the current batch or import a previously saved one."
+            "value": "Open the management panel via Correction Rules → View Current Correction Rules. You can save a rules file for the current batch or import a previously saved one."
           }
         }
       }
@@ -4009,19 +4009,19 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "注意：调整记忆基于工作表表头结构匹配。如果表头发生较大变化，记忆可能不会自动生效。"
+            "value": "注意：修正规则基于工作表表头结构匹配。如果表头发生较大变化，规则可能不会自动生效。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "注意：調整記憶基於工作表表頭結構匹配。如果表頭發生較大變化，記憶可能不會自動生效。"
+            "value": "注意：修正規則基於工作表表頭結構匹配。如果表頭發生較大變化，規則可能不會自動生效。"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Note: Adjustment memory is matched by worksheet header structure. If headers change significantly, the memory may not apply automatically."
+            "value": "Note: Correction rules are matched by worksheet header structure. If headers change significantly, the rules may not apply automatically."
           }
         }
       }
@@ -4745,19 +4745,19 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "当前调整记忆"
+            "value": "当前修正规则"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "目前調整記憶"
+            "value": "目前修正規則"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Current Adjustment Memory"
+            "value": "Current Correction Rules"
           }
         }
       }
@@ -4827,6 +4827,75 @@
           "stringUnit": {
             "state": "translated",
             "value": "xlsOne"
+          }
+        }
+      }
+    },
+    "清除当前调整记忆": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清除当前修正规则"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清除目前修正規則"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear Current Rules"
+          }
+        }
+      }
+    },
+    "当前同构结构暂无调整记忆": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "当前同构结构暂无修正规则"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "目前同構結構暫無修正規則"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No correction rules for current structure."
+          }
+        }
+      }
+    },
+    "在汇总结果中修正单元格后，系统会为当前同构结构记住这些调整；也可以导入同构结构的调整记忆。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在汇总结果中修正单元格后，系统会为当前同构结构记住这些修正；也可以导入同构结构的修正规则。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在匯總結果中修正儲存格後，系統會為目前同構結構記住這些修正；也可以匯入同構結構的修正規則。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "After correcting cells in the merge result, the system remembers these corrections for the current structure; you can also import correction rules for the same structure."
           }
         }
       }

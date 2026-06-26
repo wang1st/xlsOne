@@ -60,7 +60,7 @@
     </message>
     <message>
         <location filename="../app/src/help_dialog.cpp" line="66"/>
-        <source>调整记忆</source>
+        <source>修正规则</source>
         <translation type="unfinished">Correction Rules</translation>
     </message>
     <message>
@@ -234,14 +234,14 @@
     </message>
     <message>
         <location filename="../app/src/main_window.cpp" line="367"/>
-        <source>查看当前调整记忆</source>
+        <source>查看当前修正规则</source>
         <translation>View Current Rules</translation>
     </message>
     <message>
         <location filename="../app/src/main_window.cpp" line="371"/>
         <location filename="../app/src/main_window.cpp" line="1297"/>
         <location filename="../app/src/main_window.cpp" line="1301"/>
-        <source>保存当前调整记忆</source>
+        <source>保存当前修正规则</source>
         <translation>Save Current Rules</translation>
     </message>
     <message>
@@ -267,7 +267,7 @@
     <message>
         <location filename="../app/src/main_window.cpp" line="397"/>
         <location filename="../app/src/main_window.cpp" line="1091"/>
-        <source>调整记忆</source>
+        <source>修正规则</source>
         <translation>Correction Rules</translation>
     </message>
     <message>
@@ -293,13 +293,13 @@
     </message>
     <message>
         <location filename="../app/src/main_window.cpp" line="509"/>
-        <source>撤销上一步</source>
-        <translation>Undo</translation>
+        <source>撤销修正</source>
+        <translation>Undo Correction</translation>
     </message>
     <message>
         <location filename="../app/src/main_window.cpp" line="510"/>
-        <source>清除调整</source>
-        <translation>Clear Corrections</translation>
+        <source>清除所有修正</source>
+        <translation>Clear All Corrections</translation>
     </message>
     <message>
         <location filename="../app/src/main_window.cpp" line="424"/>
@@ -353,7 +353,7 @@
     </message>
     <message>
         <location filename="../app/src/main_window.cpp" line="723"/>
-        <source>正在应用调整记忆...</source>
+        <source>正在应用修正规则...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -363,17 +363,17 @@
     </message>
     <message>
         <location filename="../app/src/main_window.cpp" line="736"/>
-        <source> 已应用调整记忆：%1。</source>
+        <source> 已应用修正规则：%1。</source>
         <translation> Applied rule: %1.</translation>
     </message>
     <message>
         <location filename="../app/src/main_window.cpp" line="738"/>
-        <source> 检测到多组高置信调整记忆，未自动应用。</source>
+        <source> 检测到多组高置信修正规则，未自动应用。</source>
         <translation> Multiple high-confidence rules detected, not auto-applied.</translation>
     </message>
     <message>
         <location filename="../app/src/main_window.cpp" line="740"/>
-        <source> 发现相近调整记忆，未自动应用。</source>
+        <source> 发现相近修正规则，未自动应用。</source>
         <translation> Similar rules found, not auto-applied.</translation>
     </message>
     <message>
@@ -423,7 +423,7 @@
     </message>
     <message>
         <location filename="../app/src/main_window.cpp" line="969"/>
-        <source>当前手动调整记忆</source>
+        <source>当前手动修正规则</source>
         <translation>Current manual rules</translation>
     </message>
     <message>
@@ -433,7 +433,7 @@
     </message>
     <message>
         <location filename="../app/src/main_window.cpp" line="1125"/>
-        <source>已将 %1 个单元格标记为 %2，可点击“保存当前调整记忆”复用。</source>
+        <source>已将 %1 个单元格标记为 %2，可点击“保存当前修正规则”复用。</source>
         <translation>Marked %1 cells as %2. Save rules to reuse.</translation>
     </message>
     <message>
@@ -478,7 +478,7 @@
     </message>
     <message>
         <location filename="../app/src/main_window.cpp" line="1209"/>
-        <source>已撤销上一步修正。</source>
+        <source>已撤销修正修正。</source>
         <translation>Previous correction undone.</translation>
     </message>
     <message>
@@ -524,44 +524,44 @@
     </message>
     <message>
         <location filename="../app/src/main_window.cpp" line="1301"/>
-        <source>当前没有可用于生成调整记忆指纹的同构工作簿。</source>
+        <source>当前没有可用于生成修正规则指纹的同构工作簿。</source>
         <translation>No compatible workbooks for rule fingerprint.</translation>
     </message>
     <message>
         <location filename="../app/src/main_window.cpp" line="1332"/>
         <location filename="../app/src/main_window.cpp" line="1358"/>
-        <source>已更新调整记忆“%1”。</source>
+        <source>已更新修正规则“%1”。</source>
         <translation>Updated rule &quot;%1&quot;.</translation>
     </message>
     <message>
         <location filename="../app/src/main_window.cpp" line="1387"/>
-        <source>已保存调整记忆“%1”，包含 %2 个修正。</source>
+        <source>已保存修正规则“%1”，包含 %2 个修正。</source>
         <translation>Saved rule &quot;%1&quot; with %2 corrections.</translation>
     </message>
     <message>
         <location filename="../app/src/main_window.cpp" line="1406"/>
         <location filename="../app/src/main_window.cpp" line="1413"/>
-        <source>导入调整记忆</source>
+        <source>导入修正规则</source>
         <translation>Import Rules</translation>
     </message>
     <message>
         <location filename="../app/src/main_window.cpp" line="1406"/>
-        <source>当前没有可绑定调整记忆的同构工作簿。</source>
+        <source>当前没有可绑定修正规则的同构工作簿。</source>
         <translation>No compatible workbooks for rule binding.</translation>
     </message>
     <message>
         <location filename="../app/src/main_window.cpp" line="1413"/>
-        <source>导入的调整记忆不属于当前同构结构。</source>
+        <source>导入的修正规则不属于当前同构结构。</source>
         <translation>Imported rules don&apos;t match current structure.</translation>
     </message>
     <message>
         <location filename="../app/src/main_window.cpp" line="1429"/>
-        <source>已导入调整记忆“%1”。</source>
+        <source>已导入修正规则“%1”。</source>
         <translation>Imported rule &quot;%1&quot;.</translation>
     </message>
     <message>
         <location filename="../app/src/main_window.cpp" line="1448"/>
-        <source>已清除当前调整记忆。</source>
+        <source>已清除当前修正规则。</source>
         <translation>Cleared current rules.</translation>
     </message>
     <message>

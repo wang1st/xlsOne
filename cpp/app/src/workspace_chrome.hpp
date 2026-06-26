@@ -30,6 +30,7 @@ private:
     QPushButton* reloadButton_ = nullptr;
     QPushButton* clearButton_ = nullptr;
     QPushButton* exportButton_ = nullptr;
+    QWidget* buttonGroup_ = nullptr;
     QLabel* licenseBadge_ = nullptr;
     QWidget* licenseDot_ = nullptr;
 };

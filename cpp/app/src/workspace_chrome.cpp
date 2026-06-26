@@ -71,20 +71,20 @@ void WorkspaceChrome::buildUi()
     root->addWidget(brandWidget);
 
     // Utility button group
-    auto* group = new QWidget(this);
-    group->setObjectName(QStringLiteral("workspaceButtonGroup"));
-    auto* groupLayout = new QHBoxLayout(group);
+    buttonGroup_ = new QWidget(this);
+    buttonGroup_->setObjectName(QStringLiteral("workspaceButtonGroup"));
+    auto* groupLayout = new QHBoxLayout(buttonGroup_);
     groupLayout->setContentsMargins(4, 4, 4, 4);
     groupLayout->setSpacing(2);
 
-    appendButton_ = makeUtilityButton(group, tr("追加"), xlsone::ui::SymbolIcon::Plus, t.textMuted);
-    reloadButton_ = makeUtilityButton(group, tr("刷新"), xlsone::ui::SymbolIcon::Refresh, t.textMuted);
-    clearButton_ = makeUtilityButton(group, tr("清空"), xlsone::ui::SymbolIcon::Xmark, t.textMuted);
+    appendButton_ = makeUtilityButton(buttonGroup_, tr("追加"), xlsone::ui::SymbolIcon::Plus, t.textMuted);
+    reloadButton_ = makeUtilityButton(buttonGroup_, tr("刷新"), xlsone::ui::SymbolIcon::Refresh, t.textMuted);
+    clearButton_ = makeUtilityButton(buttonGroup_, tr("清空"), xlsone::ui::SymbolIcon::Xmark, t.textMuted);
     groupLayout->addWidget(appendButton_);
     groupLayout->addWidget(reloadButton_);
     groupLayout->addWidget(clearButton_);
 
-    root->addWidget(group);
+    root->addWidget(buttonGroup_);
     root->addStretch(1);
 
     // License status badge
@@ -142,6 +142,7 @@ void WorkspaceChrome::buildUi()
 
 void WorkspaceChrome::setWorkspaceState(bool hasWorkspace, bool canExport)
 {
+    buttonGroup_->setVisible(hasWorkspace);
     appendButton_->setVisible(hasWorkspace);
     reloadButton_->setVisible(hasWorkspace);
     clearButton_->setVisible(hasWorkspace);

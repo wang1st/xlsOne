@@ -60,8 +60,8 @@
     </message>
     <message>
         <location filename="../app/src/help_dialog.cpp" line="66"/>
-        <source>调整记忆</source>
-        <translation>调整记忆</translation>
+        <source>修正规则</source>
+        <translation>修正规则</translation>
     </message>
     <message>
         <location filename="../app/src/help_dialog.cpp" line="69"/>
@@ -234,15 +234,15 @@
     </message>
     <message>
         <location filename="../app/src/main_window.cpp" line="367"/>
-        <source>查看当前调整记忆</source>
-        <translation>查看当前调整记忆</translation>
+        <source>查看当前修正规则</source>
+        <translation>查看当前修正规则</translation>
     </message>
     <message>
         <location filename="../app/src/main_window.cpp" line="371"/>
         <location filename="../app/src/main_window.cpp" line="1297"/>
         <location filename="../app/src/main_window.cpp" line="1301"/>
-        <source>保存当前调整记忆</source>
-        <translation>保存当前调整记忆</translation>
+        <source>保存当前修正规则</source>
+        <translation>保存当前修正规则</translation>
     </message>
     <message>
         <location filename="../app/src/main_window.cpp" line="374"/>
@@ -267,8 +267,8 @@
     <message>
         <location filename="../app/src/main_window.cpp" line="397"/>
         <location filename="../app/src/main_window.cpp" line="1091"/>
-        <source>调整记忆</source>
-        <translation>调整记忆</translation>
+        <source>修正规则</source>
+        <translation>修正规则</translation>
     </message>
     <message>
         <location filename="../app/src/main_window.cpp" line="403"/>
@@ -298,13 +298,13 @@
     </message>
     <message>
         <location filename="../app/src/main_window.cpp" line="509"/>
-        <source>撤销上一步</source>
-        <translation>撤销上一步</translation>
+        <source>撤销修正</source>
+        <translation>撤销修正</translation>
     </message>
     <message>
         <location filename="../app/src/main_window.cpp" line="510"/>
-        <source>清除调整</source>
-        <translation>清除调整</translation>
+        <source>清除所有修正</source>
+        <translation>清除所有修正</translation>
     </message>
     <message>
         <location filename="../app/src/main_window.cpp" line="435"/>
@@ -353,8 +353,8 @@
     </message>
     <message>
         <location filename="../app/src/main_window.cpp" line="723"/>
-        <source>正在应用调整记忆...</source>
-        <translation>正在应用调整记忆...</translation>
+        <source>正在应用修正规则...</source>
+        <translation>正在应用修正规则...</translation>
     </message>
     <message>
         <location filename="../app/src/main_window.cpp" line="731"/>
@@ -363,18 +363,18 @@
     </message>
     <message>
         <location filename="../app/src/main_window.cpp" line="736"/>
-        <source> 已应用调整记忆：%1。</source>
-        <translation> 已应用调整记忆：%1。</translation>
+        <source> 已应用修正规则：%1。</source>
+        <translation> 已应用修正规则：%1。</translation>
     </message>
     <message>
         <location filename="../app/src/main_window.cpp" line="738"/>
-        <source> 检测到多组高置信调整记忆，未自动应用。</source>
-        <translation> 检测到多组高置信调整记忆，未自动应用。</translation>
+        <source> 检测到多组高置信修正规则，未自动应用。</source>
+        <translation> 检测到多组高置信修正规则，未自动应用。</translation>
     </message>
     <message>
         <location filename="../app/src/main_window.cpp" line="740"/>
-        <source> 发现相近调整记忆，未自动应用。</source>
-        <translation> 发现相近调整记忆，未自动应用。</translation>
+        <source> 发现相近修正规则，未自动应用。</source>
+        <translation> 发现相近修正规则，未自动应用。</translation>
     </message>
     <message>
         <location filename="../app/src/main_window.cpp" line="771"/>
@@ -423,8 +423,8 @@
     </message>
     <message>
         <location filename="../app/src/main_window.cpp" line="969"/>
-        <source>当前手动调整记忆</source>
-        <translation>当前手动调整记忆</translation>
+        <source>当前手动修正规则</source>
+        <translation>当前手动修正规则</translation>
     </message>
     <message>
         <location filename="../app/src/main_window.cpp" line="1091"/>
@@ -433,8 +433,8 @@
     </message>
     <message>
         <location filename="../app/src/main_window.cpp" line="1125"/>
-        <source>已将 %1 个单元格标记为 %2，可点击“保存当前调整记忆”复用。</source>
-        <translation>已将 %1 个单元格标记为 %2，可点击“保存当前调整记忆”复用。</translation>
+        <source>已将 %1 个单元格标记为 %2，可点击“保存当前修正规则”复用。</source>
+        <translation>已将 %1 个单元格标记为 %2，可点击“保存当前修正规则”复用。</translation>
     </message>
     <message>
         <location filename="../app/src/main_window.cpp" line="1130"/>
@@ -478,8 +478,8 @@
     </message>
     <message>
         <location filename="../app/src/main_window.cpp" line="1209"/>
-        <source>已撤销上一步修正。</source>
-        <translation>已撤销上一步修正。</translation>
+        <source>已撤销修正修正。</source>
+        <translation>已撤销修正修正。</translation>
     </message>
     <message>
         <location filename="../app/src/main_window.cpp" line="1220"/>
@@ -524,45 +524,45 @@
     </message>
     <message>
         <location filename="../app/src/main_window.cpp" line="1301"/>
-        <source>当前没有可用于生成调整记忆指纹的同构工作簿。</source>
-        <translation>当前没有可用于生成调整记忆指纹的同构工作簿。</translation>
+        <source>当前没有可用于生成修正规则指纹的同构工作簿。</source>
+        <translation>当前没有可用于生成修正规则指纹的同构工作簿。</translation>
     </message>
     <message>
         <location filename="../app/src/main_window.cpp" line="1332"/>
         <location filename="../app/src/main_window.cpp" line="1358"/>
-        <source>已更新调整记忆“%1”。</source>
-        <translation>已更新调整记忆“%1”。</translation>
+        <source>已更新修正规则“%1”。</source>
+        <translation>已更新修正规则“%1”。</translation>
     </message>
     <message>
         <location filename="../app/src/main_window.cpp" line="1387"/>
-        <source>已保存调整记忆“%1”，包含 %2 个修正。</source>
-        <translation>已保存调整记忆“%1”，包含 %2 个修正。</translation>
+        <source>已保存修正规则“%1”，包含 %2 个修正。</source>
+        <translation>已保存修正规则“%1”，包含 %2 个修正。</translation>
     </message>
     <message>
         <location filename="../app/src/main_window.cpp" line="1406"/>
         <location filename="../app/src/main_window.cpp" line="1413"/>
-        <source>导入调整记忆</source>
-        <translation>导入调整记忆</translation>
+        <source>导入修正规则</source>
+        <translation>导入修正规则</translation>
     </message>
     <message>
         <location filename="../app/src/main_window.cpp" line="1406"/>
-        <source>当前没有可绑定调整记忆的同构工作簿。</source>
-        <translation>当前没有可绑定调整记忆的同构工作簿。</translation>
+        <source>当前没有可绑定修正规则的同构工作簿。</source>
+        <translation>当前没有可绑定修正规则的同构工作簿。</translation>
     </message>
     <message>
         <location filename="../app/src/main_window.cpp" line="1413"/>
-        <source>导入的调整记忆不属于当前同构结构。</source>
-        <translation>导入的调整记忆不属于当前同构结构。</translation>
+        <source>导入的修正规则不属于当前同构结构。</source>
+        <translation>导入的修正规则不属于当前同构结构。</translation>
     </message>
     <message>
         <location filename="../app/src/main_window.cpp" line="1429"/>
-        <source>已导入调整记忆“%1”。</source>
-        <translation>已导入调整记忆“%1”。</translation>
+        <source>已导入修正规则“%1”。</source>
+        <translation>已导入修正规则“%1”。</translation>
     </message>
     <message>
         <location filename="../app/src/main_window.cpp" line="1448"/>
-        <source>已清除当前调整记忆。</source>
-        <translation>已清除当前调整记忆。</translation>
+        <source>已清除当前修正规则。</source>
+        <translation>已清除当前修正规则。</translation>
     </message>
     <message>
         <location filename="../app/src/main_window.cpp" line="1455"/>

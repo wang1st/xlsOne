@@ -2,6 +2,33 @@
 
 ln -sf /usr/bin/xlsone.sh /usr/bin/xlsone || true
 
+# ---------------------------------------------------------------------------
+# Compatibility check: can the bundled Qt libraries load on this system?
+# If the DEB was built on a system with a newer glibc (e.g. KylinOS with
+# glibc >= 2.29), the bundled Qt libs may require symbols not available on
+# older targets (e.g. UOS 20 / Debian 10 with glibc 2.28).
+# In that case we hide the bundle and rely on the system Qt5 installation.
+# ---------------------------------------------------------------------------
+BUNDLEDIR="/usr/lib/xlsone"
+MARKER_FILE="$BUNDLEDIR/.use-system-qt"
+BACKUP_DIR="$BUNDLEDIR/.bundled-disabled"
+
+if [ -f "$BUNDLEDIR/libQt5Core.so.5" ] && [ ! -f "$MARKER_FILE" ]; then
+    if ! ldd "$BUNDLEDIR/libQt5Core.so.5" >/dev/null 2>&1; then
+        echo "xlsone: Bundled Qt libraries incompatible with this system (glibc mismatch)."
+        echo "xlsone: Falling back to system Qt5."
+        mkdir -p "$BACKUP_DIR"
+        for f in "$BUNDLEDIR"/libQt5* "$BUNDLEDIR"/libicu* "$BUNDLEDIR"/libdouble* "$BUNDLEDIR"/libpcre*; do
+            [ -e "$f" ] && mv "$f" "$BACKUP_DIR/" 2>/dev/null || true
+        done
+        # Also disable bundled plugins (they may be built against the same incompatible Qt)
+        if [ -d "$BUNDLEDIR/plugins" ]; then
+            mv "$BUNDLEDIR/plugins" "$BACKUP_DIR/plugins" 2>/dev/null || true
+        fi
+        touch "$MARKER_FILE"
+    fi
+fi
+
 # Clean up a broken qt.conf that may have been installed to /usr/bin/ by an
 # earlier xlsOne package. A qt.conf in /usr/bin/ overrides the system Qt plugin
 # path for every Qt application in /usr/bin/ and can break the DDE desktop.
