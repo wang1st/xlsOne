@@ -101,13 +101,28 @@ UpdateInfo UpdateChecker::parseUpdateInfo(const QByteArray& json)
     const QString key = platformKey();
 
     if (downloadsValue.isObject()) {
-        const QJsonValue platformValue = downloadsValue.toObject().value(key);
+        const QJsonObject downloads = downloadsValue.toObject();
+        const QJsonValue platformValue = downloads.value(key);
+
+        // New architecture-aware format:
+        //   "linux_architectures": { "arm64": "url", "amd64": "url" }
+        const QString archKey = architectureKey();
+        const QString archSuffix = QStringLiteral("_architectures");
+        const QString archKeyFull = key + archSuffix;
+        const QJsonValue archValue = downloads.value(archKeyFull);
+        if (archValue.isObject()) {
+            const QString url = archValue.toObject().value(archKey).toString();
+            if (!url.isEmpty()) {
+                info.downloadUrl = url;
+                return info;
+            }
+        }
+
         if (platformValue.isString()) {
             // Legacy format: "linux": "url"
             info.downloadUrl = platformValue.toString();
         } else if (platformValue.isObject()) {
             // Architecture-aware format: "linux": { "arm64": "url", "amd64": "url" }
-            const QString archKey = architectureKey();
             info.downloadUrl = platformValue.toObject().value(archKey).toString();
         }
     }
