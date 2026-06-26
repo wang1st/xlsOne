@@ -196,20 +196,37 @@ fi
 # ---------------------------------------------------------------------------
 # Auto-download low-glibc Qt5 libraries for self-contained bundle
 # ---------------------------------------------------------------------------
+HOST_ARCH="$(uname -m)"
+case "$HOST_ARCH" in
+    x86_64)
+        DEEPIN_QT_ARCH="amd64"
+        DEEPIN_QT_FILENAME="qt5.15-gles_231205_amd64.tar.xz"
+        ;;
+    aarch64|arm64)
+        DEEPIN_QT_ARCH="aarch64"
+        DEEPIN_QT_FILENAME="qt5.15-gles_231207_aarch64.tar.xz"
+        ;;
+    *)
+        echo "Error: unsupported host architecture for Qt5 bundle: $HOST_ARCH" >&2
+        echo "  Supported: x86_64, aarch64" >&2
+        exit 1
+        ;;
+esac
+
 DEEPIN_QT_DIR="$PROJECT_ROOT/deepin-qt5.15/usr/local/qt5.15-gles"
 DEEPIN_QT_DIR_ALT="$PROJECT_ROOT/deepin-qt5.15/qt5.15-gles"
-DEEPIN_QT_URL="https://github.com/deepin-community/sig-deepin-shared-libs/releases/download/Qt5.15.10-OpenGLES%3D%3D5.15.10%2Bszbt2/qt5.15-gles_231207_aarch64.tar.xz"
+DEEPIN_QT_URL="https://github.com/deepin-community/sig-deepin-shared-libs/releases/download/Qt5.15.10-OpenGLES%3D%3D5.15.10%2Bszbt2/$DEEPIN_QT_FILENAME"
 
 if [ "$BUNDLE_MODE" = "bundle" ]; then
     if [ -f "$DEEPIN_QT_DIR_ALT/lib/libQt5Core.so" ] && [ -d "$DEEPIN_QT_DIR_ALT/plugins/platforms" ]; then
         DEEPIN_QT_DIR="$DEEPIN_QT_DIR_ALT"
     fi
     if [ ! -f "$DEEPIN_QT_DIR/lib/libQt5Core.so" ] || [ ! -d "$DEEPIN_QT_DIR/plugins/platforms" ]; then
-        echo "==> Downloading low-glibc Qt5.15 bundle for aarch64 ..."
+        echo "==> Downloading low-glibc Qt5.15 bundle for $DEEPIN_QT_ARCH ..."
         echo "    Source: $DEEPIN_QT_URL"
         echo "    Target: $DEEPIN_QT_DIR"
         mkdir -p "$PROJECT_ROOT/deepin-qt5.15"
-        _qt_tar="$PROJECT_ROOT/deepin-qt5.15/qt5.15-gles_231207_aarch64.tar.xz"
+        _qt_tar="$PROJECT_ROOT/deepin-qt5.15/$DEEPIN_QT_FILENAME"
 
         if ! command -v wget >/dev/null 2>&1 && ! command -v curl >/dev/null 2>&1; then
             echo "Error: neither wget nor curl is available for downloading Qt5 bundle." >&2
@@ -233,6 +250,10 @@ if [ "$BUNDLE_MODE" = "bundle" ]; then
             echo "Error: failed to extract Qt5 bundle" >&2
             exit 1
         }
+
+        if [ -f "$DEEPIN_QT_DIR_ALT/lib/libQt5Core.so" ] && [ -d "$DEEPIN_QT_DIR_ALT/plugins/platforms" ]; then
+            DEEPIN_QT_DIR="$DEEPIN_QT_DIR_ALT"
+        fi
 
         if [ ! -f "$DEEPIN_QT_DIR/lib/libQt5Core.so" ]; then
             echo "Error: Qt5 bundle extracted but libQt5Core.so not found in $DEEPIN_QT_DIR/lib" >&2
