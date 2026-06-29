@@ -56,7 +56,7 @@ xlsone::SchemaCellOverrideType overrideTypeFromString(const QString& value)
 xlsone::MergeSchema swiftSchemaFromJson(const QJsonObject& object)
 {
     xlsone::MergeSchema schema;
-    schema.name = object.value(QStringLiteral("name")).toString(QObject::tr("导入调整记忆"));
+    schema.name = object.value(QStringLiteral("name")).toString(QObject::tr("导入修正规则"));
     schema.version = 2;
 
     const auto wf = object.value(QStringLiteral("workbookFingerprint")).toObject();
@@ -112,7 +112,7 @@ xlsone::MergeSchema importableSchemaFromJson(const QJsonObject& root)
     if (object.contains(QStringLiteral("cellOverrides"))) {
         return swiftSchemaFromJson(object);
     }
-    throw std::runtime_error("不支持的调整记忆 JSON 格式");
+    throw std::runtime_error("不支持的修正规则 JSON 格式");
 }
 
 } // namespace
@@ -124,7 +124,7 @@ SchemaManagerDialog::SchemaManagerDialog(const xlsone::SchemaRepository& reposit
     repository_(repository),
     currentSchema_(currentSchema)
 {
-    setWindowTitle(tr("当前调整记忆"));
+    setWindowTitle(tr("当前修正规则"));
     resize(500, 400);
 
     details_ = new QTextEdit(this);
@@ -132,7 +132,7 @@ SchemaManagerDialog::SchemaManagerDialog(const xlsone::SchemaRepository& reposit
 
     exportButton_ = new QPushButton(tr("导出"), this);
     importButton_ = new QPushButton(tr("导入"), this);
-    clearButton_ = new QPushButton(tr("清除当前调整记忆"), this);
+    clearButton_ = new QPushButton(tr("清除当前修正规则"), this);
     auto* closeButton = new QPushButton(tr("关闭"), this);
 
     auto* buttonLayout = new QHBoxLayout;
@@ -173,7 +173,7 @@ void SchemaManagerDialog::refreshDetails()
     if (hasSchema) {
         details_->setPlainText(describeSchema(*currentSchema_));
     } else {
-        details_->setPlainText(tr("当前同构结构暂无调整记忆。\n\n在汇总结果中手动修正单元格后，点击\"调整记忆\"菜单中的\"保存当前调整记忆\"即可创建。"));
+        details_->setPlainText(tr("当前同构结构暂无修正规则。\n\n在汇总结果中手动修正单元格后，点击\"修正规则\"菜单中的\"保存当前修正规则\"即可创建。"));
     }
 }
 
@@ -185,7 +185,7 @@ void SchemaManagerDialog::exportCurrent()
     const QString safeName = schema.name.trimmed().isEmpty()
         ? QStringLiteral("schema") : schema.name.trimmed();
     const auto path = xlsone::ui::getSaveFileNameCentered(
-        this, tr("导出调整记忆"), safeName + QStringLiteral(".json"),
+        this, tr("导出修正规则"), safeName + QStringLiteral(".json"),
         tr("JSON Files (*.json);;All Files (*)"));
     if (path.isEmpty()) { return; }
 
@@ -203,7 +203,7 @@ void SchemaManagerDialog::exportCurrent()
 void SchemaManagerDialog::importSchema()
 {
     const auto path = xlsone::ui::getOpenFileNameCentered(
-        this, tr("导入调整记忆"), {}, tr("JSON Files (*.json);;All Files (*)"));
+        this, tr("导入修正规则"), {}, tr("JSON Files (*.json);;All Files (*)"));
     if (path.isEmpty()) { return; }
 
     QFile file(path);
@@ -233,8 +233,8 @@ void SchemaManagerDialog::importSchema()
 void SchemaManagerDialog::clearCurrent()
 {
     const auto choice = xlsone::ui::askQuestion(
-        this, tr("清除当前调整记忆"),
-        tr("删除当前调整记忆后，汇总表将恢复自动判断。确定清除？"));
+        this, tr("清除当前修正规则"),
+        tr("删除当前修正规则后，汇总表将恢复自动判断。确定清除？"));
     if (choice != QMessageBox::Yes) { return; }
     clearRequested_ = true;
     accept();

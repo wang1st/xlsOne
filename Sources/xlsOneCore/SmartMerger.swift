@@ -255,7 +255,7 @@ public actor SmartMerger {
         return try await schemaRepository.importSchema(data: data)
     }
 
-    /// 导入调整记忆，并限定只能绑定到当前同构工作区。
+    /// 导入修正规则，并限定只能绑定到当前同构工作区。
     public func importSchema(
         data: Data,
         forCurrentWorkspaceFiles files: [ExcelFile],
@@ -346,9 +346,9 @@ public enum AdjustmentMemoryImportError: LocalizedError, Sendable {
     public var errorDescription: String? {
         switch self {
         case .emptyWorkspace:
-            return LocaleManager.loc("当前没有可绑定调整记忆的同构工作区。")
+            return LocaleManager.loc("当前没有可绑定修正规则的同构工作区。")
         case .incompatibleWorkspace:
-            return LocaleManager.loc("导入的调整记忆不属于当前同构结构。")
+            return LocaleManager.loc("导入的修正规则不属于当前同构结构。")
         }
     }
 }

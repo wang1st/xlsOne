@@ -1,0 +1,97 @@
+#!/bin/sh
+
+ln -sf /usr/bin/xlsone.sh /usr/bin/xlsone || true
+
+# ---------------------------------------------------------------------------
+# Compatibility check: can the bundled Qt libraries load on this system?
+# If the DEB was built on a system with a newer glibc (e.g. KylinOS with
+# glibc >= 2.29), the bundled Qt libs may require symbols not available on
+# older targets (e.g. UOS 20 / Debian 10 with glibc 2.28).
+# In that case we hide the bundle and rely on the system Qt5 installation.
+# ---------------------------------------------------------------------------
+BUNDLEDIR="/usr/lib/xlsone"
+MARKER_FILE="$BUNDLEDIR/.use-system-qt"
+BACKUP_DIR="$BUNDLEDIR/.bundled-disabled"
+
+if [ -f "$BUNDLEDIR/libQt5Core.so.5" ] && [ ! -f "$MARKER_FILE" ]; then
+    if ! ldd "$BUNDLEDIR/libQt5Core.so.5" >/dev/null 2>&1; then
+        echo "xlsone: Bundled Qt libraries incompatible with this system (glibc mismatch)."
+        echo "xlsone: Falling back to system Qt5."
+        mkdir -p "$BACKUP_DIR"
+        for f in "$BUNDLEDIR"/libQt5* "$BUNDLEDIR"/libicu* "$BUNDLEDIR"/libdouble* "$BUNDLEDIR"/libpcre*; do
+            [ -e "$f" ] && mv "$f" "$BACKUP_DIR/" 2>/dev/null || true
+        done
+        # Also disable bundled plugins (they may be built against the same incompatible Qt)
+        if [ -d "$BUNDLEDIR/plugins" ]; then
+            mv "$BUNDLEDIR/plugins" "$BACKUP_DIR/plugins" 2>/dev/null || true
+        fi
+        touch "$MARKER_FILE"
+    fi
+fi
+
+# Clean up a broken qt.conf that may have been installed to /usr/bin/ by an
+# earlier xlsOne package. A qt.conf in /usr/bin/ overrides the system Qt plugin
+# path for every Qt application in /usr/bin/ and can break the DDE desktop.
+# We only remove files that clearly belong to xlsOne (contain our lib path).
+for f in /usr/bin/qt.conf /usr/bin/qt.conf.bak; do
+    if [ -f "$f" ]; then
+        if grep -q "/usr/lib/xlsone" "$f" 2>/dev/null; then
+            rm -f "$f" || true
+        fi
+    fi
+done
+
+# Install desktop shortcut for every human user
+DESKTOP_SRC="/usr/share/applications/xlsone.desktop"
+
+if [ ! -f "$DESKTOP_SRC" ]; then
+    exit 0
+fi
+
+for home in /home/*/; do
+    [ -d "$home" ] || continue
+    user=$(basename "$home")
+    if id -u "$user" >/dev/null 2>&1; then
+        desktop_dir=""
+        # Read the user's XDG desktop dir configuration directly so we don't
+        # need to spawn a login shell (which can hang or fail in some installers).
+        user_dirs="$home/.config/user-dirs.dirs"
+        if [ -f "$user_dirs" ]; then
+            desktop_dir=$(grep '^XDG_DESKTOP_DIR=' "$user_dirs" 2>/dev/null \
+                | sed -n 's/^XDG_DESKTOP_DIR="\(.*\)"$/\1/p')
+            case "$desktop_dir" in
+                '$HOME'/*) desktop_dir="$home/${desktop_dir#'$HOME/'}" ;;
+                "$home"/*|'/'*) : ;;
+                "") : ;;
+                *) desktop_dir="$home/$desktop_dir" ;;
+            esac
+        fi
+        if [ -z "$desktop_dir" ] || [ ! -d "$desktop_dir" ]; then
+            for fallback in "$home/Desktop" "$home/桌面"; do
+                if [ -d "$fallback" ]; then
+                    desktop_dir="$fallback"
+                    break
+                fi
+            done
+        fi
+        if [ -n "$desktop_dir" ] && [ -d "$desktop_dir" ]; then
+            cp "$DESKTOP_SRC" "$desktop_dir/" || true
+            chown "$user" "$desktop_dir/xlsone.desktop" 2>/dev/null || true
+            chmod +x "$desktop_dir/xlsone.desktop" 2>/dev/null || true
+        fi
+    fi
+done
+
+# Refresh freedesktop caches so MIME associations, desktop entries and
+# icons take effect immediately after install / upgrade.
+if command -v update-mime-database >/dev/null 2>&1; then
+    update-mime-database /usr/share/mime || true
+fi
+if command -v update-desktop-database >/dev/null 2>&1; then
+    update-desktop-database /usr/share/applications || true
+fi
+if command -v gtk-update-icon-cache >/dev/null 2>&1; then
+    gtk-update-icon-cache -f /usr/share/icons/hicolor || true
+fi
+
+exit 0

@@ -5,6 +5,8 @@ add_executable(xlsone_app
     src/diagnostics_view.hpp
     src/empty_workspace_view.cpp
     src/empty_workspace_view.hpp
+    src/help_dialog.cpp
+    src/help_dialog.hpp
     src/inspector_panel.cpp
     src/inspector_panel.hpp
     src/license_activation_dialog.cpp
@@ -59,6 +61,8 @@ target_link_libraries(xlsone_app
         Qt5::Gui
         Qt5::Widgets
 )
+
+target_link_options(xlsone_app PRIVATE "-Wl,--disable-new-dtags")
 
 target_include_directories(xlsone_app
     PRIVATE

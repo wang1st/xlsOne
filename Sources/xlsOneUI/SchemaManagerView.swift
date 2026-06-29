@@ -1,7 +1,7 @@
 import SwiftUI
 import xlsOneCore
 
-/// 当前同构结构的调整记忆视图
+/// 当前同构结构的修正规则视图
 struct SchemaManagerView: View {
     @EnvironmentObject private var viewModel: AppViewModel
     @Environment(\.dismiss) private var dismiss

@@ -1,0 +1,42 @@
+#!/bin/sh
+
+rm -f /usr/bin/xlsone || true
+
+# Clean up files created by postinst for the system-Qt fallback
+BUNDLEDIR="/usr/lib/xlsone"
+rm -f "$BUNDLEDIR/.use-system-qt" 2>/dev/null || true
+# Move bundled libs back from disabled backup so dpkg can cleanly remove them
+if [ -d "$BUNDLEDIR/.bundled-disabled" ]; then
+    for f in "$BUNDLEDIR/.bundled-disabled"/* "$BUNDLEDIR/.bundled-disabled"/plugins/* "$BUNDLEDIR/.bundled-disabled"/plugins/*/*; do
+        if [ -e "$f" ]; then
+            dest="$BUNDLEDIR/${f#$BUNDLEDIR/.bundled-disabled/}"
+            mkdir -p "$(dirname "$dest")" 2>/dev/null || true
+            mv "$f" "$dest" 2>/dev/null || true
+        fi
+    done
+    rm -rf "$BUNDLEDIR/.bundled-disabled" 2>/dev/null || true
+fi
+
+for home in /home/*/; do
+    [ -d "$home" ] || continue
+    for name in "xlsone.desktop"; do
+        for dir in "$home/Desktop" "$home/桌面"; do
+            shortcut="$dir/$name"
+            if [ -f "$shortcut" ]; then
+                rm -f "$shortcut" || true
+            fi
+        done
+    done
+done
+
+# Refresh freedesktop caches so removed MIME types, desktop entries
+# and icons are no longer visible.
+if command -v update-mime-database >/dev/null 2>&1; then
+    update-mime-database /usr/share/mime || true
+fi
+if command -v update-desktop-database >/dev/null 2>&1; then
+    update-desktop-database /usr/share/applications || true
+fi
+if command -v gtk-update-icon-cache >/dev/null 2>&1; then
+    gtk-update-icon-cache -f /usr/share/icons/hicolor || true
+fi

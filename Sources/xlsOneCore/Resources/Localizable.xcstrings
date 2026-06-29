@@ -674,19 +674,19 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "撤销上一步"
+            "value": "撤销修正"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "撤銷上一步"
+            "value": "撤銷修正"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Undo"
+            "value": "Undo Correction"
           }
         },
         "ja": {
@@ -703,13 +703,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "清除本批次调整"
+            "value": "清除所有修正"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "清除本批次調整"
+            "value": "清除所有修正"
           }
         },
         "en": {
@@ -1167,13 +1167,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "调整记忆"
+            "value": "修正规则"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "調整記憶"
+            "value": "修正規則"
           }
         },
         "en": {
@@ -1370,13 +1370,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "查看当前调整记忆"
+            "value": "查看当前修正规则"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "檢視目前調整記憶"
+            "value": "檢視目前修正規則"
           }
         },
         "en": {
@@ -1399,13 +1399,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "保存当前调整记忆"
+            "value": "保存当前修正规则"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "儲存目前調整記憶"
+            "value": "儲存目前修正規則"
           }
         },
         "en": {
@@ -1451,31 +1451,25 @@
         }
       }
     },
-    "使用帮助": {
+    "快速参考指南": {
       "extractionState": "manual",
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "使用帮助"
+            "value": "快速参考指南"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "使用説明"
+            "value": "快速參考指南"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Help"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ヘルプ"
+            "value": "Quick Reference"
           }
         }
       }
@@ -2588,13 +2582,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "当前调整记忆没有单元格修正。"
+            "value": "当前修正规则没有单元格修正。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "目前調整記憶沒有單元格修正。"
+            "value": "目前修正規則沒有單元格修正。"
           }
         },
         "en": {
@@ -3423,89 +3417,2130 @@
         }
       }
     },
-    "App Store 版本请通过 Mac App Store 获取更新。": {
+    "帮助_快速开始": {
       "extractionState": "manual",
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "App Store 版本请通过 Mac App Store 获取更新。"
+            "value": "快速开始"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "App Store 版本請通過 Mac App Store 獲取更新。"
+            "value": "快速開始"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The App Store version gets updates through the Mac App Store."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The App Store version gets updates through the Mac App Store."
+            "value": "Quick Start"
           }
         }
       }
     },
-    "当前没有可保存调整记忆的同构工作区。": {
+    "帮助_快速开始_介绍": {
       "extractionState": "manual",
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "当前没有可保存调整记忆的同构工作区。"
+            "value": "表表归一可以将多张格式相同的 Excel 报表快速汇总成一张工作表。只需导入文件，程序会自动识别可合并的工作表并完成汇总。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "目前沒有可儲存調整記憶的同構工作區。"
+            "value": "表表歸一可以將多張格式相同的 Excel 報表快速匯總成一張工作表。只需匯入檔案，程式會自動識別可合併的工作表並完成匯總。"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "No isomorphic workspace available for saving adjustment memory."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No isomorphic workspace available for saving adjustment memory."
+            "value": "xlsOne quickly merges multiple identically-formatted Excel reports into a single sheet. Just import your files, and the app automatically detects mergeable sheets and produces the summary."
           }
         }
       }
     },
-    "当前没有可绑定调整记忆的同构工作区。": {
+    "帮助_快速开始_步骤标题": {
       "extractionState": "manual",
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "当前没有可绑定调整记忆的同构工作区。"
+            "value": "五步完成汇总"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "目前沒有可綁定調整記憶的同構工作區。"
+            "value": "五步完成匯總"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "No isomorphic workspace available for binding adjustment memory."
+            "value": "Five Steps to Merge"
+          }
+        }
+      }
+    },
+    "帮助_快速开始_步骤1": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "点击工具栏“导入文件”或直接将 .xlsx / .xls 文件拖入窗口。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "點擊工具列「匯入檔案」或直接將 .xlsx / .xls 檔案拖入視窗。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Click Import Files in the toolbar, or drag .xlsx / .xls files into the window."
+          }
+        }
+      }
+    },
+    "帮助_快速开始_步骤2": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "程序会自动校验所有工作簿结构，识别出可合并与已跳过的 Sheet。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "程式會自動校驗所有工作簿結構，識別出可合併與已跳過的 Sheet。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The app validates every workbook and identifies mergeable vs. skipped sheets."
+          }
+        }
+      }
+    },
+    "帮助_快速开始_步骤3": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "点击顶部 Sheet 标签切换不同报表页，查看汇总结果。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "點擊頂部 Sheet 標籤切換不同報表頁，查看匯總結果。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Click the sheet tabs at the top to switch report pages and view merged results."
+          }
+        }
+      }
+    },
+    "帮助_快速开始_步骤4": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "选中单元格可在右侧面板查看各来源文件的原始值。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選取儲存格可在右側面板查看各來源檔案的原始值。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select any cell to inspect the original values from each source file in the right panel."
+          }
+        }
+      }
+    },
+    "帮助_快速开始_步骤5": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "确认无误后点击“导出 XLSX”保存汇总结果。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "確認無誤後點擊「匯出 XLSX」儲存匯總結果。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When satisfied, click Export XLSX to save the merged workbook."
+          }
+        }
+      }
+    },
+    "帮助_快速开始_提示": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "提示：导入前请确保所有待汇总文件使用相同的表头和行列结构，这样可获得最佳汇总效果。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "提示：匯入前請確保所有待匯總檔案使用相同的表頭和行列結構，這樣可獲得最佳匯總效果。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tip: For best results, make sure all files share the same headers and row/column layout before importing."
+          }
+        }
+      }
+    },
+    "帮助_导入文件": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导入文件"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "匯入檔案"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importing Files"
+          }
+        }
+      }
+    },
+    "帮助_导入文件_介绍": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "表表归一支持一次性导入多个 Excel 文件，并将它们作为同一批次进行汇总。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "表表歸一支援一次性匯入多個 Excel 檔案，並將它們作為同一批次進行匯總。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "xlsOne can import multiple Excel files at once and merge them as a single batch."
+          }
+        }
+      }
+    },
+    "帮助_导入文件_方式标题": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导入方式"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "匯入方式"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ways to Import"
+          }
+        }
+      }
+    },
+    "帮助_导入文件_方式1": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "拖拽导入：在 Finder 中选中一个或多个 .xlsx / .xls 文件，拖入主窗口空白区域。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "拖曳匯入：在 Finder 中選取一個或多個 .xlsx / .xls 檔案，拖入主視窗空白區域。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drag and drop: Select one or more .xlsx / .xls files in Finder and drop them onto the main window."
+          }
+        }
+      }
+    },
+    "帮助_导入文件_方式2": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "菜单导入：选择“文件”→“导入文件...”，在弹出的对话框中选中文件。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選單匯入：選擇「檔案」→「匯入檔案...」，在彈出的對話框中選取檔案。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Menu import: Choose File → Import Files… and select files in the dialog."
+          }
+        }
+      }
+    },
+    "帮助_导入文件_方式3": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "快捷键导入：按 Command+O 快速打开文件选择对话框。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "快速鍵匯入：按 Command+O 快速開啟檔案選擇對話框。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keyboard shortcut: Press Command+O to open the file picker quickly."
+          }
+        }
+      }
+    },
+    "帮助_导入文件_追加标题": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "追加文件"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "追加檔案"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adding More Files"
+          }
+        }
+      }
+    },
+    "帮助_导入文件_追加说明": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "如果已经导入了一批文件，想要继续加入更多报表，可以点击工具栏“追加”按钮，或按 Command+Shift+O。追加的文件会与当前批次一起重新汇总。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "如果已經匯入了一批檔案，想要繼續加入更多報表，可以點擊工具列「追加」按鈕，或按 Command+Shift+O。追加的檔案會與目前批次一起重新匯總。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "If you have already imported a batch and want to add more reports, click the Append button in the toolbar or press Command+Shift+O. The newly added files are merged together with the current batch."
+          }
+        }
+      }
+    },
+    "帮助_导入文件_注意": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "注意：程序不会修改原始 Excel 文件，所有汇总操作均在内存中进行。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "注意：程式不會修改原始 Excel 檔案，所有匯總操作均在記憶體中進行。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Note: The app never modifies your original Excel files; all merging happens in memory."
+          }
+        }
+      }
+    },
+    "帮助_查看汇总结果": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "查看汇总结果"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "查看匯總結果"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Viewing Merge Results"
+          }
+        }
+      }
+    },
+    "帮助_查看汇总结果_介绍": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导入成功后，主界面会显示汇总后的工作表。可合并的工作表会自动合并为一个结果表，您可以通过顶部标签切换查看。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "匯入成功後，主介面會顯示匯總後的工作表。可合併的工作表會自動合併為一個結果表，您可以透過頂部標籤切換查看。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "After a successful import, the main window shows the merged worksheet. Mergeable sheets are combined into a single result table, which you can switch between using the top tabs."
+          }
+        }
+      }
+    },
+    "帮助_查看汇总结果_合并逻辑标题": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "合并规则"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "合併規則"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Merge Rules"
+          }
+        }
+      }
+    },
+    "帮助_查看汇总结果_合并逻辑1": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "可相加的数值（金额、数量等）会自动求和。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "可相加的數值（金額、數量等）會自動求和。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Summable numbers such as amounts and quantities are automatically totaled."
+          }
+        }
+      }
+    },
+    "帮助_查看汇总结果_合并逻辑2": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "文本、编号、名称等不可相加的内容会保留出现次数最多的共同值。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "文字、編號、名稱等不可相加的內容會保留出現次數最多的共同值。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Text, codes, names, and other non-summable fields keep the most common shared value."
+          }
+        }
+      }
+    },
+    "帮助_查看汇总结果_合并逻辑3": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "如果某个单元格在不同文件中数值差异较大，会被标记为异常，方便您重点检查。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "如果某個儲存格在不同檔案中數值差異較大，會被標記為異常，方便您重點檢查。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cells whose values vary significantly across files are flagged as anomalies for your review."
+          }
+        }
+      }
+    },
+    "帮助_查看汇总结果_穿透查阅标题": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "穿透查阅"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "穿透查閱"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Source Drilldown"
+          }
+        }
+      }
+    },
+    "帮助_查看汇总结果_穿透查阅说明": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "点击汇总表中的任意单元格，右侧面板会列出该单元格在所有来源文件中的原始值、文件名以及所在位置。这让您可以快速核对数据来源。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "點擊匯總表中的任意儲存格，右側面板會列出該儲存格在所有來源檔案中的原始值、檔案名以及所在位置。這讓您可以快速核對資料來源。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Click any cell in the merged table; the right panel lists its original value in every source file, along with the filename and location, so you can quickly verify the data."
+          }
+        }
+      }
+    },
+    "帮助_查看汇总结果_提示": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "提示：使用键盘 J / K 可以快速跳转到下一个或上一个异常单元格。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "提示：使用鍵盤 J / K 可以快速跳轉到下一個或上一個異常儲存格。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tip: Press J / K to jump to the next or previous anomaly cell."
+          }
+        }
+      }
+    },
+    "帮助_工作表状态": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "工作表状态"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "工作表狀態"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sheet Status"
+          }
+        }
+      }
+    },
+    "帮助_工作表状态_介绍": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导入多个文件后，每个 Sheet 标签会显示该工作表的汇总状态。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "匯入多個檔案後，每個 Sheet 標籤會顯示該工作表的匯總狀態。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "After importing multiple files, each sheet tab shows the merge status of that worksheet."
+          }
+        }
+      }
+    },
+    "帮助_工作表状态_可合并标题": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "可合并"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "可合併"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mergeable"
+          }
+        }
+      }
+    },
+    "帮助_工作表状态_可合并说明": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "表示该 Sheet 在所有文件中的结构一致，已成功参与汇总。点击标签即可查看合并后的结果。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "表示該 Sheet 在所有檔案中的結構一致，已成功參與匯總。點擊標籤即可查看合併後的結果。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The sheet has a consistent structure across all files and has been included in the merge. Click the tab to view the merged result."
+          }
+        }
+      }
+    },
+    "帮助_工作表状态_已跳过标题": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已跳过"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已跳過"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skipped"
+          }
+        }
+      }
+    },
+    "帮助_工作表状态_已跳过说明": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "表示该 Sheet 在不同文件中的结构不一致，暂时无法自动合并。常见原因包括："
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "表示該 Sheet 在不同檔案中的結構不一致，暫時無法自動合併。常見原因包括："
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The sheet could not be merged automatically because its structure differs across files. Common reasons include:"
+          }
+        }
+      }
+    },
+    "帮助_工作表状态_跳过原因1": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有效数据区域（起始行/列）不同。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有效資料區域（起始行/列）不同。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The used data range (starting row/column) differs."
+          }
+        }
+      }
+    },
+    "帮助_工作表状态_跳过原因2": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "行数或列数不一致，导致无法按位置对齐。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "行數或列數不一致，導致無法按位置對齊。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Row or column counts differ, preventing positional alignment."
+          }
+        }
+      }
+    },
+    "帮助_工作表状态_跳过原因3": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "表头内容存在明显差异。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "表頭內容存在明顯差異。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Header content differs significantly."
+          }
+        }
+      }
+    },
+    "帮助_工作表状态_注意": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "注意：对于已跳过的 Sheet，程序会展示结构分组分析。您可以根据提示统一各文件的行列范围后重新导入。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "注意：對於已跳過的 Sheet，程式會展示結構分組分析。您可以根據提示統一各檔案的行列範圍後重新匯入。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Note: For skipped sheets, the app shows a structural grouping analysis. You can adjust the files to use the same row/column ranges and import again."
+          }
+        }
+      }
+    },
+    "帮助_单元格修正": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "单元格修正"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "儲存格修正"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cell Correction"
+          }
+        }
+      }
+    },
+    "帮助_单元格修正_介绍": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "当程序对某个单元格的合并类型判断不准确时，您可以手动指定其类型。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "當程式對某個儲存格的合併類型判斷不準確時，您可以手動指定其類型。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "If the app misclassifies a cell’s merge behavior, you can manually override its type."
+          }
+        }
+      }
+    },
+    "帮助_单元格修正_类型标题": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "修正类型"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "修正類型"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Correction Types"
+          }
+        }
+      }
+    },
+    "帮助_单元格修正_类型1": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "标签：将该单元格视为文本，汇总时保留最频繁出现的值，不参与求和。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "標籤：將該儲存格視為文字，匯總時保留最頻繁出現的值，不參與求和。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Label: Treat the cell as text; the merged result keeps the most frequent value and it is not summed."
+          }
+        }
+      }
+    },
+    "帮助_单元格修正_类型2": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "求和：将该单元格视为数值，汇总时对所有来源文件的对应单元格求和。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "求和：將該儲存格視為數值，匯總時對所有來源檔案的對應儲存格求和。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sum: Treat the cell as numeric; the merged result sums the corresponding cells from all source files."
+          }
+        }
+      }
+    },
+    "帮助_单元格修正_操作标题": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "如何修正"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "如何修正"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "How to Correct"
+          }
+        }
+      }
+    },
+    "帮助_单元格修正_操作1": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在汇总表中点击需要修正的单元格。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在匯總表中點擊需要修正的儲存格。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Click the cell you want to correct in the merged table."
+          }
+        }
+      }
+    },
+    "帮助_单元格修正_操作2": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在右侧面板选择“修正为标签”或“修正为求和”。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在右側面板選擇「修正為標籤」或「修正為求和」。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose Correct to Label or Correct to Sum in the right panel."
+          }
+        }
+      }
+    },
+    "帮助_单元格修正_操作3": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "也可以右键点击单元格，在上下文菜单中选择修正类型。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "也可以右鍵點擊儲存格，在上下文選單中選擇修正類型。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You can also right-click the cell and choose a correction type from the context menu."
+          }
+        }
+      }
+    },
+    "帮助_单元格修正_操作4": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "选中多个单元格后，可一次性批量应用相同的修正。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選取多個儲存格後，可一次性批量套用相同的修正。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select multiple cells to apply the same correction to all of them at once."
+          }
+        }
+      }
+    },
+    "帮助_单元格修正_提示": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "提示：选中的单元格会高亮显示，Command+Z 可撤销最近一次的修正操作。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "提示：選取的儲存格會高亮顯示，Command+Z 可撤銷最近一次的修正操作。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tip: Selected cells are highlighted, and Command+Z undoes the most recent correction."
+          }
+        }
+      }
+    },
+    "帮助_调整记忆": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "修正规则"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "修正規則"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Correction Rules"
+          }
+        }
+      }
+    },
+    "帮助_调整记忆_介绍": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "修正规则会记住您对单元格类型的修正，以便在下次处理相似结构的工作簿时自动应用。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "修正規則會記住您對儲存格類型的修正，以便在下次處理相似結構的工作簿時自動套用。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Correction rules remember your cell-type corrections so they can be applied automatically the next time you process workbooks with a similar structure."
+          }
+        }
+      }
+    },
+    "帮助_调整记忆_作用标题": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "主要作用"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "主要作用"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What It Does"
+          }
+        }
+      }
+    },
+    "帮助_调整记忆_作用1": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "减少重复修正：相同的表头结构再次导入时，会自动应用您之前的修正。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "減少重複修正：相同的表頭結構再次匯入時，會自動套用您之前的修正。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fewer repeated corrections: Previous corrections are applied automatically when the same header structure is imported again."
+          }
+        }
+      }
+    },
+    "帮助_调整记忆_作用2": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "提高工作效率：尤其适合需要定期汇总固定格式报表的场景。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "提高工作效率：尤其適合需要定期匯總固定格式報表的場景。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Improved efficiency: Especially useful when you regularly merge reports with a fixed format."
+          }
+        }
+      }
+    },
+    "帮助_调整记忆_作用3": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "可随时查看、保存或清除已记住的修正规则。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "可隨時檢視、儲存或清除已記住的修正規則。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You can view, save, or clear remembered correction rules at any time."
+          }
+        }
+      }
+    },
+    "帮助_调整记忆_管理标题": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "管理修正规则"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "管理修正規則"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Managing Rules"
+          }
+        }
+      }
+    },
+    "帮助_调整记忆_管理说明": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "通过菜单“修正规则”→“查看当前修正规则”可以打开管理面板。您可以为当前批次保存一份规则文件，也可以从之前保存的规则文件导入。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "透過選單「修正規則」→「檢視目前修正規則」可以開啟管理面板。您可以為目前批次儲存一份規則檔案，也可以從之前儲存的規則檔案匯入。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open the management panel via Correction Rules → View Current Correction Rules. You can save a rules file for the current batch or import a previously saved one."
+          }
+        }
+      }
+    },
+    "帮助_调整记忆_注意": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "注意：修正规则基于工作表表头结构匹配。如果表头发生较大变化，规则可能不会自动生效。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "注意：修正規則基於工作表表頭結構匹配。如果表頭發生較大變化，規則可能不會自動生效。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Note: Correction rules are matched by worksheet header structure. If headers change significantly, the rules may not apply automatically."
+          }
+        }
+      }
+    },
+    "帮助_快捷键": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "快捷键"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "快速鍵"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keyboard Shortcuts"
+          }
+        }
+      }
+    },
+    "帮助_快捷键_介绍": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "熟练使用快捷键可以让汇总操作更加高效。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "熟練使用快速鍵可以讓匯總操作更加高效。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keyboard shortcuts make common merge tasks faster."
+          }
+        }
+      }
+    },
+    "帮助_快捷键_导入文件": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导入文件"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "匯入檔案"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import files"
+          }
+        }
+      }
+    },
+    "帮助_快捷键_追加文件": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "追加文件"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "追加檔案"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add files"
+          }
+        }
+      }
+    },
+    "帮助_快捷键_导出": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导出 XLSX"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "匯出 XLSX"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export XLSX"
+          }
+        }
+      }
+    },
+    "帮助_快捷键_刷新": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "刷新当前结果"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重整目前結果"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Refresh current results"
+          }
+        }
+      }
+    },
+    "帮助_快捷键_清空": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清空工作区"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清空工作區"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear workspace"
+          }
+        }
+      }
+    },
+    "帮助_快捷键_撤销": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "撤销上一步修正"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "撤銷上一步修正"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Undo last correction"
+          }
+        }
+      }
+    },
+    "帮助_快捷键_标签": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "将选中单元格修正为标签"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "將選取儲存格修正為標籤"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Correct selected cell(s) to Label"
+          }
+        }
+      }
+    },
+    "帮助_快捷键_求和": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "将选中单元格修正为求和"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "將選取儲存格修正為求和"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Correct selected cell(s) to Sum"
+          }
+        }
+      }
+    },
+    "帮助_快捷键_下一个异常": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "跳转到下一个异常单元格"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "跳轉到下一個異常儲存格"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jump to next anomaly"
+          }
+        }
+      }
+    },
+    "帮助_快捷键_上一个异常": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "跳转到上一个异常单元格"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "跳轉到上一個異常儲存格"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jump to previous anomaly"
+          }
+        }
+      }
+    },
+    "帮助_常见问题": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "常见问题"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "常見問題"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FAQ"
+          }
+        }
+      }
+    },
+    "帮助_常见问题_问题1": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "为什么有些 Sheet 会被跳过？"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "為什麼有些 Sheet 會被跳過？"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Why are some sheets skipped?"
+          }
+        }
+      }
+    },
+    "帮助_常见问题_答案1": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "当同一个 Sheet 在不同文件中的有效数据区域、行数、列数或表头不一致时，程序无法按位置对齐，就会跳过该 Sheet。您可以根据“已跳过”页面给出的结构分组提示，统一各文件后再重新导入。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "當同一個 Sheet 在不同檔案中的有效資料區域、行數、列數或表頭不一致時，程式無法按位置對齊，就會跳過該 Sheet。您可以根據「已跳過」頁面給出的結構分組提示，統一各檔案後再重新匯入。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A sheet is skipped when its used range, row/column count, or headers differ across files, preventing positional alignment. Follow the structural grouping hints on the Skipped page, unify the files, and import again."
+          }
+        }
+      }
+    },
+    "帮助_常见问题_问题2": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "汇总结果会修改原始文件吗？"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "匯總結果會修改原始檔案嗎？"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Will merging modify my original files?"
+          }
+        }
+      }
+    },
+    "帮助_常见问题_答案2": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不会。所有读取、汇总和修正操作均在内存中完成，只有点击“导出 XLSX”后才会生成新的 Excel 文件。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不會。所有讀取、匯總和修正操作均在記憶體中完成，只有點擊「匯出 XLSX」後才會產生新的 Excel 檔案。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No. All reading, merging, and correction operations happen in memory. A new Excel file is created only when you click Export XLSX."
+          }
+        }
+      }
+    },
+    "帮助_常见问题_问题3": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "支持哪些 Excel 格式？"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "支援哪些 Excel 格式？"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Which Excel formats are supported?"
+          }
+        }
+      }
+    },
+    "帮助_常见问题_答案3": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "目前支持 .xlsx 和 .xls 格式。建议导入前确保文件未被密码保护，且各文件表头一致。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "目前支援 .xlsx 和 .xls 格式。建議匯入前確保檔案未被密碼保護，且各檔案表頭一致。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The app currently supports .xlsx and .xls files. Make sure files are not password-protected and share consistent headers before importing."
+          }
+        }
+      }
+    },
+    "帮助_常见问题_问题4": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "如何撤销误操作？"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "如何撤銷誤操作？"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "How do I undo a mistake?"
+          }
+        }
+      }
+    },
+    "帮助_常见问题_答案4": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "对于单元格修正，可以点击工具栏“撤销上一步”按钮，或按 Command+Z。如果要清除当前批次的所有修正，可以点击“清除本批次调整”。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "對於儲存格修正，可以點擊工具列「撤銷上一步」按鈕，或按 Command+Z。如果要清除目前批次的所有修正，可以點擊「清除本批次調整」。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "For cell corrections, click Undo in the toolbar or press Command+Z. To clear all corrections for the current batch, click Clear Batch Corrections."
+          }
+        }
+      }
+    },
+    "帮助_联系我们": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "联系我们"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "聯絡我們"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Contact Us"
+          }
+        }
+      }
+    },
+    "帮助_联系我们_介绍": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "如果在使用过程中遇到问题，或有产品建议，欢迎通过以下方式联系我们。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "如果在使用過程中遇到問題，或有產品建議，歡迎透過以下方式聯絡我們。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "If you run into issues or have product feedback, feel free to reach out."
+          }
+        }
+      }
+    },
+    "帮助_联系我们_邮箱标签": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "邮箱"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "電郵"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Email"
+          }
+        }
+      }
+    },
+    "帮助_联系我们_邮箱值": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "831261@qq.com"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "831261@qq.com"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "831261@qq.com"
+          }
+        }
+      }
+    },
+    "帮助_联系我们_网站标签": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "网站"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "網站"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Website"
+          }
+        }
+      }
+    },
+    "帮助_联系我们_网站值": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "z-pulse.cn"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "z-pulse.cn"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "z-pulse.cn"
+          }
+        }
+      }
+    },
+    "帮助_联系我们_版权": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "© 2026 王臻. 保留所有权利。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "© 2026 王臻. 保留所有權利。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "© 2026 Wang Zhen. All rights reserved."
+          }
+        }
+      }
+    },
+    "帮助_搜索占位符": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "搜索帮助..."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "搜尋說明..."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search help..."
+          }
+        }
+      }
+    },
+    "帮助_选择章节": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在左侧选择一个章节开始阅读"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在左側選擇一個章節開始閱讀"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select a topic on the left to start reading"
+          }
+        }
+      }
+    },
+    "帮助_章节副标题": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "表表归一帮助文档"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "表表歸一說明文件"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "xlsOne Help Documentation"
+          }
+        }
+      }
+    },
+    "当前调整记忆": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "当前修正规则"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "目前修正規則"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Current Correction Rules"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "No isomorphic workspace available for binding adjustment memory."
+            "value": "現在の調整メモリ"
+          }
+        }
+      }
+    },
+    "无法加载校验报告": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法加载校验报告"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法載入校驗報告"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unable to Load Validation Report"
+          }
+        }
+      }
+    },
+    "激活 表表归一": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "激活 表表归一"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "啟用 表表歸一"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Activate xlsOne"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "xlsOne を有効化"
+          }
+        }
+      }
+    },
+    "表表归一": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "表表归一"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "表表歸一"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "xlsOne"
           }
         }
       }
@@ -3516,19 +5551,19 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "清除当前调整记忆"
+            "value": "清除当前修正规则"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "清除目前調整記憶"
+            "value": "清除目前修正規則"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Clear Current Adjustment Memory"
+            "value": "Clear Current Rules"
           }
         },
         "ja": {
@@ -3539,669 +5574,383 @@
         }
       }
     },
-    "删除当前调整记忆后，当前同构工作区将恢复自动判断。确定清除？": {
+    "当前同构结构暂无调整记忆": {
       "extractionState": "manual",
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "删除当前调整记忆后，当前同构工作区将恢复自动判断。确定清除？"
+            "value": "当前同构结构暂无修正规则"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "刪除目前調整記憶後，目前同構工作區將恢復自動判斷。確定清除？"
+            "value": "目前同構結構暫無修正規則"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "After deleting the current adjustment memory, the isomorphic workspace will revert to automatic judgment. Confirm clear?"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "After deleting the current adjustment memory, the isomorphic workspace will revert to automatic judgment. Confirm clear?"
+            "value": "No correction rules for current structure."
           }
         }
       }
     },
-    "App Store 已授权": {
+    "在汇总结果中修正单元格后，系统会为当前同构结构记住这些调整；也可以导入同构结构的调整记忆。": {
       "extractionState": "manual",
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "App Store 已授权"
+            "value": "在汇总结果中修正单元格后，系统会为当前同构结构记住这些修正；也可以导入同构结构的修正规则。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "App Store 已授權"
+            "value": "在匯總結果中修正儲存格後，系統會為目前同構結構記住這些修正；也可以匯入同構結構的修正規則。"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "App Store Licensed"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "App Store 認証済み"
+            "value": "After correcting cells in the merge result, the system remembers these corrections for the current structure; you can also import correction rules for the same structure."
           }
         }
       }
     },
-    "激活/导入许可证...": {
+    "修正规则": {
       "extractionState": "manual",
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "激活/导入许可证..."
+            "value": "修正规则"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "啟動/匯入授權..."
+            "value": "修正規則"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Activate/Import License..."
+            "value": "Correction Rules"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ライセンスを有効化/インポート..."
+            "value": "調整メモリ"
           }
         }
       }
     },
-    "已选 %lld 个文件": {
+    "当前修正规则": {
       "extractionState": "manual",
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "已选 %lld 个文件"
+            "value": "当前修正规则"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "已選 %lld 個檔案"
+            "value": "目前修正規則"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld files selected"
+            "value": "Current Correction Rules"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld files selected"
+            "value": "現在の調整メモリ"
           }
         }
       }
     },
-    "系统已忽略尾部空白行列后重试校验，但当前仍没有任何 sheet 能在所有文件间对齐。": {
+    "查看当前修正规则": {
       "extractionState": "manual",
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "系统已忽略尾部空白行列后重试校验，但当前仍没有任何 sheet 能在所有文件间对齐。"
+            "value": "查看当前修正规则"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "系統已忽略尾部空白行列後重試校驗，但目前仍沒有任何 sheet 能在所有檔案間對齊。"
+            "value": "檢視目前修正規則"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The system ignored trailing blank rows/columns and retried validation, but no sheet can be aligned across all files."
+            "value": "View Current Rules"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "末尾の空白行/列を除外して再検証しましたが、すべてのファイル間で整列できるシートがありません。"
+            "value": "現在の調整メモリを表示"
           }
         }
       }
     },
-    "文件参与情况": {
+    "保存当前修正规则": {
       "extractionState": "manual",
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "文件参与情况"
+            "value": "保存当前修正规则"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "檔案參與情況"
+            "value": "儲存目前修正規則"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "File Participation"
+            "value": "Save Current Rules"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ファイル参加状況"
+            "value": "現在の調整メモリを保存"
           }
         }
       }
     },
-    "不参与合并": {
+    "清除当前修正规则": {
       "extractionState": "manual",
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "不参与合并"
+            "value": "清除当前修正规则"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "不參與合併"
+            "value": "清除目前修正規則"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Excluded"
+            "value": "Clear Current Rules"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Excluded"
+            "value": "Clear Current Adjustment Memory"
           }
         }
       }
     },
-    "已选 %lld 个": {
+    "当前没有可保存修正规则的同构工作区。": {
       "extractionState": "manual",
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "已选 %lld 个"
+            "value": "当前没有可保存修正规则的同构工作区。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "已選 %lld 個"
+            "value": "当前没有可保存修正规则的同构工作区。"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld selected"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld selected"
+            "value": "当前没有可保存修正规则的同构工作区。"
           }
         }
       }
     },
-    "未参与本次汇总": {
+    "当前没有可绑定修正规则的同构工作区。": {
       "extractionState": "manual",
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "未参与本次汇总"
+            "value": "当前没有可绑定修正规则的同构工作区。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "未參與本次匯總"
+            "value": "当前没有可绑定修正规则的同构工作区。"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Not included in this merge"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Not included in this merge"
+            "value": "当前没有可绑定修正规则的同构工作区。"
           }
         }
       }
     },
-    "统一该 sheet 的有效行列范围后，可重新纳入合并。": {
+    "删除当前修正规则后，当前同构工作区将恢复自动判断。确定清除？": {
       "extractionState": "manual",
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "统一该 sheet 的有效行列范围后，可重新纳入合并。"
+            "value": "删除当前修正规则后，当前同构工作区将恢复自动判断。确定清除？"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "統一該 sheet 的有效行列範圍後，可重新納入合併。"
+            "value": "删除当前修正规则后，当前同构工作区将恢复自动判断。确定清除？"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "After normalizing the effective row/column range for this sheet, it can be re-included in the merge."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "After normalizing the effective row/column range for this sheet, it can be re-included in the merge."
+            "value": "删除当前修正规则后，当前同构工作区将恢复自动判断。确定清除？"
           }
         }
       }
     },
-    "当前按%@显示": {
+    "导出修正规则失败: %@": {
       "extractionState": "manual",
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "当前按%@显示"
+            "value": "导出修正规则失败: %@"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "目前按%@顯示"
+            "value": "导出修正规则失败: %@"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Currently displayed as %@"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Currently displayed as %@"
+            "value": "导出修正规则失败: %@"
           }
         }
       }
     },
-    "按 1 或 2": {
+    "清除修正规则失败: %@": {
       "extractionState": "manual",
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "按 1 或 2"
+            "value": "清除修正规则失败: %@"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "按 1 或 2"
+            "value": "清除修正规则失败: %@"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Press 1 or 2"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Press 1 or 2"
+            "value": "清除修正规则失败: %@"
           }
         }
       }
     },
-    "当前平台不支持导入授权文件": {
+    "导入修正规则失败: %@": {
       "extractionState": "manual",
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "当前平台不支持导入授权文件"
+            "value": "导入修正规则失败: %@"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "目前平台不支援匯入授權檔案"
+            "value": "导入修正规则失败: %@"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Importing license files is not supported on this platform."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Importing license files is not supported on this platform."
+            "value": "导入修正规则失败: %@"
           }
         }
       }
     },
-    "您的许可证已过期，请续费获取新的激活码": {
+    "记住修正规则失败: %@": {
       "extractionState": "manual",
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "您的许可证已过期，请续费获取新的激活码"
+            "value": "记住修正规则失败: %@"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "您的授權已過期，請續費獲取新的啟動碼"
+            "value": "记住修正规则失败: %@"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Your license has expired. Please renew to get a new activation code."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ライセンスの有効期限が切れました。新しいコードを取得してください"
+            "value": "记住修正规则失败: %@"
           }
         }
       }
     },
-    "输入激活码以解锁全部功能": {
+    "%@ · %lld 个文件": {
       "extractionState": "manual",
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "输入激活码以解锁全部功能"
+            "value": "%@ · %lld 个文件"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "輸入啟動碼以解鎖全部功能"
+            "value": "%@ · %lld 個檔案"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Enter activation code to unlock all features"
+            "value": "%@ · %lld files"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "アクティベーションコードを入力して全機能を解除"
-          }
-        }
-      }
-    },
-    "激活码": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "激活码"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "啟動碼"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Activation Code"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "アクティベーションコード"
-          }
-        }
-      }
-    },
-    "离线激活": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "离线激活"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "離線啟動"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Offline Activation"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "オフライン有効化"
-          }
-        }
-      }
-    },
-    "离线激活方式：": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "离线激活方式："
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "離線啟動方式："
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Offline Activation Steps:"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "オフライン有効化方法："
-          }
-        }
-      }
-    },
-    "1. 在联网电脑上访问 z-pulse.cn/offline": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "1. 在联网电脑上访问 z-pulse.cn/offline"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "1. 在聯網電腦上訪問 z-pulse.cn/offline"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "1. Visit z-pulse.cn/offline on an internet-connected computer"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "1. ネット接続PCで z-pulse.cn/offline にアクセス"
-          }
-        }
-      }
-    },
-    "2. 输入购买邮箱和本机设备码": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "2. 输入购买邮箱和本机设备码"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "2. 輸入購買郵箱和本機設備碼"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "2. Enter your purchase email and device code"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "2. 購入メールアドレスとデバイスコードを入力"
-          }
-        }
-      }
-    },
-    "3. 下载授权文件并导入本程序": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "3. 下载授权文件并导入本程序"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "3. 下載授權檔案並匯入本程式"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "3. Download the license file and import it into this program"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "3. ライセンスファイルをダウンロードしてインポート"
-          }
-        }
-      }
-    },
-    "已跳过的工作表": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已跳过的工作表"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已跳過的工作表"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Skipped Sheets"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Skipped Sheets"
-          }
-        }
-      }
-    },
-    "导入的调整记忆不属于当前同构结构。": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "导入的调整记忆不属于当前同构结构。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "匯入的調整記憶不屬於目前同構結構。"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The imported adjustment memory does not belong to the current isomorphic structure."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The imported adjustment memory does not belong to the current isomorphic structure."
+            "value": "%@ · %lld files"
           }
         }
       }
@@ -4264,6 +6013,92 @@
         }
       }
     },
+    "App Store 已授权": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "App Store 已授权"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "App Store 已授權"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "App Store Licensed"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "App Store 認証済み"
+          }
+        }
+      }
+    },
+    "App Store 版本请通过 Mac App Store 获取更新。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "App Store 版本请通过 Mac App Store 获取更新。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "App Store 版本請通過 Mac App Store 獲取更新。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The App Store version gets updates through the Mac App Store."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The App Store version gets updates through the Mac App Store."
+          }
+        }
+      }
+    },
+    "language_menu": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Language"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "语言"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "語言"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "言語"
+          }
+        }
+      }
+    },
     "主结构：": {
       "extractionState": "manual",
       "localizations": {
@@ -4289,552 +6124,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Main structure: "
-          }
-        }
-      }
-    },
-    "%@ · %lld 个文件": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ · %lld 个文件"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ · %lld 個檔案"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ · %lld files"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ · %lld files"
-          }
-        }
-      }
-    },
-    "验证中...": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "验证中..."
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "驗證中..."
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Verifying..."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "検証中..."
-          }
-        }
-      }
-    },
-    "激活": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "激活"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "啟動"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Activate"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "有効化"
-          }
-        }
-      }
-    },
-    "免费试用 14 天": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "免费试用 14 天"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "免費試用 14 天"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Free 14-Day Trial"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "14日間無料トライアル"
-          }
-        }
-      }
-    },
-    "购买激活码 →": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "购买激活码 →"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "購買啟動碼 →"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Purchase License →"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ライセンスを購入 →"
-          }
-        }
-      }
-    },
-    "导入授权文件...": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "导入授权文件..."
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "匯入授權檔案..."
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Import License File..."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ライセンスファイルをインポート..."
-          }
-        }
-      }
-    },
-    "授权文件已导入：%@": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "授权文件已导入：%@"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "授權檔案已匯入：%@"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "License file imported: %@"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "License file imported: %@"
-          }
-        }
-      }
-    },
-    "未激活": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "未激活"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "未啟動"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Not Activated"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Not Activated"
-          }
-        }
-      }
-    },
-    "已过期": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已过期"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已過期"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Expired"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Expired"
-          }
-        }
-      }
-    },
-    "离线模式": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "离线模式"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "離線模式"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Offline Mode"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Offline Mode"
-          }
-        }
-      }
-    },
-    "试用 %lld 天": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "试用 %lld 天"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "試用 %lld 天"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Trial %lld days"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Trial %lld days"
-          }
-        }
-      }
-    },
-    "金额": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "金额"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "金額"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Amount"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Amount"
-          }
-        }
-      }
-    },
-    "restart_title": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "需要重启"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "需要重啟"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Restart Required"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "言語変更"
-          }
-        }
-      }
-    },
-    "restart_message": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Language changed. Restart to apply."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "语言已更改，重启后生效。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "語言已更改，重新啟動後生效。"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "言語が変更されました。再起動後に適用されます。"
-          }
-        }
-      }
-    },
-    "restart_later": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "稍后重启"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "稍後重啟"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Restart Later"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Restart Later"
-          }
-        }
-      }
-    },
-    "激活 表表归一": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Activate xlsOne"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "激活 表表归一"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "啟用 表表歸一"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "xlsOne を有効化"
-          }
-        }
-      }
-    },
-    "当前调整记忆": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Current Adjustment Memory"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "当前调整记忆"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "目前調整記憶"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "現在の調整メモリ"
-          }
-        }
-      }
-    },
-    "最小化": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Minimize"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "最小化"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "最小化"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "最小化"
-          }
-        }
-      }
-    },
-    "缩放": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zoom"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "缩放"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "縮放"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ズーム"
           }
         }
       }
@@ -4867,30 +6156,324 @@
         }
       }
     },
-    "language_menu": {
+    "导入的修正规则不属于当前同构结构。": {
+      "extractionState": "manual",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Language"
-          }
-        },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "语言"
+            "value": "导入的修正规则不属于当前同构结构。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "語言"
+            "value": "导入的修正规则不属于当前同构结构。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导入的修正规则不属于当前同构结构。"
+          }
+        }
+      }
+    },
+    "已按类型调整显示为\\(override.cellType.displayName)": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已按类型调整显示为\\(override.cellType.displayName)"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已按类型调整显示为\\(override.cellType.displayName)"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已按类型调整显示为\\(override.cellType.displayName)"
+          }
+        }
+      }
+    },
+    "已选 %lld 个": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已选 %lld 个"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已選 %lld 個"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld selected"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "言語"
+            "value": "%lld selected"
+          }
+        }
+      }
+    },
+    "当前按%@显示": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "当前按%@显示"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "目前按%@顯示"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Currently displayed as %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Currently displayed as %@"
+          }
+        }
+      }
+    },
+    "按 1 或 2": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按 1 或 2"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按 1 或 2"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Press 1 or 2"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Press 1 or 2"
+          }
+        }
+      }
+    },
+    "最小化": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Minimize"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最小化"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最小化"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最小化"
+          }
+        }
+      }
+    },
+    "有效尺寸": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有效尺寸"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有效尺寸"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有效尺寸"
+          }
+        }
+      }
+    },
+    "未参与本次汇总": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未参与本次汇总"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未參與本次匯總"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not included in this merge"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not included in this merge"
+          }
+        }
+      }
+    },
+    "激活/导入许可证...": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "激活/导入许可证..."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "啟動/匯入授權..."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Activate/Import License..."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ライセンスを有効化/インポート..."
+          }
+        }
+      }
+    },
+    "统一该 sheet 的有效行列范围后，可重新纳入合并。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "统一该 sheet 的有效行列范围后，可重新纳入合并。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "統一該 sheet 的有效行列範圍後，可重新納入合併。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "After normalizing the effective row/column range for this sheet, it can be re-included in the merge."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "After normalizing the effective row/column range for this sheet, it can be re-included in the merge."
+          }
+        }
+      }
+    },
+    "缩放": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zoom"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "缩放"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "縮放"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ズーム"
+          }
+        }
+      }
+    },
+    "识别到 %lld 个结构分组": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "识别到 %lld 个结构分组"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "识别到 %lld 个结构分组"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "识别到 %lld 个结构分组"
           }
         }
       }
