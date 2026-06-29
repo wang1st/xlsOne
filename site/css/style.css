@@ -298,10 +298,21 @@ a:hover {
     color: #1d1d1f;
     text-decoration: none;
 }
+.footer .icp {
+    margin-top: 14px;
+}
+.footer .icp a {
+    font-size: 0.72rem;
+    color: #aeaeb2;
+    margin: 0;
+}
+.footer .icp a:hover {
+    color: #1d1d1f;
+}
 .footer .copyright {
     color: #aeaeb2;
-    font-size: 0.75rem;
-    margin-top: 14px;
+    font-size: 0.72rem;
+    margin-top: 4px;
 }
 
 /* Responsive */
