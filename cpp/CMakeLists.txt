@@ -92,17 +92,33 @@ if(UNIX AND NOT APPLE)
         xlsone_bundle_qt_lib("libQt5DBus.so")
         xlsone_bundle_qt_lib("libQt5XcbQpa.so")
 
-        # Bundle ICU (required by QtCore; version must match the bundled Qt)
-        set(_icu_dir "/usr/lib/${CMAKE_LIBRARY_ARCHITECTURE}")
-        file(GLOB _icu_files
-            "${_icu_dir}/libicudata.so.[0-9]*"
-            "${_icu_dir}/libicui18n.so.[0-9]*"
-            "${_icu_dir}/libicuuc.so.[0-9]*"
+        # Bundle ICU (required by QtCore; version must match the bundled Qt).
+        # The bundled Qt5 from deepin-shared-libs needs ICU 63, while the build
+        # host may only ship ICU 66. Prefer the ICU libraries shipped alongside
+        # the Qt bundle (e.g. deepin-qt5.15/icu63/...), fall back to the Qt dir
+        # itself, and finally to the system ICU dir.
+        set(_icu_search_dirs
+            "${PROJECT_SOURCE_DIR}/deepin-qt5.15/icu63/usr/lib/${CMAKE_LIBRARY_ARCHITECTURE}"
+            "${XLSONE_QT_BUNDLE_DIR}"
+            "/usr/lib/${CMAKE_LIBRARY_ARCHITECTURE}"
         )
-        if(_icu_files)
-            install(FILES ${_icu_files} DESTINATION ${XLSONE_BUNDLE_LIB_DEST})
-        else()
-            message(WARNING "ICU libraries not found under ${_icu_dir} — target may need system ICU")
+        set(_icu_found OFF)
+        foreach(_dir ${_icu_search_dirs})
+            if(NOT _icu_found)
+                file(GLOB _icu_files
+                    "${_dir}/libicudata.so.[0-9]*"
+                    "${_dir}/libicui18n.so.[0-9]*"
+                    "${_dir}/libicuuc.so.[0-9]*"
+                )
+                if(_icu_files)
+                    install(FILES ${_icu_files} DESTINATION ${XLSONE_BUNDLE_LIB_DEST})
+                    set(_icu_found ON)
+                    message(STATUS "Bundling ICU libraries from ${_dir}")
+                endif()
+            endif()
+        endforeach()
+        if(NOT _icu_found)
+            message(WARNING "ICU libraries not found — target may need system ICU")
         endif()
 
         # Bundle libdouble-conversion (required by Qt5Core for string↔number conversion)
@@ -135,6 +151,21 @@ if(UNIX AND NOT APPLE)
         endforeach()
         if(NOT _pcre_found)
             message(WARNING "libpcre2-16 not found — Qt may require it for regex support")
+        endif()
+
+        # Bundle libzstd (required by Qt5Core in some builds)
+        set(_zstd_found OFF)
+        foreach(_dir ${_icu_search_dirs})
+            if(NOT _zstd_found)
+                file(GLOB _zstd_files "${_dir}/libzstd.so.*")
+                if(_zstd_files)
+                    install(FILES ${_zstd_files} DESTINATION ${XLSONE_BUNDLE_LIB_DEST})
+                    set(_zstd_found ON)
+                endif()
+            endif()
+        endforeach()
+        if(NOT _zstd_found)
+            message(WARNING "libzstd not found — Qt may require it")
         endif()
 
         # Bundle Qt platform, image, and input-method plugins
