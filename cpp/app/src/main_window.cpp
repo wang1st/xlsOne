@@ -1,6 +1,7 @@
 #include "main_window.hpp"
 
 #include "dialog_utils.hpp"
+#include "help_dialog.hpp"
 #include "license_activation_dialog.hpp"
 #include "merged_table_delegate.hpp"
 #include "schema_manager_dialog.hpp"
@@ -28,10 +29,10 @@
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QMimeData>
+#include <QProgressBar>
 #include <QRegularExpression>
-#include <QRegularExpression>
-#include <QSet>
 #include <QSettings>
+#include <QSet>
 #include <QShowEvent>
 #include <QSplitter>
 #include <QStatusBar>
@@ -350,9 +351,9 @@ void MainWindow::buildUi()
     reloadAction->setShortcut(QKeySequence::Refresh);
     connect(reloadAction, &QAction::triggered, this, &MainWindow::reloadFiles);
 
-    auto* newAction = new QAction(tr("新建批次"), this);
-    newAction->setShortcut(QKeySequence::New);
-    connect(newAction, &QAction::triggered, this, &MainWindow::clearWorkspace);
+    auto* clearAction = new QAction(tr("清空工作区"), this);
+    clearAction->setShortcut(QKeySequence::New);
+    connect(clearAction, &QAction::triggered, this, &MainWindow::clearWorkspace);
 
     auto* exportAction = new QAction(tr("导出 XLSX..."), this);
     exportAction->setShortcut(QKeySequence::Save);
@@ -365,11 +366,11 @@ void MainWindow::buildUi()
     auto* clearOverridesAction = new QAction(tr("清除所有修正"), this);
     connect(clearOverridesAction, &QAction::triggered, this, &MainWindow::clearOverrides);
 
-    auto* manageSchemasAction = new QAction(tr("查看当前调整记忆"), this);
+    auto* manageSchemasAction = new QAction(tr("查看当前修正规则"), this);
     manageSchemasAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_Comma));
     connect(manageSchemasAction, &QAction::triggered, this, &MainWindow::manageSchemas);
 
-    auto* saveSchemaAction = new QAction(tr("保存当前调整记忆"), this);
+    auto* saveSchemaAction = new QAction(tr("保存当前修正规则"), this);
     connect(saveSchemaAction, &QAction::triggered, this, &MainWindow::saveCurrentSchema);
 
     auto* licenseActivateAction = new QAction(tr("激活/导入许可证..."), this);
@@ -377,51 +378,37 @@ void MainWindow::buildUi()
 
     // ---- 文件 ----
     auto* fileMenu = menuBar()->addMenu(tr("文件"));
-    fileMenu->addAction(newAction);
-    fileMenu->addSeparator();
     fileMenu->addAction(openAction);
     fileMenu->addAction(appendAction);
+    fileMenu->addAction(reloadAction);
+    fileMenu->addAction(clearAction);
     fileMenu->addSeparator();
     fileMenu->addAction(exportAction);
     fileMenu->addSeparator();
-    fileMenu->addAction(reloadAction);
+    auto* quitAction = new QAction(tr("退出"), this);
+    quitAction->setShortcut(QKeySequence::Quit);
+    connect(quitAction, &QAction::triggered, qApp, &QApplication::quit);
+    fileMenu->addAction(quitAction);
 
     // ---- 编辑 ----
     auto* editMenu = menuBar()->addMenu(tr("编辑"));
     editMenu->addAction(undoOverrideAction);
-    editMenu->addSeparator();
     editMenu->addAction(clearOverridesAction);
 
-    // ---- 视图 (placeholder, matches Swift empty View menu)
-    auto* viewMenu = menuBar()->addMenu(tr("显示"));
-    viewMenu->setEnabled(false);
-
-    // ---- 调整记忆 ----
-    auto* adjustmentMemoryMenu = menuBar()->addMenu(tr("调整记忆"));
+    // ---- 修正规则 ----
+    auto* adjustmentMemoryMenu = menuBar()->addMenu(tr("修正规则"));
     adjustmentMemoryMenu->addAction(manageSchemasAction);
     adjustmentMemoryMenu->addAction(saveSchemaAction);
 
-    // ---- 窗口 ----
-    auto* windowMenu = menuBar()->addMenu(tr("窗口"));
-    auto* minimizeAction = new QAction(tr("最小化"), this);
-    minimizeAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_M));
-    connect(minimizeAction, &QAction::triggered, this, [this] { showMinimized(); });
-    windowMenu->addAction(minimizeAction);
-    auto* zoomAction = new QAction(tr("缩放"), this);
-    connect(zoomAction, &QAction::triggered, this, [this] {
-        if (isMaximized()) showNormal(); else showMaximized();
-    });
-    windowMenu->addAction(zoomAction);
-    windowMenu->addSeparator();
-    auto* bringAllAction = new QAction(tr("前置全部窗口"), this);
-    connect(bringAllAction, &QAction::triggered, this, [this] { raise(); activateWindow(); });
-    windowMenu->addAction(bringAllAction);
-
     // ---- 许可 ----
+#if !defined(__aarch64__) && !defined(__arm64__)
     auto* licenseMenu = menuBar()->addMenu(tr("许可"));
     licenseMenu->addAction(licenseActivateAction);
+#else
+    delete licenseActivateAction;
+#endif
 
-    // ---- 语言 (save-only — restart required) ----
+    // ---- 语言 ----
     auto* languageMenu = menuBar()->addMenu(tr("语言"));
     languageGroup_ = new QActionGroup(this);
     languageGroup_->setExclusive(true);
@@ -442,9 +429,7 @@ void MainWindow::buildUi()
     auto* zhHantAction = makeLangAction(QStringLiteral("繁體中文"), QStringLiteral("zh_TW"));
     auto* jaAction = makeLangAction(QStringLiteral("日本語"), QStringLiteral("ja"));
 
-    // Check the current language
     if (currentLang.isEmpty()) {
-        // System default — check the first action
         languageGroup_->actions().first()->setChecked(true);
     } else if (currentLang == QStringLiteral("en")) {
         enAction->setChecked(true);
@@ -456,31 +441,12 @@ void MainWindow::buildUi()
         jaAction->setChecked(true);
     }
 
-    auto* helpAction = new QAction(tr("使用帮助"), this);
+    auto* helpAction = new QAction(tr("快速参考指南"), this);
+    helpAction->setShortcut(QKeySequence(Qt::Key_F1));
     connect(helpAction, &QAction::triggered, this, [this] {
-        xlsone::ui::showInformation(this, tr("使用帮助"),
-            tr("表表归一  ·  多张同格式 Excel 报表一键汇总\n\n"
-               "1. 导入文件\n"
-               "   拖拽 .xlsx 或 .xls 文件到窗口，或点击 [文件] → [导入文件]\n\n"
-               "2. 切换工作表\n"
-               "   点击顶部的 Sheet 标签可切换要查看的报表页\n\n"
-               "3. 查看汇总\n"
-               "   - 金额、数量等能相加的数自动合计\n"
-               "   - 名称、编号等信息保留最常见的共同前缀\n"
-               "   - 结构不一致的工作表会跳过，并提示原因\n\n"
-               "4. 穿透查阅\n"
-               "   点击单元格可查看各文件原始值\n\n"
-               "5. 导出结果\n"
-               "   点击 [导出 XLSX] 保存汇总结果\n\n"
-               "6. 单元格修正\n"
-               "   在右侧面板可将单元格手动指定为标签或求和\n\n"
-               "快捷键:\n"
-               "   Ctrl+O  导入文件\n"
-               "   Ctrl+Shift+O  追加文件\n"
-               "   Ctrl+S  导出\n"
-               "   Ctrl+R  刷新\n"
-               "   Ctrl+N  清空\n"
-               "   Ctrl+Z  撤销修正"));
+        auto* dialog = new HelpDialog(this);
+        dialog->setAttribute(Qt::WA_DeleteOnClose);
+        xlsone::ui::showDialogCentered(dialog, this);
     });
 
     auto* aboutAction = new QAction(tr("关于 表表归一"), this);
@@ -495,10 +461,7 @@ void MainWindow::buildUi()
                "<p>把多张格式一致的 Excel 表合成一份汇总表。"
                "金额、数量等能相加的数会自动合计；"
                "名称、编号等不该相加的信息，会保留各文件里最常见的共同前缀。</p>"
-               "<p><b>作者：</b>王臻</p>"
-               "<p><b>技术：</b>C++  /  Qt</p>"
-               "<p><b>邮箱：</b>831261@qq.com</p>"
-                "<p>&copy; 2026 王臻. 保留所有权利.</p>").arg(ver));
+               "<p><b>联系方式：</b>831261@qq.com</p>").arg(ver));
     });
 
     auto* checkUpdateAction = new QAction(tr("检查更新"), this);
@@ -516,7 +479,7 @@ void MainWindow::buildUi()
     rootLayout->setContentsMargins(0, 0, 0, 0);
     rootLayout->setSpacing(0);
 
-    chrome_ = new WorkspaceChrome(root);
+    chrome_ = new WorkspaceChrome(licenseManager_, root);
     rootLayout->addWidget(chrome_);
     connect(chrome_, &WorkspaceChrome::appendRequested, this, &MainWindow::appendFiles);
     connect(chrome_, &WorkspaceChrome::reloadRequested, this, &MainWindow::reloadFiles);
@@ -578,8 +541,8 @@ void MainWindow::buildUi()
     auto* correctionLayout = new QHBoxLayout(correctionBar_);
     correctionLayout->setContentsMargins(14, 8, 14, 8);
     correctionLabel_ = new QLabel(correctionBar_);
-    undoButton_ = new QPushButton(tr("撤销上一步"), correctionBar_);
-    clearOverridesButton_ = new QPushButton(tr("清除调整"), correctionBar_);
+    undoButton_ = new QPushButton(tr("撤销修正"), correctionBar_);
+    clearOverridesButton_ = new QPushButton(tr("清除所有修正"), correctionBar_);
     correctionLayout->addWidget(correctionLabel_);
     correctionLayout->addStretch(1);
     correctionLayout->addWidget(undoButton_);
@@ -608,8 +571,17 @@ void MainWindow::buildUi()
     connect(inspector_, &InspectorPanel::markSumRequested, this, &MainWindow::markSelectedAsSum);
     connect(inspector_, &InspectorPanel::restoreAutomaticRequested, this, &MainWindow::restoreAutomaticDecisionForSelection);
 
-    statusLabel_ = new QLabel(tr("拖入 Excel 文件，或点击打开开始。"), this);
+    statusLabel_ = new QLabel(tr("拖入 Excel 文件，开始智能汇总。"), this);
     statusBar()->addPermanentWidget(statusLabel_, 1);
+
+    statusProgress_ = new QProgressBar(this);
+    statusProgress_->setMaximumWidth(180);
+    statusProgress_->setMaximumHeight(14);
+    statusProgress_->setTextVisible(false);
+    statusProgress_->setRange(0, 100);
+    statusProgress_->setValue(0);
+    statusProgress_->hide();
+    statusBar()->addPermanentWidget(statusProgress_);
 
     updateChecker_ = new xlsone::UpdateChecker(this);
     connect(updateChecker_, &xlsone::UpdateChecker::updateAvailable, this,
@@ -752,6 +724,7 @@ void MainWindow::loadFiles(const QStringList& paths, bool append)
 
 void MainWindow::recomputeWorkspace()
 {
+    setProgress(5, tr("正在校验文件结构..."));
     validation_ = validator_.validate(parsedFiles_, parseFailures_);
     showValidationSummary();
     updateDiagnostics();
@@ -759,6 +732,7 @@ void MainWindow::recomputeWorkspace()
     baseResults_.clear();
     results_.clear();
     if (validation_.report.readiness != xlsone::MergeReadiness::Ready) {
+        clearProgress();
         tableModel_->setResult({});
         selectedSheetName_.clear();
         selectedSheetMergeable_ = true;
@@ -770,25 +744,38 @@ void MainWindow::recomputeWorkspace()
         return;
     }
 
-    for (const auto& sheetName : validation_.report.commonSheetNames) {
+    const int totalSheets = static_cast<int>(validation_.report.commonSheetNames.size());
+    for (int i = 0; i < totalSheets; ++i) {
+        const QString& sheetName = validation_.report.commonSheetNames[i];
+        const int progress = 20 + (60 * i / std::max(1, totalSheets));
+        setProgress(progress, tr("正在汇总“%1”... (%2/%3)")
+            .arg(sheetName)
+            .arg(i + 1)
+            .arg(totalSheets));
         baseResults_.push_back(merger_.merge(validation_.mergeableFiles, sheetName));
     }
 
+    setProgress(85, tr("正在应用修正规则..."));
     const auto match = xlsone::SchemaMatcher::match(
         xlsone::fingerprintFor(validation_.mergeableFiles, validation_.report.commonSheetNames),
         schemaRepository_.loadAll()
     );
     const auto exactSchema = match.exactSchema();
     syncWorkspaceSchemaBase(exactSchema);
+
+    setProgress(90, tr("正在生成最终结果..."));
+    rebuildResultsWithCurrentOverrides();
+
+    QString schemaMessage;
     if (exactSchema.has_value()) {
-        statusLabel_->setText(statusLabel_->text() + tr(" 已应用调整记忆：%1。").arg(exactSchema->name));
+        schemaMessage = tr(" 已应用修正规则：%1。").arg(exactSchema->name);
     } else if (match.kind == xlsone::SchemaMatchKind::Ambiguous) {
-        statusLabel_->setText(statusLabel_->text() + tr(" 检测到多组高置信调整记忆，未自动应用。"));
+        schemaMessage = tr(" 检测到多组高置信修正规则，未自动应用。");
     } else if (match.kind == xlsone::SchemaMatchKind::Similar) {
-        statusLabel_->setText(statusLabel_->text() + tr(" 发现相近调整记忆，未自动应用。"));
+        schemaMessage = tr(" 发现相近修正规则，未自动应用。");
     }
 
-    rebuildResultsWithCurrentOverrides();
+    clearProgress();
 
     QString nextSheet = selectedSheetName_;
     const auto resultIterator = std::find_if(results_.begin(), results_.end(), [&](const auto& result) {
@@ -802,6 +789,11 @@ void MainWindow::recomputeWorkspace()
     updateSheetStrip();
     updateCorrectionBar();
     updateChromeState();
+
+    if (!schemaMessage.isEmpty() && statusLabel_ != nullptr) {
+        statusLabel_->setText(statusLabel_->text() + schemaMessage);
+    }
+
     if (!selectedSheetName_.isEmpty()) {
         selectSheet(selectedSheetName_, true);
     } else if (!validation_.report.skippedSheetNames.isEmpty()) {
@@ -835,6 +827,26 @@ void MainWindow::updateChromeState()
     }
     if (contentStack_ != nullptr) {
         contentStack_->setCurrentWidget(hasWorkspace ? workspaceView_ : emptyView_);
+    }
+}
+
+void MainWindow::setProgress(int value, const QString& text)
+{
+    if (statusLabel_ != nullptr) {
+        statusLabel_->setText(text);
+    }
+    if (statusProgress_ != nullptr) {
+        statusProgress_->setValue(qBound(0, value, 100));
+        statusProgress_->show();
+    }
+    QApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
+}
+
+void MainWindow::clearProgress()
+{
+    if (statusProgress_ != nullptr) {
+        statusProgress_->setValue(0);
+        statusProgress_->hide();
     }
 }
 
@@ -989,7 +1001,7 @@ void MainWindow::rebuildResultsWithCurrentOverrides()
 {
     results_ = baseResults_;
     xlsone::MergeSchema transientSchema;
-    transientSchema.name = tr("当前手动调整记忆");
+    transientSchema.name = tr("当前手动修正规则");
     transientSchema.overrides = effectiveWorkspaceOverrides();
     for (auto& result : results_) {
         result = xlsone::applySchema(transientSchema, result);
@@ -1022,13 +1034,13 @@ QString MainWindow::suggestedAdjustmentMemoryName() const
     auto exportName = suggestedWorkbookName(exportNamingFilenames(validation_.report, selectedPaths_));
     if (exportName.endsWith(QStringLiteral("_汇总"))) {
         exportName.chop(QStringLiteral("_汇总").size());
-        return exportName + QStringLiteral("_调整记忆");
+        return exportName + QStringLiteral("_修正规则");
     }
     if (exportName.endsWith(QStringLiteral("汇总"))) {
         exportName.chop(QStringLiteral("汇总").size());
-        return exportName + QStringLiteral("调整记忆");
+        return exportName + QStringLiteral("修正规则");
     }
-    return exportName + QStringLiteral("_调整记忆");
+    return exportName + QStringLiteral("_修正规则");
 }
 
 void MainWindow::persistAdjustmentMemory()
@@ -1111,7 +1123,7 @@ void MainWindow::applyOverrideForSelection(xlsone::SchemaCellOverrideType type)
     const int resultIndex = currentResultIndex();
     const auto indexes = selectedCellIndexes();
     if (resultIndex < 0 || indexes.isEmpty()) {
-        xlsone::ui::showInformation(this, tr("调整记忆"), tr("请先选择一个或多个汇总单元格。"));
+        xlsone::ui::showInformation(this, tr("修正规则"), tr("请先选择一个或多个汇总单元格。"));
         return;
     }
 
@@ -1145,7 +1157,7 @@ void MainWindow::applyOverrideForSelection(xlsone::SchemaCellOverrideType type)
     const auto kind = type == xlsone::SchemaCellOverrideType::Label
         ? xlsone::CellKind::Label
         : type == xlsone::SchemaCellOverrideType::Sum ? xlsone::CellKind::Sum : xlsone::CellKind::Mixed;
-    statusLabel_->setText(tr("已将 %1 个单元格标记为 %2，可点击“保存当前调整记忆”复用。")
+    statusLabel_->setText(tr("已将 %1 个单元格标记为 %2，可点击“保存当前修正规则”复用。")
         .arg(indexes.size())
         .arg(xlsone::cellKindName(kind)));
     try {
@@ -1229,7 +1241,7 @@ void MainWindow::undoLastOverride()
     }
     updateSheetStrip();
     updateCorrectionBar();
-    statusLabel_->setText(tr("已撤销上一步修正。"));
+    statusLabel_->setText(tr("已撤销修正。"));
     try {
         persistAdjustmentMemory();
     } catch (const std::exception& error) {
@@ -1317,11 +1329,11 @@ void MainWindow::jumpAcrossAnomalies(int step)
 void MainWindow::saveCurrentSchema()
 {
     if (currentOverrides_.empty()) {
-        xlsone::ui::showInformation(this, tr("保存当前调整记忆"), tr("当前还没有手动修正的单元格。"));
+        xlsone::ui::showInformation(this, tr("保存当前修正规则"), tr("当前还没有手动修正的单元格。"));
         return;
     }
     if (validation_.mergeableFiles.empty() || validation_.report.commonSheetNames.isEmpty()) {
-        xlsone::ui::showInformation(this, tr("保存当前调整记忆"), tr("当前没有可用于生成调整记忆指纹的同构工作簿。"));
+        xlsone::ui::showInformation(this, tr("保存当前修正规则"), tr("当前没有可用于生成修正规则指纹的同构工作簿。"));
         return;
     }
 
@@ -1329,7 +1341,7 @@ void MainWindow::saveCurrentSchema()
     const auto now = QDateTime::currentDateTimeUtc();
     const auto effectiveOverrides = effectiveWorkspaceOverrides();
 
-    // 1. 如果已有活跃调整记忆，直接更新
+    // 1. 如果已有活跃修正规则，直接更新
     const auto schemaId = workspaceActiveSchemaId_.has_value()
         ? workspaceActiveSchemaId_ : workspaceBaseSchemaId_;
     if (schemaId.has_value()) {
@@ -1352,12 +1364,12 @@ void MainWindow::saveCurrentSchema()
             }
             updateSheetStrip();
             updateCorrectionBar();
-            statusLabel_->setText(tr("已更新调整记忆“%1”。").arg(schema->name));
+            statusLabel_->setText(tr("已更新修正规则“%1”。").arg(schema->name));
             return;
         }
     }
 
-    // 2. 按指纹查找已有调整记忆
+    // 2. 按指纹查找已有修正规则
     auto allSchemas = schemaRepository_.loadAll();
     const auto match = xlsone::SchemaMatcher::match(fingerprint, allSchemas);
     if (match.kind == xlsone::SchemaMatchKind::Exact) {
@@ -1378,11 +1390,11 @@ void MainWindow::saveCurrentSchema()
         }
         updateSheetStrip();
         updateCorrectionBar();
-        statusLabel_->setText(tr("已更新调整记忆“%1”。").arg(schema.name));
+        statusLabel_->setText(tr("已更新修正规则“%1”。").arg(schema.name));
         return;
     }
 
-    // 3. 自动生成名称，新建调整记忆
+    // 3. 自动生成名称，新建修正规则
     const QString name = suggestedAdjustmentMemoryName();
     xlsone::MergeSchema newSchema;
     newSchema.id = QUuid::createUuid();
@@ -1407,7 +1419,7 @@ void MainWindow::saveCurrentSchema()
     }
     updateSheetStrip();
     updateCorrectionBar();
-    statusLabel_->setText(tr("已保存调整记忆“%1”，包含 %2 个修正。").arg(newSchema.name).arg(static_cast<int>(newSchema.overrides.size())));
+    statusLabel_->setText(tr("已保存修正规则“%1”，包含 %2 个修正。").arg(newSchema.name).arg(static_cast<int>(newSchema.overrides.size())));
 }
 
 void MainWindow::manageSchemas()
@@ -1426,14 +1438,14 @@ void MainWindow::manageSchemas()
 
     if (auto imported = dialog.importedSchema(); imported.has_value()) {
         if (validation_.mergeableFiles.empty() || validation_.report.commonSheetNames.isEmpty()) {
-            xlsone::ui::showInformation(this, tr("导入调整记忆"), tr("当前没有可绑定调整记忆的同构工作簿。"));
+            xlsone::ui::showInformation(this, tr("导入修正规则"), tr("当前没有可绑定修正规则的同构工作簿。"));
             return;
         }
 
         const auto fingerprint = xlsone::fingerprintFor(validation_.mergeableFiles, validation_.report.commonSheetNames);
         const auto importMatch = xlsone::SchemaMatcher::match(fingerprint, {*imported});
         if (importMatch.kind != xlsone::SchemaMatchKind::Exact) {
-            xlsone::ui::showWarning(this, tr("导入调整记忆"), tr("导入的调整记忆不属于当前同构结构。"));
+            xlsone::ui::showWarning(this, tr("导入修正规则"), tr("导入的修正规则不属于当前同构结构。"));
             return;
         }
 
@@ -1449,7 +1461,7 @@ void MainWindow::manageSchemas()
         }
         updateSheetStrip();
         updateCorrectionBar();
-        statusLabel_->setText(tr("已导入调整记忆“%1”。").arg(imported->name));
+        statusLabel_->setText(tr("已导入修正规则“%1”。").arg(imported->name));
         return;
     }
 
@@ -1468,7 +1480,7 @@ void MainWindow::manageSchemas()
         }
         updateSheetStrip();
         updateCorrectionBar();
-        statusLabel_->setText(tr("已清除当前调整记忆。"));
+        statusLabel_->setText(tr("已清除当前修正规则。"));
     }
 }
 
@@ -1514,7 +1526,6 @@ void MainWindow::onLanguageSelected()
         settings.setValue(QStringLiteral("AppLanguage"), langCode);
     }
 
-    // Show restart prompt using the CURRENT UI language.
     xlsone::ui::showInformation(this,
         tr("语言已更改"),
         tr("语言已更改，重启后生效。"));

@@ -1,0 +1,316 @@
+/* ═══════════════════════════════════════════════════════════ */
+/*  表表归一 快速参考指南 — 工业级排版风格                       */
+/* ═══════════════════════════════════════════════════════════ */
+
+:root {
+    --c-bg: #ffffff;
+    --c-fg: #1f2328;
+    --c-fg-secondary: #59636e;
+    --c-fg-tertiary: #8b949e;
+    --c-border: #d0d7de;
+    --c-border-light: #e5e7eb;
+    --c-accent: #2563eb;
+    --c-accent-light: #eff6ff;
+    --c-tip-bg: #f0fdf4;
+    --c-tip-fg: #166534;
+    --c-tip-border: #86efac;
+    --c-note-bg: #fff7ed;
+    --c-note-fg: #9a3412;
+    --c-note-border: #fdba74;
+    --c-badge-ready-bg: #dbeafe;
+    --c-badge-ready-fg: #1e40af;
+    --c-badge-skipped-bg: #fee2e2;
+    --c-badge-skipped-fg: #991b1b;
+    --radius: 8px;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif;
+    font-size: 14px;
+    line-height: 1.72;
+    color: var(--c-fg);
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 40px 48px 64px;
+    background: var(--c-bg);
+    -webkit-font-smoothing: antialiased;
+}
+
+/* ── Header ── */
+.guide-header {
+    margin-bottom: 40px;
+    padding-bottom: 24px;
+    border-bottom: 2px solid var(--c-border);
+}
+
+.guide-header h1 {
+    font-size: 28px;
+    font-weight: 700;
+    margin: 0 0 8px;
+    color: #0d1117;
+    letter-spacing: -0.5px;
+}
+
+.guide-header .subtitle {
+    font-size: 15px;
+    color: var(--c-fg-secondary);
+    margin: 0 0 6px;
+}
+
+.guide-header .version {
+    font-size: 12px;
+    color: var(--c-fg-tertiary);
+    margin: 0;
+}
+
+/* ── Section spacing ── */
+section {
+    margin-bottom: 48px;
+}
+
+section:last-child {
+    margin-bottom: 0;
+}
+
+/* ── Headings ── */
+h2 {
+    font-size: 20px;
+    font-weight: 600;
+    margin: 0 0 16px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--c-border-light);
+    color: #0d1117;
+}
+
+h3 {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 24px 0 12px;
+    color: #24292f;
+}
+
+h4 {
+    font-size: 14px;
+    font-weight: 600;
+    margin: 0 0 8px;
+    color: #24292f;
+}
+
+/* ── Paragraphs and lists ── */
+p {
+    margin: 0 0 14px;
+    color: #333;
+}
+
+ul, ol {
+    padding-left: 24px;
+    margin: 0 0 16px;
+}
+
+li {
+    margin-bottom: 8px;
+}
+
+/* ── Step list ── */
+ol.steps > li {
+    margin-bottom: 16px;
+    padding-left: 4px;
+}
+
+ol.steps > li > strong {
+    display: block;
+    margin-bottom: 2px;
+    color: #0d1117;
+}
+
+.step-desc {
+    display: block;
+    color: var(--c-fg-secondary);
+    font-size: 13.5px;
+}
+
+/* ── Keyboard shortcuts ── */
+kbd {
+    font-family: "SF Mono", "Cascadia Code", "Fira Code", "Consolas", "Liberation Mono", monospace;
+    font-size: 12px;
+    background: #f3f4f6;
+    border: 1px solid var(--c-border-light);
+    border-radius: 4px;
+    padding: 1px 6px;
+    white-space: nowrap;
+    color: #24292f;
+}
+
+code {
+    font-family: "SF Mono", "Cascadia Code", "Fira Code", "Consolas", "Liberation Mono", monospace;
+    font-size: 13px;
+    background: #f3f4f6;
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: #be185d;
+}
+
+/* ── Callout boxes ── */
+.tip, .note {
+    padding: 14px 18px;
+    border-radius: var(--radius);
+    margin: 18px 0;
+    font-size: 13.5px;
+    line-height: 1.65;
+}
+
+.tip {
+    background: var(--c-tip-bg);
+    color: var(--c-tip-fg);
+    border-left: 4px solid var(--c-tip-border);
+}
+
+.tip strong, .tip::before {
+    color: var(--c-tip-fg);
+}
+
+.note {
+    background: var(--c-note-bg);
+    color: var(--c-note-fg);
+    border-left: 4px solid var(--c-note-border);
+}
+
+.note strong {
+    color: var(--c-note-fg);
+}
+
+/* ── Tables ── */
+.feature-table, .shortcut-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0 24px;
+    font-size: 13.5px;
+}
+
+.feature-table th,
+.shortcut-table th {
+    background: #f9fafb;
+    font-weight: 600;
+    text-align: left;
+    padding: 10px 14px;
+    border: 1px solid var(--c-border);
+    color: #24292f;
+}
+
+.feature-table td,
+.shortcut-table td {
+    padding: 10px 14px;
+    border: 1px solid var(--c-border-light);
+    vertical-align: top;
+}
+
+.feature-table tr:hover td,
+.shortcut-table tr:hover td {
+    background: #f8fafc;
+}
+
+/* ── Shortcut table ── */
+.shortcut-table td:first-child {
+    white-space: nowrap;
+    font-family: "SF Mono", "Cascadia Code", "Consolas", monospace;
+    font-size: 13px;
+}
+
+.shortcut-table td:last-child {
+    color: var(--c-fg-secondary);
+    font-size: 13px;
+}
+
+/* ── Badges ── */
+.badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.badge-ready {
+    background: var(--c-badge-ready-bg);
+    color: var(--c-badge-ready-fg);
+}
+
+.badge-skipped {
+    background: var(--c-badge-skipped-bg);
+    color: var(--c-badge-skipped-fg);
+}
+
+/* ── Card grid ── */
+.card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+    margin: 16px 0;
+}
+
+.card {
+    background: #f9fafb;
+    border: 1px solid var(--c-border-light);
+    border-radius: var(--radius);
+    padding: 18px;
+}
+
+.card h4 {
+    margin-bottom: 6px;
+}
+
+.card p {
+    margin: 0;
+    font-size: 13.5px;
+    color: var(--c-fg-secondary);
+    line-height: 1.6;
+}
+
+/* ── FAQ ── */
+.faq-item {
+    margin-bottom: 24px;
+}
+
+.faq-item h3 {
+    font-size: 14px;
+    font-weight: 600;
+    margin: 0 0 8px;
+    color: #0d1117;
+}
+
+.faq-item p, .faq-item ul {
+    margin-bottom: 8px;
+}
+
+/* ── Links ── */
+a {
+    color: var(--c-accent);
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+/* ── Strong emphasis ── */
+strong {
+    font-weight: 600;
+    color: #111827;
+}
+
+/* ── Responsive adjustments ── */
+@media (max-width: 640px) {
+    body {
+        padding: 24px 20px 40px;
+    }
+    .card-grid {
+        grid-template-columns: 1fr;
+    }
+    .guide-header h1 {
+        font-size: 22px;
+    }
+}

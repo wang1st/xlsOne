@@ -28,6 +28,7 @@ public:
     static int compareVersions(const QString& lhs, const QString& rhs);
     static UpdateInfo parseUpdateInfo(const QByteArray& json);
     static QString platformKey();
+    static QString architectureKey();
 
 signals:
     void updateAvailable(const UpdateInfo& info);

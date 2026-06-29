@@ -8,16 +8,34 @@ namespace xlsone::ui {
 struct Theme {
     bool isDark = false;
 
-    QColor bg0;
-    QColor bg1;
-    QColor bg2;
-    QColor bg3;
+    // Backgrounds (macOS-aligned semantics)
+    QColor bg0;          // window background
+    QColor bg1;          // surface / control background
+    QColor bg2;          // elevated surface / hover
+    QColor bg3;          // header / separator
+    QColor surface;      // card / input backgrounds (alias for bg1)
+    QColor elevatedSurface;
+
+    // Text
+    QColor text;         // primary label
+    QColor textMuted;    // secondary label
+    QColor textDisabled; // tertiary / disabled label
+
+    // Borders / Dividers
     QColor border;
     QColor borderSoft;
-    QColor text;
-    QColor textMuted;
+
+    // Accents
     QColor accent;
     QColor accentSoft;
+
+    // Status colors (semantic)
+    QColor success;
+    QColor warning;
+    QColor error;
+    QColor info;
+
+    // Legacy business semantics (kept for compatibility)
     QColor labelBg;
     QColor labelFg;
     QColor labelBorder;

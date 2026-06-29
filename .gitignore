@@ -22,3 +22,16 @@ output_*.html
 
 # Test files
 test_*.swift
+
+# Agent / tool artifacts
+.opencode/
+opencode.json
+
+# Linux packaging artifacts
+cpp/_CPack_Packages/
+cpp/deepin-qt5.15/
+*.deb
+
+# Deployment credentials
+ssh-passwd.txt
+sudo-passwd.txt

@@ -1,1 +1,11 @@
-version.json
+{
+  "latest_version": "1.0.2",
+  "changelog": "v1.0.2: 新增 amd64 架构支持，同步更新 arm64 / amd64 双版本 DEB 包",
+  "downloads": {
+    "macos": "https://z-pulse.cn/downloads/xlsOne-1.0.2-macos-arm64.dmg",
+    "windows": "https://z-pulse.cn/downloads/xlsOne-1.0.2-win64.exe",
+    "linux": "https://z-pulse.cn/downloads/xlsOne-1.0.2-linux-arm64.deb",
+    "linux_arm64": "https://z-pulse.cn/downloads/xlsOne-1.0.2-linux-arm64.deb",
+    "linux_amd64": "https://z-pulse.cn/downloads/xlsOne-1.0.2-linux-amd64.deb"
+  }
+}

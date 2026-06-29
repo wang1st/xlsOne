@@ -5,6 +5,7 @@
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QNetworkRequest>
+#include <QSysInfo>
 #include <QTimer>
 #include <QVersionNumber>
 
@@ -96,9 +97,35 @@ UpdateInfo UpdateChecker::parseUpdateInfo(const QByteArray& json)
     info.latestVersion = root.value(QStringLiteral("latest_version")).toString();
     info.changelog = root.value(QStringLiteral("changelog")).toString();
 
-    const QJsonObject downloads = root.value(QStringLiteral("downloads")).toObject();
+    const QJsonValue downloadsValue = root.value(QStringLiteral("downloads"));
     const QString key = platformKey();
-    info.downloadUrl = downloads.value(key).toString();
+
+    if (downloadsValue.isObject()) {
+        const QJsonObject downloads = downloadsValue.toObject();
+        const QJsonValue platformValue = downloads.value(key);
+
+        // New architecture-aware format:
+        //   "linux_architectures": { "arm64": "url", "amd64": "url" }
+        const QString archKey = architectureKey();
+        const QString archSuffix = QStringLiteral("_architectures");
+        const QString archKeyFull = key + archSuffix;
+        const QJsonValue archValue = downloads.value(archKeyFull);
+        if (archValue.isObject()) {
+            const QString url = archValue.toObject().value(archKey).toString();
+            if (!url.isEmpty()) {
+                info.downloadUrl = url;
+                return info;
+            }
+        }
+
+        if (platformValue.isString()) {
+            // Legacy format: "linux": "url"
+            info.downloadUrl = platformValue.toString();
+        } else if (platformValue.isObject()) {
+            // Architecture-aware format: "linux": { "arm64": "url", "amd64": "url" }
+            info.downloadUrl = platformValue.toObject().value(archKey).toString();
+        }
+    }
 
     return info;
 }
@@ -112,6 +139,18 @@ QString UpdateChecker::platformKey()
 #else
     return QStringLiteral("linux");
 #endif
+}
+
+QString UpdateChecker::architectureKey()
+{
+    const QString arch = QSysInfo::currentCpuArchitecture();
+    if (arch == QStringLiteral("arm64") || arch == QStringLiteral("aarch64")) {
+        return QStringLiteral("arm64");
+    }
+    if (arch == QStringLiteral("x86_64") || arch == QStringLiteral("amd64")) {
+        return QStringLiteral("amd64");
+    }
+    return arch;
 }
 
 } // namespace xlsone

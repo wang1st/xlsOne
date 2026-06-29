@@ -4,6 +4,7 @@
 
 #include <QDialog>
 #include <QString>
+#include <QVector>
 
 class QLabel;
 class QLineEdit;
@@ -22,16 +23,25 @@ private slots:
     void onImportLicenseClicked();
     void onTrialClicked();
     void onActivationFinished(const xlsone::ActivationResult& result);
+    void onKeyPartChanged(int index);
+    void onKeyPartBackspace(int index);
+    void toggleOfflineInfo();
 
 private:
     void buildUi();
+    void buildBrandPanel(QWidget* container);
+    void buildFormPanel(QWidget* container);
+    void updateActivateButton();
+    void setMessage(const QString& message, bool error);
+    void focusNextPart(int fromIndex);
+    void focusPreviousPart(int fromIndex);
 
     xlsone::LicenseManager* licenseManager_ = nullptr;
-    QLineEdit* keyInput_ = nullptr;
+    QVector<QLineEdit*> keyParts_;
     QPushButton* activateButton_ = nullptr;
     QPushButton* trialButton_ = nullptr;
     QPushButton* offlineToggle_ = nullptr;
     QWidget* offlineInfo_ = nullptr;
-    QLabel* errorLabel_ = nullptr;
+    QLabel* messageLabel_ = nullptr;
     bool showOffline_ = false;
 };

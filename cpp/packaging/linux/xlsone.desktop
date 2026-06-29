@@ -1,10 +1,13 @@
 [Desktop Entry]
+Version=1.0
 Type=Application
 Name=xlsOne
 GenericName=Excel Workbook Merger
 Comment=Merge homologous Excel workbooks
-Exec=xlsOneQt %F
+Exec=/usr/bin/xlsone.sh %F
 Icon=xlsone
 Terminal=false
 Categories=Office;Spreadsheet;
+StartupNotify=true
+StartupWMClass=xlsone
 MimeType=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;application/vnd.ms-excel;text/csv;text/tab-separated-values;
