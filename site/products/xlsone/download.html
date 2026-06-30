@@ -101,18 +101,10 @@ fetch('/api/version.json?v=0.3.0')
     .then(r => r.json())
     .then(data => {
         document.getElementById('ver').textContent = 'v' + data.latest_version;
-
-        // Prefer architecture-aware object format, fallback to flat keys
-        const linux = data.downloads.linux_architectures || data.downloads.linux;
-        if (typeof linux === 'string') {
-            document.getElementById('dl-linux-arm64').href = linux;
-            document.getElementById('dl-linux-amd64').style.display = 'none';
-        } else if (linux && typeof linux === 'object') {
-            document.getElementById('dl-linux-arm64').href =
-                linux.arm64 || data.downloads.linux_arm64 || '#';
-            document.getElementById('dl-linux-amd64').href =
-                linux.amd64 || data.downloads.linux_amd64 || '#';
-        }
+        if (data.downloads.linux_arm64)
+            document.getElementById('dl-linux-arm64').href = data.downloads.linux_arm64;
+        if (data.downloads.linux_amd64)
+            document.getElementById('dl-linux-amd64').href = data.downloads.linux_amd64;
     })
     .catch(() => {
         document.getElementById('ver').textContent = '加载失败';
