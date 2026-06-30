@@ -14,11 +14,9 @@ BUNDLEDIR="/usr/lib/xlsone"
 
 # Force XCB platform plugin to avoid Wayland loading issues on systems where
 # the bundled Qt5 wayland plugin is present but its system dependencies
-# (libwayland-client etc.) are missing or incompatible.
-# Users can still override this by setting QT_QPA_PLATFORM themselves.
-if [ -z "${QT_QPA_PLATFORM:-}" ]; then
-    export QT_QPA_PLATFORM=xcb
-fi
+# (libwayland-client etc.) are missing or incompatible. Some desktop
+# environments set QT_QPA_PLATFORM=wayland, which breaks this bundled Qt5.
+export QT_QPA_PLATFORM=xcb
 
 # Set plugin path: use bundled plugins if available, otherwise Qt will
 # auto-detect the system plugin directory (e.g. /usr/lib/.../qt5/plugins/).
