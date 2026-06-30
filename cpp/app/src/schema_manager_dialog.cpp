@@ -112,7 +112,7 @@ xlsone::MergeSchema importableSchemaFromJson(const QJsonObject& root)
     if (object.contains(QStringLiteral("cellOverrides"))) {
         return swiftSchemaFromJson(object);
     }
-    throw std::runtime_error("不支持的修正规则 JSON 格式");
+    throw std::runtime_error("Unsupported correction-rules JSON format");
 }
 
 } // namespace
@@ -215,7 +215,7 @@ void SchemaManagerDialog::importSchema()
     try {
         const auto document = QJsonDocument::fromJson(file.readAll());
         if (!document.isObject()) {
-            throw std::runtime_error("JSON 根节点不是对象");
+            throw std::runtime_error("JSON root is not an object");
         }
         auto schema = importableSchemaFromJson(document.object());
         schema.id = QUuid::createUuid();

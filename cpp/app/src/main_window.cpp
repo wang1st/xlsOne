@@ -13,6 +13,7 @@
 #include <QAction>
 #include <QActionGroup>
 #include <QApplication>
+#include <QCoreApplication>
 #include <QDateTime>
 #include <QDesktopServices>
 #include <QDragEnterEvent>
@@ -47,23 +48,23 @@ QString fileStatusName(xlsone::FileValidationStatus status)
 {
     switch (status) {
     case xlsone::FileValidationStatus::Included:
-        return QStringLiteral("参与");
+        return QObject::tr("参与");
     case xlsone::FileValidationStatus::Warning:
-        return QStringLiteral("警告");
+        return QObject::tr("警告");
     case xlsone::FileValidationStatus::Blocked:
-        return QStringLiteral("阻断");
+        return QObject::tr("阻断");
     }
-    return QStringLiteral("未知");
+    return QObject::tr("未知");
 }
 
 QString readinessName(xlsone::MergeReadiness readiness)
 {
-    return readiness == xlsone::MergeReadiness::Ready ? QStringLiteral("可合并") : QStringLiteral("阻断");
+    return readiness == xlsone::MergeReadiness::Ready ? QObject::tr("可合并") : QObject::tr("阻断");
 }
 
 QString severityName(xlsone::ValidationSeverity severity)
 {
-    return severity == xlsone::ValidationSeverity::Blocking ? QStringLiteral("阻断") : QStringLiteral("警告");
+    return severity == xlsone::ValidationSeverity::Blocking ? QObject::tr("阻断") : QObject::tr("警告");
 }
 
 bool sameOverrideCell(const xlsone::SchemaCellOverride& lhs, const xlsone::SchemaCellOverride& rhs)
@@ -263,7 +264,7 @@ QString suggestedWorkbookName(const QStringList& filenames)
     }
 
     if (stems.isEmpty()) {
-        return QStringLiteral("汇总结果");
+        return QCoreApplication::translate("MainWindow", "汇总结果");
     }
 
     QString baseName;
@@ -279,18 +280,19 @@ QString suggestedWorkbookName(const QStringList& filenames)
         } else if (prefix.size() >= 2) {
             baseName = prefix;
         } else {
-            baseName = QStringLiteral("汇总结果");
+            baseName = QCoreApplication::translate("MainWindow", "汇总结果");
         }
     }
 
     const auto sanitized = sanitizeSuggestedFileName(baseName);
     if (sanitized.isEmpty()) {
-        return QStringLiteral("汇总结果");
+        return QCoreApplication::translate("MainWindow", "汇总结果");
     }
-    if (sanitized.endsWith(QStringLiteral("汇总"))) {
+    const QString summarySuffix = QCoreApplication::translate("MainWindow", "汇总");
+    if (sanitized.endsWith(summarySuffix)) {
         return sanitized;
     }
-    return sanitized + QStringLiteral("_汇总");
+    return sanitized + QLatin1Char('_') + summarySuffix;
 }
 
 QStringList exportNamingFilenames(
@@ -1032,15 +1034,17 @@ void MainWindow::syncWorkspaceSchemaBase(const std::optional<xlsone::MergeSchema
 QString MainWindow::suggestedAdjustmentMemoryName() const
 {
     auto exportName = suggestedWorkbookName(exportNamingFilenames(validation_.report, selectedPaths_));
-    if (exportName.endsWith(QStringLiteral("_汇总"))) {
-        exportName.chop(QStringLiteral("_汇总").size());
-        return exportName + QStringLiteral("_修正规则");
+    const QString summarySuffix = tr("汇总");
+    const QString correctionSuffix = tr("修正规则");
+    if (exportName.endsWith(QLatin1Char('_') + summarySuffix)) {
+        exportName.chop((QLatin1Char('_') + summarySuffix).size());
+        return exportName + QLatin1Char('_') + correctionSuffix;
     }
-    if (exportName.endsWith(QStringLiteral("汇总"))) {
-        exportName.chop(QStringLiteral("汇总").size());
-        return exportName + QStringLiteral("修正规则");
+    if (exportName.endsWith(summarySuffix)) {
+        exportName.chop(summarySuffix.size());
+        return exportName + correctionSuffix;
     }
-    return exportName + QStringLiteral("_修正规则");
+    return exportName + QLatin1Char('_') + correctionSuffix;
 }
 
 void MainWindow::persistAdjustmentMemory()
