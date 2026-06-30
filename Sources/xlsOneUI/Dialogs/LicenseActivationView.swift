@@ -25,7 +25,7 @@ public struct LicenseActivationView: View {
             brandPanel
             formPanel
         }
-        .frame(minWidth: 640, minHeight: 480, idealWidth: 720, idealHeight: 520)
+        .frame(minWidth: 640, idealWidth: 720, maxWidth: .infinity, minHeight: 480, idealHeight: 520, maxHeight: .infinity)
         .background(XColor.background)
     }
 
@@ -149,8 +149,9 @@ public struct LicenseActivationView: View {
         }
     }
 
+    @ViewBuilder
     private func activationCodeField(index: Int) -> some View {
-        TextField("", text: $keyParts[index])
+        let field = TextField("", text: $keyParts[index])
             .textFieldStyle(.plain)
             .font(XFont.monospacedInput)
             .multilineTextAlignment(.center)
@@ -165,10 +166,15 @@ public struct LicenseActivationView: View {
             .onChange(of: keyParts[index]) { newValue in
                 handleKeyPartChange(index: index, newValue: newValue)
             }
-            .onKeyPress(.delete) {
+
+        if #available(macOS 14.0, *) {
+            field.onKeyPress(.delete) {
                 handleBackspace(index: index)
                 return .handled
             }
+        } else {
+            field
+        }
     }
 
     private func handleKeyPartChange(index: Int, newValue: String) {

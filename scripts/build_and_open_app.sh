@@ -111,6 +111,7 @@ cat > "$PLIST_PATH" <<EOF
     <array>
         <string>zh-Hans</string>
         <string>en</string>
+        <string>ja</string>
     </array>
     <key>CFBundleExecutable</key>
     <string>$PRODUCT_NAME</string>

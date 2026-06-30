@@ -58,7 +58,7 @@ LicenseActivationDialog::LicenseActivationDialog(xlsone::LicenseManager* mgr,
 
 void LicenseActivationDialog::buildUi()
 {
-    setWindowTitle(QStringLiteral("激活 表表归一"));
+    setWindowTitle(tr("激活 表表归一"));
     setMinimumSize(680, 480);
     resize(720, 520);
     setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);

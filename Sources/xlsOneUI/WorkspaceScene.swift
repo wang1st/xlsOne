@@ -138,14 +138,14 @@ private struct WorkspaceAdjustmentMemoryCommands: Commands {
     @ObservedObject var localeManager: LocaleManager
 
     var body: some Commands {
-        CommandMenu(LocaleManager.loc("调整记忆")) {
-            Button(LocaleManager.loc("查看当前调整记忆")) {
+        CommandMenu(LocaleManager.loc("修正规则")) {
+            Button(LocaleManager.loc("查看当前修正规则")) {
                 viewModel.showSchemaManagerWindow()
             }
             .keyboardShortcut(",", modifiers: .command)
             .disabled(!viewModel.canManageAdjustmentMemory)
 
-            Button(LocaleManager.loc("保存当前调整记忆")) {
+            Button(LocaleManager.loc("保存当前修正规则")) {
                 viewModel.saveCurrentAdjustmentMemory()
             }
             .disabled(!viewModel.canManageAdjustmentMemory)
@@ -166,18 +166,18 @@ private struct WorkspaceWindowCommands: Commands {
 
     var body: some Commands {
         CommandGroup(replacing: .windowArrangement) {
-            Button("最小化") {
+            Button(LocaleManager.loc("最小化")) {
                 NSApp.keyWindow?.miniaturize(nil)
             }
             .keyboardShortcut("m", modifiers: .command)
 
-            Button("缩放") {
+            Button(LocaleManager.loc("缩放")) {
                 NSApp.keyWindow?.zoom(nil)
             }
 
             Divider()
 
-            Button("前置全部窗口") {
+            Button(LocaleManager.loc("前置全部窗口")) {
                 NSApp.arrangeInFront(nil)
             }
         }
@@ -190,7 +190,7 @@ private struct WorkspaceLicenseCommands: Commands {
 
     var body: some Commands {
         CommandMenu(LocaleManager.loc("许可")) {
-            Button(LicenseManager.isAppStoreDistribution ? "App Store 已授权" : "激活/导入许可证...") {
+            Button(LicenseManager.isAppStoreDistribution ? LocaleManager.loc("App Store 已授权") : LocaleManager.loc("激活/导入许可证...")) {
                 if !LicenseManager.isAppStoreDistribution {
                     licenseManager.showActivationSheet = true
                 }
@@ -204,7 +204,7 @@ private struct WorkspaceLanguageCommands: Commands {
     @ObservedObject var localeManager: LocaleManager
 
     var body: some Commands {
-        CommandMenu("Language") {
+        CommandMenu(LocaleManager.loc("language_menu")) {
             ForEach(LocaleManager.AppLanguage.allCases) { language in
                 Button {
                     localeManager.currentLanguage = language
@@ -348,6 +348,10 @@ enum WorkspaceDialogPresenter {
     }
 }
 
+extension Notification.Name {
+    static let showRestartToast = Notification.Name("showRestartToast")
+}
+
 public final class WorkspaceAppDelegate: NSObject, NSApplicationDelegate {
     private var menuObserver: NSObjectProtocol?
 
@@ -462,7 +466,7 @@ enum WorkspaceAppPresentation {
     static func showAppStoreUpdatePanel() {
         WorkspaceDialogPresenter.runAlert(
             title: LocaleManager.loc("检查更新"),
-            message: "App Store 版本请通过 Mac App Store 获取更新。",
+            message: LocaleManager.loc("App Store 版本请通过 Mac App Store 获取更新。"),
             style: .informational
         )
         NSApp.activate(ignoringOtherApps: true)
@@ -849,7 +853,7 @@ class AppViewModel: ObservableObject {
     }
 
     var toolbarPresentation: ToolbarPresentation {
-        WorkspaceToolbar.buildPresentation(
+        WorkspaceToolbarBuilder.buildPresentation(
             selectedFileCount: selectedFilePaths.count,
             canExport: canExport
         )
@@ -1106,8 +1110,8 @@ class AppViewModel: ObservableObject {
     func saveCurrentAdjustmentMemory() {
         guard canManageAdjustmentMemory else {
             WorkspaceDialogPresenter.runAlert(
-                title: LocaleManager.loc("保存当前调整记忆"),
-                message: "当前没有可保存修正规则的同构工作区。",
+                title: LocaleManager.loc("保存当前修正规则"),
+                message: LocaleManager.loc("当前没有可保存修正规则的同构工作区。"),
                 style: .informational
             )
             return
@@ -1138,7 +1142,7 @@ class AppViewModel: ObservableObject {
                 }
             } catch {
                 await MainActor.run {
-                    errorMessage = "导出修正规则失败: \(error.localizedDescription)"
+                    errorMessage = LocaleManager.loc("导出修正规则失败: %@").replacingOccurrences(of: "%@", with: error.localizedDescription)
                     showError = true
                 }
             }
@@ -1149,7 +1153,7 @@ class AppViewModel: ObservableObject {
         guard canManageAdjustmentMemory else {
             WorkspaceDialogPresenter.runAlert(
                 title: LocaleManager.loc("导入"),
-                message: "当前没有可绑定修正规则的同构工作区。",
+                message: LocaleManager.loc("当前没有可绑定修正规则的同构工作区。"),
                 style: .informational
             )
             return
@@ -1172,8 +1176,8 @@ class AppViewModel: ObservableObject {
 
         let alert = NSAlert()
         alert.alertStyle = .warning
-        alert.messageText = "清除当前修正规则"
-        alert.informativeText = "删除当前修正规则后，当前同构工作区将恢复自动判断。确定清除？"
+        alert.messageText = LocaleManager.loc("清除当前修正规则")
+        alert.informativeText = LocaleManager.loc("删除当前修正规则后，当前同构工作区将恢复自动判断。确定清除？")
         alert.addButton(withTitle: LocaleManager.loc("清除"))
         alert.addButton(withTitle: LocaleManager.loc("取消"))
         guard WorkspaceDialogPresenter.runAlert(alert) == .alertFirstButtonReturn else { return }
@@ -1194,7 +1198,7 @@ class AppViewModel: ObservableObject {
                 await refreshWorkspaceResults()
             } catch {
                 await MainActor.run {
-                    errorMessage = "清除修正规则失败: \(error.localizedDescription)"
+                    errorMessage = LocaleManager.loc("清除修正规则失败: %@").replacingOccurrences(of: "%@", with: error.localizedDescription)
                     showError = true
                 }
             }
@@ -1434,7 +1438,7 @@ class AppViewModel: ObservableObject {
         do {
             try await persistAdjustmentMemory()
         } catch {
-            errorMessage = "记住调整失败: \(error.localizedDescription)"
+            errorMessage = LocaleManager.loc("记住修正规则失败: %@").replacingOccurrences(of: "%@", with: error.localizedDescription)
             showError = true
         }
         await refreshWorkspaceResults()
@@ -1510,7 +1514,7 @@ class AppViewModel: ObservableObject {
             await refreshWorkspaceResults()
         } catch {
             await MainActor.run {
-                errorMessage = "导入修正规则失败: \(error.localizedDescription)"
+                errorMessage = LocaleManager.loc("导入修正规则失败: %@").replacingOccurrences(of: "%@", with: error.localizedDescription)
                 showError = true
             }
         }

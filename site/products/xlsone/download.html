@@ -8,12 +8,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>下载 · 表表归一</title>
     <link rel="stylesheet" href="/css/style.css">
+    <link rel="icon" href="/images/xlsone-logo.svg" type="image/svg+xml">
 </head>
 <body>
 
 <nav class="nav">
     <div class="container">
-        <a href="/" class="nav-brand">ZENITH PULSE</a>
+        <a href="/" class="nav-brand"><img src="/images/zenith-pulse-logo.svg" alt="">ZENITH PULSE</a>
         <div class="nav-links">
             <a href="/products/xlsone/">表表归一</a>
             <a href="/support/">支持</a>
@@ -22,39 +23,60 @@
 </nav>
 
 <main>
-    <section class="download-section" style="padding-top:120px">
-        <div class="container">
-            <h2 class="section-title" style="margin-bottom:12px">下载</h2>
-            <p style="text-align:center;color:#86868b;font-size:0.95rem;margin-bottom:48px">
-                表表归一 v<span id="ver">-</span>
+    <section class="download-section">
+        <div class="container animate-in">
+            <h2 class="section-title" style="margin-bottom:12px">下载表表归一</h2>
+            <p style="text-align:center;color:var(--color-ink-secondary);font-size:1.05rem;margin-bottom:48px">
+                当前最新版本 <span class="tag" id="ver" style="vertical-align:middle">-</span>
             </p>
 
-            <div class="download-list">
+            <div class="arch-hint animate-in animate-delay-1">
+                不确定该选哪个？在终端运行 <code>uname -m</code>：<br>
+                输出 <code>aarch64</code> 或 <code>arm64</code> 请下载 <strong>ARM64</strong> 版本；<br>
+                输出 <code>x86_64</code> 请下载 <strong>AMD64</strong> 版本。
+            </div>
+
+            <div class="download-list animate-in animate-delay-2">
                 <div class="download-card">
+                    <div>
+                        <div class="platform">Linux ARM64</div>
+                        <div class="meta">ARM64 / aarch64 · Ubuntu 20.04+ / Debian 11+ / UOS / 麒麟</div>
+                    </div>
+                    <div class="actions">
+                        <a id="dl-linux-arm64" href="#" class="btn btn-primary">下载 ARM64 DEB</a>
+                    </div>
+                </div>
+                <div class="download-card">
+                    <div>
+                        <div class="platform">Linux AMD64</div>
+                        <div class="meta">Intel / AMD · x86_64 · Ubuntu 20.04+ / Debian 11+ / 麒麟</div>
+                    </div>
+                    <div class="actions">
+                        <a id="dl-linux-amd64" href="#" class="btn btn-primary">下载 AMD64 DEB</a>
+                    </div>
+                </div>
+                <div class="download-card" style="opacity:0.5">
                     <div>
                         <div class="platform">macOS</div>
                         <div class="meta">Apple Silicon &amp; Intel · macOS 12+</div>
                     </div>
-                    <a id="dl-macos" href="#" class="btn btn-outline">macOS 版</a>
+                    <div class="actions">
+                        <a href="#" class="btn btn-outline" style="pointer-events:none">即将推出</a>
+                    </div>
                 </div>
-                <div class="download-card">
+                <div class="download-card" style="opacity:0.5">
                     <div>
                         <div class="platform">Windows</div>
-                        <div class="meta">Windows 10 / 11 ARM64</div>
+                        <div class="meta">Windows 10 / 11</div>
                     </div>
-                    <a id="dl-windows" href="#" class="btn btn-outline">Windows 版</a>
-                </div>
-                <div class="download-card">
-                    <div>
-                        <div class="platform">Linux</div>
-                        <div class="meta">ARM64 · Ubuntu 20.04+ / Debian 11+ / UOS</div>
+                    <div class="actions">
+                        <a href="#" class="btn btn-outline" style="pointer-events:none">即将推出</a>
                     </div>
-                    <a id="dl-linux" href="#" class="btn btn-outline">下载 DEB</a>
                 </div>
             </div>
 
-            <p style="text-align:center;color:#86868b;font-size:0.85rem;margin-top:48px">
-                Mac App Store 版本准备中。
+            <p style="text-align:center;color:var(--color-ink-tertiary);font-size:0.9rem;margin-top:48px">
+                macOS 与 Windows 版本正在准备中。Linux 安装包为 .deb 格式，下载后可用 <code>sudo dpkg -i</code> 安装。
             </p>
         </div>
     </section>
@@ -65,6 +87,12 @@
         <a href="/support/">支持</a>
         <a href="/privacy/">隐私政策</a>
         <p class="copyright">&copy; 2026 ZENITH PULSE</p>
+        <div class="beian">
+            <a target="_blank" href="http://www.beian.gov.cn/portal/registerSystemInfo?recordcode=33100202001675">
+                <img src="http://www.beian.gov.cn/img/ghs.png" alt="公安备案">
+                浙公网安备33100202001675号
+            </a>
+        </div>
     </div>
 </footer>
 
@@ -72,16 +100,14 @@
 fetch('/api/version.json?v=0.3.0')
     .then(r => r.json())
     .then(data => {
-        document.getElementById('ver').textContent = data.latest_version;
-        if (data.downloads.macos)
-            document.getElementById('dl-macos').href = data.downloads.macos;
-        if (data.downloads.windows)
-            document.getElementById('dl-windows').href = data.downloads.windows;
-        if (data.downloads.linux)
-            document.getElementById('dl-linux').href = data.downloads.linux;
+        document.getElementById('ver').textContent = 'v' + data.latest_version;
+        if (data.downloads.linux_arm64)
+            document.getElementById('dl-linux-arm64').href = data.downloads.linux_arm64;
+        if (data.downloads.linux_amd64)
+            document.getElementById('dl-linux-amd64').href = data.downloads.linux_amd64;
     })
     .catch(() => {
-        document.getElementById('ver').textContent = '（加载失败）';
+        document.getElementById('ver').textContent = '加载失败';
     });
 </script>
 

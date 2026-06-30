@@ -1,4 +1,5 @@
 import SwiftUI
+import xlsOneCore
 
 /// Empty workspace placeholder shown when no files have been imported.
 struct WorkspaceEmptyState: View {

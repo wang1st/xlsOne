@@ -23,7 +23,7 @@ struct HelpTopic: Identifiable, Hashable {
 }
 
 /// A single content block inside a help topic.
-enum HelpBlock {
+enum HelpBlock: Hashable {
     case heading(String)
     case paragraph(String)
     case numbered([String])
@@ -43,6 +43,38 @@ enum HelpBlock {
             return pairs.map { "\($0.key) \($0.action)" }.joined(separator: " ")
         case .contact(_, let labelKey, let valueKey):
             return "\(LocaleManager.loc(labelKey)) \(LocaleManager.loc(valueKey))"
+        }
+    }
+
+    static func == (lhs: HelpBlock, rhs: HelpBlock) -> Bool {
+        switch (lhs, rhs) {
+        case (.heading(let a), .heading(let b)),
+             (.paragraph(let a), .paragraph(let b)),
+             (.tip(let a), .tip(let b)),
+             (.note(let a), .note(let b)):
+            return a == b
+        case (.numbered(let a), .numbered(let b)),
+             (.bullets(let a), .bullets(let b)):
+            return a == b
+        case (.shortcuts(let a), .shortcuts(let b)):
+            return a.count == b.count && zip(a, b).allSatisfy { $0.key == $1.key && $0.action == $1.action }
+        case (.contact(let i1, let l1, let v1), .contact(let i2, let l2, let v2)):
+            return i1 == i2 && l1 == l2 && v1 == v2
+        default:
+            return false
+        }
+    }
+
+    func hash(into hasher: inout Hasher) {
+        switch self {
+        case .heading(let s): hasher.combine(0); hasher.combine(s)
+        case .paragraph(let s): hasher.combine(1); hasher.combine(s)
+        case .numbered(let arr): hasher.combine(2); hasher.combine(arr)
+        case .bullets(let arr): hasher.combine(3); hasher.combine(arr)
+        case .tip(let s): hasher.combine(4); hasher.combine(s)
+        case .note(let s): hasher.combine(5); hasher.combine(s)
+        case .shortcuts(let pairs): hasher.combine(6); hasher.combine(pairs.map { $0.key + "\t" + $0.action })
+        case .contact(let i, let l, let v): hasher.combine(7); hasher.combine(i); hasher.combine(l); hasher.combine(v)
         }
     }
 }
@@ -252,7 +284,7 @@ public struct HelpView: View {
             Divider()
             contentArea
         }
-        .frame(minWidth: 900, minHeight: 640, idealWidth: 1000, idealHeight: 700)
+        .frame(minWidth: 900, idealWidth: 1000, maxWidth: .infinity, minHeight: 640, idealHeight: 700, maxHeight: .infinity)
         .background(XColor.background)
         .id(localeManager.currentLanguage.rawValue)
     }
