@@ -18,25 +18,23 @@ find_package(Qt5 REQUIRED COMPONENTS Core Gui Widgets Network Test)
 
 enable_testing()
 
-# Translations — use lrelease to compile .ts → .qm (skip if .qm already present)
+# Translations — use lrelease to compile .ts → .qm
 set(_i18n_dir "${CMAKE_CURRENT_SOURCE_DIR}/i18n")
-if(EXISTS "${_i18n_dir}/xlsone_zh_CN.qm" AND EXISTS "${_i18n_dir}/xlsone_en.qm")
-    message(STATUS "Pre-compiled .qm translations found — skipping lrelease")
+find_program(LRELEASE_EXECUTABLE lrelease)
+if(LRELEASE_EXECUTABLE)
+    add_custom_target(translations ALL
+        COMMAND ${LRELEASE_EXECUTABLE}
+            "${_i18n_dir}/xlsone_zh_CN.ts"
+            "${_i18n_dir}/xlsone_en.ts"
+            "${_i18n_dir}/xlsone_ja.ts"
+            -qm "${_i18n_dir}/xlsone_zh_CN.qm"
+            -qm "${_i18n_dir}/xlsone_en.qm"
+            -qm "${_i18n_dir}/xlsone_ja.qm"
+        WORKING_DIRECTORY "${_i18n_dir}"
+        COMMENT "Compiling Qt translations"
+    )
 else()
-    find_program(LRELEASE_EXECUTABLE lrelease)
-    if(LRELEASE_EXECUTABLE)
-        add_custom_target(translations ALL
-            COMMAND ${LRELEASE_EXECUTABLE}
-                "${_i18n_dir}/xlsone_zh_CN.ts"
-                "${_i18n_dir}/xlsone_en.ts"
-                -qm "${_i18n_dir}/xlsone_zh_CN.qm"
-                -qm "${_i18n_dir}/xlsone_en.qm"
-            WORKING_DIRECTORY "${_i18n_dir}"
-            COMMENT "Compiling Qt translations"
-        )
-    else()
-        message(WARNING "lrelease not found — translations will not be compiled")
-    endif()
+    message(WARNING "lrelease not found — translations will not be compiled")
 endif()
 install(DIRECTORY "${_i18n_dir}/"
     DESTINATION i18n
