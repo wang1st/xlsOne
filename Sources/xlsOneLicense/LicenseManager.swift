@@ -133,7 +133,7 @@ public final class LicenseManager: ObservableObject {
         }
         return .success(plan: plan, expiresAt: nil)
 #else
-        return .failure(.serverError("当前平台不支持导入授权文件"))
+        return .failure(.serverError(LocaleManager.loc("当前平台不支持导入授权文件")))
 #endif
     }
 
@@ -446,7 +446,7 @@ public final class LicenseManager: ObservableObject {
         case "KEY_REVOKED":     return .keyRevoked
         case "DEVICE_LIMIT":    return .deviceLimit
         case "RATE_LIMITED":    return .rateLimited
-        default:                return .serverError(error.message ?? "未知错误")
+        default:                return .serverError(error.message ?? LocaleManager.loc("未知错误"))
         }
     }
 }

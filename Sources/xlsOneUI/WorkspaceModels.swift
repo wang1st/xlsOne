@@ -621,7 +621,7 @@ struct ToolbarPresentation: Equatable {
     let exportIsProminent: Bool
 }
 
-enum WorkspaceToolbar {
+enum WorkspaceToolbarBuilder {
     static func buildPresentation(
         selectedFileCount: Int,
         canExport: Bool

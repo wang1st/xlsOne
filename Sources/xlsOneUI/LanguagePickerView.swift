@@ -20,9 +20,10 @@ public struct LanguagePickerView: View {
         }
         .pickerStyle(.menu)
         .onChange(of: selectedLanguage) { newLanguage in
-            localeManager.currentLanguage = newLanguage
-            localeManager.applyToFoundation()
-            AlgorithmI18n.shared.reload()
+            // Save-only: UI stays unchanged until next launch.
+            UserDefaults.standard.set(newLanguage.rawValue, forKey: "AppLanguage")
+            localeManager.applyToFoundation(for: newLanguage)
+            NotificationCenter.default.post(name: .showRestartToast, object: newLanguage)
         }
     }
 }

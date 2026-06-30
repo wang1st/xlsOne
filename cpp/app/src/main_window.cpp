@@ -11,6 +11,7 @@
 #include "xlsone/core/license_manager.hpp"
 
 #include <QAction>
+#include <QActionGroup>
 #include <QApplication>
 #include <QDateTime>
 #include <QDesktopServices>
@@ -30,6 +31,7 @@
 #include <QMimeData>
 #include <QProgressBar>
 #include <QRegularExpression>
+#include <QSettings>
 #include <QSet>
 #include <QShowEvent>
 #include <QSplitter>
@@ -405,6 +407,39 @@ void MainWindow::buildUi()
 #else
     delete licenseActivateAction;
 #endif
+
+    // ---- 语言 ----
+    auto* languageMenu = menuBar()->addMenu(tr("语言"));
+    languageGroup_ = new QActionGroup(this);
+    languageGroup_->setExclusive(true);
+
+    auto makeLangAction = [this, languageMenu](const QString& label, const QString& langCode) {
+        auto* action = languageMenu->addAction(label);
+        action->setCheckable(true);
+        action->setData(langCode);
+        languageGroup_->addAction(action);
+        connect(action, &QAction::triggered, this, &MainWindow::onLanguageSelected);
+        return action;
+    };
+
+    const QString currentLang = QSettings().value(QStringLiteral("AppLanguage")).toString();
+    makeLangAction(tr("跟随系统"), QString());
+    auto* enAction = makeLangAction(QStringLiteral("English"), QStringLiteral("en"));
+    auto* zhHansAction = makeLangAction(QStringLiteral("简体中文"), QStringLiteral("zh_CN"));
+    auto* zhHantAction = makeLangAction(QStringLiteral("繁體中文"), QStringLiteral("zh_TW"));
+    auto* jaAction = makeLangAction(QStringLiteral("日本語"), QStringLiteral("ja"));
+
+    if (currentLang.isEmpty()) {
+        languageGroup_->actions().first()->setChecked(true);
+    } else if (currentLang == QStringLiteral("en")) {
+        enAction->setChecked(true);
+    } else if (currentLang == QStringLiteral("zh_CN")) {
+        zhHansAction->setChecked(true);
+    } else if (currentLang == QStringLiteral("zh_TW")) {
+        zhHantAction->setChecked(true);
+    } else if (currentLang == QStringLiteral("ja")) {
+        jaAction->setChecked(true);
+    }
 
     auto* helpAction = new QAction(tr("快速参考指南"), this);
     helpAction->setShortcut(QKeySequence(Qt::Key_F1));
@@ -1476,6 +1511,24 @@ void MainWindow::exportResult()
     } catch (const std::exception& error) {
         xlsone::ui::showCritical(this, tr("导出失败"), QString::fromUtf8(error.what()));
     }
+}
+
+void MainWindow::onLanguageSelected()
+{
+    auto* action = qobject_cast<QAction*>(sender());
+    if (!action) return;
+
+    const QString langCode = action->data().toString();
+    QSettings settings;
+    if (langCode.isEmpty()) {
+        settings.remove(QStringLiteral("AppLanguage"));
+    } else {
+        settings.setValue(QStringLiteral("AppLanguage"), langCode);
+    }
+
+    xlsone::ui::showInformation(this,
+        tr("语言已更改"),
+        tr("语言已更改，重启后生效。"));
 }
 
 void MainWindow::showLicenseActivation()

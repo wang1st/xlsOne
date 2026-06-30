@@ -123,7 +123,7 @@ if(UNIX AND NOT APPLE)
 
         # Bundle libdouble-conversion (required by Qt5Core for string↔number conversion)
         # Check both the system lib dir and the Qt bundle dir (KylinOS may have it in either)
-        set(_dc_search_dirs "${_icu_dir}" "${XLSONE_QT_BUNDLE_DIR}")
+        set(_dc_search_dirs "${_icu_dir}" "${XLSONE_QT_BUNDLE_DIR}" "/usr/lib/${CMAKE_LIBRARY_ARCHITECTURE}")
         set(_dc_found OFF)
         foreach(_dir ${_dc_search_dirs})
             if(NOT _dc_found)

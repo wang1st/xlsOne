@@ -346,9 +346,9 @@ public enum AdjustmentMemoryImportError: LocalizedError, Sendable {
     public var errorDescription: String? {
         switch self {
         case .emptyWorkspace:
-            return "当前没有可绑定修正规则的同构工作区。"
+            return LocaleManager.loc("当前没有可绑定修正规则的同构工作区。")
         case .incompatibleWorkspace:
-            return "导入的修正规则不属于当前同构结构。"
+            return LocaleManager.loc("导入的修正规则不属于当前同构结构。")
         }
     }
 }

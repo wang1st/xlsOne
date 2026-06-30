@@ -15,10 +15,10 @@ public struct ColumnTypeAnalyzer {
         public var displayName: String {
             switch self {
             case .code: return "编码"
-            case .amount: return "金额"
-            case .label: return "标签"
-            case .date: return "日期"
-            case .unknown: return "未知"
+            case .amount: return LocaleManager.loc("金额")
+            case .label: return LocaleManager.loc("标签")
+            case .date: return LocaleManager.loc("日期")
+            case .unknown: return LocaleManager.loc("未知")
             }
         }
     }
