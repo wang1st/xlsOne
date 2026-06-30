@@ -100,32 +100,55 @@ UpdateInfo UpdateChecker::parseUpdateInfo(const QByteArray& json)
     const QJsonValue downloadsValue = root.value(QStringLiteral("downloads"));
     const QString key = platformKey();
 
-    if (downloadsValue.isObject()) {
-        const QJsonObject downloads = downloadsValue.toObject();
-        const QJsonValue platformValue = downloads.value(key);
+    const QString archKey = architectureKey();
 
-        // New architecture-aware format:
-        //   "linux_architectures": { "arm64": "url", "amd64": "url" }
-        const QString archKey = architectureKey();
-        const QString archSuffix = QStringLiteral("_architectures");
-        const QString archKeyFull = key + archSuffix;
-        const QJsonValue archValue = downloads.value(archKeyFull);
-        if (archValue.isObject()) {
-            const QString url = archValue.toObject().value(archKey).toString();
-            if (!url.isEmpty()) {
-                info.downloadUrl = url;
-                return info;
-            }
+    if (!downloadsValue.isObject()) {
+        return info;
+    }
+
+    const QJsonObject downloads = downloadsValue.toObject();
+
+    // Helper to set URL if non-empty.
+    auto setIfValid = [&info](const QString& url) {
+        if (!url.isEmpty()) {
+            info.downloadUrl = url;
         }
+    };
 
-        if (platformValue.isString()) {
-            // Legacy format: "linux": "url"
-            info.downloadUrl = platformValue.toString();
-        } else if (platformValue.isObject()) {
-            // Architecture-aware format: "linux": { "arm64": "url", "amd64": "url" }
-            info.downloadUrl = platformValue.toObject().value(archKey).toString();
+    // 1. Architecture-aware object format:
+    //    "linux_architectures": { "arm64": "url", "amd64": "url" }
+    const QJsonValue archObjectValue = downloads.value(key + QStringLiteral("_architectures"));
+    if (archObjectValue.isObject()) {
+        setIfValid(archObjectValue.toObject().value(archKey).toString());
+        if (!info.downloadUrl.isEmpty()) {
+            return info;
         }
     }
+
+    const QJsonValue platformValue = downloads.value(key);
+
+    // 2. Architecture-aware platform value format:
+    //    "linux": { "arm64": "url", "amd64": "url" }
+    if (platformValue.isObject()) {
+        setIfValid(platformValue.toObject().value(archKey).toString());
+        if (!info.downloadUrl.isEmpty()) {
+            return info;
+        }
+    }
+
+    // 3. Legacy flat format:
+    //    "linux": "url"
+    if (platformValue.isString()) {
+        setIfValid(platformValue.toString());
+        if (!info.downloadUrl.isEmpty()) {
+            return info;
+        }
+    }
+
+    // 4. Flat per-architecture keys:
+    //    "linux_arm64": "url", "linux_amd64": "url"
+    const QString flatArchKey = key + QLatin1Char('_') + archKey;
+    setIfValid(downloads.value(flatArchKey).toString());
 
     return info;
 }
