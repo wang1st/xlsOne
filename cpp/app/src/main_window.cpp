@@ -1,5 +1,6 @@
 #include "main_window.hpp"
 
+#include "check_update_dialog.hpp"
 #include "dialog_utils.hpp"
 #include "help_dialog.hpp"
 #include "license_activation_dialog.hpp"
@@ -41,6 +42,7 @@
 #include <QVBoxLayout>
 
 #include <algorithm>
+#include <memory>
 
 namespace {
 
@@ -467,7 +469,9 @@ void MainWindow::buildUi()
     });
 
     auto* checkUpdateAction = new QAction(tr("检查更新"), this);
-    connect(checkUpdateAction, &QAction::triggered, this, &MainWindow::checkForUpdates);
+    connect(checkUpdateAction, &QAction::triggered, this, [this] {
+        checkForUpdates(false);
+    });
 
     auto* helpMenu = menuBar()->addMenu(tr("帮助"));
     helpMenu->addAction(checkUpdateAction);
@@ -588,18 +592,6 @@ void MainWindow::buildUi()
     statusBar()->addPermanentWidget(statusProgress_);
 
     updateChecker_ = new xlsone::UpdateChecker(this);
-    connect(updateChecker_, &xlsone::UpdateChecker::updateAvailable, this,
-        [this](const xlsone::UpdateInfo& info) {
-            auto* dialog = new UpdateDialog(info.latestVersion,
-                                            info.changelog,
-                                            info.downloadUrl,
-                                            this);
-            connect(dialog, &QDialog::accepted, this, [this] {
-                QDesktopServices::openUrl(QUrl(
-                    QStringLiteral(XLSONE_UPDATE_BASE_URL "/products/xlsone/download.html")));
-            });
-            xlsone::ui::showDialogCentered(dialog, this);
-        });
 
     updateChromeState();
 }
@@ -613,13 +605,67 @@ void MainWindow::showEvent(QShowEvent* event)
     }
 }
 
-void MainWindow::checkForUpdates()
+void MainWindow::checkForUpdates(bool silent)
 {
-    if (updateChecker_ == nullptr) {
+    if (updateChecker_ == nullptr || checkingUpdates_) {
         return;
     }
+    checkingUpdates_ = true;
+
     const QString apiUrl = QStringLiteral(
         XLSONE_UPDATE_BASE_URL "/api/version");
+
+    if (silent) {
+        // Silent auto-check: only show dialog when an update is available.
+        auto connAvailable = std::make_shared<QMetaObject::Connection>();
+        auto connNoUpdate = std::make_shared<QMetaObject::Connection>();
+        auto connError = std::make_shared<QMetaObject::Connection>();
+
+        auto finish = [this, connAvailable, connNoUpdate, connError]() {
+            checkingUpdates_ = false;
+            disconnect(*connAvailable);
+            disconnect(*connNoUpdate);
+            disconnect(*connError);
+        };
+
+        *connAvailable = connect(updateChecker_, &xlsone::UpdateChecker::updateAvailable, this,
+            [this, finish](const xlsone::UpdateInfo& info) {
+                finish();
+                auto* dialog = new UpdateDialog(info.latestVersion,
+                                                info.changelog,
+                                                info.downloadUrl,
+                                                this);
+                connect(dialog, &QDialog::accepted, this, [] {
+                    QDesktopServices::openUrl(QUrl(
+                        QStringLiteral(XLSONE_UPDATE_BASE_URL "/products/xlsone/download.html")));
+                });
+                xlsone::ui::showDialogCentered(dialog, this);
+            });
+        *connNoUpdate = connect(updateChecker_, &xlsone::UpdateChecker::noUpdateAvailable, this,
+            [finish]() { finish(); });
+        *connError = connect(updateChecker_, &xlsone::UpdateChecker::checkError, this,
+            [finish](const QString&) { finish(); });
+    } else {
+        // Manual check: show the full check-update dialog.
+        auto* dialog = new CheckUpdateDialog(this);
+        dialog->setAttribute(Qt::WA_DeleteOnClose);
+        connect(dialog, &CheckUpdateDialog::retryRequested, this, [this]() {
+            checkForUpdates(false);
+        });
+        connect(dialog, &QDialog::finished, this, [this]() {
+            checkingUpdates_ = false;
+        });
+        connect(updateChecker_, &xlsone::UpdateChecker::updateAvailable,
+                dialog, &CheckUpdateDialog::showUpdateAvailable);
+        connect(updateChecker_, &xlsone::UpdateChecker::noUpdateAvailable,
+                dialog, [this, dialog]() {
+                    dialog->showNoUpdate(updateChecker_->currentVersion());
+                });
+        connect(updateChecker_, &xlsone::UpdateChecker::checkError,
+                dialog, &CheckUpdateDialog::showError);
+        xlsone::ui::showDialogCentered(dialog, this);
+    }
+
     updateChecker_->checkForUpdates(apiUrl);
 }
 

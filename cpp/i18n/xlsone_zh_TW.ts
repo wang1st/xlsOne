@@ -1,6 +1,88 @@
 <?xml version='1.0' encoding='utf-8'?>
 <TS version="2.1" language="zh_CN">
 <context>
+    <name>CheckUpdateDialog</name>
+    <message>
+        <location filename="../app/src/check_update_dialog.cpp" line="18" />
+        <source>检查更新</source>
+        <translation>檢查更新</translation>
+    </message>
+    <message>
+        <location filename="../app/src/check_update_dialog.cpp" line="93" />
+        <source>正在检查更新...</source>
+        <translation>正在檢查更新...</translation>
+    </message>
+    <message>
+        <location filename="../app/src/check_update_dialog.cpp" line="101" />
+        <source>请稍候，正在连接更新服务器...</source>
+        <translation>請稍候，正在連接更新伺服器...</translation>
+    </message>
+    <message>
+        <location filename="../app/src/check_update_dialog.cpp" line="106" />
+        <source>取消</source>
+        <translation>取消</translation>
+    </message>
+    <message>
+        <location filename="../app/src/check_update_dialog.cpp" line="115" />
+        <source>当前已是最新版本</source>
+        <translation>目前已是最新版本</translation>
+    </message>
+    <message>
+        <location filename="../app/src/check_update_dialog.cpp" line="118" />
+        <source>您当前使用的 %1 已经是最新版本，无需更新。</source>
+        <translation>您目前使用的 %1 已經是最新版本，無需更新。</translation>
+    </message>
+    <message>
+        <location filename="../app/src/check_update_dialog.cpp" line="124" />
+        <source>确定</source>
+        <translation>確定</translation>
+    </message>
+    <message>
+        <location filename="../app/src/check_update_dialog.cpp" line="133" />
+        <source>发现新版本 %1</source>
+        <translation>發現新版本 %1</translation>
+    </message>
+    <message>
+        <location filename="../app/src/check_update_dialog.cpp" line="136" />
+        <source>新版本已发布，建议您更新以获得更好的体验。</source>
+        <translation>新版本已發布，建議您更新以獲得更好的體驗。</translation>
+    </message>
+    <message>
+        <location filename="../app/src/check_update_dialog.cpp" line="148" />
+        <source>立即下载</source>
+        <translation>立即下載</translation>
+    </message>
+    <message>
+        <location filename="../app/src/check_update_dialog.cpp" line="158" />
+        <source>稍后提醒</source>
+        <translation>稍後提醒</translation>
+    </message>
+    <message>
+        <location filename="../app/src/check_update_dialog.cpp" line="168" />
+        <source>检查更新失败</source>
+        <translation>檢查更新失敗</translation>
+    </message>
+    <message>
+        <location filename="../app/src/check_update_dialog.cpp" line="171" />
+        <source>无法连接到更新服务器，请检查网络后重试。
+
+错误信息：%1</source>
+        <translation>無法連接到更新伺服器，請檢查網路後重試。
+
+錯誤資訊：%1</translation>
+    </message>
+    <message>
+        <location filename="../app/src/check_update_dialog.cpp" line="177" />
+        <source>重试</source>
+        <translation>重試</translation>
+    </message>
+    <message>
+        <location filename="../app/src/check_update_dialog.cpp" line="184" />
+        <source>关闭</source>
+        <translation>關閉</translation>
+    </message>
+</context>
+<context>
     <name>DiagnosticsView</name>
     <message>
         <location filename="../app/src/diagnostics_view.cpp" line="61" />
@@ -189,7 +271,7 @@
         <translation>聯絡方式</translation>
     </message>
     <message>
-        <location filename="../app/src/help_dialog.cpp" line="113" />
+        <location filename="../app/src/help_dialog.cpp" line="111" />
         <source>关闭</source>
         <translation>關閉</translation>
     </message>
@@ -375,421 +457,421 @@
 <context>
     <name>MainWindow</name>
     <message>
-        <location filename="../app/src/main_window.cpp" line="344" />
+        <location filename="../app/src/main_window.cpp" line="346" />
         <source>导入文件...</source>
         <translation>匯入檔案...</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="348" />
+        <location filename="../app/src/main_window.cpp" line="350" />
         <source>追加文件...</source>
         <translation>追加檔案...</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="352" />
+        <location filename="../app/src/main_window.cpp" line="354" />
         <source>刷新</source>
         <translation>重新整理</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="356" />
+        <location filename="../app/src/main_window.cpp" line="358" />
         <source>清空工作区</source>
         <translation>清空工作區</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="360" />
+        <location filename="../app/src/main_window.cpp" line="362" />
         <source>导出 XLSX...</source>
         <translation>匯出 XLSX...</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="364" />
-        <location filename="../app/src/main_window.cpp" line="546" />
-        <location filename="../app/src/main_window.cpp" line="1236" />
+        <location filename="../app/src/main_window.cpp" line="366" />
+        <location filename="../app/src/main_window.cpp" line="550" />
+        <location filename="../app/src/main_window.cpp" line="1282" />
         <source>撤销修正</source>
         <translation>撤銷修正</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="368" />
-        <location filename="../app/src/main_window.cpp" line="547" />
+        <location filename="../app/src/main_window.cpp" line="370" />
+        <location filename="../app/src/main_window.cpp" line="551" />
         <source>清除所有修正</source>
         <translation>清除所有修正</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="371" />
+        <location filename="../app/src/main_window.cpp" line="373" />
         <source>查看当前修正规则</source>
         <translation>檢視當前修正規則</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="375" />
-        <location filename="../app/src/main_window.cpp" line="1338" />
-        <location filename="../app/src/main_window.cpp" line="1342" />
+        <location filename="../app/src/main_window.cpp" line="377" />
+        <location filename="../app/src/main_window.cpp" line="1384" />
+        <location filename="../app/src/main_window.cpp" line="1388" />
         <source>保存当前修正规则</source>
         <translation>儲存當前修正規則</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="378" />
+        <location filename="../app/src/main_window.cpp" line="380" />
         <source>激活/导入许可证...</source>
         <translation>啟用/匯入許可證...</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="382" />
+        <location filename="../app/src/main_window.cpp" line="384" />
         <source>文件</source>
         <translation>檔案</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="390" />
+        <location filename="../app/src/main_window.cpp" line="392" />
         <source>退出</source>
         <translation>退出</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="396" />
+        <location filename="../app/src/main_window.cpp" line="398" />
         <source>编辑</source>
         <translation>編輯</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="401" />
-        <location filename="../app/src/main_window.cpp" line="1040" />
-        <location filename="../app/src/main_window.cpp" line="1132" />
+        <location filename="../app/src/main_window.cpp" line="403" />
+        <location filename="../app/src/main_window.cpp" line="1086" />
+        <location filename="../app/src/main_window.cpp" line="1178" />
         <source>修正规则</source>
         <translation>修正規則</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="407" />
+        <location filename="../app/src/main_window.cpp" line="409" />
         <source>许可</source>
         <translation>許可</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="414" />
+        <location filename="../app/src/main_window.cpp" line="416" />
         <source>语言</source>
         <translation>語言</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="428" />
+        <location filename="../app/src/main_window.cpp" line="430" />
         <source>跟随系统</source>
         <translation>跟隨系統</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="446" />
+        <location filename="../app/src/main_window.cpp" line="448" />
         <source>快速参考指南</source>
         <translation>快速參考指南</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="454" />
-        <location filename="../app/src/main_window.cpp" line="460" />
+        <location filename="../app/src/main_window.cpp" line="456" />
+        <location filename="../app/src/main_window.cpp" line="462" />
         <source>关于 表表归一</source>
         <translation>關於 表表歸一</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="461" />
+        <location filename="../app/src/main_window.cpp" line="463" />
         <source>&lt;h3&gt;表表归一  V%1&lt;/h3&gt;&lt;p&gt;多张同格式 Excel 报表一键汇总&lt;/p&gt;&lt;p&gt;把多张格式一致的 Excel 表合成一份汇总表。金额、数量等能相加的数会自动合计；名称、编号等不该相加的信息，会保留各文件里最常见的共同前缀。&lt;/p&gt;&lt;p&gt;&lt;b&gt;联系方式：&lt;/b&gt;831261@qq.com&lt;/p&gt;</source>
         <translation>&lt;h3&gt;表表歸一  V%1&lt;/h3&gt;&lt;p&gt;多張同格式 Excel 報表一鍵彙總&lt;/p&gt;&lt;p&gt;把多張格式一致的 Excel 表合成一份彙總表。金額、數量等能相加的數會自動合計；名稱、編號等不該相加的資訊，會保留各檔案裡最常見的共同字首。&lt;/p&gt;&lt;p&gt;&lt;b&gt;聯絡方式：&lt;/b&gt;831261@qq.com&lt;/p&gt;</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="469" />
+        <location filename="../app/src/main_window.cpp" line="471" />
         <source>检查更新</source>
         <translation>檢查更新</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="472" />
+        <location filename="../app/src/main_window.cpp" line="476" />
         <source>帮助</source>
         <translation>幫助</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="578" />
+        <location filename="../app/src/main_window.cpp" line="582" />
         <source>拖入 Excel 文件，开始智能汇总。</source>
         <translation>拖入 Excel 檔案，開始智慧彙總。</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="663" />
+        <location filename="../app/src/main_window.cpp" line="709" />
         <source>选择工作簿</source>
         <translation>選擇工作簿</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="665" />
+        <location filename="../app/src/main_window.cpp" line="711" />
         <source>Excel Files (*.xlsx *.xls);;All Files (*)</source>
         <translation>Excel 工作簿 (*.xlsx *.xls);;所有檔案 (*)</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="702" />
+        <location filename="../app/src/main_window.cpp" line="748" />
         <source>选择单元格后查看结果与来源。</source>
         <translation>選擇單元格後檢視結果與來源。</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="706" />
+        <location filename="../app/src/main_window.cpp" line="752" />
         <source>工作区已清空。</source>
         <translation>工作區已清空。</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="731" />
+        <location filename="../app/src/main_window.cpp" line="777" />
         <source>正在校验文件结构...</source>
         <translation>正在校驗檔案結構...</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="744" />
+        <location filename="../app/src/main_window.cpp" line="790" />
         <source>没有可参与汇总的同构工作表。</source>
         <translation>沒有可參與彙總的同構工作表。</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="755" />
+        <location filename="../app/src/main_window.cpp" line="801" />
         <source>正在汇总“%1”... (%2/%3)</source>
         <translation>正在彙總“%1”... (%2/%3)</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="762" />
+        <location filename="../app/src/main_window.cpp" line="808" />
         <source>正在应用修正规则...</source>
         <translation>正在應用修正規則...</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="770" />
+        <location filename="../app/src/main_window.cpp" line="816" />
         <source>正在生成最终结果...</source>
         <translation>正在生成最終結果...</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="775" />
+        <location filename="../app/src/main_window.cpp" line="821" />
         <source> 已应用修正规则：%1。</source>
         <translation> 已應用修正規則：%1。</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="777" />
+        <location filename="../app/src/main_window.cpp" line="823" />
         <source> 检测到多组高置信修正规则，未自动应用。</source>
         <translation> 檢測到多組高置信修正規則，未自動應用。</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="779" />
+        <location filename="../app/src/main_window.cpp" line="825" />
         <source> 发现相近修正规则，未自动应用。</source>
         <translation> 發現相近修正規則，未自動應用。</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="810" />
+        <location filename="../app/src/main_window.cpp" line="856" />
         <source>已选 %1 个文件，可合并 %2 张工作表，解析失败 %3 个。</source>
         <translation>已選 %1 個檔案，可合併 %2 張工作表，解析失敗 %3 個。</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="868" />
+        <location filename="../app/src/main_window.cpp" line="914" />
         <source>%1 行 / %2 列</source>
         <translation>%1 行 / %2 列</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="877" />
+        <location filename="../app/src/main_window.cpp" line="923" />
         <source>[%1] %2: %3</source>
         <translation>[%1] %2: %3</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="883" />
+        <location filename="../app/src/main_window.cpp" line="929" />
         <source>已跳过</source>
         <translation>已跳過</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="901" />
+        <location filename="../app/src/main_window.cpp" line="947" />
         <source>已调整 %1 处</source>
         <translation>已調整 %1 處</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="942" />
+        <location filename="../app/src/main_window.cpp" line="988" />
         <source>选择一个单元格查看来源。</source>
         <translation>選擇一個單元格檢視來源。</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="943" />
+        <location filename="../app/src/main_window.cpp" line="989" />
         <source>正在查看“%1”，共 %2 行。</source>
         <translation>正在檢視“%1”，共 %2 行。</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="953" />
+        <location filename="../app/src/main_window.cpp" line="999" />
         <source>该工作表未参与合并，请查看左侧诊断原因。</source>
         <translation>該工作表未參與合併，請檢視左側診斷原因。</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="954" />
+        <location filename="../app/src/main_window.cpp" line="1000" />
         <source>“%1”已跳过。</source>
         <translation>“%1”已跳過。</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="1008" />
+        <location filename="../app/src/main_window.cpp" line="1054" />
         <source>当前手动修正规则</source>
         <translation>當前手動修正規則</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="291" />
-        <location filename="../app/src/main_window.cpp" line="1039" />
+        <location filename="../app/src/main_window.cpp" line="293" />
+        <location filename="../app/src/main_window.cpp" line="1085" />
         <source>汇总</source>
         <translation>彙總</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="1132" />
+        <location filename="../app/src/main_window.cpp" line="1178" />
         <source>请先选择一个或多个汇总单元格。</source>
         <translation>請先選擇一個或多個彙總單元格。</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="1166" />
+        <location filename="../app/src/main_window.cpp" line="1212" />
         <source>已将 %1 个单元格标记为 %2，可点击“保存当前修正规则”复用。</source>
         <translation>已將 %1 個單元格標記為 %2，可點選“儲存當前修正規則”複用。</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="1171" />
-        <location filename="../app/src/main_window.cpp" line="1227" />
+        <location filename="../app/src/main_window.cpp" line="1217" />
+        <location filename="../app/src/main_window.cpp" line="1273" />
         <source> 已记住调整。</source>
         <translation> 已記住調整。</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="1173" />
-        <location filename="../app/src/main_window.cpp" line="1229" />
-        <location filename="../app/src/main_window.cpp" line="1254" />
-        <location filename="../app/src/main_window.cpp" line="1279" />
+        <location filename="../app/src/main_window.cpp" line="1219" />
+        <location filename="../app/src/main_window.cpp" line="1275" />
+        <location filename="../app/src/main_window.cpp" line="1300" />
+        <location filename="../app/src/main_window.cpp" line="1325" />
         <source>记住调整失败</source>
         <translation>記住調整失敗</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="1192" />
-        <location filename="../app/src/main_window.cpp" line="1207" />
+        <location filename="../app/src/main_window.cpp" line="1238" />
+        <location filename="../app/src/main_window.cpp" line="1253" />
         <source>恢复自动</source>
         <translation>恢復自動</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="1192" />
+        <location filename="../app/src/main_window.cpp" line="1238" />
         <source>请先选择一个汇总单元格。</source>
         <translation>請先選擇一個彙總單元格。</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="1207" />
+        <location filename="../app/src/main_window.cpp" line="1253" />
         <source>当前单元格没有手动或已记住的修正。</source>
         <translation>當前單元格沒有手動或已記住的修正。</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="1224" />
+        <location filename="../app/src/main_window.cpp" line="1270" />
         <source>已将 %1 恢复为自动判定。</source>
         <translation>已將 %1 恢復為自動判定。</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="1236" />
+        <location filename="../app/src/main_window.cpp" line="1282" />
         <source>当前没有可撤销的修正。</source>
         <translation>當前沒有可撤銷的修正。</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="1250" />
+        <location filename="../app/src/main_window.cpp" line="1296" />
         <source>已撤销修正。</source>
         <translation>已撤銷修正。</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="1536" />
+        <location filename="../app/src/main_window.cpp" line="1582" />
         <source>语言已更改</source>
         <translation>語言已更改</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="1537" />
+        <location filename="../app/src/main_window.cpp" line="1583" />
         <source>语言已更改，重启后生效。</source>
         <translation>語言已更改，重啟後生效。</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="1261" />
+        <location filename="../app/src/main_window.cpp" line="1307" />
         <source>清除修正</source>
         <translation>清除修正</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="267" />
-        <location filename="../app/src/main_window.cpp" line="283" />
-        <location filename="../app/src/main_window.cpp" line="289" />
+        <location filename="../app/src/main_window.cpp" line="269" />
+        <location filename="../app/src/main_window.cpp" line="285" />
+        <location filename="../app/src/main_window.cpp" line="291" />
         <source>汇总结果</source>
         <translation>彙總結果</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="1261" />
+        <location filename="../app/src/main_window.cpp" line="1307" />
         <source>当前没有手动修正。</source>
         <translation>當前沒有手動修正。</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="1275" />
+        <location filename="../app/src/main_window.cpp" line="1321" />
         <source>已清除当前工作区的手动修正。</source>
         <translation>已清除當前工作區的手動修正。</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="1287" />
-        <location filename="../app/src/main_window.cpp" line="1307" />
+        <location filename="../app/src/main_window.cpp" line="1333" />
+        <location filename="../app/src/main_window.cpp" line="1353" />
         <source>异常导航</source>
         <translation>異常導航</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="1287" />
+        <location filename="../app/src/main_window.cpp" line="1333" />
         <source>当前没有可检查的汇总结果。</source>
         <translation>當前沒有可檢查的彙總結果。</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="1307" />
+        <location filename="../app/src/main_window.cpp" line="1353" />
         <source>当前工作表没有混合或可疑单元格。</source>
         <translation>當前工作表沒有混合或可疑單元格。</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="1332" />
+        <location filename="../app/src/main_window.cpp" line="1378" />
         <source>已跳转到 %1。</source>
         <translation>已跳轉到 %1。</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="1338" />
+        <location filename="../app/src/main_window.cpp" line="1384" />
         <source>当前还没有手动修正的单元格。</source>
         <translation>當前還沒有手動修正的單元格。</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="1342" />
+        <location filename="../app/src/main_window.cpp" line="1388" />
         <source>当前没有可用于生成修正规则指纹的同构工作簿。</source>
         <translation>當前沒有可用於生成修正規則指紋的同構工作簿。</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="1373" />
-        <location filename="../app/src/main_window.cpp" line="1399" />
+        <location filename="../app/src/main_window.cpp" line="1419" />
+        <location filename="../app/src/main_window.cpp" line="1445" />
         <source>已更新修正规则“%1”。</source>
         <translation>已更新修正規則“%1”。</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="1428" />
+        <location filename="../app/src/main_window.cpp" line="1474" />
         <source>已保存修正规则“%1”，包含 %2 个修正。</source>
         <translation>已儲存修正規則“%1”，包含 %2 個修正。</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="1447" />
-        <location filename="../app/src/main_window.cpp" line="1454" />
+        <location filename="../app/src/main_window.cpp" line="1493" />
+        <location filename="../app/src/main_window.cpp" line="1500" />
         <source>导入修正规则</source>
         <translation>匯入修正規則</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="1447" />
+        <location filename="../app/src/main_window.cpp" line="1493" />
         <source>当前没有可绑定修正规则的同构工作簿。</source>
         <translation>當前沒有可繫結修正規則的同構工作簿。</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="1454" />
+        <location filename="../app/src/main_window.cpp" line="1500" />
         <source>导入的修正规则不属于当前同构结构。</source>
         <translation>匯入的修正規則不屬於當前同構結構。</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="1470" />
+        <location filename="../app/src/main_window.cpp" line="1516" />
         <source>已导入修正规则“%1”。</source>
         <translation>已匯入修正規則“%1”。</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="1489" />
+        <location filename="../app/src/main_window.cpp" line="1535" />
         <source>已清除当前修正规则。</source>
         <translation>已清除當前修正規則。</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="1496" />
+        <location filename="../app/src/main_window.cpp" line="1542" />
         <source>导出</source>
         <translation>匯出</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="1496" />
+        <location filename="../app/src/main_window.cpp" line="1542" />
         <source>当前没有可导出的汇总结果。</source>
         <translation>當前沒有可匯出的彙總結果。</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="1502" />
+        <location filename="../app/src/main_window.cpp" line="1548" />
         <source>导出汇总</source>
         <translation>匯出彙總</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="1504" />
+        <location filename="../app/src/main_window.cpp" line="1550" />
         <source>Excel Workbook (*.xlsx);;All Files (*)</source>
         <translation>Excel 工作簿 (*.xlsx);;所有檔案 (*)</translation>
     </message>
     <message>
-        <location filename="../app/src/main_window.cpp" line="1518" />
+        <location filename="../app/src/main_window.cpp" line="1564" />
         <source>导出失败</source>
         <translation>匯出失敗</translation>
     </message>
@@ -800,35 +882,35 @@
         <location filename="../app/src/diagnostics_view.cpp" line="15" />
         <location filename="../app/src/diagnostics_view.cpp" line="20" />
         <location filename="../app/src/diagnostics_view.cpp" line="28" />
-        <location filename="../app/src/main_window.cpp" line="55" />
-        <location filename="../app/src/main_window.cpp" line="62" />
-        <location filename="../app/src/main_window.cpp" line="67" />
+        <location filename="../app/src/main_window.cpp" line="57" />
+        <location filename="../app/src/main_window.cpp" line="64" />
+        <location filename="../app/src/main_window.cpp" line="69" />
         <source>阻断</source>
         <translation>阻斷</translation>
     </message>
     <message>
         <location filename="../app/src/diagnostics_view.cpp" line="15" />
         <location filename="../app/src/diagnostics_view.cpp" line="27" />
-        <location filename="../app/src/main_window.cpp" line="53" />
-        <location filename="../app/src/main_window.cpp" line="67" />
+        <location filename="../app/src/main_window.cpp" line="55" />
+        <location filename="../app/src/main_window.cpp" line="69" />
         <source>警告</source>
         <translation>警告</translation>
     </message>
     <message>
         <location filename="../app/src/diagnostics_view.cpp" line="20" />
-        <location filename="../app/src/main_window.cpp" line="62" />
+        <location filename="../app/src/main_window.cpp" line="64" />
         <source>可合并</source>
         <translation>可合併</translation>
     </message>
     <message>
         <location filename="../app/src/diagnostics_view.cpp" line="26" />
-        <location filename="../app/src/main_window.cpp" line="51" />
+        <location filename="../app/src/main_window.cpp" line="53" />
         <source>参与</source>
         <translation>參與</translation>
     </message>
     <message>
         <location filename="../app/src/diagnostics_view.cpp" line="30" />
-        <location filename="../app/src/main_window.cpp" line="57" />
+        <location filename="../app/src/main_window.cpp" line="59" />
         <location filename="../app/src/schema_manager_dialog.cpp" line="35" />
         <location filename="../app/src/schema_manager_dialog.cpp" line="41" />
         <source>未知</source>
@@ -865,20 +947,20 @@
         <translation>%1 / 跳過</translation>
     </message>
     <message>
-        <location filename="../app/src/dialog_utils.cpp" line="124" />
-        <location filename="../app/src/dialog_utils.cpp" line="132" />
-        <location filename="../app/src/dialog_utils.cpp" line="140" />
-        <location filename="../app/src/dialog_utils.cpp" line="149" />
+        <location filename="../app/src/dialog_utils.cpp" line="126" />
+        <location filename="../app/src/dialog_utils.cpp" line="134" />
+        <location filename="../app/src/dialog_utils.cpp" line="142" />
+        <location filename="../app/src/dialog_utils.cpp" line="151" />
         <source>确定</source>
         <translation>確定</translation>
     </message>
     <message>
-        <location filename="../app/src/dialog_utils.cpp" line="157" />
+        <location filename="../app/src/dialog_utils.cpp" line="159" />
         <source>是</source>
         <translation>是</translation>
     </message>
     <message>
-        <location filename="../app/src/dialog_utils.cpp" line="158" />
+        <location filename="../app/src/dialog_utils.cpp" line="160" />
         <source>否</source>
         <translation>否</translation>
     </message>

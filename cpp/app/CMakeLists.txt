@@ -1,4 +1,6 @@
 add_executable(xlsone_app
+    src/check_update_dialog.cpp
+    src/check_update_dialog.hpp
     src/dialog_utils.cpp
     src/dialog_utils.hpp
     src/diagnostics_view.cpp
