@@ -1,6 +1,8 @@
 #pragma once
 
 #include <QColor>
+#include <QPushButton>
+#include <QString>
 #include <QWidget>
 
 namespace xlsone::ui {
@@ -52,5 +54,9 @@ struct Theme {
 const Theme& theme();
 bool isSystemDark();
 void applyAppStyle(QWidget* root);
+
+// Style helpers to keep button appearance consistent with the empty-state primary button.
+QString primaryButtonStyleSheet();
+void stylePrimaryButton(QPushButton* button);
 
 } // namespace xlsone::ui

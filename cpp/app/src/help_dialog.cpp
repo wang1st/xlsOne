@@ -1,6 +1,7 @@
 #include "help_dialog.hpp"
 
 #include "dialog_utils.hpp"
+#include "ui_theme.hpp"
 
 #include <QDialogButtonBox>
 #include <QHBoxLayout>
@@ -108,6 +109,10 @@ void HelpDialog::buildUi()
 
     // ── Button Box ──
     auto* buttonBox = new QDialogButtonBox(QDialogButtonBox::Close, Qt::Horizontal, this);
+    if (auto* closeButton = buttonBox->button(QDialogButtonBox::Close)) {
+        closeButton->setText(tr("关闭"));
+        xlsone::ui::stylePrimaryButton(qobject_cast<QPushButton*>(closeButton));
+    }
     connect(buttonBox, &QDialogButtonBox::rejected, this, &QDialog::close);
 
     // ── Layout ──

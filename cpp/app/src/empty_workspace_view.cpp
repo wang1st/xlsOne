@@ -20,25 +20,7 @@ EmptyWorkspaceView::EmptyWorkspaceView(QWidget* parent) : QWidget(parent)
     openButton_ = new QPushButton(tr("选择文件"), this);
     openButton_->setIcon(xlsone::ui::makeSymbolIcon(xlsone::ui::SymbolIcon::FolderPlus, Qt::white));
     openButton_->setIconSize(QSize(16, 16));
-    openButton_->setCursor(Qt::PointingHandCursor);
-    openButton_->setObjectName(QStringLiteral("primaryImportButton"));
-
-    const auto& t = xlsone::ui::theme();
-    openButton_->setStyleSheet(QStringLiteral(
-        "QPushButton#primaryImportButton {"
-        " background: %1; color: white; border: 1px solid %2;"
-        " border-radius: 8px; padding: 9px 18px; font-weight: 600; font-size: 13px;"
-        "}"
-        "QPushButton#primaryImportButton:hover { background: %3; }"
-        "QPushButton#primaryImportButton:pressed { background: %4; }"
-        "QPushButton#primaryImportButton:disabled { background: %5; color: %6; }"
-    )
-        .arg(t.accent.name())
-        .arg(t.isDark ? QStringLiteral("rgba(82,148,255,0.30)") : QStringLiteral("rgba(42,117,255,0.30)"))
-        .arg(t.isDark ? QStringLiteral("#1e5fd6") : QStringLiteral("#2368e8"))
-        .arg(t.isDark ? QStringLiteral("#1647a8") : QStringLiteral("#1c59cc"))
-        .arg(t.isDark ? QStringLiteral("#2c2e36") : QStringLiteral("#e2e6ef"))
-        .arg(t.textDisabled.name()));
+    xlsone::ui::stylePrimaryButton(openButton_);
 
     connect(openButton_, &QPushButton::clicked, this, &EmptyWorkspaceView::openRequested);
 }

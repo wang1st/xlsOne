@@ -2,6 +2,7 @@
 
 #include <QApplication>
 #include <QPalette>
+#include <QPushButton>
 
 namespace xlsone::ui {
 
@@ -82,6 +83,35 @@ const Theme& theme()
     return t;
 }
 
+QString primaryButtonStyleSheet()
+{
+    const auto& t = theme();
+    return QStringLiteral(
+        "QPushButton {"
+        " background: %1; color: white; border: 1px solid %2;"
+        " border-radius: 8px; padding: 9px 18px; font-weight: 600; font-size: 13px;"
+        "}"
+        "QPushButton:hover { background: %3; }"
+        "QPushButton:pressed { background: %4; }"
+        "QPushButton:disabled { background: %5; color: %6; }"
+    )
+        .arg(t.accent.name())
+        .arg(t.isDark ? QStringLiteral("rgba(82,148,255,0.30)") : QStringLiteral("rgba(42,117,255,0.30)"))
+        .arg(t.isDark ? QStringLiteral("#1e5fd6") : QStringLiteral("#2368e8"))
+        .arg(t.isDark ? QStringLiteral("#1647a8") : QStringLiteral("#1c59cc"))
+        .arg(t.isDark ? QStringLiteral("#2c2e36") : QStringLiteral("#e2e6ef"))
+        .arg(t.textDisabled.name());
+}
+
+void stylePrimaryButton(QPushButton* button)
+{
+    if (button == nullptr) {
+        return;
+    }
+    button->setCursor(Qt::PointingHandCursor);
+    button->setStyleSheet(primaryButtonStyleSheet());
+}
+
 void applyAppStyle(QWidget* root)
 {
     const auto& t = theme();
@@ -99,6 +129,26 @@ void applyAppStyle(QWidget* root)
         }
         QMessageBox QLabel {
             color: %1;
+        }
+        QMessageBox QPushButton, QFileDialog QPushButton {
+            background: %11;
+            color: white;
+            border: 1px solid %12;
+            border-radius: 8px;
+            padding: 9px 18px;
+            font-weight: 600;
+            font-size: 13px;
+            min-width: 72px;
+        }
+        QMessageBox QPushButton:hover, QFileDialog QPushButton:hover {
+            background: %13;
+        }
+        QMessageBox QPushButton:pressed, QFileDialog QPushButton:pressed {
+            background: %14;
+        }
+        QMessageBox QPushButton:disabled, QFileDialog QPushButton:disabled {
+            background: %15;
+            color: %16;
         }
         QMenuBar {
             background: %3;
@@ -182,7 +232,13 @@ void applyAppStyle(QWidget* root)
         .arg(hex(t.textMuted))
         .arg(t.isDark ? QStringLiteral("rgba(180,180,190,60)") : QStringLiteral("rgba(120,128,140,90)"))
         .arg(t.isDark ? QStringLiteral("rgba(255,255,255,10)") : QStringLiteral("rgba(0,0,0,7)"))
-        .arg(t.isDark ? QStringLiteral("rgba(255,255,255,18)") : QStringLiteral("rgba(0,0,0,14)"));
+        .arg(t.isDark ? QStringLiteral("rgba(255,255,255,18)") : QStringLiteral("rgba(0,0,0,14)"))
+        .arg(hex(t.accent))
+        .arg(t.isDark ? QStringLiteral("rgba(82,148,255,0.30)") : QStringLiteral("rgba(42,117,255,0.30)"))
+        .arg(t.isDark ? QStringLiteral("#1e5fd6") : QStringLiteral("#2368e8"))
+        .arg(t.isDark ? QStringLiteral("#1647a8") : QStringLiteral("#1c59cc"))
+        .arg(t.isDark ? QStringLiteral("#2c2e36") : QStringLiteral("#e2e6ef"))
+        .arg(hex(t.textDisabled));
 
     if (root != nullptr) {
         root->setStyleSheet(style);
