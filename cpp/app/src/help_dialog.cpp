@@ -107,20 +107,17 @@ void HelpDialog::buildUi()
     splitter->setStretchFactor(1, 1);
     splitter->setSizes({220, 780});
 
-    // ── Button Box ──
-    auto* buttonBox = new QDialogButtonBox(QDialogButtonBox::Close, Qt::Horizontal, this);
-    if (auto* closeButton = buttonBox->button(QDialogButtonBox::Close)) {
-        closeButton->setText(tr("关闭"));
-        xlsone::ui::stylePrimaryButton(qobject_cast<QPushButton*>(closeButton));
-    }
-    connect(buttonBox, &QDialogButtonBox::rejected, this, &QDialog::close);
+    // ── Close button ──
+    auto* closeButton = new QPushButton(tr("关闭"), this);
+    xlsone::ui::stylePrimaryButton(closeButton);
+    connect(closeButton, &QPushButton::clicked, this, &QDialog::close);
 
     // ── Layout ──
     auto* mainLayout = new QVBoxLayout(this);
     mainLayout->setContentsMargins(16, 16, 16, 12);
     mainLayout->setSpacing(12);
     mainLayout->addWidget(splitter, 1);
-    mainLayout->addWidget(buttonBox, 0);
+    mainLayout->addWidget(closeButton, 0, Qt::AlignRight);
     setLayout(mainLayout);
 
     // ── Connections ──
