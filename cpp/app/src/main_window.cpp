@@ -545,6 +545,8 @@ void MainWindow::buildUi()
     correctionLabel_ = new QLabel(correctionBar_);
     undoButton_ = new QPushButton(tr("撤销修正"), correctionBar_);
     clearOverridesButton_ = new QPushButton(tr("清除所有修正"), correctionBar_);
+    xlsone::ui::stylePrimaryButton(undoButton_);
+    xlsone::ui::stylePrimaryButton(clearOverridesButton_);
     correctionLayout->addWidget(correctionLabel_);
     correctionLayout->addStretch(1);
     correctionLayout->addWidget(undoButton_);

@@ -100,8 +100,10 @@ void InspectorPanel::showCell(const QString& reference, const xlsone::MergedCell
     auto* buttons = new QHBoxLayout;
     auto* labelButton = new QPushButton(tr("标签"), detailCard);
     labelButton->setProperty("overrideButton", QVariant(QStringLiteral("label")));
+    xlsone::ui::stylePrimaryButton(labelButton);
     auto* sumButton = new QPushButton(tr("求和"), detailCard);
     sumButton->setProperty("overrideButton", QVariant(QStringLiteral("sum")));
+    xlsone::ui::stylePrimaryButton(sumButton);
     buttons->addWidget(labelButton);
     buttons->addWidget(sumButton);
     buttons->addStretch(1);
@@ -112,7 +114,7 @@ void InspectorPanel::showCell(const QString& reference, const xlsone::MergedCell
     if (canRestoreAutomatic) {
         auto* restoreButton = new QPushButton(tr("恢复自动判断"), detailCard);
         restoreButton->setProperty("restoreButton", QVariant(true));
-        restoreButton->setCursor(Qt::PointingHandCursor);
+        xlsone::ui::stylePrimaryButton(restoreButton);
         detailLayout->addWidget(restoreButton);
         connect(restoreButton, &QPushButton::clicked, this, &InspectorPanel::restoreAutomaticRequested);
     }

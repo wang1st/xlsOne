@@ -1,5 +1,7 @@
 #include "update_dialog.hpp"
 
+#include "ui_theme.hpp"
+
 #include <QDesktopServices>
 #include <QLabel>
 #include <QPushButton>
@@ -39,6 +41,7 @@ UpdateDialog::UpdateDialog(const QString& version,
 
     auto* downloadButton = new QPushButton(tr("立即下载"), this);
     downloadButton->setDefault(true);
+    xlsone::ui::stylePrimaryButton(downloadButton);
     connect(downloadButton, &QPushButton::clicked, this, [this] {
         QDesktopServices::openUrl(QUrl(downloadUrl_));
         accept();
@@ -46,6 +49,7 @@ UpdateDialog::UpdateDialog(const QString& version,
     layout->addWidget(downloadButton);
 
     auto* laterButton = new QPushButton(tr("稍后提醒"), this);
+    xlsone::ui::stylePrimaryButton(laterButton);
     connect(laterButton, &QPushButton::clicked, this, &QDialog::reject);
     layout->addWidget(laterButton);
 }

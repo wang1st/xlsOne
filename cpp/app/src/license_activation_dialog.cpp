@@ -219,21 +219,8 @@ void LicenseActivationDialog::buildFormPanel(QWidget* container)
     // Activate button
     activateButton_ = new QPushButton(tr("激活"), container);
     activateButton_->setEnabled(false);
-    activateButton_->setCursor(Qt::PointingHandCursor);
-    activateButton_->setMinimumHeight(44);
-    activateButton_->setStyleSheet(QStringLiteral(
-        "QPushButton {"
-        " font-size: 15px; font-weight: 600; color: white;"
-        " background-color: %1; border: none; border-radius: 8px;"
-        " padding: 12px 0;"
-        "}"
-        "QPushButton:disabled { background-color: %2; color: %3; }"
-        "QPushButton:hover:!disabled { background-color: %4; }"
-    )
-        .arg(t.accent.name())
-        .arg(t.isDark ? QStringLiteral("#2c2e36") : QStringLiteral("#e2e6ef"))
-        .arg(t.textDisabled.name())
-        .arg(t.isDark ? QStringLiteral("#1e5fd6") : QStringLiteral("#2368e8")));
+    activateButton_->setMinimumHeight(40);
+    xlsone::ui::stylePrimaryButton(activateButton_);
     connect(activateButton_, &QPushButton::clicked,
             this, &LicenseActivationDialog::onActivateClicked);
     root->addWidget(activateButton_);
@@ -303,19 +290,7 @@ void LicenseActivationDialog::buildFormPanel(QWidget* container)
     addStep(3, tr("下载授权文件并导入本程序"));
 
     auto* importButton = new QPushButton(tr("导入授权文件..."), offlineInfo_);
-    importButton->setCursor(Qt::PointingHandCursor);
-    importButton->setMinimumHeight(34);
-    importButton->setStyleSheet(QStringLiteral(
-        "QPushButton {"
-        " color: %1; background: %2; border: 1px solid %3;"
-        " border-radius: 6px; font-size: 12px;"
-        "}"
-        "QPushButton:hover { background: %4; }"
-    )
-        .arg(t.text.name())
-        .arg(t.surface.name())
-        .arg(t.border.name())
-        .arg(t.bg2.name()));
+    xlsone::ui::stylePrimaryButton(importButton);
     connect(importButton, &QPushButton::clicked,
             this, &LicenseActivationDialog::onImportLicenseClicked);
     offlineLayout->addSpacing(4);

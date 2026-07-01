@@ -1,6 +1,7 @@
 #include "schema_manager_dialog.hpp"
 
 #include "dialog_utils.hpp"
+#include "ui_theme.hpp"
 
 #include <QFile>
 #include <QFileDialog>
@@ -134,6 +135,11 @@ SchemaManagerDialog::SchemaManagerDialog(const xlsone::SchemaRepository& reposit
     importButton_ = new QPushButton(tr("导入"), this);
     clearButton_ = new QPushButton(tr("清除当前修正规则"), this);
     auto* closeButton = new QPushButton(tr("关闭"), this);
+
+    xlsone::ui::stylePrimaryButton(exportButton_);
+    xlsone::ui::stylePrimaryButton(importButton_);
+    xlsone::ui::stylePrimaryButton(clearButton_);
+    xlsone::ui::stylePrimaryButton(closeButton);
 
     auto* buttonLayout = new QHBoxLayout;
     buttonLayout->addWidget(exportButton_);
