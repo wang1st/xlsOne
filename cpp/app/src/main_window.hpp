@@ -56,7 +56,7 @@ private slots:
     void clearOverrides();
     void selectSheet(const QString& sheetName, bool mergeable);
     void inspectCell(const QModelIndex& index);
-    void checkForUpdates();
+    void checkForUpdates(bool silent = true);
     void showLicenseActivation();
     void onLanguageSelected();
 
@@ -130,4 +130,5 @@ private:
     xlsone::LicenseManager* licenseManager_ = nullptr;
     QActionGroup* languageGroup_ = nullptr;
     bool firstShow_ = true;
+    bool checkingUpdates_ = false;
 };

@@ -1,6 +1,88 @@
 <?xml version='1.0' encoding='utf-8'?>
 <TS version="2.1" language="ja">
 <context>
+    <name>CheckUpdateDialog</name>
+    <message>
+        <location filename="../app/src/check_update_dialog.cpp" line="+18" />
+        <source>检查更新</source>
+        <translation>更新を確認</translation>
+    </message>
+    <message>
+        <location line="+75" />
+        <source>正在检查更新...</source>
+        <translation>更新を確認中...</translation>
+    </message>
+    <message>
+        <location line="+8" />
+        <source>请稍候，正在连接更新服务器...</source>
+        <translation>しばらくお待ちください。更新サーバーに接続中...</translation>
+    </message>
+    <message>
+        <location line="+5" />
+        <source>取消</source>
+        <translation>キャンセル</translation>
+    </message>
+    <message>
+        <location line="+9" />
+        <source>当前已是最新版本</source>
+        <translation>最新バージョンです</translation>
+    </message>
+    <message>
+        <location line="+3" />
+        <source>您当前使用的 %1 已经是最新版本，无需更新。</source>
+        <translation>現在お使いの %1 は最新バージョンです。更新の必要はありません。</translation>
+    </message>
+    <message>
+        <location line="+6" />
+        <source>确定</source>
+        <translation>OK</translation>
+    </message>
+    <message>
+        <location line="+9" />
+        <source>发现新版本 %1</source>
+        <translation>新しいバージョン %1 があります</translation>
+    </message>
+    <message>
+        <location line="+3" />
+        <source>新版本已发布，建议您更新以获得更好的体验。</source>
+        <translation>新しいバージョンがリリースされました。より良い体験のために更新することをお勧めします。</translation>
+    </message>
+    <message>
+        <location line="+12" />
+        <source>立即下载</source>
+        <translation>今すぐダウンロード</translation>
+    </message>
+    <message>
+        <location line="+10" />
+        <source>稍后提醒</source>
+        <translation>後で通知</translation>
+    </message>
+    <message>
+        <location line="+10" />
+        <source>检查更新失败</source>
+        <translation>更新の確認に失敗しました</translation>
+    </message>
+    <message>
+        <location line="+3" />
+        <source>无法连接到更新服务器，请检查网络后重试。
+
+错误信息：%1</source>
+        <translation>更新サーバーに接続できませんでした。ネットワークを確認して再試行してください。
+
+エラー: %1</translation>
+    </message>
+    <message>
+        <location line="+6" />
+        <source>重试</source>
+        <translation>再試行</translation>
+    </message>
+    <message>
+        <location line="+7" />
+        <source>关闭</source>
+        <translation>閉じる</translation>
+    </message>
+</context>
+<context>
     <name>DiagnosticsView</name>
     <message>
         <location filename="../app/src/diagnostics_view.cpp" line="+61" />
@@ -189,7 +271,7 @@ Skipped sheets: %3</translation>
         <translation>お問い合わせ</translation>
     </message>
     <message>
-        <location line="+34" />
+        <location line="+32" />
         <source>关闭</source>
         <translation>Close</translation>
     </message>
@@ -375,7 +457,7 @@ Skipped sheets: %3</translation>
 <context>
     <name>MainWindow</name>
     <message>
-        <location filename="../app/src/main_window.cpp" line="+344" />
+        <location filename="../app/src/main_window.cpp" line="+346" />
         <source>导入文件...</source>
         <translation>ファイルをインポート...</translation>
     </message>
@@ -401,19 +483,19 @@ Skipped sheets: %3</translation>
     </message>
     <message>
         <location line="+4" />
-        <location line="+182" />
-        <location line="+690" />
+        <location line="+184" />
+        <location line="+732" />
         <source>撤销修正</source>
         <translation>修正を元に戻す</translation>
     </message>
     <message>
-        <location line="-868" />
-        <location line="+179" />
+        <location line="-912" />
+        <location line="+181" />
         <source>清除所有修正</source>
         <translation>すべての修正をクリア</translation>
     </message>
     <message>
-        <location line="-169" />
+        <location line="-171" />
         <source>激活/导入许可证...</source>
         <translation>ライセンスを有効化/インポート...</translation>
     </message>
@@ -449,12 +531,12 @@ Skipped sheets: %3</translation>
         <translation>アップデートを確認</translation>
     </message>
     <message>
-        <location line="+3" />
+        <location line="+5" />
         <source>帮助</source>
         <translation>ヘルプ</translation>
     </message>
     <message>
-        <location line="+191" />
+        <location line="+233" />
         <source>选择工作簿</source>
         <translation>Select Workbook</translation>
     </message>
@@ -479,7 +561,7 @@ Skipped sheets: %3</translation>
         <translation>No compatible sheets for merging.</translation>
     </message>
     <message>
-        <location line="-373" />
+        <location line="-417" />
         <source>查看当前修正规则</source>
         <translation>現在の修正ルールを表示</translation>
     </message>
@@ -492,20 +574,20 @@ Skipped sheets: %3</translation>
     </message>
     <message>
         <location line="+86" />
-        <location line="+963" />
+        <location line="+1007" />
         <location line="+4" />
         <source>保存当前修正规则</source>
         <translation>現在の修正ルールを保存</translation>
     </message>
     <message>
-        <location line="-941" />
-        <location line="+639" />
+        <location line="-985" />
+        <location line="+683" />
         <location line="+92" />
         <source>修正规则</source>
         <translation>修正ルール</translation>
     </message>
     <message>
-        <location line="-704" />
+        <location line="-748" />
         <source>跟随系统</source>
         <translation>システムに従う</translation>
     </message>
@@ -520,12 +602,12 @@ Skipped sheets: %3</translation>
         <translation>&lt;h3&gt;表表归一  V%1&lt;/h3&gt;&lt;p&gt;多张同格式 Excel 报表一键汇总&lt;/p&gt;&lt;p&gt;把多张格式一致的 Excel 表合成一份汇总表。金额、数量等能相加的数会自动合计；名称、编号等不该相加的信息，会保留各文件里最常见的共同前缀。&lt;/p&gt;&lt;p&gt;&lt;b&gt;联系方式：&lt;/b&gt;831261@qq.com&lt;/p&gt;</translation>
     </message>
     <message>
-        <location line="+117" />
+        <location line="+119" />
         <source>拖入 Excel 文件，开始智能汇总。</source>
         <translation>Excelファイルをドラッグして、スマート集計を開始</translation>
     </message>
     <message>
-        <location line="+153" />
+        <location line="+195" />
         <source>正在校验文件结构...</source>
         <translation>ファイル構造を検証中...</translation>
     </message>
@@ -716,18 +798,18 @@ Skipped sheets: %3</translation>
         <translation>Export failed</translation>
     </message>
     <message>
-        <location line="-1104" />
+        <location line="-1148" />
         <source>语言</source>
         <translation>言語</translation>
     </message>
     <message>
-        <location line="+594" />
+        <location line="+638" />
         <source>当前手动修正规则</source>
         <translation>現在の手動修正ルール</translation>
     </message>
     <message>
-        <location line="-717" />
-        <location line="+748" />
+        <location line="-761" />
+        <location line="+792" />
         <source>汇总</source>
         <translation>集計</translation>
     </message>
@@ -800,7 +882,7 @@ Skipped sheets: %3</translation>
         <location filename="../app/src/diagnostics_view.cpp" line="-94" />
         <location line="+5" />
         <location line="+8" />
-        <location filename="../app/src/main_window.cpp" line="-1482" />
+        <location filename="../app/src/main_window.cpp" line="-1526" />
         <location line="+7" />
         <location line="+5" />
         <source>阻断</source>
@@ -865,7 +947,7 @@ Skipped sheets: %3</translation>
         <translation>%1 / Skipped</translation>
     </message>
     <message>
-        <location filename="../app/src/dialog_utils.cpp" line="+124" />
+        <location filename="../app/src/dialog_utils.cpp" line="+126" />
         <location line="+8" />
         <location line="+8" />
         <location line="+9" />
