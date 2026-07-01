@@ -4,6 +4,9 @@
         <file>resources/xlsOne.ico</file>
         <file>resources/xlsOne.png</file>
         <file alias="help/index.html">help/index.html</file>
+        <file alias="help/index_en.html">help/index_en.html</file>
+        <file alias="help/index_zh_TW.html">help/index_zh_TW.html</file>
+        <file alias="help/index_ja.html">help/index_ja.html</file>
         <file alias="help/style.css">help/style.css</file>
         <file alias="i18n/algorithm_keywords.json">../i18n/algorithm_keywords.json</file>
     </qresource>

@@ -4,6 +4,8 @@
 
 #include <QDialogButtonBox>
 #include <QHBoxLayout>
+#include <QLocale>
+#include <QSettings>
 #include <QSplitter>
 #include <QTextBrowser>
 #include <QTreeWidget>
@@ -81,7 +83,19 @@ void HelpDialog::buildUi()
     // ── Text Browser (content) ──
     browser_ = new QTextBrowser(this);
     browser_->setOpenExternalLinks(true);
-    browser_->setSource(QUrl(QStringLiteral("qrc:/help/index.html")));
+
+    // Pick help document based on saved language or system locale.
+    QString helpDoc = QStringLiteral("qrc:/help/index.html");
+    const QString savedLang = QSettings().value(QStringLiteral("AppLanguage")).toString();
+    const QString locale = savedLang.isEmpty() ? QLocale::system().name() : savedLang;
+    if (locale == QStringLiteral("en") || locale.startsWith(QStringLiteral("en_"))) {
+        helpDoc = QStringLiteral("qrc:/help/index_en.html");
+    } else if (locale == QStringLiteral("zh_TW") || locale == QStringLiteral("zh_Hant") || locale == QStringLiteral("zh_HK")) {
+        helpDoc = QStringLiteral("qrc:/help/index_zh_TW.html");
+    } else if (locale == QStringLiteral("ja") || locale.startsWith(QStringLiteral("ja_"))) {
+        helpDoc = QStringLiteral("qrc:/help/index_ja.html");
+    }
+    browser_->setSource(QUrl(helpDoc));
 
     // ── Splitter ──
     auto* splitter = new QSplitter(Qt::Horizontal, this);

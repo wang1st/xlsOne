@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>表表歸一 快速參考指南</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="guide-header">
+    <h1>表表歸一 快速參考指南</h1>
+    <p class="subtitle">多張同格式 Excel 報表一鍵彙總 — 工業級操作手冊</p>
+    <p class="version">版本 1.x &middot; 適用於 Linux / Windows / macOS</p>
+</header>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!--  快速開始                                                     -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<section id="topic-quickstart">
+    <h2>快速開始</h2>
+    <p>首次使用？按以下 5 步即可完成第一次彙總：</p>
+    <ol class="steps">
+        <li>
+            <strong>啟動應用</strong>
+            <span class="step-desc">開啟表表歸一，進入空白工作臺。支援 Linux、Windows、macOS 三大平臺。</span>
+        </li>
+        <li>
+            <strong>匯入檔案</strong>
+            <span class="step-desc">將多個 <code>.xlsx</code> 或 <code>.xls</code> 檔案拖入視窗，或透過 <kbd>檔案 → 匯入檔案…</kbd> 選擇。支援資料夾批次匯入。</span>
+        </li>
+        <li>
+            <strong>自動校驗</strong>
+            <span class="step-desc">程式自動分析檔案結構，識別可合併的工作表，並在底部狀態列報告校驗摘要。</span>
+        </li>
+        <li>
+            <strong>檢視結果</strong>
+            <span class="step-desc">點選頂部 Sheet 標籤切換匯總頁，主表格顯示合併後的資料。藍色單元格為可求和數值，點選任意單元格可在右側面板檢視來源明細。</span>
+        </li>
+        <li>
+            <strong>匯出儲存</strong>
+            <span class="step-desc">確認無誤後，點選工具欄 <kbd>匯出 XLSX</kbd>（或 <kbd>Ctrl+E</kbd>），選擇儲存路徑即完成。</span>
+        </li>
+    </ol>
+    <div class="tip">
+        <strong>提示：</strong> 匯入前請確保所有 Excel 檔案使用相同的表頭結構和行列布局。結構不一致的工作表會被自動跳過並給出診斷原因。
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!--  匯入檔案                                                     -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<section id="topic-import">
+    <h2>匯入檔案</h2>
+    <p>支援三種匯入方式，適用於不同工作場景：</p>
+    <table class="feature-table">
+        <thead>
+            <tr><th>方式</th><th>操作</th><th>適用場景</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>拖拽匯入</strong></td>
+                <td>將檔案或資料夾直接拖入視窗空白區</td>
+                <td>從檔案管理器快速選取</td>
+            </tr>
+            <tr>
+                <td><strong>選單匯入</strong></td>
+                <td><kbd>檔案 → 匯入檔案…</kbd>（<kbd>Ctrl+O</kbd>）</td>
+                <td>新建工作區、替換當前檔案列表</td>
+            </tr>
+            <tr>
+                <td><strong>追加匯入</strong></td>
+                <td>點選工具欄 <kbd>追加</kbd>（<kbd>Ctrl+Shift+O</kbd>）</td>
+                <td>在已有工作區基礎上補充更多檔案</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>匯入要求</h3>
+    <ul>
+        <li>檔案格式：支援 <code>.xlsx</code>（Office 2007+）和 <code>.xls</code>（BIFF8, Office 97–2003）。</li>
+        <li>結構一致：所有待合併檔案必須包含<strong>同名工作表</strong>，且該工作表的表頭行列必須完全對齊。</li>
+        <li>編碼相容：支援中文、英文等 Unicode 內容，無需額外配置。</li>
+    </ul>
+
+    <div class="note">
+        <strong>注意：</strong> 如果匯入時出現"解析失敗"，請檢查檔案是否已損壞或被其他程式獨佔開啟。已加密（帶密碼保護）的 Excel 檔案暫不支援。
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!--  檢視彙總                                                     -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<section id="topic-merge">
+    <h2>檢視彙總結果</h2>
+    <p>匯入成功後，視窗上方會顯示所有檢測到的工作表標籤頁：</p>
+
+    <h3>合併策略</h3>
+    <div class="card-grid">
+        <div class="card">
+            <h4>數值列 — 自動合計</h4>
+            <p>金額、數量、百分比等純數值列，程式自動識別並對所有原始檔進行<strong>求和彙總</strong>。彙總單元格以藍色字型高亮顯示。</p>
+        </div>
+        <div class="card">
+            <h4>文字列 — 公共字首</h4>
+            <p>名稱、編號、專案程式碼等文字資訊，程式取所有原始檔的<strong>最長公共字首</strong>作為彙總值。若各檔案值不同，則標記為可稽核。</p>
+        </div>
+        <div class="card">
+            <h4>空值處理</h4>
+            <p>若部分原始檔在某單元格無資料，程式預設以非空值彙總。可在右側面板檢視每個原始檔的實際值。</p>
+        </div>
+    </div>
+
+    <div class="tip">
+        <strong>提示：</strong> 雙擊任意彙總單元格可展開該單元格在<strong>所有原始檔中的原始值</strong>，方便審計和校對。
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!--  工作表狀態                                                   -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<section id="topic-sheetstatus">
+    <h2>工作表狀態</h2>
+    <p>每個工作表標籤都會顯示其合併狀態：</p>
+
+    <table class="feature-table">
+        <thead>
+            <tr><th>狀態</th><th>含義</th><th>操作</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><span class="badge badge-ready">可合併</span></td>
+                <td>該工作表在所有原始檔中結構一致，已成功參與彙總</td>
+                <td>點選標籤檢視彙總資料</td>
+            </tr>
+            <tr>
+                <td><span class="badge badge-skipped">已跳過</span></td>
+                <td>結構不一致，該工作表未能參與合併</td>
+                <td>點選標籤檢視診斷原因</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>常見跳過原因</h3>
+    <ol>
+        <li><strong>表頭行數不一致：</strong>不同原始檔的標題行數不同，導致資料區域無法對齊。</li>
+        <li><strong>列數不匹配：</strong>同一工作表的列數在不同原始檔中存在差異。</li>
+        <li><strong>表頭內容不一致：</strong>列標題文字不同，程式無法確定列對應關係。</li>
+    </ol>
+
+    <div class="note">
+        <strong>建議：</strong> 使用統一的 Excel 模板規範各分支機構/部門的資料填報格式，可大幅減少"已跳過"情況。預定義的模板檔案可用於後續匯入校驗。
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!--  穿透查閱                                                     -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<section id="topic-drilldown">
+    <h2>穿透查閱</h2>
+    <p>彙總表的每個單元格都支援<strong>穿透查閱</strong>（Drill-down），幫助追溯資料來源：</p>
+
+    <ol class="steps">
+        <li><strong>點選單元格：</strong>在彙總表格中單擊任意單元格。</li>
+        <li><strong>檢視來源面板：</strong>右側面板列出該單元格在各原始檔中的原始值，標註檔名和具體數值。</li>
+        <li><strong>識別異常：</strong>若某個檔案的值與其他檔案差異較大，可快速定位該檔案進行核實。</li>
+    </ol>
+
+    <div class="tip">
+        <strong>審計場景：</strong> 財務審計中，可逐個單元格穿透檢視各子公司的原始填報資料，驗證彙總結果的正確性。
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!--  匯出結果                                                     -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<section id="topic-export">
+    <h2>匯出結果</h2>
+    <p>彙總校驗完畢後，將結果儲存為標準 Excel 檔案：</p>
+
+    <ol class="steps">
+        <li>確認彙總表資料無誤（必要時可進行單元格修正後匯出）。</li>
+        <li>點選工具欄 <kbd>匯出 XLSX</kbd> 或使用快捷鍵 <kbd>Ctrl+E</kbd>。</li>
+        <li>在檔案對話方塊中選擇儲存路徑和檔名。</li>
+        <li>匯出的 <code>.xlsx</code> 檔案可用 Excel / WPS / LibreOffice 開啟。</li>
+    </ol>
+
+    <h3>匯出內容說明</h3>
+    <ul>
+        <li>每個可合併的工作表在匯出檔案中保留為獨立 Sheet。</li>
+        <li>數值格式（千分位、小數位、百分比等）儘可能保留原始樣式。</li>
+        <li>單元格修正結果會反映在最終匯出檔案中。</li>
+        <li>已跳過的 Sheet 不出現在匯出檔案中。</li>
+    </ul>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!--  單元格修正                                                   -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<section id="topic-correction">
+    <h2>單元格修正</h2>
+    <p>如果程式的自動判定與預期不符，可以手動修正單元格的聚合方式：</p>
+
+    <h3>修正型別</h3>
+    <table class="feature-table">
+        <thead>
+            <tr><th>型別</th><th>快捷鍵</th><th>行為</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>標籤</strong>（Label）</td>
+                <td><kbd>1</kbd></td>
+                <td>強制以文字方式合併（取公共字首），不進行求和</td>
+            </tr>
+            <tr>
+                <td><strong>求和</strong>（Sum）</td>
+                <td><kbd>2</kbd></td>
+                <td>強制以數值方式合併（累加），即使內容包含文字</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>操作步驟</h3>
+    <ol>
+        <li>在彙總表中選中一個或多個需要修正的單元格。</li>
+        <li>在右側面板點選 <kbd>標籤</kbd> 或 <kbd>求和</kbd>，或直接按鍵盤 <kbd>1</kbd> / <kbd>2</kbd>。</li>
+        <li>底部狀態列顯示已調整數量，可隨時 <kbd>撤銷</kbd>（<kbd>Ctrl+Z</kbd>）或 <kbd>清除所有修正</kbd>。</li>
+        <li>點選 <kbd>恢復自動</kbd> 可將單個單元格恢復為程式的原始判定。</li>
+    </ol>
+
+    <div class="tip">
+        <strong>最佳實踐：</strong> 修正完成後，建議將修正規則儲存為<strong>修正規則</strong>，下次匯入相同結構的檔案時可自動應用。
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!--  修正規則                                                     -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<section id="topic-schema">
+    <h2>修正規則</h2>
+    <p>修正規則（Schema）是一組可複用的單元格修正規則。特別適用於<strong>週期性重複彙總</strong>的場景（如月度/季度財務報表合併）。</p>
+
+    <h3>核心功能</h3>
+    <div class="card-grid">
+        <div class="card">
+            <h4>自動匹配</h4>
+            <p>匯入檔案時，程式自動檢測是否存在匹配的修正規則。若檔案結構與已儲存的規則高度吻合，自動應用已有修正規則。</p>
+        </div>
+        <div class="card">
+            <h4>儲存規則</h4>
+            <p>透過 <kbd>修正規則 → 儲存當前修正規則</kbd>（<kbd>Ctrl+S</kbd>）將當前工作區的所有修正規則持久化儲存。</p>
+        </div>
+        <div class="card">
+            <h4>管理規則</h4>
+            <p>透過 <kbd>修正規則 → 檢視當前修正規則</kbd> 管理已儲存的規則：檢視修正明細、匯入/匯出 JSON 檔案、清除過時規則。</p>
+        </div>
+    </div>
+
+    <h3>最佳實踐</h3>
+    <ul>
+        <li>為每個報表模板建立獨立的修正規則，命名規則如"華東區月度銷售報表"。</li>
+        <li>使用 <code>.json</code> 格式匯出/匯入修正規則，便於團隊共享和版本管理。</li>
+        <li>結構發生變化時，及時更新修正規則以避免舊規則錯誤應用。</li>
+    </ul>
+
+    <div class="note">
+        <strong>技術說明：</strong> 修正規則基於"結構指紋"（列名 + 行位置 + 資料型別）進行匹配，而非檔名。因此即使檔案來源不同，只要結構一致即可複用規則。
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!--  快捷鍵                                                       -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<section id="topic-shortcuts">
+    <h2>快捷鍵</h2>
+    <table class="shortcut-table">
+        <thead>
+            <tr><th>快捷鍵</th><th>功能</th><th>選單路徑</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><kbd>Ctrl+O</kbd></td><td>匯入檔案（替換當前）</td><td>檔案 → 匯入檔案…</td></tr>
+            <tr><td><kbd>Ctrl+Shift+O</kbd></td><td>追加檔案到當前工作區</td><td>檔案 → 追加檔案…</td></tr>
+            <tr><td><kbd>Ctrl+E</kbd></td><td>匯出彙總結果</td><td>檔案 → 匯出 XLSX…</td></tr>
+            <tr><td><kbd>Ctrl+R</kbd></td><td>重新整理當前工作區</td><td>檔案 → 重新整理</td></tr>
+            <tr><td><kbd>Ctrl+N</kbd></td><td>清空工作區</td><td>檔案 → 清空工作區</td></tr>
+            <tr><td><kbd>Ctrl+S</kbd></td><td>儲存當前修正規則</td><td>修正規則 → 儲存當前修正規則</td></tr>
+            <tr><td><kbd>Ctrl+Z</kbd></td><td>撤銷修正單元格修正</td><td>編輯 → 撤銷修正</td></tr>
+            <tr><td><kbd>1</kbd></td><td>將選中單元格標記為標籤</td><td>右側面板 → 標籤</td></tr>
+            <tr><td><kbd>2</kbd></td><td>將選中單元格標記為求和</td><td>右側面板 → 求和</td></tr>
+            <tr><td><kbd>Ctrl+Q</kbd></td><td>退出程式</td><td>檔案 → 退出</td></tr>
+            <tr><td><kbd>F1</kbd></td><td>開啟快速參考指南</td><td>快速參考指南 → 快速參考指南</td></tr>
+        </tbody>
+    </table>
+
+    <div class="tip">
+        <strong>macOS 使用者注意：</strong> macOS 版本使用 <kbd>&#8984;</kbd>（Command）鍵替代 <kbd>Ctrl</kbd>。例如 <kbd>&#8984;+O</kbd> 匯入檔案。
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!--  常見問題                                                     -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<section id="topic-faq">
+    <h2>常見問題</h2>
+
+    <div class="faq-item">
+        <h3>Q: 匯入後所有工作表都顯示"已跳過"？</h3>
+        <p>說明原始檔之間結構差異較大。請檢查：</p>
+        <ul>
+            <li>各檔案的 Sheet 名稱是否完全一致。</li>
+            <li>表頭區域（前幾行）的行數是否相同。</li>
+            <li>資料列的列數和列標題是否匹配。</li>
+            <li>是否混入了不同模板生成的檔案。</li>
+        </ul>
+    </div>
+
+    <div class="faq-item">
+        <h3>Q: 數值沒有被正確求和？</h3>
+        <p>可能原因：</p>
+        <ul>
+            <li>單元格內數值被識別為文字格式（如包含空格、貨幣符號）。</li>
+            <li>該列在模板中被定義為文字標籤列。</li>
+            <li>解決方法：選中該單元格後按 <kbd>2</kbd> 強制標記為"求和"。</li>
+        </ul>
+    </div>
+
+    <div class="faq-item">
+        <h3>Q: 如何批次調整多個單元格？</h3>
+        <p>在彙總表中按住 <kbd>Ctrl</kbd> 點選可多選單元格，然後統一按 <kbd>1</kbd> 或 <kbd>2</kbd> 進行批次修正。批次修正後建議儲存為修正規則。</p>
+    </div>
+
+    <div class="faq-item">
+        <h3>Q: 修正規則如何共享給同事？</h3>
+        <p>透過 <kbd>修正規則 → 檢視當前修正規則</kbd> → <kbd>匯出</kbd> 將規則儲存為 <code>.json</code> 檔案。同事透過 <kbd>匯入</kbd> 按鈕載入該檔案即可。</p>
+    </div>
+
+    <div class="faq-item">
+        <h3>Q: 支援的最大檔案數量和大小？</h3>
+        <p>理論上無硬性限制，實際取決於可用記憶體。實測單次匯入 100 個檔案（每個約 5MB）可流暢執行。建議單次不超過 200 個檔案以保證互動響應速度。</p>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!--  聯絡方式                                                    -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<section id="topic-support">
+    <h2>聯絡方式</h2>
+    <p>如有問題或建議，請聯絡：<a href="mailto:831261@qq.com">831261@qq.com</a></p>
+</section>
+
+</body>
+</html>

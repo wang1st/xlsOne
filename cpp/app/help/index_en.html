@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>xlsOne Quick Reference Guide</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="guide-header">
+    <h1>xlsOne Quick Reference Guide</h1>
+    <p class="subtitle">One-click summary of multiple identically-formatted Excel reports</p>
+    <p class="version">Version 1.x &middot; Linux / Windows / macOS</p>
+</header>
+
+<section id="topic-quickstart">
+    <h2>Quick Start</h2>
+    <p>First time using xlsOne? Follow these 5 steps:</p>
+    <ol class="steps">
+        <li><strong>Launch the app</strong> Open xlsOne to the empty workspace.</li>
+        <li><strong>Import files</strong> Drag multiple <code>.xlsx</code> or <code>.xls</code> files into the window, or use <kbd>File &rarr; Import Files...</kbd>.</li>
+        <li><strong>Auto validation</strong> The app analyzes file structures and reports a validation summary in the status bar.</li>
+        <li><strong>View results</strong> Click sheet tabs to switch summary pages. Blue cells are numeric sums; click any cell to see source details.</li>
+        <li><strong>Export</strong> Click <kbd>Export XLSX</kbd> (or <kbd>Ctrl+E</kbd>) to save.</li>
+    </ol>
+    <div class="tip"><strong>Tip:</strong> Make sure all Excel files use the same header structure and layout. Inconsistent sheets are skipped with diagnostic reasons.</div>
+</section>
+
+<section id="topic-import">
+    <h2>Import Files</h2>
+    <p>Three import methods are supported:</p>
+    <table class="feature-table">
+        <thead><tr><th>Method</th><th>Operation</th><th>Use case</th></tr></thead>
+        <tbody>
+            <tr><td><strong>Drag &amp; drop</strong></td><td>Drag files or folders into the window</td><td>Quick selection from file manager</td></tr>
+            <tr><td><strong>Menu import</strong></td><td><kbd>File &rarr; Import Files...</kbd> (<kbd>Ctrl+O</kbd>)</td><td>New workspace / replace current list</td></tr>
+            <tr><td><strong>Append</strong></td><td>Click <kbd>Append</kbd> (<kbd>Ctrl+Shift+O</kbd>)</td><td>Add more files to the current workspace</td></tr>
+        </tbody>
+    </table>
+    <h3>Requirements</h3>
+    <ul>
+        <li>Formats: <code>.xlsx</code> (Office 2007+) and <code>.xls</code> (BIFF8, Office 97&ndash;2003).</li>
+        <li>Consistent structure: all files must contain sheets with the <strong>same name</strong> and aligned headers.</li>
+        <li>Unicode compatible; no extra encoding setup needed.</li>
+    </ul>
+    <div class="note"><strong>Note:</strong> If import fails, check whether the file is corrupted, locked by another program, or password-protected.</div>
+</section>
+
+<section id="topic-merge">
+    <h2>View Summary Results</h2>
+    <p>After import, sheet tabs appear at the top:</p>
+    <h3>Merge Strategy</h3>
+    <div class="card-grid">
+        <div class="card"><h4>Numeric columns &mdash; Auto sum</h4><p>Amounts, quantities, percentages, etc. are automatically <strong>summed</strong>. Summary cells are highlighted in blue.</p></div>
+        <div class="card"><h4>Text columns &mdash; Common prefix</h4><p>Names, codes, project IDs use the <strong>longest common prefix</strong> across source files. Conflicts are marked for review.</p></div>
+        <div class="card"><h4>Empty values</h4><p>When some sources are empty, non-empty values are used by default. Source values are shown in the right panel.</p></div>
+    </div>
+    <div class="tip"><strong>Tip:</strong> Double-click any summary cell to expand the original values from all source files for audit.</div>
+</section>
+
+<section id="topic-sheetstatus">
+    <h2>Sheet Status</h2>
+    <p>Each sheet tab shows its merge status:</p>
+    <table class="feature-table">
+        <thead><tr><th>Status</th><th>Meaning</th><th>Action</th></tr></thead>
+        <tbody>
+            <tr><td><span class="badge badge-ready">Ready</span></td><td>Structure is consistent across sources and the sheet participated in the merge.</td><td>Click to view summary data.</td></tr>
+            <tr><td><span class="badge badge-skipped">Skipped</span></td><td>Structure is inconsistent; the sheet was excluded.</td><td>Click to view diagnostic reasons.</td></tr>
+        </tbody>
+    </table>
+    <h3>Common skip reasons</h3>
+    <ol>
+        <li><strong>Header row count mismatch</strong> across source files.</li>
+        <li><strong>Column count mismatch</strong> for the same sheet.</li>
+        <li><strong>Header content mismatch</strong>; column titles differ.</li>
+    </ol>
+    <div class="note"><strong>Recommendation:</strong> Use a unified Excel template across branches/departments to reduce skipped sheets.</div>
+</section>
+
+<section id="topic-drilldown">
+    <h2>Drill-down</h2>
+    <p>Each summary cell supports <strong>drill-down</strong> to trace data sources:</p>
+    <ol class="steps">
+        <li><strong>Click a cell</strong> in the summary table.</li>
+        <li><strong>View source panel</strong> on the right to see original values per file.</li>
+        <li><strong>Spot anomalies</strong> when one file's value differs significantly from others.</li>
+    </ol>
+    <div class="tip"><strong>Audit scenario:</strong> During financial audits, drill down cell by cell to verify consolidated results.</div>
+</section>
+
+<section id="topic-export">
+    <h2>Export Results</h2>
+    <p>After validation, save the summary as a standard Excel file:</p>
+    <ol class="steps">
+        <li>Confirm summary data is correct (apply cell corrections if needed).</li>
+        <li>Click <kbd>Export XLSX</kbd> or press <kbd>Ctrl+E</kbd>.</li>
+        <li>Choose save path and filename.</li>
+        <li>Open the exported <code>.xlsx</code> in Excel / WPS / LibreOffice.</li>
+    </ol>
+    <h3>Export contents</h3>
+    <ul>
+        <li>Each mergeable sheet is preserved as a separate Sheet.</li>
+        <li>Number formats are retained where possible.</li>
+        <li>Cell corrections are reflected in the final file.</li>
+        <li>Skipped sheets are not included.</li>
+    </ul>
+</section>
+
+<section id="topic-correction">
+    <h2>Cell Correction</h2>
+    <p>If automatic detection does not match expectations, manually correct a cell's aggregation:</p>
+    <h3>Correction types</h3>
+    <table class="feature-table">
+        <thead><tr><th>Type</th><th>Shortcut</th><th>Behavior</th></tr></thead>
+        <tbody>
+            <tr><td><strong>Label</strong></td><td><kbd>1</kbd></td><td>Force text merge (common prefix), no summing.</td></tr>
+            <tr><td><strong>Sum</strong></td><td><kbd>2</kbd></td><td>Force numeric merge (accumulation), even if content contains text.</td></tr>
+        </tbody>
+    </table>
+    <h3>Steps</h3>
+    <ol>
+        <li>Select one or more cells in the summary table.</li>
+        <li>Click <kbd>Label</kbd> or <kbd>Sum</kbd> in the right panel, or press <kbd>1</kbd> / <kbd>2</kbd>.</li>
+        <li>The status bar shows the adjustment count; use <kbd>Undo</kbd> (<kbd>Ctrl+Z</kbd>) or <kbd>Clear all corrections</kbd> as needed.</li>
+        <li>Click <kbd>Restore auto</kbd> to revert a single cell to the original detection.</li>
+    </ol>
+    <div class="tip"><strong>Best practice:</strong> After corrections, save them as a correction rule for reuse with the same structure.</div>
+</section>
+
+<section id="topic-schema">
+    <h2>Correction Rules</h2>
+    <p>Correction rules (Schema) are reusable cell-correction sets, ideal for <strong>recurring summaries</strong> such as monthly/quarterly financial reports.</p>
+    <h3>Core features</h3>
+    <div class="card-grid">
+        <div class="card"><h4>Auto match</h4><p>The app detects matching rules on import and applies them automatically when structure is similar.</p></div>
+        <div class="card"><h4>Save rules</h4><p>Use <kbd>Correction Rules &rarr; Save Current Rules</kbd> (<kbd>Ctrl+S</kbd>) to persist corrections.</p></div>
+        <div class="card"><h4>Manage rules</h4><p>Use <kbd>Correction Rules &rarr; View Current Rules</kbd> to inspect, import/export JSON, or clear outdated rules.</p></div>
+    </div>
+    <h3>Best practices</h3>
+    <ul>
+        <li>Create one rule per report template, e.g. "East Region Monthly Sales Report".</li>
+        <li>Export/import rules as <code>.json</code> for team sharing and version control.</li>
+        <li>Update rules when structures change.</li>
+    </ul>
+    <div class="note"><strong>Technical note:</strong> Rules match by "structure fingerprint" (column names + row positions + data types), not file names.</div>
+</section>
+
+<section id="topic-shortcuts">
+    <h2>Keyboard Shortcuts</h2>
+    <table class="shortcut-table">
+        <thead><tr><th>Shortcut</th><th>Function</th><th>Menu path</th></tr></thead>
+        <tbody>
+            <tr><td><kbd>Ctrl+O</kbd></td><td>Import files (replace current)</td><td>File &rarr; Import Files...</td></tr>
+            <tr><td><kbd>Ctrl+Shift+O</kbd></td><td>Append files to workspace</td><td>File &rarr; Append Files...</td></tr>
+            <tr><td><kbd>Ctrl+E</kbd></td><td>Export summary result</td><td>File &rarr; Export XLSX...</td></tr>
+            <tr><td><kbd>Ctrl+R</kbd></td><td>Refresh workspace</td><td>File &rarr; Refresh</td></tr>
+            <tr><td><kbd>Ctrl+N</kbd></td><td>Clear workspace</td><td>File &rarr; Clear Workspace</td></tr>
+            <tr><td><kbd>Ctrl+S</kbd></td><td>Save current correction rules</td><td>Correction Rules &rarr; Save Current Rules</td></tr>
+            <tr><td><kbd>Ctrl+Z</kbd></td><td>Undo last cell correction</td><td>Edit &rarr; Undo Correction</td></tr>
+            <tr><td><kbd>1</kbd></td><td>Mark selected cells as Label</td><td>Right panel &rarr; Label</td></tr>
+            <tr><td><kbd>2</kbd></td><td>Mark selected cells as Sum</td><td>Right panel &rarr; Sum</td></tr>
+            <tr><td><kbd>Ctrl+Q</kbd></td><td>Quit</td><td>File &rarr; Quit</td></tr>
+            <tr><td><kbd>F1</kbd></td><td>Open quick reference guide</td><td>Help &rarr; Quick Reference Guide</td></tr>
+        </tbody>
+    </table>
+    <div class="tip"><strong>macOS users:</strong> Use <kbd>&#8984;</kbd> (Command) instead of <kbd>Ctrl</kbd>.</div>
+</section>
+
+<section id="topic-faq">
+    <h2>FAQ</h2>
+    <div class="faq-item">
+        <h3>Q: All sheets show "Skipped" after import?</h3>
+        <ul>
+            <li>Check whether sheet names match exactly across files.</li>
+            <li>Verify header row counts are the same.</li>
+            <li>Verify column counts and titles match.</li>
+            <li>Make sure files are not from different templates.</li>
+        </ul>
+    </div>
+    <div class="faq-item">
+        <h3>Q: Numbers are not summed correctly?</h3>
+        <ul>
+            <li>The cell may be recognized as text (e.g. contains spaces or currency symbols).</li>
+            <li>The column may be defined as a label column in the template.</li>
+            <li>Fix: select the cell and press <kbd>2</kbd> to force Sum.</li>
+        </ul>
+    </div>
+    <div class="faq-item">
+        <h3>Q: How to adjust multiple cells at once?</h3>
+        <p>Hold <kbd>Ctrl</kbd> and click cells to multi-select, then press <kbd>1</kbd> or <kbd>2</kbd>. Save corrections as a rule afterwards.</p>
+    </div>
+    <div class="faq-item">
+        <h3>Q: How to share correction rules with colleagues?</h3>
+        <p>Use <kbd>Correction Rules &rarr; View Current Rules</kbd> &rarr; <kbd>Export</kbd> to save as <code>.json</code>. Colleagues load it via <kbd>Import</kbd>.</p>
+    </div>
+    <div class="faq-item">
+        <h3>Q: Maximum file count and size?</h3>
+        <p>No hard limit; depends on available memory. Tests show 100 files (~5 MB each) run smoothly. We recommend fewer than 200 files for responsive interaction.</p>
+    </div>
+</section>
+
+<section id="topic-support">
+    <h2>Contact</h2>
+    <p>For questions or feedback: <a href="mailto:831261@qq.com">831261@qq.com</a></p>
+</section>
+
+</body>
+</html>
