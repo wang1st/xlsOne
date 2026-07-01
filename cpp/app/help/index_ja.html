@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>表表帰一 クイックリファレンスガイド</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="guide-header">
+    <h1>表表帰一 クイックリファレンスガイド</h1>
+    <p class="subtitle">同じフォーマットの複数 Excel 報告書をワンクリックで集計</p>
+    <p class="version">Version 1.x &middot; Linux / Windows / macOS</p>
+</header>
+
+<section id="topic-quickstart">
+    <h2>クイックスタート</h2>
+    <p>初めてお使いですか？以下の 5 ステップで最初の集計を完了できます：</p>
+    <ol class="steps">
+        <li><strong>アプリを起動</strong> 表表帰一を開き、空のワークスペースを表示します。</li>
+        <li><strong>ファイルをインポート</strong> 複数の <code>.xlsx</code> または <code>.xls</code> ファイルをウィンドウにドラッグするか、<kbd>ファイル &rarr; ファイルをインポート...</kbd> を使用します。</li>
+        <li><strong>自動検証</strong> アプリがファイル構造を分析し、ステータスバーに検証サマリーを表示します。</li>
+        <li><strong>結果を表示</strong> シートタブをクリックして集計ページを切り替えます。青いセルは数値の合計です。任意のセルをクリックするとソースの詳細が表示されます。</li>
+        <li><strong>エクスポート</strong> <kbd>XLSX をエクスポート</kbd> （または <kbd>Ctrl+E</kbd>）をクリックして保存します。</li>
+    </ol>
+    <div class="tip"><strong>ヒント：</strong> すべての Excel ファイルが同じヘッダー構造とレイアウトを使用していることを確認してください。構造が一致しないシートは、診断理由とともにスキップされます。</div>
+</section>
+
+<section id="topic-import">
+    <h2>ファイルのインポート</h2>
+    <p>3 つのインポート方法をサポートしています：</p>
+    <table class="feature-table">
+        <thead><tr><th>方法</th><th>操作</th><th>用途</th></tr></thead>
+        <tbody>
+            <tr><td><strong>ドラッグ＆ドロップ</strong></td><td>ファイルまたはフォルダをウィンドウにドラッグ</td><td>ファイルマネージャーからのクイック選択</td></tr>
+            <tr><td><strong>メニューからインポート</strong></td><td><kbd>ファイル &rarr; ファイルをインポート...</kbd> （<kbd>Ctrl+O</kbd>）</td><td>新規ワークスペース / 現在のリストを置換</td></tr>
+            <tr><td><strong>追加</strong></td><td><kbd>追加</kbd> （<kbd>Ctrl+Shift+O</kbd>）をクリック</td><td>現在のワークスペースにファイルを追加</td></tr>
+        </tbody>
+    </table>
+    <h3>要件</h3>
+    <ul>
+        <li>形式： <code>.xlsx</code> （Office 2007+）および <code>.xls</code> （BIFF8、Office 97&ndash;2003）。</li>
+        <li>構造の一貫性：すべてのファイルに <strong>同じ名前</strong> のシートがあり、ヘッダーが揃っている必要があります。</li>
+        <li>Unicode 対応；追加のエンコーディング設定は不要です。</li>
+    </ul>
+    <div class="note"><strong>注意：</strong> インポートに失敗した場合、ファイルが破損している、他のプログラムによってロックされている、またはパスワード保護されていないか確認してください。</div>
+</section>
+
+<section id="topic-merge">
+    <h2>集計結果の表示</h2>
+    <p>インポート後、上部にシートタブが表示されます：</p>
+    <h3>マージ戦略</h3>
+    <div class="card-grid">
+        <div class="card"><h4>数値列 &mdash; 自動合計</h4><p>金額、数量、パーセンテージなどは自動的に <strong>合計</strong> されます。集計セルは青色でハイライトされます。</p></div>
+        <div class="card"><h4>テキスト列 &mdash; 共通プレフィックス</h4><p>名前、コード、プロジェクト ID などは、ソースファイル間の <strong>最長共通プレフィックス</strong> を使用します。競合はレビュー対象としてマークされます。</p></div>
+        <div class="card"><h4>空値の処理</h4><p>一部のソースが空の場合、デフォルトで空でない値が使用されます。ソース値は右侧面板に表示されます。</p></div>
+    </div>
+    <div class="tip"><strong>ヒント：</strong> 任意の集計セルをダブルクリックすると、すべてのソースファイルからの元の値が展開され、監査に役立ちます。</div>
+</section>
+
+<section id="topic-sheetstatus">
+    <h2>シート状態</h2>
+    <p>各シートタブにはマージ状態が表示されます：</p>
+    <table class="feature-table">
+        <thead><tr><th>状態</th><th>意味</th><th>操作</th></tr></thead>
+        <tbody>
+            <tr><td><span class="badge badge-ready">マージ可能</span></td><td>ソース間で構造が一致し、シートはマージに参加しました。</td><td>クリックして集計データを表示。</td></tr>
+            <tr><td><span class="badge badge-skipped">スキップ済み</span></td><td>構造が一致せず、シートは除外されました。</td><td>クリックして診断理由を表示。</td></tr>
+        </tbody>
+    </table>
+    <h3>一般的なスキップ理由</h3>
+    <ol>
+        <li><strong>ヘッダー行数の不一致</strong></li>
+        <li><strong>列数の不一致</strong></li>
+        <li><strong>ヘッダー内容の不一致</strong></li>
+    </ol>
+    <div class="note"><strong>推奨：</strong> 支社/部門間で統一された Excel テンプレートを使用すると、スキップを減らせます。</div>
+</section>
+
+<section id="topic-drilldown">
+    <h2>ドリルダウン</h2>
+    <p>各集計セルは <strong>ドリルダウン</strong> をサポートし、データソースを追跡できます：</p>
+    <ol class="steps">
+        <li><strong>セルをクリック</strong></li>
+        <li>右の <strong>ソースパネル</strong> でファイルごとの元の値を確認</li>
+        <li>1 つのファイルの値が大きく異なる場合に異常を発見</li>
+    </ol>
+    <div class="tip"><strong>監査シナリオ：</strong> 財務監査中に、セルごとにドリルダウンして結果を検証できます。</div>
+</section>
+
+<section id="topic-export">
+    <h2>結果のエクスポート</h2>
+    <p>検証後、サマリーを標準の Excel ファイルとして保存します：</p>
+    <ol class="steps">
+        <li>集計データが正しいことを確認（必要に応じてセル修正）。</li>
+        <li><kbd>XLSX をエクスポート</kbd> または <kbd>Ctrl+E</kbd> を押します。</li>
+        <li>保存パスとファイル名を選択します。</li>
+        <li>エクスポートされた <code>.xlsx</code> を Excel / WPS / LibreOffice で開きます。</li>
+    </ol>
+    <h3>エクスポート内容</h3>
+    <ul>
+        <li>マージ可能な各シートは独立したシートとして保持されます。</li>
+        <li>数値形式は可能な限り保持されます。</li>
+        <li>セル修正結果が最終ファイルに反映されます。</li>
+        <li>スキップされたシートは含まれません。</li>
+    </ul>
+</section>
+
+<section id="topic-correction">
+    <h2>セル修正</h2>
+    <p>自動判定が期待と一致しない場合は、セルの集計方法を手動で修正できます：</p>
+    <h3>修正タイプ</h3>
+    <table class="feature-table">
+        <thead><tr><th>タイプ</th><th>ショートカット</th><th>動作</th></tr></thead>
+        <tbody>
+            <tr><td><strong>ラベル</strong></td><td><kbd>1</kbd></td><td>テキストマージ（共通プレフィックス）を強制、合計しない</td></tr>
+            <tr><td><strong>合計</strong></td><td><kbd>2</kbd></td><td>数値マージ（累積）を強制</td></tr>
+        </tbody>
+    </table>
+    <h3>手順</h3>
+    <ol>
+        <li>集計表で修正するセルを 1 つ以上選択します。</li>
+        <li>右侧面板で <kbd>ラベル</kbd> または <kbd>合計</kbd> をクリックするか、<kbd>1</kbd> / <kbd>2</kbd> を押します。</li>
+        <li>ステータスバーに調整数が表示されます。必要に応じて <kbd>元に戻す</kbd> （<kbd>Ctrl+Z</kbd>）または <kbd>すべての修正をクリア</kbd> を使用します。</li>
+        <li><kbd>自動に戻す</kbd> をクリックすると、単一セルを元の判定に戻せます。</li>
+    </ol>
+    <div class="tip"><strong>ベストプラクティス：</strong> 修正後は、同じ構造で再利用できるよう <strong>修正ルール</strong> として保存してください。</div>
+</section>
+
+<section id="topic-schema">
+    <h2>修正ルール</h2>
+    <p>修正ルール（Schema）は、再利用可能なセル修正セットです。月次/四半期財務報告書などの <strong>繰り返し集計</strong> に最適です。</p>
+    <h3>主要機能</h3>
+    <div class="card-grid">
+        <div class="card"><h4>自動マッチング</h4><p>インポート時に一致するルールを検出し、構造が類似していれば自動適用します。</p></div>
+        <div class="card"><h4>ルールの保存</h4><p><kbd>修正ルール &rarr; 現在の修正ルールを保存</kbd> （<kbd>Ctrl+S</kbd>）で修正を永続化します。</p></div>
+        <div class="card"><h4>ルールの管理</h4><p><kbd>修正ルール &rarr; 現在の修正ルールを表示</kbd> で、詳細の確認、JSON のインポート/エクスポート、古いルールの削除ができます。</p></div>
+    </div>
+    <h3>ベストプラクティス</h3>
+    <ul>
+        <li>レポートテンプレートごとに独立したルールを作成します。</li>
+        <li>ルールを <code>.json</code> 形式でエクスポート/インポートし、チームで共有します。</li>
+        <li>構造が変わったらルールを更新します。</li>
+    </ul>
+    <div class="note"><strong>技術的メモ：</strong> ルールは「構造フィンガープリント」（列名 + 行位置 + データ型）でマッチングし、ファイル名ではありません。</div>
+</section>
+
+<section id="topic-shortcuts">
+    <h2>キーボードショートカット</h2>
+    <table class="shortcut-table">
+        <thead><tr><th>ショートカット</th><th>機能</th><th>メニューパス</th></tr></thead>
+        <tbody>
+            <tr><td><kbd>Ctrl+O</kbd></td><td>ファイルをインポート（現在を置換）</td><td>ファイル &rarr; ファイルをインポート...</td></tr>
+            <tr><td><kbd>Ctrl+Shift+O</kbd></td><td>ワークスペースにファイルを追加</td><td>ファイル &rarr; ファイルを追加...</td></tr>
+            <tr><td><kbd>Ctrl+E</kbd></td><td>集計結果をエクスポート</td><td>ファイル &rarr; XLSX をエクスポート...</td></tr>
+            <tr><td><kbd>Ctrl+R</kbd></td><td>ワークスペースを更新</td><td>ファイル &rarr; 更新</td></tr>
+            <tr><td><kbd>Ctrl+N</kbd></td><td>ワークスペースをクリア</td><td>ファイル &rarr; ワークスペースをクリア</td></tr>
+            <tr><td><kbd>Ctrl+S</kbd></td><td>現在の修正ルールを保存</td><td>修正ルール &rarr; 現在の修正ルールを保存</td></tr>
+            <tr><td><kbd>Ctrl+Z</kbd></td><td>最後のセル修正を元に戻す</td><td>編集 &rarr; 修正を取り消す</td></tr>
+            <tr><td><kbd>1</kbd></td><td>選択セルをラベルとしてマーク</td><td>右侧面板 &rarr; ラベル</td></tr>
+            <tr><td><kbd>2</kbd></td><td>選択セルを合計としてマーク</td><td>右侧面板 &rarr; 合計</td></tr>
+            <tr><td><kbd>Ctrl+Q</kbd></td><td>終了</td><td>ファイル &rarr; 終了</td></tr>
+            <tr><td><kbd>F1</kbd></td><td>クイックリファレンスガイドを開く</td><td>ヘルプ &rarr; クイックリファレンスガイド</td></tr>
+        </tbody>
+    </table>
+    <div class="tip"><strong>macOS ユーザー：</strong> <kbd>Ctrl</kbd> の代わりに <kbd>&#8984;</kbd> （Command）キーを使用してください。</div>
+</section>
+
+<section id="topic-faq">
+    <h2>FAQ</h2>
+    <div class="faq-item">
+        <h3>Q: インポート後、すべてのシートが「スキップ済み」と表示されます。</h3>
+        <ul>
+            <li>各ファイルのシート名が完全に一致しているか確認してください。</li>
+            <li>ヘッダー行数が同じか確認してください。</li>
+            <li>列数と列タイトルが一致しているか確認してください。</li>
+            <li>異なるテンプレートから生成されたファイルが混在していないか確認してください。</li>
+        </ul>
+    </div>
+    <div class="faq-item">
+        <h3>Q: 数値が正しく合計されません。</h3>
+        <ul>
+            <li>セルがテキストとして認識されている可能性があります（空白や通貨記号を含むなど）。</li>
+            <li>テンプレートでその列がラベル列として定義されている可能性があります。</li>
+            <li>解決方法：セルを選択して <kbd>2</kbd> を押し、合計を強制します。</li>
+        </ul>
+    </div>
+    <div class="faq-item">
+        <h3>Q: 複数のセルを一度に調整するには？</h3>
+        <p><kbd>Ctrl</kbd> を押しながらセルをクリックして複数選択し、<kbd>1</kbd> または <kbd>2</kbd> を押します。その後、修正ルールとして保存することをお勧めします。</p>
+    </div>
+    <div class="faq-item">
+        <h3>Q: 修正ルールを同僚と共有するには？</h3>
+        <p><kbd>修正ルール &rarr; 現在の修正ルールを表示</kbd> &rarr; <kbd>エクスポート</kbd> で <code>.json</code> として保存します。同僚は <kbd>インポート</kbd> ボタンで読み込みます。</p>
+    </div>
+    <div class="faq-item">
+        <h3>Q: サポートされる最大ファイル数とサイズは？</h3>
+        <p>厳密な上限はありません。使用可能なメモリに依存します。100 ファイル（各約 5 MB）までスムーズに動作することを確認済みです。応答性を保つため、200 ファイル未満を推奨します。</p>
+    </div>
+</section>
+
+<section id="topic-support">
+    <h2>お問い合わせ</h2>
+    <p>ご質問やご提案がある場合： <a href="mailto:831261@qq.com">831261@qq.com</a></p>
+</section>
+
+</body>
+</html>

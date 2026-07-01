@@ -25,11 +25,9 @@ if(LRELEASE_EXECUTABLE)
     add_custom_target(translations ALL
         COMMAND ${LRELEASE_EXECUTABLE}
             "${_i18n_dir}/xlsone_zh_CN.ts"
+            "${_i18n_dir}/xlsone_zh_TW.ts"
             "${_i18n_dir}/xlsone_en.ts"
             "${_i18n_dir}/xlsone_ja.ts"
-            -qm "${_i18n_dir}/xlsone_zh_CN.qm"
-            -qm "${_i18n_dir}/xlsone_en.qm"
-            -qm "${_i18n_dir}/xlsone_ja.qm"
         WORKING_DIRECTORY "${_i18n_dir}"
         COMMENT "Compiling Qt translations"
     )
