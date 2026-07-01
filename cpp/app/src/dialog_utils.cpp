@@ -1,7 +1,9 @@
 #include "dialog_utils.hpp"
 
+#include <QAbstractButton>
 #include <QApplication>
 #include <QDialog>
+#include <QPushButton>
 #include <QScreen>
 #include <QTimer>
 #include <QWidget>
@@ -120,34 +122,48 @@ QString getSaveFileNameCentered(QWidget* parent, const QString& title, const QSt
 
 void showInformation(QWidget* parent, const QString& title, const QString& text)
 {
-    QMessageBox box(QMessageBox::Information, title, text, QMessageBox::Ok, parent);
+    QMessageBox box(QMessageBox::NoIcon, title, text, QMessageBox::NoButton, parent);
+    auto* okButton = box.addButton(QObject::tr("确定"), QMessageBox::AcceptRole);
+    box.setDefaultButton(okButton);
     execMessageBox(box, parent);
 }
 
 void showWarning(QWidget* parent, const QString& title, const QString& text)
 {
-    QMessageBox box(QMessageBox::Warning, title, text, QMessageBox::Ok, parent);
+    QMessageBox box(QMessageBox::NoIcon, title, text, QMessageBox::NoButton, parent);
+    auto* okButton = box.addButton(QObject::tr("确定"), QMessageBox::AcceptRole);
+    box.setDefaultButton(okButton);
     execMessageBox(box, parent);
 }
 
 void showCritical(QWidget* parent, const QString& title, const QString& text)
 {
-    QMessageBox box(QMessageBox::Critical, title, text, QMessageBox::Ok, parent);
+    QMessageBox box(QMessageBox::NoIcon, title, text, QMessageBox::NoButton, parent);
+    auto* okButton = box.addButton(QObject::tr("确定"), QMessageBox::AcceptRole);
+    box.setDefaultButton(okButton);
     execMessageBox(box, parent);
 }
 
 void showAbout(QWidget* parent, const QString& title, const QString& html)
 {
-    QMessageBox box(QMessageBox::Information, title, html, QMessageBox::Ok, parent);
+    QMessageBox box(QMessageBox::NoIcon, title, html, QMessageBox::NoButton, parent);
     box.setTextFormat(Qt::RichText);
+    auto* okButton = box.addButton(QObject::tr("确定"), QMessageBox::AcceptRole);
+    box.setDefaultButton(okButton);
     execDialogCentered(box, parent);
 }
 
 QMessageBox::StandardButton askQuestion(QWidget* parent, const QString& title, const QString& text)
 {
-    QMessageBox box(QMessageBox::Question, title, text, QMessageBox::Yes | QMessageBox::No, parent);
-    box.setDefaultButton(QMessageBox::No);
-    return static_cast<QMessageBox::StandardButton>(execMessageBox(box, parent));
+    QMessageBox box(QMessageBox::NoIcon, title, text, QMessageBox::NoButton, parent);
+    box.addButton(QObject::tr("是"), QMessageBox::YesRole);
+    auto* noButton = box.addButton(QObject::tr("否"), QMessageBox::NoRole);
+    box.setDefaultButton(noButton);
+    box.exec();
+    if (box.buttonRole(box.clickedButton()) == QMessageBox::YesRole) {
+        return QMessageBox::Yes;
+    }
+    return QMessageBox::No;
 }
 
 } // namespace xlsone::ui
