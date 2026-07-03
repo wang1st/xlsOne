@@ -1,7 +1,6 @@
 #include "zip_archive.hpp"
 
 #include <QFile>
-#include <QTextCodec>
 #include <QtEndian>
 #include <stdexcept>
 #include <zlib.h>
@@ -29,8 +28,7 @@ QString decodeFileName(const QByteArray& raw, quint16 flags)
     if ((flags & (1 << 11)) != 0) {
         return QString::fromUtf8(raw);
     }
-    QTextCodec* codec = QTextCodec::codecForLocale();
-    return codec->toUnicode(raw);
+    return QString::fromLocal8Bit(raw);
 }
 
 QByteArray inflateRawDeflate(const QByteArray& compressed, quint32 expectedSize)

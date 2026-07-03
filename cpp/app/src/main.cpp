@@ -33,6 +33,18 @@ int main(int argc, char* argv[])
         ? QLocale::system().uiLanguages()
         : QStringList{savedLang};
 
+    // Use a modern sans-serif (Heiti-like) font instead of the default SimSun.
+    QFont appFont = QApplication::font();
+    const QString effectiveLocale = uiLanguages.isEmpty() ? QStringLiteral("en") : uiLanguages.first();
+    if (effectiveLocale.startsWith(QStringLiteral("zh"))) {
+        appFont.setFamily(QStringLiteral("Microsoft YaHei"));
+    } else if (effectiveLocale.startsWith(QStringLiteral("ja"))) {
+        appFont.setFamily(QStringLiteral("Yu Gothic UI"));
+    } else {
+        appFont.setFamily(QStringLiteral("Segoe UI"));
+    }
+    QApplication::setFont(appFont);
+
     QTranslator appTranslator;
     for (const QString& locale : uiLanguages) {
         const QString baseName = QStringLiteral("xlsone_") + QLocale(locale).name();

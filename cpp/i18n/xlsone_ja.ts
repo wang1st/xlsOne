@@ -599,7 +599,7 @@ Skipped sheets: %3</translation>
     <message>
         <location line="+15" />
         <source>&lt;h3&gt;表表归一  V%1&lt;/h3&gt;&lt;p&gt;多张同格式 Excel 报表一键汇总&lt;/p&gt;&lt;p&gt;把多张格式一致的 Excel 表合成一份汇总表。金额、数量等能相加的数会自动合计；名称、编号等不该相加的信息，会保留各文件里最常见的共同前缀。&lt;/p&gt;&lt;p&gt;&lt;b&gt;联系方式：&lt;/b&gt;831261@qq.com&lt;/p&gt;</source>
-        <translation>&lt;h3&gt;表表归一  V%1&lt;/h3&gt;&lt;p&gt;多张同格式 Excel 报表一键汇总&lt;/p&gt;&lt;p&gt;把多张格式一致的 Excel 表合成一份汇总表。金额、数量等能相加的数会自动合计；名称、编号等不该相加的信息，会保留各文件里最常见的共同前缀。&lt;/p&gt;&lt;p&gt;&lt;b&gt;联系方式：&lt;/b&gt;831261@qq.com&lt;/p&gt;</translation>
+        <translation>&lt;h3&gt;xlsOne  V%1&lt;/h3&gt;&lt;p&gt;同じ形式の複数 Excel 報告書をワンクリックで集計&lt;/p&gt;&lt;p&gt;同じ形式の複数 Excel シートを1つの集計表にまとめます。金額や数量など足し算できる数値は自動で合計し、名称や番号など足し算すべきでない情報は、各ファイルで最も共通する接頭辞を保持します。&lt;/p&gt;&lt;p&gt;&lt;b&gt;お問い合わせ：&lt;/b&gt;831261@qq.com&lt;/p&gt;</translation>
     </message>
     <message>
         <location line="+119" />

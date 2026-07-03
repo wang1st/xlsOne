@@ -4,6 +4,7 @@
 #include "xlsone/core/license_manager.hpp"
 
 #include <QApplication>
+#include <QClipboard>
 #include <QFileDialog>
 #include <QFrame>
 #include <QHBoxLayout>
@@ -11,7 +12,6 @@
 #include <QLineEdit>
 #include <QMessageBox>
 #include <QPushButton>
-#include <QSysInfo>
 #include <QVBoxLayout>
 
 namespace {
@@ -286,8 +286,36 @@ void LicenseActivationDialog::buildFormPanel(QWidget* container)
     };
 
     addStep(1, tr("联系 831261@qq.com 获取离线授权页面地址"));
-    addStep(2, tr("输入购买邮箱和本机设备码"));
+    addStep(2, tr("在页面中输入本机设备码并获取授权文件"));
     addStep(3, tr("下载授权文件并导入本程序"));
+
+    // Device fingerprint display
+    auto* fingerprintLabel = new QLabel(tr("本机设备码"), offlineInfo_);
+    fingerprintLabel->setStyleSheet(QStringLiteral("color: %1; font-size: 12px; font-weight: 500;").arg(t.text.name()));
+    offlineLayout->addWidget(fingerprintLabel);
+
+    auto* fingerprintRow = new QHBoxLayout();
+    fingerprintRow->setSpacing(8);
+    auto* fingerprintValue = new QLabel(xlsone::LicenseManager::deviceFingerprint(), offlineInfo_);
+    fingerprintValue->setWordWrap(true);
+    fingerprintValue->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    fingerprintValue->setStyleSheet(QStringLiteral(
+        "color: %1; font-size: 12px; font-family: monospace; background: %2; padding: 6px; border-radius: 4px;"
+    ).arg(t.text.name()).arg(t.bg0.name()));
+    fingerprintRow->addWidget(fingerprintValue, 1);
+
+    auto* copyButton = new QPushButton(tr("复制"), offlineInfo_);
+    copyButton->setFlat(true);
+    copyButton->setCursor(Qt::PointingHandCursor);
+    copyButton->setStyleSheet(QStringLiteral(
+        "QPushButton { color: %1; font-size: 12px; border: none; background: transparent; }"
+        "QPushButton:hover { text-decoration: underline; }"
+    ).arg(t.accent.name()));
+    connect(copyButton, &QPushButton::clicked, this, [fingerprintValue]() {
+        QApplication::clipboard()->setText(fingerprintValue->text());
+    });
+    fingerprintRow->addWidget(copyButton);
+    offlineLayout->addLayout(fingerprintRow);
 
     auto* importButton = new QPushButton(tr("导入授权文件..."), offlineInfo_);
     xlsone::ui::stylePrimaryButton(importButton);
@@ -409,7 +437,7 @@ void LicenseActivationDialog::onActivateClicked()
     activateButton_->setText(tr("验证中..."));
     setMessage(QString(), false);
 
-    const QString deviceId = QSysInfo::machineUniqueId();
+    const QString deviceId = xlsone::LicenseManager::deviceFingerprint();
     licenseManager_->activate(key, deviceId);
 }
 
@@ -426,7 +454,7 @@ void LicenseActivationDialog::onImportLicenseClicked()
     }
 
     QString errorMessage;
-    const QString deviceId = QSysInfo::machineUniqueId();
+    const QString deviceId = xlsone::LicenseManager::deviceFingerprint();
     if (!licenseManager_->importOfflineLicenseFile(path, deviceId, &errorMessage)) {
         setMessage(errorMessage, true);
         return;

@@ -1,14 +1,19 @@
 // xlsOne Activation API — Cloudflare Worker
 // Endpoints:
-//   POST /api/activate  — 激活许可证密钥
-//   POST /api/verify    — 验证 License Token
-//   POST /api/refresh   — 刷新订阅 Token
+//   POST /api/activate          — 激活许可证密钥（旧版 HMAC/JWT，保留兼容）
+//   POST /api/verify            — 验证 License Token
+//   POST /api/refresh           — 刷新订阅 Token
 //   POST /api/webhook/lemonsqueezy — Lemon Squeezy 购买回调
-//   POST /api/admin/generate — 管理后台生成激活码（需 API Key）
+//   POST /api/admin/generate    — 管理后台生成激活码
+//   POST /api/activate/windows  — Windows 版 Ed25519 许可证激活
+//   POST /api/webhook/afdian    — 爱发电购买回调（Windows 版）
+//   POST /api/admin/generate-windows — 管理后台生成 Windows 激活码
 
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
+import { ed25519 } from '@noble/curves/ed25519'
 import { createHmac, timingSafeEqual } from './crypto'
+import { md5 } from 'js-md5'
 
 // ========== Types ==========
 
@@ -16,6 +21,10 @@ interface Env {
   DB: D1Database
   ACTIVATION_SECRET: string
   LEMON_SQUEEZY_SIGNING_SECRET: string
+  ED25519_PRIVATE_KEY?: string
+  AFDIAN_USER_ID?: string
+  AFDIAN_TOKEN?: string
+  AFDIAN_WEBHOOK_TOKEN?: string
   ADMIN_API_KEY?: string
 }
 
@@ -27,9 +36,19 @@ interface LicensePayload {
   exp: number       // expiration timestamp (0 = lifetime)
 }
 
+interface WindowsLicensePayload {
+  key_id: string
+  plan: string
+  device_hash: string
+  device_components: string[]
+  issued_at: number
+  expires_at: number
+}
+
 // ========== Constants ==========
 
 const KEY_PATTERN = /^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/
+const WINDOWS_KEY_PATTERN = /^XLS1-[A-Z0-9]{4}-[A-Z0-9]{4}$/
 const TOKEN_LIFETIME = 30 * 24 * 60 * 60  // 30 days in seconds
 const MIGRATION_LIMIT = 3                 // max device migrations per key per year
 const RATE_LIMIT_WINDOW = 60              // 1 minute
@@ -37,9 +56,14 @@ const RATE_LIMIT_MAX = 10                 // max requests per window
 
 // ========== Helpers ==========
 
-function b64enc(buf: ArrayBuffer): string {
+function b64enc(buf: ArrayBuffer | Uint8Array): string {
   return btoa(String.fromCharCode(...new Uint8Array(buf)))
     .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+}
+
+function utf8ToBase64(str: string): string {
+  const bytes = new TextEncoder().encode(str)
+  return btoa(String.fromCharCode(...bytes))
 }
 
 function b64dec(str: string): ArrayBuffer {
@@ -49,6 +73,18 @@ function b64dec(str: string): ArrayBuffer {
   const bytes = new Uint8Array(binary.length)
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
   return bytes.buffer
+}
+
+function hexToBytes(hex: string): Uint8Array {
+  const bytes = new Uint8Array(hex.length / 2)
+  for (let i = 0; i < bytes.length; i++) {
+    bytes[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16)
+  }
+  return bytes
+}
+
+function bytesToHex(bytes: Uint8Array): string {
+  return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('')
 }
 
 async function sign(payload: LicensePayload, secret: string): Promise<string> {
@@ -107,6 +143,115 @@ function checkRateLimit(ip: string): boolean {
   if (entry.count >= RATE_LIMIT_MAX) return false
   entry.count++
   return true
+}
+
+// ========== Ed25519 license helpers ==========
+
+function getEd25519PrivateKey(env: Env): Uint8Array | null {
+  if (!env.ED25519_PRIVATE_KEY) return null
+  const hex = env.ED25519_PRIVATE_KEY.replace(/[^0-9a-fA-F]/g, '')
+  if (hex.length !== 64) return null
+  return hexToBytes(hex)
+}
+
+function signWindowsLicense(payload: WindowsLicensePayload, privateKey: Uint8Array): string {
+  const encoder = new TextEncoder()
+  const message = encoder.encode(JSON.stringify(payload))
+  const signature = ed25519.sign(message, privateKey)
+  return b64enc(signature)
+}
+
+function buildWindowsLicense(
+  keyRow: { key_id: string; plan: string; expires_at: string | null; device_hash: string | null; device_components: string | null },
+  deviceHash: string,
+  deviceComponents: string[],
+  privateKey: Uint8Array
+): { license: object; payload: WindowsLicensePayload } {
+  const now = Math.floor(Date.now() / 1000)
+  let expiresAt = 0
+  if (keyRow.expires_at) {
+    expiresAt = Math.floor(new Date(keyRow.expires_at).getTime() / 1000)
+  }
+
+  const payload: WindowsLicensePayload = {
+    key_id: keyRow.key_id,
+    plan: keyRow.plan,
+    device_hash: deviceHash,
+    device_components: deviceComponents,
+    issued_at: now,
+    expires_at: expiresAt,
+  }
+
+  const signature = signWindowsLicense(payload, privateKey)
+
+  const license = {
+    ...payload,
+    signature,
+  }
+
+  return { license, payload }
+}
+
+async function countMigrations(db: D1Database, keyId: string, since: Date): Promise<number> {
+  const result = await db.prepare(
+    'SELECT COUNT(*) as count FROM windows_device_migrations WHERE key_id = ? AND migrated_at >= ?'
+  ).bind(keyId, since.toISOString()).first<{ count: number }>()
+  return result?.count || 0
+}
+
+// ========== Afdian helpers ==========
+
+function afdianSign(token: string, paramsBase64: string, timestamp: number): string {
+  // 爱发电开放平台签名：MD5(token + params_base64 + timestamp + token)
+  return md5(`${token}${paramsBase64}${timestamp}${token}`)
+}
+
+async function afdianSendMessage(
+  env: Env,
+  receiverId: string,
+  message: string
+): Promise<{ success: boolean; error?: string }> {
+  if (!env.AFDIAN_USER_ID || !env.AFDIAN_TOKEN) {
+    return { success: false, error: 'Afdian credentials not configured' }
+  }
+
+  const params = {
+    receiver_id: receiverId,
+    message,
+  }
+  const paramsStr = JSON.stringify(params)
+  const paramsBase64 = utf8ToBase64(paramsStr)
+  const timestamp = Math.floor(Date.now() / 1000)
+  const sign = afdianSign(env.AFDIAN_TOKEN, paramsBase64, timestamp)
+
+  const body = {
+    user_id: env.AFDIAN_USER_ID,
+    params: paramsBase64,
+    ts: timestamp,
+    sign,
+  }
+
+  try {
+    const res = await fetch('https://afdian.net/api/open/send-msg', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+    const data = await res.json<{ ec?: number; msg?: string }>()
+    if (data.ec === 200) {
+      return { success: true }
+    }
+    return { success: false, error: data.msg || `ec=${data.ec}` }
+  } catch (err) {
+    return { success: false, error: String(err) }
+  }
+}
+
+function verifyAfdianWebhook(token: string | undefined, data: unknown, sign: string): boolean {
+  if (!token) return false
+  const dataStr = JSON.stringify(data)
+  const expected = md5(`${token}${dataStr}${token}`)
+  return timingSafeEqual(expected, sign.toLowerCase())
 }
 
 // ========== App ==========
@@ -401,6 +546,332 @@ app.post('/api/webhook/lemonsqueezy', async (c) => {
   }
 
   return c.json({ status: 'ignored' })
+})
+
+// ========== Windows license issuance helper ==========
+
+interface WindowsIssueSuccess {
+  ok: true
+  license: object
+  plan: string
+  expires_at: string | null
+  device_hash: string
+}
+
+interface WindowsIssueFailure {
+  ok: false
+  status: number
+  body: object
+}
+
+type WindowsIssueResult = WindowsIssueSuccess | WindowsIssueFailure
+
+async function issueWindowsLicense(
+  env: Env,
+  keyId: string,
+  deviceHash: string,
+  deviceName: string,
+  deviceComponents: string[]
+): Promise<WindowsIssueResult> {
+  const keyRow = await env.DB.prepare(
+    'SELECT * FROM windows_keys WHERE key_id = ?'
+  ).bind(keyId).first<{
+    key_id: string
+    plan: string
+    status: string
+    device_hash: string | null
+    device_components: string | null
+    expires_at: string | null
+  }>()
+
+  if (!keyRow) {
+    return { ok: false, status: 404, body: { error: 'KEY_NOT_FOUND', message: '激活码不存在' } }
+  }
+
+  if (keyRow.status === 'revoked') {
+    return { ok: false, status: 403, body: { error: 'KEY_REVOKED', message: '激活码已被吊销' } }
+  }
+
+  if (keyRow.expires_at) {
+    const expiry = new Date(keyRow.expires_at)
+    if (expiry < new Date()) {
+      return { ok: false, status: 403, body: { error: 'SUBSCRIPTION_EXPIRED', message: '订阅已过期' } }
+    }
+  }
+
+  if (keyRow.device_hash && keyRow.device_hash !== deviceHash) {
+    // Allow migration within limit.
+    const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000)
+    const migrations = await countMigrations(env.DB, keyId, oneYearAgo)
+    if (migrations >= MIGRATION_LIMIT) {
+      return {
+        ok: false,
+        status: 403,
+        body: {
+          error: 'DEVICE_LIMIT',
+          message: `该激活码每年最多换机 ${MIGRATION_LIMIT} 次，已达上限`,
+        },
+      }
+    }
+
+    // Record migration and revoke the previous device.
+    await env.DB.prepare(`
+      INSERT INTO windows_device_migrations (key_id, old_device, new_device)
+      VALUES (?, ?, ?)
+    `).bind(keyId, keyRow.device_hash, deviceHash).run()
+
+    await env.DB.prepare(`
+      UPDATE windows_devices SET revoked = 1 WHERE key_id = ? AND device_id = ? AND revoked = 0
+    `).bind(keyId, keyRow.device_hash).run()
+  }
+
+  const privateKey = getEd25519PrivateKey(env)
+  if (!privateKey) {
+    return { ok: false, status: 500, body: { error: 'SERVER_ERROR', message: '签名密钥未配置' } }
+  }
+
+  const components = Array.isArray(deviceComponents) ? deviceComponents : []
+  const { license } = buildWindowsLicense(keyRow, deviceHash, components, privateKey)
+
+  // Upsert device record.
+  await env.DB.prepare(`
+    INSERT INTO windows_devices (device_id, key_id, device_name, activated_at, last_seen_at)
+    VALUES (?, ?, ?, datetime('now'), datetime('now'))
+    ON CONFLICT(device_id, key_id) DO UPDATE SET
+      last_seen_at = datetime('now'),
+      revoked = 0
+  `).bind(deviceHash, keyId, deviceName || '').run()
+
+  // Update key binding.
+  await env.DB.prepare(`
+    UPDATE windows_keys
+    SET status = 'used',
+        device_hash = ?,
+        device_components = ?,
+        activated_at = datetime('now')
+    WHERE key_id = ?
+  `).bind(deviceHash, JSON.stringify(components), keyId).run()
+
+  return {
+    ok: true,
+    license,
+    plan: keyRow.plan,
+    expires_at: keyRow.expires_at || null,
+    device_hash: deviceHash,
+  }
+}
+
+function parseWindowsActivationBody(body: unknown): {
+  key: string
+  device_hash: string
+  device_name?: string
+  device_components?: string[]
+} | null {
+  if (typeof body !== 'object' || body === null) return null
+  const b = body as Record<string, unknown>
+  if (typeof b.key !== 'string' || typeof b.device_hash !== 'string') return null
+  return {
+    key: b.key,
+    device_hash: b.device_hash,
+    device_name: typeof b.device_name === 'string' ? b.device_name : undefined,
+    device_components: Array.isArray(b.device_components)
+      ? b.device_components.filter((x): x is string => typeof x === 'string')
+      : undefined,
+  }
+}
+
+// ========== POST /api/activate/windows ==========
+
+app.post('/api/activate/windows', async (c) => {
+  const ip = c.req.header('CF-Connecting-IP') || 'unknown'
+  if (!checkRateLimit(ip)) {
+    return c.json({ error: 'RATE_LIMITED', message: '请求过于频繁，请稍后再试' }, 429)
+  }
+
+  let body: unknown
+  try {
+    body = await c.req.json()
+  } catch {
+    return c.json({ error: 'INVALID_JSON' }, 400)
+  }
+
+  const parsed = parseWindowsActivationBody(body)
+  if (!parsed) {
+    return c.json({ error: 'INVALID_PARAMS', message: '请求参数无效' }, 400)
+  }
+
+  const { key, device_hash, device_name, device_components } = parsed
+
+  if (!WINDOWS_KEY_PATTERN.test(key.toUpperCase())) {
+    return c.json({ error: 'INVALID_KEY', message: '激活码格式不正确' }, 400)
+  }
+  if (device_hash.length < 16 || device_hash.length > 128) {
+    return c.json({ error: 'INVALID_DEVICE', message: '设备指纹无效' }, 400)
+  }
+
+  const keyId = key.toUpperCase()
+  const result = await issueWindowsLicense(
+    c.env,
+    keyId,
+    device_hash,
+    device_name || '',
+    device_components || []
+  )
+
+  if (!result.ok) {
+    return c.json(result.body, result.status as any)
+  }
+
+  return c.json({
+    license: result.license,
+    plan: result.plan,
+    expires_at: result.expires_at,
+    device_hash: result.device_hash,
+  })
+})
+
+// ========== POST /api/license/download ==========
+// For offline activation: user provides key + device fingerprint on a web page,
+// server returns a signed .license file that can be imported into the Windows app.
+
+app.post('/api/license/download', async (c) => {
+  const ip = c.req.header('CF-Connecting-IP') || 'unknown'
+  if (!checkRateLimit(ip)) {
+    return c.json({ error: 'RATE_LIMITED', message: '请求过于频繁，请稍后再试' }, 429)
+  }
+
+  let body: unknown
+  try {
+    body = await c.req.json()
+  } catch {
+    return c.json({ error: 'INVALID_JSON' }, 400)
+  }
+
+  const parsed = parseWindowsActivationBody(body)
+  if (!parsed) {
+    return c.json({ error: 'INVALID_PARAMS', message: '请求参数无效' }, 400)
+  }
+
+  const { key, device_hash, device_name, device_components } = parsed
+
+  if (!WINDOWS_KEY_PATTERN.test(key.toUpperCase())) {
+    return c.json({ error: 'INVALID_KEY', message: '激活码格式不正确' }, 400)
+  }
+  if (device_hash.length < 16 || device_hash.length > 128) {
+    return c.json({ error: 'INVALID_DEVICE', message: '设备指纹无效' }, 400)
+  }
+
+  const keyId = key.toUpperCase()
+  const result = await issueWindowsLicense(
+    c.env,
+    keyId,
+    device_hash,
+    device_name || '',
+    device_components || []
+  )
+
+  if (!result.ok) {
+    return c.json(result.body, result.status as any)
+  }
+
+  const licenseText = JSON.stringify(result.license)
+  return c.body(licenseText, 200, {
+    'Content-Type': 'application/json',
+    'Content-Disposition': `attachment; filename="${keyId}.license"`,
+  })
+})
+
+// ========== POST /api/webhook/afdian ==========
+
+app.post('/api/webhook/afdian', async (c) => {
+  if (!c.env.AFDIAN_WEBHOOK_TOKEN) {
+    return c.json({ error: 'UNAUTHORIZED', message: 'Webhook token not configured' }, 401)
+  }
+
+  const payload = await c.req.json<{ data?: unknown; sign?: string }>()
+  const { data, sign } = payload
+
+  if (!sign || !data || typeof data !== 'object') {
+    return c.json({ error: 'INVALID_PAYLOAD' }, 400)
+  }
+
+  if (!verifyAfdianWebhook(c.env.AFDIAN_WEBHOOK_TOKEN, data, sign)) {
+    return c.json({ error: 'INVALID_SIGNATURE' }, 401)
+  }
+
+  // Afdian webhook data shape:
+  // data.order: { out_trade_no, user_id, user_name, product_type, month_count, ... }
+  const order = (data as any).order
+  if (!order) {
+    return c.json({ error: 'INVALID_ORDER' }, 400)
+  }
+
+  const orderId = order.out_trade_no
+  const userId = order.user_id
+  const email = order.remark || order.user_name || ''
+  const plan = 'personal_lifetime'
+
+  // Check for duplicate order.
+  const existing = await c.env.DB.prepare(
+    'SELECT key_id FROM windows_keys WHERE order_id = ?'
+  ).bind(orderId).first<{ key_id: string }>()
+
+  if (existing) {
+    return c.json({ key_id: existing.key_id, order_id: orderId, status: 'exists' })
+  }
+
+  const keyId = generateKeyId()
+
+  await c.env.DB.prepare(`
+    INSERT INTO windows_keys (key_id, plan, status, order_id, email)
+    VALUES (?, ?, 'unused', ?, ?)
+  `).bind(keyId, plan, orderId, email).run()
+
+  // Best-effort send private message with the key.
+  let messageStatus = 'pending'
+  if (userId && c.env.AFDIAN_USER_ID && c.env.AFDIAN_TOKEN) {
+    const message = `感谢您的购买！\n表表归一 Windows 版激活码：${keyId}\n请在软件激活窗口输入此激活码完成绑定。激活码永久有效，每年可换机 ${MIGRATION_LIMIT} 次。`
+    const sendResult = await afdianSendMessage(c.env, userId, message)
+    messageStatus = sendResult.success ? 'sent' : `failed: ${sendResult.error}`
+  }
+
+  return c.json({ key_id: keyId, order_id: orderId, status: 'created', message_status: messageStatus })
+})
+
+// ========== POST /api/admin/generate-windows-keys ==========
+
+app.post('/api/admin/generate-windows-keys', async (c) => {
+  const auth = c.req.header('Authorization')
+  const apiKey = c.env.ADMIN_API_KEY || c.env.ACTIVATION_SECRET
+  if (!auth || auth !== `Bearer ${apiKey}`) {
+    return c.json({ error: 'UNAUTHORIZED' }, 401)
+  }
+
+  let body: { count?: number; plan?: string; expires_at?: string }
+  try {
+    body = await c.req.json()
+  } catch {
+    return c.json({ error: 'INVALID_JSON' }, 400)
+  }
+
+  const count = Math.min(body.count || 1, 100)
+  const plan = body.plan || 'personal_lifetime'
+
+  const keys: string[] = []
+  const stmt = c.env.DB.prepare(
+    'INSERT INTO windows_keys (key_id, plan, status, expires_at) VALUES (?, ?, ?, ?)'
+  )
+
+  const batch = []
+  for (let i = 0; i < count; i++) {
+    const keyId = generateKeyId()
+    batch.push(stmt.bind(keyId, plan, 'unused', body.expires_at || null))
+    keys.push(keyId)
+  }
+
+  await c.env.DB.batch(batch)
+
+  return c.json({ keys, count, plan })
 })
 
 // ========== POST /api/admin/generate (管理后台生成激活码) ==========

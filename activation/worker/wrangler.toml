@@ -11,6 +11,16 @@ database_id = "xlsone-license-db"
 ACTIVATION_SECRET = ""  # 运行时通过 wrangler secret put 设置
 LEMON_SQUEEZY_SIGNING_SECRET = ""  # Lemon Squeezy webhook 签名密钥
 
+# 以下值需通过 wrangler secret put 设置，不应写入本文件：
+# ED25519_PRIVATE_KEY    — Windows 版 Ed25519 签名私钥（64 字符十六进制）
+#   当前示例密钥对的种子：5933069fa1dbc3f931afd6519ff7add22cefc804628eb0ee80ada5ef75a14561
+#   对应公钥（已嵌入 Windows 客户端）：a20719b25b5336d7f4dbd42dc240f3ab8893777fa0dc9a4d9945ef6ed8419e32
+#   生产环境请重新生成并妥善保管私钥。
+# AFDIAN_USER_ID         — 爱发电用户 ID
+# AFDIAN_TOKEN           — 爱发电开放平台 Token
+# AFDIAN_WEBHOOK_TOKEN   — 爱发电 Webhook Token
+# ADMIN_API_KEY          — 管理后台接口密钥（可选，默认使用 ACTIVATION_SECRET）
+
 [env.production]
 routes = [
   { pattern = "api.xlsone.com", custom_domain = true },

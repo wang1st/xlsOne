@@ -45,6 +45,18 @@ Windows packaging entry point:
 cpp\scripts\package_windows.ps1 -Preset windows-release -QtBin C:\Qt\6.6.0\msvc2019_64\bin
 ```
 
+## Windows 授权与激活
+
+Windows 版采用 Ed25519 签名授权文件 + 设备指纹绑定的付费授权模式：
+
+- `LicenseManager`（`core/src/license_manager.cpp`）内置 Ed25519 公钥，可本地离线验证授权文件签名。
+- Windows 设备指纹通过 PowerShell/WMIC 读取主板、CPU、硬盘序列号及 `MachineGuid`，并做 SHA-256 哈希。
+- 在线激活调用 `POST /api/activate/windows`，返回签名授权 JSON。
+- 离线激活在对话框中显示本机设备码，用户可在网页申请 `.license` 文件后导入。
+- 设备组件哈希支持部分匹配，允许小范围硬件变动；大幅换机需走服务端迁移（每年 3 次）。
+
+授权公钥与 Worker 私钥由 `activation/README.md` 管理；生产环境请重新生成密钥对。
+
 UOS cross presets `uos-arm64-release` and `uos-loongarch64-release` expect `UOS_ARM64_TOOLCHAIN_FILE` and `UOS_LOONGARCH64_TOOLCHAIN_FILE` to point to prepared CMake toolchain files.
 
 On macOS with Homebrew Qt, `qt-cmake` can also be used:

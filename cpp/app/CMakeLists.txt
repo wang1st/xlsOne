@@ -1,4 +1,4 @@
-add_executable(xlsone_app
+set(_xlsone_app_sources
     src/check_update_dialog.cpp
     src/check_update_dialog.hpp
     src/dialog_utils.cpp
@@ -34,6 +34,11 @@ add_executable(xlsone_app
     src/workspace_chrome.hpp
     xlsone.qrc
 )
+if(WIN32)
+    list(APPEND _xlsone_app_sources resources/xlsone.rc)
+endif()
+
+add_executable(xlsone_app ${_xlsone_app_sources})
 
 set_target_properties(xlsone_app PROPERTIES
     WIN32_EXECUTABLE TRUE
@@ -59,12 +64,18 @@ endif()
 target_link_libraries(xlsone_app
     PRIVATE
         xlsone_core
-        Qt5::Core
-        Qt5::Gui
-        Qt5::Widgets
+        Qt${QT_VERSION_MAJOR}::Core
+        Qt${QT_VERSION_MAJOR}::Gui
+        Qt${QT_VERSION_MAJOR}::Widgets
 )
 
-target_link_options(xlsone_app PRIVATE "-Wl,--disable-new-dtags")
+if(TARGET translations)
+    add_dependencies(xlsone_app translations)
+endif()
+
+if(UNIX AND NOT APPLE)
+    target_link_options(xlsone_app PRIVATE "-Wl,--disable-new-dtags")
+endif()
 
 target_include_directories(xlsone_app
     PRIVATE

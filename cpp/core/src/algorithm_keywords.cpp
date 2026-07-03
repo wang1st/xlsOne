@@ -110,7 +110,8 @@ void AlgorithmKeywords::mergeArray(const QJsonObject& obj, const QString& key, Q
         return;
     }
     const QJsonArray arr = it->toArray();
-    QSet<QString> existing = QSet<QString>::fromList(target);
+    QSet<QString> existing;
+    for (const QString& s : target) existing.insert(s);
     for (const auto& val : arr) {
         if (val.isString()) {
             const QString s = val.toString().trimmed();
@@ -210,7 +211,8 @@ void AlgorithmKeywords::load()
     m_metricAnchorPatterns.clear();
     m_metricAnchorPatterns = m_amountPatterns;
     {
-        QSet<QString> existing = QSet<QString>::fromList(m_amountPatterns);
+        QSet<QString> existing;
+        for (const QString& s : m_amountPatterns) existing.insert(s);
         for (const auto& s : m_weakAmountPatterns) {
             if (!existing.contains(s)) {
                 m_metricAnchorPatterns.append(s);

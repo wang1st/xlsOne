@@ -1,0 +1,21 @@
+<CPackWiXPatch>
+    <!-- Add optional sub-features for the shortcuts. -->
+    <CPackWiXFragment Id="#PRODUCTFEATURE">
+        <Feature Id="StartMenuShortcutFeature"
+                 Title="@XLSONE_WIX_FEATURE_START_MENU_TITLE@"
+                 Description="@XLSONE_WIX_FEATURE_START_MENU_DESC@"
+                 Level="1"
+                 Absent="allow"
+                 Display="expand">
+            <ComponentRef Id="ApplicationShortcut"/>
+        </Feature>
+        <Feature Id="DesktopShortcutFeature"
+                 Title="@XLSONE_WIX_FEATURE_DESKTOP_TITLE@"
+                 Description="@XLSONE_WIX_FEATURE_DESKTOP_DESC@"
+                 Level="1"
+                 Absent="allow"
+                 Display="expand">
+            <ComponentRef Id="DesktopShortcut"/>
+        </Feature>
+    </CPackWiXFragment>
+</CPackWiXPatch>

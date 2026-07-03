@@ -8,6 +8,7 @@
 #include <QPaintEvent>
 #include <QPainter>
 #include <QPainterPath>
+#include <QPixmap>
 #include <QResizeEvent>
 #include <QStyleOption>
 #include <algorithm>
@@ -81,15 +82,9 @@ void EmptyWorkspaceView::paintEvent(QPaintEvent* event)
     const int headerY = card.top() + 28;
     const int iconSize = 28;
     const QRect iconRect(card.center().x() - iconSize / 2, headerY, iconSize, iconSize);
-    painter.save();
-    painter.setPen(Qt::NoPen);
-    painter.setBrush(t.accent);
-    painter.drawRoundedRect(iconRect, 7, 7);
-    painter.setPen(QPen(Qt::white, 2));
-    painter.setBrush(Qt::NoBrush);
-    painter.drawLine(iconRect.left() + 7, iconRect.center().y(), iconRect.right() - 7, iconRect.center().y());
-    painter.drawLine(iconRect.center().x(), iconRect.top() + 7, iconRect.center().x(), iconRect.bottom() - 7);
-    painter.restore();
+    const QPixmap logo = QPixmap(QStringLiteral(":/resources/xlsOne.png"))
+                             .scaled(iconSize, iconSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    painter.drawPixmap(iconRect, logo);
 
     QFont brandFont = font();
     brandFont.setPointSize(13);

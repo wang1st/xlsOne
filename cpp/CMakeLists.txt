@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.22)
 project(xlsOneQt
     VERSION 1.0.3
     DESCRIPTION "Cross-platform C++/Qt port of xlsOne"
-    LANGUAGES CXX
+    LANGUAGES C CXX
 )
 
 set(CMAKE_CXX_STANDARD 20)
@@ -14,7 +14,8 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
-find_package(Qt5 REQUIRED COMPONENTS Core Gui Widgets Network Test)
+find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core Gui Widgets Network Test)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Gui Widgets Network Test)
 
 enable_testing()
 
@@ -206,7 +207,7 @@ set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "同构 Excel 工作簿智能合并与校�
 set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
 set(CPACK_PACKAGE_CONTACT "831261@qq.com")
 
-# Architecture-tagged package filename (e.g. xlsone-1.0.2-linux-arm64.deb)
+# Architecture-tagged package filename (e.g. xlsone-1.0.2-linux-arm64.deb / xlsone-1.0.2-windows-amd64.zip)
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64")
     set(_xlsone_pkg_arch "arm64")
 elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64")
@@ -214,9 +215,83 @@ elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64")
 else()
     set(_xlsone_pkg_arch "${CMAKE_SYSTEM_PROCESSOR}")
 endif()
-set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-linux-${_xlsone_pkg_arch}")
+if(WIN32)
+    set(_xlsone_pkg_platform "windows")
+elseif(APPLE)
+    set(_xlsone_pkg_platform "macos")
+else()
+    set(_xlsone_pkg_platform "linux")
+endif()
+set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${_xlsone_pkg_platform}-${_xlsone_pkg_arch}")
 
-if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../LICENSE")
+if(WIN32)
+    set(CPACK_PACKAGE_INSTALL_DIRECTORY "xlsOne")
+    # Fixed upgrade GUID for xlsOne Windows installer. Do not change between releases.
+    set(CPACK_WIX_UPGRADE_GUID "A1B2C3D4-E5F6-7890-1234-567890ABCDEF")
+    set(CPACK_WIX_PROPERTY_ARPURLINFOABOUT "https://xlsone.com")
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/app/resources/xlsOne.ico")
+        set(CPACK_WIX_PRODUCT_ICON "${CMAKE_CURRENT_SOURCE_DIR}/app/resources/xlsOne.ico")
+    elseif(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/app/resources/xlsOne_256x256.png")
+        set(CPACK_WIX_PRODUCT_ICON "${CMAKE_CURRENT_SOURCE_DIR}/app/resources/xlsOne_256x256.png")
+    endif()
+
+    # Installer language selection (affects EULA text and WixUI culture).
+    set(XLSONE_INSTALLER_LANGUAGE "zh_CN" CACHE STRING
+        "Windows installer language: zh_CN, zh_TW, en, ja")
+    set(_xlsone_lang_map_zh_CN "zh-CN")
+    set(_xlsone_lang_map_zh_TW "zh-TW")
+    set(_xlsone_lang_map_en    "en-US")
+    set(_xlsone_lang_map_ja    "ja-JP")
+    set(_xlsone_wix_culture "${_xlsone_lang_map_${XLSONE_INSTALLER_LANGUAGE}}")
+    if(NOT _xlsone_wix_culture)
+        message(FATAL_ERROR "Unsupported XLSONE_INSTALLER_LANGUAGE: ${XLSONE_INSTALLER_LANGUAGE}")
+    endif()
+
+    set(_xlsone_license_txt
+        "${CMAKE_CURRENT_SOURCE_DIR}/packaging/windows/licenses/EULA_${XLSONE_INSTALLER_LANGUAGE}.txt")
+    if(NOT EXISTS "${_xlsone_license_txt}")
+        message(FATAL_ERROR "License file not found: ${_xlsone_license_txt}")
+    endif()
+    set(CPACK_RESOURCE_FILE_LICENSE "${_xlsone_license_txt}")
+    set(CPACK_WIX_CULTURES "${_xlsone_wix_culture}")
+
+    # Optional Start Menu / Desktop shortcuts via a configured Wix patch.
+    if(XLSONE_INSTALLER_LANGUAGE STREQUAL "zh_CN")
+        set(XLSONE_WIX_FEATURE_START_MENU_TITLE "开始菜单快捷方式")
+        set(XLSONE_WIX_FEATURE_START_MENU_DESC "在开始菜单中创建 xlsOne 快捷方式。")
+        set(XLSONE_WIX_FEATURE_DESKTOP_TITLE "桌面快捷方式")
+        set(XLSONE_WIX_FEATURE_DESKTOP_DESC "在桌面上创建 xlsOne 快捷方式。")
+    elseif(XLSONE_INSTALLER_LANGUAGE STREQUAL "zh_TW")
+        set(XLSONE_WIX_FEATURE_START_MENU_TITLE "開始功能表捷徑")
+        set(XLSONE_WIX_FEATURE_START_MENU_DESC "在開始功能表中建立 xlsOne 捷徑。")
+        set(XLSONE_WIX_FEATURE_DESKTOP_TITLE "桌面捷徑")
+        set(XLSONE_WIX_FEATURE_DESKTOP_DESC "在桌面上建立 xlsOne 捷徑。")
+    elseif(XLSONE_INSTALLER_LANGUAGE STREQUAL "ja")
+        set(XLSONE_WIX_FEATURE_START_MENU_TITLE "スタートメニューのショートカット")
+        set(XLSONE_WIX_FEATURE_START_MENU_DESC "スタートメニューに xlsOne のショートカットを作成します。")
+        set(XLSONE_WIX_FEATURE_DESKTOP_TITLE "デスクトップのショートカット")
+        set(XLSONE_WIX_FEATURE_DESKTOP_DESC "デスクトップに xlsOne のショートカットを作成します。")
+    else()
+        set(XLSONE_WIX_FEATURE_START_MENU_TITLE "Start Menu shortcut")
+        set(XLSONE_WIX_FEATURE_START_MENU_DESC "Create a shortcut for xlsOne in the Start Menu.")
+        set(XLSONE_WIX_FEATURE_DESKTOP_TITLE "Desktop shortcut")
+        set(XLSONE_WIX_FEATURE_DESKTOP_DESC "Create a shortcut for xlsOne on the Desktop.")
+    endif()
+
+    set(_xlsone_wix_patch_in
+        "${CMAKE_CURRENT_SOURCE_DIR}/packaging/windows/shortcuts.wxs.patch.in")
+    set(_xlsone_wix_patch_out
+        "${CMAKE_CURRENT_BINARY_DIR}/packaging/windows/shortcuts.wxs.patch")
+    configure_file("${_xlsone_wix_patch_in}" "${_xlsone_wix_patch_out}" @ONLY)
+    set(CPACK_WIX_PATCH_FILE "${_xlsone_wix_patch_out}")
+    set(CPACK_WIX_EXTRA_SOURCES
+        "${CMAKE_CURRENT_SOURCE_DIR}/packaging/windows/shortcuts.wxs")
+
+    # Use FeatureTree so users can opt out of optional shortcuts.
+    set(CPACK_WIX_UI_REF "WixUI_FeatureTree")
+endif()
+
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../LICENSE" AND NOT WIN32)
     set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/../LICENSE")
 endif()
 
@@ -260,6 +335,30 @@ elseif(UNIX AND NOT APPLE)
         DESTINATION share/pixmaps
         RENAME xlsone.png
     )
+endif()
+
+# Windows: bundle Qt runtime via windeployqt during installation/packaging.
+if(WIN32)
+    find_program(WINDEPLOYQT_EXECUTABLE windeployqt
+        HINTS "${Qt${QT_VERSION_MAJOR}_DIR}/../../../bin"
+        DOC "Path to windeployqt"
+    )
+    if(WINDEPLOYQT_EXECUTABLE)
+        install(CODE "
+            set(_exe \"$<TARGET_FILE:xlsone_app>\")
+            set(_bindir \"\${CMAKE_INSTALL_PREFIX}/bin\")
+            message(STATUS \"Running windeployqt: ${WINDEPLOYQT_EXECUTABLE} --dir \${_bindir} \${_exe}\")
+            execute_process(
+                COMMAND \"${WINDEPLOYQT_EXECUTABLE}\" --dir \${_bindir} \${_exe}
+                RESULT_VARIABLE _deploy_result
+            )
+            if(NOT _deploy_result EQUAL 0)
+                message(WARNING \"windeployqt returned non-zero exit code: \${_deploy_result}\")
+            endif()
+        ")
+    else()
+        message(WARNING "windeployqt not found — Windows package may be missing Qt runtime libraries")
+    endif()
 endif()
 
 include(CPack)
