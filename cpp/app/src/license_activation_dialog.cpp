@@ -107,10 +107,12 @@ void LicenseActivationDialog::buildBrandPanel(QWidget* container)
     iconLabel->setFixedSize(56, 56);
     iconLabel->setAlignment(Qt::AlignCenter);
     iconLabel->setStyleSheet(QStringLiteral(
-        "background: %1; border-radius: 14px; color: white; font-size: 28px; font-weight: 600;"
+        "background: %1; border-radius: 14px;"
     ).arg(t.accent.name()));
-    iconLabel->setText(QStringLiteral("表"));
-    iconLabel->setAlignment(Qt::AlignCenter);
+    QPixmap logo(QStringLiteral(":/resources/xlsOne.png"));
+    if (!logo.isNull()) {
+        iconLabel->setPixmap(logo.scaled(40, 40, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    }
     layout->addWidget(iconLabel, 0, Qt::AlignCenter);
 
     // Title
