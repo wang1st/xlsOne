@@ -5,6 +5,7 @@
 
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QPixmap>
 
 namespace {
 
@@ -54,10 +55,8 @@ void WorkspaceChrome::buildUi()
     auto* brandIcon = new QLabel(brandWidget);
     brandIcon->setFixedSize(22, 22);
     brandIcon->setAlignment(Qt::AlignCenter);
-    brandIcon->setStyleSheet(QStringLiteral(
-        "background: %1; border-radius: 6px; color: white; font-size: 12px; font-weight: 600;"
-    ).arg(t.accent.name()));
-    brandIcon->setText(QStringLiteral("表"));
+    brandIcon->setPixmap(QPixmap(QStringLiteral(":/resources/xlsOne.png"))
+                             .scaled(22, 22, Qt::KeepAspectRatio, Qt::SmoothTransformation));
     brandLayout->addWidget(brandIcon);
 
     auto* brandLabel = new QLabel(tr("表表归一"), brandWidget);

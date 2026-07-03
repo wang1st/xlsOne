@@ -315,7 +315,7 @@ void exportCsvBaseline(const std::vector<MergedResult>& results, const QString& 
             value.replace(QStringLiteral("\""), QStringLiteral("\"\""));
             values.append(QStringLiteral("\"%1\"").arg(value));
         }
-        stream << values.join(QLatin1Char(',')) << endl;
+        stream << values.join(QLatin1Char(',')) << '\n';
     }
 }
 

@@ -4,6 +4,8 @@ add_library(xlsone_core STATIC
     src/algorithm_keywords.cpp
     src/biff8_xls_parser.cpp
     src/compound_file_reader.cpp
+    src/ed25519/monocypher.c
+    src/ed25519/monocypher-ed25519.c
     src/excel_parser.cpp
     src/exporter.cpp
     src/license_manager.cpp
@@ -24,8 +26,8 @@ target_include_directories(xlsone_core
 
 target_link_libraries(xlsone_core
     PUBLIC
-        Qt5::Core
-        Qt5::Network
+        Qt${QT_VERSION_MAJOR}::Core
+        Qt${QT_VERSION_MAJOR}::Network
     PRIVATE
         ZLIB::ZLIB
 )

@@ -35,3 +35,7 @@ cpp/deepin-qt5.15/
 # Deployment credentials
 ssh-passwd.txt
 sudo-passwd.txt
+
+# JavaScript dependencies
+node_modules/
+package-lock.json

@@ -5,7 +5,7 @@ add_executable(xlsone_snapshot
 target_link_libraries(xlsone_snapshot
     PRIVATE
         xlsone_core
-        Qt5::Core
+        Qt${QT_VERSION_MAJOR}::Core
 )
 
 add_test(NAME xlsone_snapshot_help COMMAND xlsone_snapshot --help)

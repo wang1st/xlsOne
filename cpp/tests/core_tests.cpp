@@ -1,5 +1,6 @@
 #include "xlsone/core/exporter.hpp"
 #include "xlsone/core/excel_parser.hpp"
+#include "xlsone/core/license_manager.hpp"
 #include "xlsone/core/merger.hpp"
 #include "xlsone/core/models.hpp"
 #include "xlsone/core/schema_repository.hpp"
@@ -66,6 +67,8 @@ private slots:
     void updateCheckerParseInvalidJson();
     void updateCheckerPlatformKeyIsNotEmpty();
     void updateCheckerFindsNewVersionOnline();
+    void licenseManagerAcceptsValidEd25519License();
+    void licenseManagerRejectsTamperedEd25519License();
 };
 
 namespace {
@@ -1132,6 +1135,48 @@ void CoreTests::updateCheckerFindsNewVersionOnline()
     QVERIFY(UpdateChecker::compareVersions(
         info.latestVersion,
         QStringLiteral("0.1.0")) > 0);
+}
+
+void CoreTests::licenseManagerAcceptsValidEd25519License()
+{
+    // Signed with production Ed25519 key pair (seed kept in Worker secret).
+    const QByteArray license = R"({
+        "key_id": "XLS1-TEST-0001",
+        "plan": "personal_lifetime",
+        "device_hash": "",
+        "device_components": [],
+        "issued_at": 1719830400,
+        "expires_at": 0,
+        "signature": "kIPZ0K77COo35s_whFUjT6Cg06wmsSZ8CyoRxSGPWa8wODVteaceUEJqaH8p1k_SiSnQYcRLDttXiZbyKopTDQ"
+    })";
+
+    xlsone::LicenseManager manager;
+    xlsone::LicenseInfo info;
+    QString errorMessage;
+    QVERIFY(manager.applyLicenseFile(license, QString(), &info, &errorMessage));
+    QCOMPARE(manager.state(), xlsone::LicenseState::Activated);
+    QCOMPARE(info.keyId, QStringLiteral("XLS1-TEST-0001"));
+    QCOMPARE(info.plan, xlsone::LicensePlan::PersonalLifetime);
+}
+
+void CoreTests::licenseManagerRejectsTamperedEd25519License()
+{
+    QByteArray license = R"({
+        "key_id": "XLS1-TEST-0001",
+        "plan": "personal_lifetime",
+        "device_hash": "",
+        "device_components": [],
+        "issued_at": 1719830400,
+        "expires_at": 0,
+        "signature": "kIPZ0K77COo35s_whFUjT6Cg06wmsSZ8CyoRxSGPWa8wODVteaceUEJqaH8p1k_SiSnQYcRLDttXiZbyKopTDQ"
+    })";
+    // Tamper with the payload.
+    license.replace("personal_lifetime", "enterprise_10");
+
+    xlsone::LicenseManager manager;
+    QString errorMessage;
+    QVERIFY(!manager.applyLicenseFile(license, QString(), nullptr, &errorMessage));
+    QVERIFY(!errorMessage.isEmpty());
 }
 
 #include "core_tests.moc"

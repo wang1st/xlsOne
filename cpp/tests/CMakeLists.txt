@@ -7,8 +7,8 @@ add_executable(xlsone_core_tests
 target_link_libraries(xlsone_core_tests
     PRIVATE
         xlsone_core
-        Qt5::Test
-        Qt5::Network
+        Qt${QT_VERSION_MAJOR}::Test
+        Qt${QT_VERSION_MAJOR}::Network
 )
 
 target_compile_definitions(xlsone_core_tests

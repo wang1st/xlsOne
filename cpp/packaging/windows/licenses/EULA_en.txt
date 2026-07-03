@@ -1,0 +1,29 @@
+xlsOne End User License Agreement (EULA)
+
+IMPORTANT: Please read the following terms carefully before installing or using this software. By installing, copying, or otherwise using this software, you agree to be bound by all the terms of this agreement. If you do not agree, do not install or use this software.
+
+1. License Grant
+This software is licensed for installation and use on a single computer for personal or internal business use only. This license is non-transferable.
+
+2. Restrictions
+You may not, without express written permission:
+  (a) reverse engineer, decompile, or disassemble this software;
+  (b) rent, lease, sublicense, or distribute this software;
+  (c) remove or alter any copyright notices, serial numbers, or proprietary marks.
+
+3. Trial Period
+This software provides a limited-time, fully functional trial. After the trial period expires, you must purchase a license to continue using all features.
+
+4. Device Binding
+The license key is bound to your device fingerprint. A limited number of migrations per year is allowed. Publicly sharing the key may result in license termination.
+
+5. Intellectual Property
+All copyrights and other intellectual property rights in this software and all copies remain with the author.
+
+6. Disclaimer
+This software is provided "as is". The author shall not be liable for any damages arising from the use or inability to use this software.
+
+7. Termination
+If you violate this agreement, the author may terminate this license at any time, and you must immediately cease use and destroy all copies.
+
+Contact: 831261@qq.com
