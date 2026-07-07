@@ -1,0 +1,11 @@
+{
+  "tagname-lowercase": true,
+  "attr-lowercase": true,
+  "doctype-first": false,
+  "id-unique": true,
+  "src-not-empty": true,
+  "alt-require": true,
+  "space-tab-mixed-disabled": "space",
+  "inline-style-disabled": false,
+  "inline-script-disabled": false
+}

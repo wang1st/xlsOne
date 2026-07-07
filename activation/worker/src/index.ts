@@ -247,10 +247,11 @@ async function afdianSendMessage(
   }
 }
 
-function verifyAfdianWebhook(token: string | undefined, data: unknown, sign: string): boolean {
-  if (!token) return false
-  const dataStr = JSON.stringify(data)
-  const expected = md5(`${token}${dataStr}${token}`)
+function verifyAfdianWebhook(token: string, data: string, sign: string): boolean {
+  // Afdian signs over the EXACT raw `data` string: MD5(token + data + token).
+  // `data` MUST be the un-parsed original string — re-serializing a parsed object
+  // changes key order / whitespace and the signature will never match.
+  const expected = md5(`${token}${data}${token}`)
   return timingSafeEqual(expected, sign.toLowerCase())
 }
 
@@ -788,10 +789,18 @@ app.post('/api/webhook/afdian', async (c) => {
     return c.json({ error: 'UNAUTHORIZED', message: 'Webhook token not configured' }, 401)
   }
 
-  const payload = await c.req.json<{ data?: unknown; sign?: string }>()
-  const { data, sign } = payload
+  // Read the RAW body so we can verify the signature over the exact `data` string.
+  const raw = await c.req.text()
+  let payload: { data?: unknown; sign?: string }
+  try {
+    payload = JSON.parse(raw)
+  } catch {
+    return c.json({ error: 'INVALID_JSON' }, 400)
+  }
 
-  if (!sign || !data || typeof data !== 'object') {
+  const { data, sign } = payload
+  // `data` must be the original string Afdian signed; do NOT parse it first.
+  if (typeof sign !== 'string' || typeof data !== 'string' || !data) {
     return c.json({ error: 'INVALID_PAYLOAD' }, 400)
   }
 
@@ -799,19 +808,35 @@ app.post('/api/webhook/afdian', async (c) => {
     return c.json({ error: 'INVALID_SIGNATURE' }, 401)
   }
 
-  // Afdian webhook data shape:
-  // data.order: { out_trade_no, user_id, user_name, product_type, month_count, ... }
-  const order = (data as any).order
-  if (!order) {
+  // Signature is valid — now parse the order from the verified string.
+  let order: any
+  try {
+    order = JSON.parse(data)
+  } catch {
     return c.json({ error: 'INVALID_ORDER' }, 400)
   }
 
-  const orderId = order.out_trade_no
-  const userId = order.user_id
-  const email = order.remark || order.user_name || ''
+  const orderObj = order?.order ?? order
+  if (!orderObj || !orderObj.out_trade_no) {
+    return c.json({ error: 'INVALID_ORDER' }, 400)
+  }
+
+  // Only issue a license once payment is actually settled. Afdian may send
+  // webhooks for pending/refunding states too — never issue on those.
+  const paid = ['PAID', 'paid', 'SUCCESS', 'success'].includes(
+    orderObj.pay_status ?? orderObj.status ?? orderObj.order_status ?? ''
+  )
+  if (!paid) {
+    return c.json({ status: 'ignored', reason: 'not_paid' })
+  }
+
+  const orderId = orderObj.out_trade_no
+  const userId = orderObj.user_id
+  const email = orderObj.remark || orderObj.user_name || ''
+  // Windows 版当前为买断制；若以后按 SKU 区分档位，在此根据 orderObj.sku/title 映射。
   const plan = 'personal_lifetime'
 
-  // Check for duplicate order.
+  // Idempotency: 同一订单只发一次授权码。
   const existing = await c.env.DB.prepare(
     'SELECT key_id FROM windows_keys WHERE order_id = ?'
   ).bind(orderId).first<{ key_id: string }>()

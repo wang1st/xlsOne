@@ -48,10 +48,10 @@ npx wrangler deploy
 
 Windows 客户端内置公钥，Worker 使用对应私钥签名授权文件。当前示例密钥对：
 
-- 种子（私钥，仅保存在 Worker Secret）：`5933069fa1dbc3f931afd6519ff7add22cefc804628eb0ee80ada5ef75a14561`
-- 公钥（已嵌入 `cpp/core/src/license_manager.cpp`）：`a20719b25b5336d7f4dbd42dc240f3ab8893777fa0dc9a4d9945ef6ed8419e32`
+- 种子（私钥，仅保存在 Worker Secret，用 `wrangler secret put ED25519_PRIVATE_KEY` 设置）
+- 公钥（嵌入 `cpp/core/src/license_manager.cpp` 的 `kLicensePublicKey` 数组）
 
-生产环境请重新生成并妥善保管私钥：
+> ⚠️ 示例密钥对已从文档/配置中移除，禁止复用——它曾暴露在仓库里，任何人都能用它伪造 Windows 授权。生产环境请务必重新生成密钥对。
 
 ```bash
 openssl genpkey -algorithm ed25519 -outform DER -out ed25519_priv.der

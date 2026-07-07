@@ -1,0 +1,34 @@
+name: Worker CI
+
+on:
+  push:
+    paths:
+      - "activation/worker/**"
+      - ".github/workflows/worker.yml"
+  pull_request:
+    paths:
+      - "activation/worker/**"
+      - ".github/workflows/worker.yml"
+
+jobs:
+  quality:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: activation/worker
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install dependencies
+        run: npm install
+      - name: Type check (tsc --noEmit)
+        run: npm run typecheck
+      - name: Lint (ESLint)
+        # 接入初期先不阻断，暴露问题为主；稳定后去掉 continue-on-error。
+        continue-on-error: true
+        run: npm run lint
+      - name: Format check (Prettier)
+        continue-on-error: true
+        run: npm run format:check

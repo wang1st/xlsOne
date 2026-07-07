@@ -31,9 +31,10 @@ static QString g_deviceFingerprintCache;
 // Ed25519 public key for verifying license signatures (32 bytes).
 // This key must match the private key used by the activation server.
 //
-// Generated key pair (keep the seed secret on the server):
-//   seed:    5933069fa1dbc3f931afd6519ff7add22cefc804628eb0ee80ada5ef75a14561
-//   public:  a20719b25b5336d7f4dbd42dc240f3ab8893777fa0dc9a4d9945ef6ed8419e32
+// Generated key pair (keep the seed secret on the server; do NOT reuse the old
+// example seed that was once committed to the repo — it is publicly known and
+// would let anyone forge licenses). Regenerate and set ED25519_PRIVATE_KEY on the
+// Worker, then update this public key to match.
 static constexpr uint8_t kLicensePublicKey[32] = {
     0xa2, 0x07, 0x19, 0xb2, 0x5b, 0x53, 0x36, 0xd7,
     0xf4, 0xdb, 0xd4, 0x2d, 0xc2, 0x40, 0xf3, 0xab,

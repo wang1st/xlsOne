@@ -36,6 +36,7 @@ cpp/deepin-qt5.15/
 # Deployment credentials
 ssh-passwd.txt
 sudo-passwd.txt
+z-pulse.cn.txt
 
 # JavaScript dependencies
 node_modules/
