@@ -1,0 +1,41 @@
+# SwiftLint 配置 — xlsOne
+# 策略：安全类规则作 error 阻断；风格类先作 warning，逐步收紧到 --strict
+included:
+  - Sources
+  - Tests
+
+excluded:
+  - .build
+
+# ── 安全红线（error，直接阻断合并）──
+force_cast: error          # 全仓当前无 as!，安全启用
+force_try: warning         # LicenseManager 有 1 处 try!，先警告，后续改 try?
+
+# ── 复杂度 / 体量（先提示后阻断）──
+function_body_length:
+  warning: 120
+  error: 220
+line_length:
+  warning: 160
+  error: 240
+type_body_length:
+  warning: 400
+  error: 700
+file_length:
+  warning: 800
+  error: 1400
+cyclomatic_complexity:
+  warning: 15
+  error: 25
+
+# 未编号的 TODO 给 warning，倒逼关联 issue
+todo: warning
+
+# 以下交给 SwiftFormat 处理，避免双重规则打架
+disabled_rules:
+  - trailing_whitespace
+  - statement_position
+  - trailing_comma
+
+# CI 中直接输出 GitHub 行内注解
+reporter: "github-actions-logging"

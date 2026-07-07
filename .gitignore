@@ -26,6 +26,7 @@ test_*.swift
 # Agent / tool artifacts
 .opencode/
 opencode.json
+.workbuddy/
 
 # Linux packaging artifacts
 cpp/_CPack_Packages/

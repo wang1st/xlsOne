@@ -1,0 +1,9 @@
+# SwiftFormat 配置 — xlsOne
+# 团队统一风格，消除格式争议
+--indent 4
+--maxwidth 120
+--trimwhitespace always
+--self remove
+--commas inline
+--enable sortedImports
+--exclude .build
