@@ -37,6 +37,22 @@ jobs:
         run: cmake --build --preset ${{ runner.os == 'Windows' && 'windows-release' || 'linux-release' }}
 
       - name: Test
-        if: runner.os != 'Windows'
         working-directory: cpp
-        run: ctest --preset linux-release
+        run: ctest --preset ${{ runner.os == 'Windows' && 'windows-release' || 'linux-release' }}
+
+  format-check:
+    name: clang-format
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install clang-format
+        run: pip install clang-format==18.*
+      - name: Check formatting
+        # 首次接入：当前 C++ 代码尚未统一格式，先继续(不阻断)。
+        # 团队执行一次 `find cpp \( -name '*.cpp' -o -name '*.h' \) -not -path '*/build*' | xargs clang-format -i`
+        # 归一化后，去掉下面的 continue-on-error 使其成为硬性门禁。
+        continue-on-error: true
+        run: |
+          find cpp \( -name '*.cpp' -o -name '*.h' -o -name '*.hpp' -o -name '*.cc' \) \
+            -not -path '*/build*' -not -path '*/build-*' \
+            | xargs clang-format --dry-run --Werror

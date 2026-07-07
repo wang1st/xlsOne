@@ -1,0 +1,15 @@
+---
+# xlsOne C++ static analysis — 保守启用，先以警告形式暴露问题，逐步收紧。
+Checks: >
+  bugprone-*,
+  performance-*,
+  modernize-*,
+  readability-*,
+  -modernize-use-trailing-return-type,
+  -readability-identifier-length,
+  -readability-magic-numbers,
+  -bugprone-easily-swappable-parameters,
+  -readability-convert-member-functions-to-static
+WarningsAsErrors: ''
+HeaderFilterRegex: 'cpp/.*'
+FormatStyle: file
