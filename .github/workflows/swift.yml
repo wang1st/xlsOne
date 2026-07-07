@@ -1,0 +1,40 @@
+name: Swift CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+concurrency:
+  group: swift-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality-gate:
+    name: Build · Test · Lint
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Cache Swift packages
+        uses: actions/cache@v4
+        with:
+          path: .build
+          key: ${{ runner.os }}-spm-${{ hashFiles('Package.resolved') }}
+          restore-keys: ${{ runner.os }}-spm-
+
+      - name: Install SwiftLint & SwiftFormat
+        run: brew install swiftlint swiftformat
+
+      - name: Format check (SwiftFormat)
+        # 首次接入：仓库尚未统一格式，先用 `|| true` 仅作提示、不阻断。
+        # 团队本地执行一次 `make format` 归一化后，去掉 `|| true` 使其成为硬性门禁。
+        run: swiftformat --lint Sources Tests --reporter github-actions-log || true
+
+      - name: Lint (SwiftLint)
+        # 安全类规则作为 error 阻断；风格类作为 warning 提示，逐步收紧。
+        run: swiftlint lint --reporter github-actions-logging
+
+      - name: Build & Test
+        run: swift test
