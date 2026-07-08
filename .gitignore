@@ -41,3 +41,7 @@ z-pulse.cn.txt
 # JavaScript dependencies
 node_modules/
 package-lock.json
+
+# Local secrets (Wrangler local dev) — never commit
+.dev.vars
+*.dev.vars

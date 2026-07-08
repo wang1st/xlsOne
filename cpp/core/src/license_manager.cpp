@@ -28,18 +28,20 @@ static const QString kOfflineTokenKey = QStringLiteral("license/offline");
 // Process-level cache for the device fingerprint to avoid repeated WMIC/PowerShell calls.
 static QString g_deviceFingerprintCache;
 
-// Ed25519 public key for verifying license signatures (32 bytes).
-// This key must match the private key used by the activation server.
+// Ed25519 public key (32 bytes) for verifying Windows license signatures.
+// Must correspond to the private seed held ONLY in the Worker secret
+// ED25519_PRIVATE_KEY (set via `wrangler secret put`, 64-char hex seed).
 //
-// Generated key pair (keep the seed secret on the server; do NOT reuse the old
-// example seed that was once committed to the repo — it is publicly known and
-// would let anyone forge licenses). Regenerate and set ED25519_PRIVATE_KEY on the
-// Worker, then update this public key to match.
+// Key pair rotated on 2026-07-08 to replace the earlier example seed that had
+// been committed to the repo and was therefore publicly known — anyone holding
+// that seed could forge licenses. The private seed is NEVER stored in source.
+// To rotate again: generate a new Ed25519 seed, set it as ED25519_PRIVATE_KEY,
+// and replace the array below with the matching public key.
 static constexpr uint8_t kLicensePublicKey[32] = {
-    0xa2, 0x07, 0x19, 0xb2, 0x5b, 0x53, 0x36, 0xd7,
-    0xf4, 0xdb, 0xd4, 0x2d, 0xc2, 0x40, 0xf3, 0xab,
-    0x88, 0x93, 0x77, 0x7f, 0xa0, 0xdc, 0x9a, 0x4d,
-    0x99, 0x45, 0xef, 0x6e, 0xd8, 0x41, 0x9e, 0x32
+    0x37, 0x49, 0xae, 0x8c, 0x90, 0xca, 0x1d, 0xd9,
+    0x26, 0x27, 0x93, 0xfd, 0x13, 0xe6, 0x49, 0x55,
+    0x88, 0x8a, 0xa4, 0xb3, 0x3b, 0xaf, 0x39, 0xb1,
+    0xf8, 0x96, 0x3e, 0x48, 0x41, 0xa1, 0x7f, 0xf3
 };
 
 namespace {
