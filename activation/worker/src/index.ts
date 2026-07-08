@@ -884,13 +884,13 @@ app.post('/api/admin/generate-windows-keys', async (c) => {
 
   const keys: string[] = []
   const stmt = c.env.DB.prepare(
-    'INSERT INTO windows_keys (key_id, plan, status, expires_at) VALUES (?, ?, ?, ?)'
+    'INSERT INTO windows_keys (key_id, plan, status) VALUES (?, ?, ?)'
   )
 
   const batch = []
   for (let i = 0; i < count; i++) {
     const keyId = generateKeyId()
-    batch.push(stmt.bind(keyId, plan, 'unused', body.expires_at || null))
+    batch.push(stmt.bind(keyId, plan, 'unused'))
     keys.push(keyId)
   }
 

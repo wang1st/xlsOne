@@ -2,28 +2,31 @@ name = "xlsone-activation-api"
 main = "src/index.ts"
 compatibility_date = "2025-04-01"
 
-[[d1_databases]]
+# 所有运行配置都放在 env.production，因为部署用 `wrangler deploy --env production`，
+# 且自定义域名路由也挂在 production 环境上。Cloudflare 的 bindings / vars 不会从
+# 顶层继承到 environment，所以 d1_databases / vars 必须显式写在 [env.production] 下。
+[env.production]
+# z-pulse.cn 为国内中文版，计划由国内节点（阿里云 FC 等）承载，不挂在此 Worker 上。
+routes = [
+  { pattern = "api.xlsone.com", custom_domain = true }
+]
+
+[[env.production.d1_databases]]
 binding = "DB"
 database_name = "xlsone-license"
-database_id = "xlsone-license-db"
+database_id = "70f9b469-9c4e-470e-b6dd-27cba2c782f5"
 
-[vars]
+[env.production.vars]
 ACTIVATION_SECRET = ""  # 运行时通过 wrangler secret put 设置
 LEMON_SQUEEZY_SIGNING_SECRET = ""  # Lemon Squeezy webhook 签名密钥
 
 # 以下值需通过 wrangler secret put 设置，不应写入本文件：
 # ED25519_PRIVATE_KEY    — Windows 版 Ed25519 签名私钥（64 字符十六进制）
 #   ⚠️ 切勿把真实私钥写入本文件或提交到仓库。生产环境用下方命令设置：
-#       wrangler secret put ED25519_PRIVATE_KEY
+#       wrangler secret put ED25519_PRIVATE_KEY --env production
 #   并在 cpp/core/src/license_manager.cpp 中同步更新对应的公钥。
 #   示例密钥对已从仓库移除，禁止复用（曾公开，可被用于伪造授权）。
 # AFDIAN_USER_ID         — 爱发电用户 ID
 # AFDIAN_TOKEN           — 爱发电开放平台 Token
 # AFDIAN_WEBHOOK_TOKEN   — 爱发电 Webhook Token
 # ADMIN_API_KEY          — 管理后台接口密钥（可选，默认使用 ACTIVATION_SECRET）
-
-[env.production]
-routes = [
-  { pattern = "api.xlsone.com", custom_domain = true },
-  { pattern = "api.z-pulse.cn", custom_domain = true }
-]

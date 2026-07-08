@@ -46,12 +46,12 @@ npx wrangler deploy
 
 ### Ed25519 密钥对
 
-Windows 客户端内置公钥，Worker 使用对应私钥签名授权文件。当前示例密钥对：
+Windows 客户端内置公钥，Worker 使用对应私钥签名授权文件。当前生产密钥对（2026-07-08 轮换）：
 
-- 种子（私钥，仅保存在 Worker Secret，用 `wrangler secret put ED25519_PRIVATE_KEY` 设置）
+- 种子（私钥，仅保存在 Worker Secret，用 `wrangler secret put ED25519_PRIVATE_KEY` 设置，64 位十六进制）
 - 公钥（嵌入 `cpp/core/src/license_manager.cpp` 的 `kLicensePublicKey` 数组）
 
-> ⚠️ 示例密钥对已从文档/配置中移除，禁止复用——它曾暴露在仓库里，任何人都能用它伪造 Windows 授权。生产环境请务必重新生成密钥对。
+> ✅ 密钥对已于 **2026-07-08** 从早期暴露在仓库中的示例种子轮换为全新一对，旧种子作废。私钥仅存在于 Cloudflare Secret（及本地 gitignored 的 `.dev.vars`），切勿写入源码或提交。
 
 ```bash
 openssl genpkey -algorithm ed25519 -outform DER -out ed25519_priv.der
