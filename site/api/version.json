@@ -1,6 +1,6 @@
 {
   "latest_version": "1.0.5",
-  "changelog": "v1.0.5: 优化授权与更新链接、增强 Windows 版代码混淆保护",
+  "changelog": "v1.0.5: Windows 版新增 MSI 安装包，安装更便捷；优化下载与更新体验",
   "downloads": {
     "linux_arm64": "https://z-pulse.cn/downloads/xlsOne-1.0.5-linux-arm64.deb",
     "linux_amd64": "https://z-pulse.cn/downloads/xlsOne-1.0.5-linux-amd64.deb",
