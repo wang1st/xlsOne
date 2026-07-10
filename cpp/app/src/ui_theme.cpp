@@ -27,6 +27,7 @@ Theme Theme::light()
     t.warning  = QColor(255, 149, 0);
     t.error    = QColor(255, 59, 48);
     t.info     = QColor(42, 117, 255);
+    t.errorSoft = QColor(255, 235, 238);
     t.labelBg  = QColor(236, 253, 245);
     t.labelFg  = QColor(22, 116, 79);
     t.labelBorder = QColor(189, 235, 212);
@@ -59,6 +60,7 @@ Theme Theme::dark()
     t.warning  = QColor(255, 169, 20);
     t.error    = QColor(255, 86, 82);
     t.info     = QColor(82, 148, 255);
+    t.errorSoft = QColor(60, 20, 20);
     t.labelBg  = QColor(28, 54, 42);
     t.labelFg  = QColor(88, 196, 148);
     t.labelBorder = QColor(38, 74, 58);

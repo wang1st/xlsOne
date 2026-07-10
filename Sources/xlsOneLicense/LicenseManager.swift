@@ -25,12 +25,20 @@ public final class LicenseManager: ObservableObject {
     // MARK: - Constants
 
     private enum API {
-        /// Primary endpoint (Cloudflare Workers — global)
-        static let primary = "https://api.xlsone.com"
-        /// Fallback endpoint (Aliyun FC — China mainland)
-        static let fallback = "https://"
-        /// Request timeout
-        static let timeout: TimeInterval = 3.0
+        /// Primary endpoint. Configurable via the Info.plist key
+        /// `XLSONEActivationBaseURL` so a single codebase serves both regions:
+        ///   - international builds leave it unset → https://api.xlsone.com
+        ///   - domestic (China mainland) builds set it → https://api.z-pulse.cn
+        static var primary: String {
+            let configured = Bundle.main.object(forInfoDictionaryKey: "XLSONEActivationBaseURL") as? String
+            return (configured?.isEmpty == false) ? configured! : "https://api.xlsone.com"
+        }
+        /// Fallback endpoint (the opposite region) for resilience.
+        static var fallback: String {
+            primary == "https://api.z-pulse.cn" ? "https://api.xlsone.com" : "https://api.z-pulse.cn"
+        }
+        /// Request timeout (slightly longer to tolerate cross-region latency)
+        static let timeout: TimeInterval = 5.0
     }
 
     private enum Storage {

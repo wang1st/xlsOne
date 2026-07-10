@@ -36,12 +36,16 @@ CREATE TABLE IF NOT EXISTS device_migrations (
 CREATE TABLE IF NOT EXISTS windows_keys (
   key_id      TEXT PRIMARY KEY,          -- XLS1-A2B3-C4D5
   plan        TEXT NOT NULL DEFAULT 'personal_lifetime',
-  status      TEXT NOT NULL DEFAULT 'unused',  -- unused / used / revoked
+  status      TEXT NOT NULL DEFAULT 'available',  -- available / activated / exhausted / revoked
+  max_activations INTEGER NOT NULL DEFAULT 3,     -- 最大激活次数
+  activation_count INTEGER NOT NULL DEFAULT 0,     -- 已消耗激活次数
+  duration_days INTEGER,                  -- 有效期天数（0=永久）
   order_id    TEXT,                      -- 爱发电订单号
   email       TEXT,                      -- 购买者邮箱
   device_hash TEXT,                      -- 绑定设备指纹
   device_components TEXT,                -- JSON 数组，用于本地部分匹配
   activated_at TEXT,
+  expires_at  TEXT,                      -- 订阅到期日 (ISO8601)，首次激活时计算
   created_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
@@ -56,7 +60,18 @@ CREATE TABLE IF NOT EXISTS windows_devices (
   PRIMARY KEY (device_id, key_id)
 );
 
--- Windows 版设备迁移记录
+-- Windows 签名试用记录（一台设备只给一次 14 天试用）
+CREATE TABLE IF NOT EXISTS windows_trials (
+  device_hash TEXT PRIMARY KEY,
+  key_id      TEXT NOT NULL,
+  device_name TEXT,
+  device_components TEXT,
+  issued_at   TEXT NOT NULL,
+  expires_at  TEXT NOT NULL,
+  last_seen_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Windows 版设备迁移记录（保留但不再写入新记录，向后兼容）
 CREATE TABLE IF NOT EXISTS windows_device_migrations (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
   key_id      TEXT NOT NULL,

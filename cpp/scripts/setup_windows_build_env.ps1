@@ -1,30 +1,31 @@
 #requires -Version 5.1
 <#
 .SYNOPSIS
-    One-time setup of the xlsOne Windows build environment.
+    One-time check of the xlsOne Windows build environment.
 
 .DESCRIPTION
-    Installs the toolchain required by package_windows_full.ps1:
-      - Python packages: aqtinstall, cmake, ninja
-      - Qt 5.15.2 for Windows x64 MinGW 8.1 (via aqtinstall)
+    Verifies the toolchain required by package_windows_full.ps1:
+      - Python packages: cmake, ninja (installed via pip if missing)
+      - Qt 6.11.1 for Windows x64 MinGW (installed via the Qt online installer)
+      - MinGW 13.1 (ships with Qt 6.11.1 as Tools\mingw1310_64)
       - WiX Toolset v3.14 binaries
-    Existing installations are left untouched unless -Force is passed.
 
-    You still need a MinGW-w64 compiler and zlib.  The easiest source on
-    Windows is MSYS2:
-        pacman -S mingw-w64-x86_64-gcc mingw-w64-x86_64-zlib
-    Then add C:\msys64\mingw64\bin to your system PATH.
+    This script no longer installs Qt itself. Qt 6.11.1 (with its bundled
+    MinGW 13.1) must be installed on the machine by the developer using the
+    official Qt online installer (https://www.qt.io/download-qt-installer).
+    The Qt5 / aqtinstall toolchain setup has been removed — the project is
+    built with Qt 6 only.
 
 .PARAMETER QtRoot
-    Root directory where Qt will be installed.
+    Root directory where Qt 6.11.1 is installed.
     Default: C:\Qt
 
 .PARAMETER WiXRoot
-    Directory where WiX 3.x binaries will be extracted.
+    Directory where WiX 3.x binaries are installed.
     Default: C:\Qt\Tools\wix314
 
 .PARAMETER Force
-    Reinstall Qt and/or WiX even if they already exist.
+    Reinstall WiX even if it already exists.
 
 .EXAMPLE
     .\scripts\setup_windows_build_env.ps1
@@ -38,12 +39,12 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$wixUrl = "https://github.com/wixtoolset/wix3/releases/download/wix3141rtm/wix314-binaries.zip"
-$qtVersion = "5.15.2"
-# aqtinstall arch name vs. the actual directory it creates differ.
-$qtAqtArch = "win64_mingw81"
-$qtDirName = "mingw81_64"
+$qtVersion = "6.11.1"
+$qtDirName = "mingw_64"
+$mingwDirName = "mingw1310_64"
 $qtFullDir = Join-Path $QtRoot "$qtVersion\$qtDirName"
+$mingwFullDir = Join-Path $QtRoot "Tools\$mingwDirName"
+$wixUrl = "https://github.com/wixtoolset/wix3/releases/download/wix3141rtm/wix314-binaries.zip"
 
 function Test-Command {
     param([string]$Name)
@@ -64,8 +65,9 @@ function Install-PythonTool {
 }
 
 Write-Host "=== xlsOne Windows Build Environment Setup ===" -ForegroundColor Cyan
-Write-Host "Qt install dir: $qtFullDir"
-Write-Host "WiX install dir: $WiXRoot"
+Write-Host "Qt dir:        $qtFullDir"
+Write-Host "MinGW dir:     $mingwFullDir"
+Write-Host "WiX dir:       $WiXRoot"
 Write-Host ""
 
 # --- Python toolchain ---
@@ -73,19 +75,28 @@ if (-not (Test-Command python)) {
     throw "Python not found on PATH. Install Python 3.10+ and add it to PATH first."
 }
 
-Install-PythonTool "aqtinstall"
 Install-PythonTool "cmake"
 Install-PythonTool "ninja"
 
-# --- Qt 5.15.2 ---
+# --- Qt 6.11.1 (preinstalled by developer) ---
 $qmake = Join-Path $qtFullDir "bin" "qmake.exe"
-if ((Test-Path $qmake) -and -not $Force) {
-    Write-Host "[OK] Qt $qtVersion already installed at $qtFullDir" -ForegroundColor Green
+if (Test-Path $qmake) {
+    Write-Host "[OK] Qt $qtVersion found at $qtFullDir" -ForegroundColor Green
 } else {
-    Write-Host "Installing Qt $qtVersion $qtAqtArch to $QtRoot ..." -ForegroundColor Cyan
-    & python -m aqt install-qt windows desktop $qtVersion $qtAqtArch -O $QtRoot
-    if ($LASTEXITCODE -ne 0) { throw "aqt install-qt failed" }
-    Write-Host "[OK] Qt installed" -ForegroundColor Green
+    Write-Host "MISSING: Qt $qtVersion at $qtFullDir" -ForegroundColor Red
+    Write-Host "         Install it via the official Qt online installer, selecting:" -ForegroundColor Yellow
+    Write-Host "           - Qt 6.11.1 -> MinGW 64-bit (mingw_64)" -ForegroundColor Yellow
+    Write-Host "           - Qt 6.11.1 -> Developer and Designer Tools -> MinGW 13.1.0 (mingw1310_64)" -ForegroundColor Yellow
+    Write-Host "         Download: https://www.qt.io/download-qt-installer" -ForegroundColor Yellow
+}
+
+# --- MinGW 13.1 (bundled with Qt 6.11.1) ---
+$gcc = Join-Path $mingwFullDir "bin" "gcc.exe"
+if (Test-Path $gcc) {
+    Write-Host "[OK] MinGW 13.1 found at $mingwFullDir" -ForegroundColor Green
+} else {
+    Write-Host "MISSING: MinGW 13.1 at $mingwFullDir" -ForegroundColor Red
+    Write-Host "         Install it as part of Qt 6.11.1 (Tools\mingw1310_64) via the Qt installer." -ForegroundColor Yellow
 }
 
 # --- WiX 3.14 ---
@@ -107,24 +118,6 @@ if ((Test-Path $candle) -and (Test-Path $light) -and -not $Force) {
     Write-Host "[OK] WiX installed" -ForegroundColor Green
 }
 
-# --- MinGW / zlib hint ---
-Write-Host ""
-Write-Host "=== Manual prerequisites ===" -ForegroundColor Yellow
-$gccCmd = Get-Command gcc -ErrorAction SilentlyContinue
-if (-not $gccCmd) {
-    Write-Host "MISSING: gcc. Install MSYS2 MinGW-w64 and add C:\msys64\mingw64\bin to PATH." -ForegroundColor Red
-} else {
-    Write-Host "[OK] gcc: $($gccCmd.Source)" -ForegroundColor Green
-}
-
-$zlibHeader = "C:\msys64\mingw64\include\zlib.h"
-$zlibLib = "C:\msys64\mingw64\lib\libz.a"
-if (-not (Test-Path $zlibHeader) -or -not (Test-Path $zlibLib)) {
-    Write-Host "MISSING: zlib. In MSYS2 run: pacman -S mingw-w64-x86_64-zlib" -ForegroundColor Red
-} else {
-    Write-Host "[OK] zlib found" -ForegroundColor Green
-}
-
 Write-Host ""
 Write-Host "=== Setup complete ===" -ForegroundColor Green
-Write-Host "You can now run: .\scripts\package_windows_full.ps1"
+Write-Host "You can now run: .\scripts\package_windows_full.ps1 -Domestic"

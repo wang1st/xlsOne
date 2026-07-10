@@ -4,7 +4,7 @@
 
 ```
 activation/
-├── worker/                 # Cloudflare Worker（激活 API）
+├── worker/                 # Cloudflare Worker（国际版激活 API，部署在 api.xlsone.com）
 │   ├── src/
 │   │   ├── index.ts        # 主 API：activate / verify / refresh / webhook / admin
 │   │   └── crypto.ts       # Web Crypto 辅助
@@ -12,6 +12,12 @@ activation/
 │   ├── wrangler.toml       # Cloudflare 部署配置
 │   ├── package.json
 │   └── tsconfig.json
+│
+├── domestic-server/         # 国内版激活 API（Node.js，部署在 z-pulse.cn / 阿里云 ECS 中国大陆节点）
+│   ├── server.js            # 主 API：activate / verify / refresh / windows / afdian / admin
+│   ├── keygen.py            # 从 64-hex 种子生成 Ed25519 PEM
+│   ├── public/              # offline.html / downloads.html
+│   └── deploy/              # install.sh / .env.example / nginx 配置 / systemd unit / 子域名启用说明
 │
 └── mac/                    # macOS 客户端模块
     └── (见 Sources/xlsOneLicense/)
@@ -113,9 +119,14 @@ echo "PUBLIC_KEY=$PUB"
 
 | 端点 | 位置 | 目标用户 |
 |------|------|---------|
-| api.xlsone.com | Cloudflare Workers | 海外 + 国内可通 |
-| 阿里云 FC (TBD) | 阿里云函数计算 | 国内兜底 |
+| api.xlsone.com | Cloudflare Workers | 海外（国际版 App Store 渠道） |
+| api.z-pulse.cn | 阿里云 ECS 中国大陆节点（Node 服务 `domestic-server`） | 国内版（Windows / macOS 国内构建） |
 | 离线授权文件 | 本地 | 内网/断网用户 |
+
+> 国内端点已上线：服务端代码见 `activation/domestic-server/`，部署脚本见
+> `activation/domestic-server/deploy/install.sh`。当前 API 经主站 `z-pulse.cn/api` 与
+> `z-pulse.cn/activation/downloads` 代理对外提供服务；`api.z-pulse.cn` 独立子域名的 TLS
+> 证书（certbot）为待办，步骤见 `activation/domestic-server/deploy/ENABLE_API_ZPULSE_CN.md`。
 
 ## 安全
 
@@ -128,10 +139,10 @@ echo "PUBLIC_KEY=$PUB"
 
 ## 待完成
 
-- [ ] 阿里云 FC 国内端点部署
-- [ ] Lemon Squeezy webhook 实际对接测试
-- [ ] 爱发电 webhook 实际对接测试
+- [x] 国内端点部署（`domestic-server` Node 服务，已上线 z-pulse.cn，详见 deploy/install.sh）
+- [ ] `api.z-pulse.cn` 独立子域名 + TLS 证书（DNS A 记录 + certbot，见 deploy/ENABLE_API_ZPULSE_CN.md）
+- [ ] 爱发电 webhook 实际对接测试（`.env` 中 `AFDIAN_*` 待填）
 - [ ] 激活码邮件自动发送（Resend/SendGrid API）
-- [ ] 离线授权文件生成网页（z-pulse.cn/offline）
-- [ ] macOS 端编译验证
+- [x] 离线授权文件生成网页（`z-pulse.cn/xlsone/offline` 已上线，`z-pulse.cn/offline` 保留兼容）
+- [ ] macOS 国内构建 + 激活联调
 - [ ] 反盗版：代码混淆（后期）

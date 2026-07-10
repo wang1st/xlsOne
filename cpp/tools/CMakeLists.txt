@@ -9,3 +9,29 @@ target_link_libraries(xlsone_snapshot
 )
 
 add_test(NAME xlsone_snapshot_help COMMAND xlsone_snapshot --help)
+
+# ---- Gift Code Generator (admin tool) ----
+add_executable(xlsone_gift_code_generator
+    gift_code_generator_main.cpp
+    gift_code_generator.hpp
+    gift_code_generator.cpp
+)
+
+set_target_properties(xlsone_gift_code_generator PROPERTIES
+    OUTPUT_NAME xlsone-gift-code-generator
+    WIN32_EXECUTABLE TRUE
+    MACOSX_BUNDLE TRUE
+)
+
+target_link_libraries(xlsone_gift_code_generator
+    PRIVATE
+        Qt${QT_VERSION_MAJOR}::Core
+        Qt${QT_VERSION_MAJOR}::Gui
+        Qt${QT_VERSION_MAJOR}::Widgets
+        Qt${QT_VERSION_MAJOR}::Network
+)
+
+install(TARGETS xlsone_gift_code_generator
+    BUNDLE DESTINATION .
+    RUNTIME DESTINATION bin
+)

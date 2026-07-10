@@ -9,7 +9,8 @@ public:
     void exportWorkbook(
         const QString& templatePath,
         const std::vector<MergedResult>& results,
-        const QString& outputPath
+        const QString& outputPath,
+        bool addExpiredWatermark = false
     ) const;
 };
 

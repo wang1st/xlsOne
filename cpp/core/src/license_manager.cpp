@@ -20,28 +20,32 @@
 
 namespace xlsone {
 
-static constexpr int kTrialDurationDays = 14;
-static const QString kTrialStartKey = QStringLiteral("license/trialStart");
+static constexpr int kServerOutageGraceDays = 3;
+static constexpr int kClockRollbackToleranceSecs = 60 * 60;
 static const QString kTokenKey = QStringLiteral("license/token");
 static const QString kOfflineTokenKey = QStringLiteral("license/offline");
+static const QString kLastSeenUtcKey = QStringLiteral("license/lastSeenUtc");
+static const QString kClockErrorMessage = QStringLiteral("系统时间异常，请校准系统时间后重试");
 
 // Process-level cache for the device fingerprint to avoid repeated WMIC/PowerShell calls.
 static QString g_deviceFingerprintCache;
 
 // Ed25519 public key (32 bytes) for verifying Windows license signatures.
 // Must correspond to the private seed held ONLY in the Worker secret
-// ED25519_PRIVATE_KEY (set via `wrangler secret put`, 64-char hex seed).
+// ED25519_PRIVATE_KEY (set via `wrangler secret put`, 64-char hex seed) and the
+// domestic server's ED25519_PRIVATE_KEY (activation/domestic-server, same seed).
 //
-// Key pair rotated on 2026-07-08 to replace the earlier example seed that had
-// been committed to the repo and was therefore publicly known — anyone holding
-// that seed could forge licenses. The private seed is NEVER stored in source.
-// To rotate again: generate a new Ed25519 seed, set it as ED25519_PRIVATE_KEY,
-// and replace the array below with the matching public key.
+// Key pair rotated on 2026-07-09: the 2026-07-08 seed had been committed in
+// plaintext to activation/domestic-server/deploy/.env.example (now a placeholder),
+// so it was treated as compromised and rotated. The private seed is NEVER stored
+// in source or in git. To rotate again: generate a new Ed25519 seed, set it as
+// ED25519_PRIVATE_KEY on BOTH signers, and replace the array below with the
+// matching public key.
 static constexpr uint8_t kLicensePublicKey[32] = {
-    0x37, 0x49, 0xae, 0x8c, 0x90, 0xca, 0x1d, 0xd9,
-    0x26, 0x27, 0x93, 0xfd, 0x13, 0xe6, 0x49, 0x55,
-    0x88, 0x8a, 0xa4, 0xb3, 0x3b, 0xaf, 0x39, 0xb1,
-    0xf8, 0x96, 0x3e, 0x48, 0x41, 0xa1, 0x7f, 0xf3
+    0xac, 0xc2, 0x09, 0xfb, 0xd4, 0xe9, 0xe1, 0x98,
+    0xc9, 0x4a, 0xef, 0x7f, 0xc3, 0xfa, 0xaf, 0x44,
+    0xf8, 0x0e, 0x27, 0x83, 0x57, 0x04, 0x59, 0x59,
+    0xe1, 0xd6, 0xa2, 0xaf, 0xb1, 0x04, 0x4c, 0xeb
 };
 
 namespace {
@@ -79,6 +83,64 @@ LicensePlan planFromString(const QString& plan)
         return LicensePlan::Trial;
     }
     return LicensePlan::PersonalLifetime;
+}
+
+int remainingDaysUntil(const QDateTime& until)
+{
+    if (!until.isValid()) {
+        return 0;
+    }
+    const qint64 seconds = QDateTime::currentDateTimeUtc().secsTo(until);
+    if (seconds <= 0) {
+        return 0;
+    }
+    return static_cast<int>((seconds + 24 * 60 * 60 - 1) / (24 * 60 * 60));
+}
+
+QDateTime settingsDateTimeUtc(const QString& key)
+{
+    const QDateTime value = QSettings().value(key).toDateTime();
+    return value.isValid() ? value.toUTC() : QDateTime();
+}
+
+bool clockRollbackDetected(const QDateTime& nowUtc)
+{
+    const QDateTime lastSeenUtc = settingsDateTimeUtc(kLastSeenUtcKey);
+    return lastSeenUtc.isValid()
+        && nowUtc.addSecs(kClockRollbackToleranceSecs) < lastSeenUtc;
+}
+
+void updateLastSeenUtc(const QDateTime& nowUtc)
+{
+    QSettings settings;
+    const QDateTime lastSeenUtc = settings.value(kLastSeenUtcKey).toDateTime();
+    if (!lastSeenUtc.isValid() || nowUtc > lastSeenUtc.toUTC()) {
+        settings.setValue(kLastSeenUtcKey, nowUtc);
+    }
+}
+
+QByteArray canonicalPayloadJson(const QJsonObject& obj)
+{
+    const QString keyId = obj.value(QStringLiteral("key_id")).toString();
+    const QString plan = obj.value(QStringLiteral("plan")).toString();
+    const QString deviceHash = obj.value(QStringLiteral("device_hash")).toString();
+    const QJsonArray deviceComponents = obj.value(QStringLiteral("device_components")).toArray();
+    const qint64 issuedAt = static_cast<qint64>(obj.value(QStringLiteral("issued_at")).toDouble());
+    const qint64 expiresAt = static_cast<qint64>(obj.value(QStringLiteral("expires_at")).toDouble());
+
+    QStringList compParts;
+    for (const QJsonValue& v : deviceComponents) {
+        compParts.append(QStringLiteral("\"") + v.toString() + QStringLiteral("\""));
+    }
+
+    const QString payloadJsonString = QStringLiteral("{\"key_id\":\"%1\",\"plan\":\"%2\",\"device_hash\":\"%3\",\"device_components\":[%4],\"issued_at\":%5,\"expires_at\":%6}")
+        .arg(keyId)
+        .arg(plan)
+        .arg(deviceHash)
+        .arg(compParts.join(QLatin1Char(',')))
+        .arg(issuedAt)
+        .arg(expiresAt);
+    return payloadJsonString.toUtf8();
 }
 
 #if defined(Q_OS_WIN)
@@ -242,27 +304,34 @@ LicenseState LicenseManager::state() const
     return state_;
 }
 
-int LicenseManager::startTrial()
+LicenseInfo LicenseManager::currentInfo() const
 {
-    QSettings settings;
-    settings.setValue(kTrialStartKey, QDateTime::currentDateTime());
-
-    const int remaining = kTrialDurationDays;
-    setState(LicenseState::Trial);
-    return remaining;
+    return currentInfo_;
 }
 
 int LicenseManager::checkTrial() const
 {
-    QSettings settings;
-    const QDateTime start = settings.value(kTrialStartKey).toDateTime();
-    if (!start.isValid()) {
+    if (currentInfo_.plan != LicensePlan::Trial || !currentInfo_.expiresAt.isValid()) {
         return -1;
     }
 
-    const qint64 elapsed = start.daysTo(QDateTime::currentDateTime());
-    const int remaining = kTrialDurationDays - static_cast<int>(elapsed);
-    return remaining > 0 ? remaining : -1;
+    const qint64 seconds = QDateTime::currentDateTimeUtc().secsTo(currentInfo_.expiresAt);
+    if (seconds <= 0) {
+        return -1;
+    }
+    return static_cast<int>((seconds + 24 * 60 * 60 - 1) / (24 * 60 * 60));
+}
+
+int LicenseManager::graceRemainingDays() const
+{
+    if (!currentInfo_.expiresAt.isValid()) {
+        return 0;
+    }
+    const QDateTime nowUtc = QDateTime::currentDateTimeUtc();
+    if (nowUtc <= currentInfo_.expiresAt) {
+        return 0;
+    }
+    return remainingDaysUntil(currentInfo_.expiresAt.addDays(kServerOutageGraceDays));
 }
 
 QString LicenseManager::deviceFingerprint()
@@ -294,6 +363,43 @@ void LicenseManager::clearDeviceFingerprintCache()
     g_deviceFingerprintCache.clear();
 }
 
+QString LicenseManager::activationBaseUrl()
+{
+    return QStringLiteral(XLSONE_ACTIVATION_BASE_URL);
+}
+
+void LicenseManager::requestTrial(const QString& deviceFingerprint)
+{
+    QJsonObject body;
+    body[QStringLiteral("device_hash")] = deviceFingerprint;
+    body[QStringLiteral("device_name")] = QSysInfo::machineHostName();
+
+#if defined(Q_OS_WIN)
+    const HardwareComponents comp = collectWindowsComponents();
+    QJsonArray components;
+    for (const QString& hash : comp.componentHashes()) {
+        components.append(hash);
+    }
+    body[QStringLiteral("device_components")] = components;
+#endif
+
+    QNetworkRequest request{
+        QUrl(QStringLiteral(XLSONE_ACTIVATION_BASE_URL "/api/trial/windows"))};
+    request.setHeader(QNetworkRequest::ContentTypeHeader,
+                      QVariant(QStringLiteral("application/json")));
+    request.setRawHeader("Accept", "application/json");
+
+    const QByteArray payload = QJsonDocument(body).toJson(QJsonDocument::Compact);
+    auto* reply = networkManager_->post(request, payload);
+    reply->setProperty("_request_kind", QStringLiteral("trial"));
+
+    auto* timer = new QTimer(reply);
+    timer->setSingleShot(true);
+    reply->setProperty("_timer", QVariant::fromValue(timer));
+    connect(timer, &QTimer::timeout, reply, &QNetworkReply::abort);
+    timer->start(10000);
+}
+
 bool LicenseManager::applyLicenseFile(const QByteArray& licenseData,
                                       const QString& deviceFingerprint,
                                       LicenseInfo* info,
@@ -317,10 +423,16 @@ bool LicenseManager::applyLicenseFile(const QByteArray& licenseData,
         return fail(QStringLiteral("授权文件缺少签名"));
     }
 
-    // Build canonical payload (JSON object without signature, compact).
-    QJsonObject payloadObj = obj;
-    payloadObj.remove(QStringLiteral("signature"));
-    const QByteArray payloadJson = QJsonDocument(payloadObj).toJson(QJsonDocument::Compact);
+    // Build canonical payload JSON matching the server's signing format.
+    // We avoid relying on QJsonDocument's field ordering/number formatting,
+    // which can differ from the JSON library that created the signature.
+    const QString keyId = obj.value(QStringLiteral("key_id")).toString();
+    const QString plan = obj.value(QStringLiteral("plan")).toString();
+    const QString deviceHash = obj.value(QStringLiteral("device_hash")).toString();
+    const qint64 issuedAt = static_cast<qint64>(obj.value(QStringLiteral("issued_at")).toDouble());
+    const qint64 expiresAt = static_cast<qint64>(obj.value(QStringLiteral("expires_at")).toDouble());
+
+    const QByteArray payloadJson = canonicalPayloadJson(obj);
 
     // Verify Ed25519 signature.
     const QByteArray signature = base64UrlDecodeBytes(signatureBase64);
@@ -332,37 +444,52 @@ bool LicenseManager::applyLicenseFile(const QByteArray& licenseData,
     }
 
     // Check device binding.
-    const QString storedFullHash = obj.value(QStringLiteral("device_hash")).toString();
+    const QString storedFullHash = deviceHash;
     if (!storedFullHash.isEmpty() && !checkDeviceHash(obj, deviceFingerprint)) {
         return fail(QStringLiteral("授权文件与当前设备不匹配"));
     }
 
-    // Check expiry.
-    const qint64 expiresAt = static_cast<qint64>(obj.value(QStringLiteral("expires_at")).toDouble());
+    const QDateTime nowUtc = QDateTime::currentDateTimeUtc();
+    if (clockRollbackDetected(nowUtc)) {
+        return fail(kClockErrorMessage);
+    }
+
+    const QDateTime issuedAtTime = issuedAt > 0
+        ? QDateTime::fromSecsSinceEpoch(issuedAt).toUTC()
+        : QDateTime();
+    if (issuedAtTime.isValid() &&
+        issuedAtTime > nowUtc.addSecs(kClockRollbackToleranceSecs)) {
+        return fail(kClockErrorMessage);
+    }
+
+    // Check expiry. A short grace window protects existing users when the
+    // activation service is unavailable around renewal time.
+    QDateTime expiry;
     if (expiresAt > 0) {
-        const QDateTime expiry = QDateTime::fromSecsSinceEpoch(expiresAt);
-        if (expiry <= QDateTime::currentDateTimeUtc()) {
+        expiry = QDateTime::fromSecsSinceEpoch(expiresAt).toUTC();
+        if (expiry <= nowUtc && expiry.addDays(kServerOutageGraceDays) <= nowUtc) {
             return fail(QStringLiteral("授权已过期"));
         }
     }
 
+    LicenseInfo parsedInfo;
+    parsedInfo.keyId = keyId;
+    parsedInfo.plan = planFromString(plan);
+    parsedInfo.deviceHash = storedFullHash;
+    parsedInfo.issuedAt = issuedAtTime;
+    parsedInfo.expiresAt = expiry;
+    parsedInfo.rawPayload = payloadJson;
     if (info) {
-        info->keyId = obj.value(QStringLiteral("key_id")).toString();
-        info->plan = planFromString(obj.value(QStringLiteral("plan")).toString());
-        info->deviceHash = storedFullHash;
-        info->issuedAt = QDateTime::fromSecsSinceEpoch(
-            static_cast<qint64>(obj.value(QStringLiteral("issued_at")).toDouble()));
-        info->expiresAt = expiresAt > 0
-            ? QDateTime::fromSecsSinceEpoch(expiresAt)
-            : QDateTime();
-        info->rawPayload = payloadJson;
+        *info = parsedInfo;
     }
+    currentInfo_ = parsedInfo;
 
     // Persist the validated license.
     QSettings settings;
     settings.setValue(kTokenKey, QString::fromUtf8(licenseData));
     settings.setValue(kOfflineTokenKey, QString::fromUtf8(licenseData));
-    setState(LicenseState::Activated);
+    updateLastSeenUtc(nowUtc);
+    setState(parsedInfo.plan == LicensePlan::Trial ? LicenseState::Trial : LicenseState::Activated);
     return true;
 }
 
@@ -382,13 +509,15 @@ void LicenseManager::activate(const QString& key, const QString& deviceFingerpri
     body[QStringLiteral("device_components")] = components;
 #endif
 
-    QNetworkRequest request{QUrl(QStringLiteral("https://api.xlsone.com/api/activate/windows"))};
+    QNetworkRequest request{
+        QUrl(QStringLiteral(XLSONE_ACTIVATION_BASE_URL "/api/activate/windows"))};
     request.setHeader(QNetworkRequest::ContentTypeHeader,
                       QVariant(QStringLiteral("application/json")));
     request.setRawHeader("Accept", "application/json");
 
     QByteArray payload = QJsonDocument(body).toJson(QJsonDocument::Compact);
     auto* reply = networkManager_->post(request, payload);
+    reply->setProperty("_request_kind", QStringLiteral("activation"));
 
     auto* timer = new QTimer(reply);
     timer->setSingleShot(true);
@@ -486,11 +615,23 @@ void LicenseManager::onActivationReply(QNetworkReply* reply)
         timer->stop();
     }
 
+    const bool isTrialRequest =
+        reply->property("_request_kind").toString() == QStringLiteral("trial");
     ActivationResult result;
+    result.trial = isTrialRequest;
 
     if (reply->error() != QNetworkReply::NoError) {
         result.success = false;
-        result.errorMessage = QStringLiteral("网络连接失败，请检查网络");
+        const QString errorString = reply->errorString();
+        if (errorString.isEmpty()) {
+            result.errorMessage = isTrialRequest
+                ? QStringLiteral("暂时无法连接试用服务器，请稍后重试")
+                : QStringLiteral("网络连接失败，请检查网络");
+        } else {
+            result.errorMessage = isTrialRequest
+                ? QStringLiteral("暂时无法连接试用服务器: %1").arg(errorString)
+                : QStringLiteral("网络错误: %1").arg(errorString);
+        }
         emit activationFinished(result);
         return;
     }
@@ -509,17 +650,29 @@ void LicenseManager::onActivationReply(QNetworkReply* reply)
                 result.errorMessage = QStringLiteral("激活码不存在");
             else if (error == QStringLiteral("KEY_REVOKED"))
                 result.errorMessage = QStringLiteral("激活码已被吊销");
+            else if (error == QStringLiteral("EXHAUSTED"))
+                result.errorMessage = QStringLiteral("该激活码的激活次数已用尽（最多 3 台设备），请购买新的激活码");
+            else if (error == QStringLiteral("SUBSCRIPTION_EXPIRED"))
+                result.errorMessage = QStringLiteral("该激活码已过期，请购买新的激活码");
             else if (error == QStringLiteral("DEVICE_LIMIT"))
                 result.errorMessage = QStringLiteral("已达到最大设备数限制");
             else if (error == QStringLiteral("DEVICE_MISMATCH"))
                 result.errorMessage = QStringLiteral("授权文件与当前设备不匹配");
             else if (error == QStringLiteral("RATE_LIMITED"))
                 result.errorMessage = QStringLiteral("请求过于频繁，请稍后再试");
+            else if (error == QStringLiteral("TRIAL_EXPIRED")) {
+                result.errorMessage = QStringLiteral("这台设备的免费试用已结束，请输入激活码继续使用完整功能");
+                setState(LicenseState::Expired);
+            }
+            else if (error == QStringLiteral("TRIAL_UNAVAILABLE"))
+                result.errorMessage = QStringLiteral("暂时无法启用试用，请稍后重试或输入激活码");
             else
                 result.errorMessage = obj.value(QStringLiteral("message")).toString(
-                    QStringLiteral("激活失败"));
+                    isTrialRequest ? QStringLiteral("试用启用失败") : QStringLiteral("激活失败"));
         } else {
-            result.errorMessage = QStringLiteral("激活失败: HTTP %1").arg(statusCode);
+            result.errorMessage = isTrialRequest
+                ? QStringLiteral("试用启用失败: HTTP %1").arg(statusCode)
+                : QStringLiteral("激活失败: HTTP %1").arg(statusCode);
         }
         emit activationFinished(result);
         return;
@@ -529,7 +682,9 @@ void LicenseManager::onActivationReply(QNetworkReply* reply)
     const QJsonObject licenseObj = obj.value(QStringLiteral("license")).toObject();
     if (licenseObj.isEmpty()) {
         result.success = false;
-        result.errorMessage = QStringLiteral("服务器响应异常");
+        result.errorMessage = isTrialRequest
+            ? QStringLiteral("试用服务器响应异常")
+            : QStringLiteral("服务器响应异常");
         emit activationFinished(result);
         return;
     }
@@ -545,6 +700,7 @@ void LicenseManager::onActivationReply(QNetworkReply* reply)
     }
 
     result.success = true;
+    result.trial = (currentInfo_.plan == LicensePlan::Trial);
     emit activationFinished(result);
 }
 
@@ -572,20 +728,55 @@ void LicenseManager::loadPersistedState()
         const QByteArray licenseData = licenseText.toUtf8();
         const QString fingerprint = deviceFingerprint();
         LicenseInfo info;
-        if (applyLicenseFile(licenseData, fingerprint, &info, nullptr)) {
-            setState(LicenseState::Activated);
+        QString applyError;
+        if (applyLicenseFile(licenseData, fingerprint, &info, &applyError)) {
             return;
         }
-        // Invalid or expired stored license: clear it.
+        if (applyError == kClockErrorMessage) {
+            setState(LicenseState::Expired);
+            return;
+        }
+
+        // Check if the license is expired but otherwise valid (signature OK,
+        // device OK). In that case, set Expired state instead of clearing it.
+        const QJsonDocument doc = QJsonDocument::fromJson(licenseData);
+        if (doc.isObject()) {
+            const QJsonObject obj = doc.object();
+            const qint64 expiresAt = static_cast<qint64>(
+                obj.value(QStringLiteral("expires_at")).toDouble());
+            if (expiresAt > 0) {
+                const QDateTime expiry = QDateTime::fromSecsSinceEpoch(expiresAt).toUTC();
+                if (expiry <= QDateTime::currentDateTimeUtc()) {
+                    // License is expired — verify signature + device to confirm
+                    // it's a genuine license (not tampered), then set Expired.
+                    const QString sigB64 = obj.value(QStringLiteral("signature")).toString();
+                    if (!sigB64.isEmpty()) {
+                        const QByteArray payloadJson = canonicalPayloadJson(obj);
+                        const QByteArray sig = base64UrlDecodeBytes(sigB64);
+                        if (sig.size() == 64 &&
+                            verifyEd25519Signature(payloadJson, sig) &&
+                            checkDeviceHash(obj, fingerprint)) {
+                            currentInfo_.keyId = obj.value(QStringLiteral("key_id")).toString();
+                            currentInfo_.plan = planFromString(obj.value(QStringLiteral("plan")).toString());
+                            currentInfo_.deviceHash = obj.value(QStringLiteral("device_hash")).toString();
+                            const qint64 issuedAt = static_cast<qint64>(
+                                obj.value(QStringLiteral("issued_at")).toDouble());
+                            currentInfo_.issuedAt = issuedAt > 0
+                                ? QDateTime::fromSecsSinceEpoch(issuedAt).toUTC()
+                                : QDateTime();
+                            currentInfo_.expiresAt = expiry;
+                            currentInfo_.rawPayload = payloadJson;
+                            setState(LicenseState::Expired);
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Invalid or tampered stored license: clear it.
         settings.remove(kTokenKey);
         settings.remove(kOfflineTokenKey);
-    }
-
-    // Check trial status
-    const int remaining = checkTrial();
-    if (remaining > 0) {
-        setState(LicenseState::Trial);
-        return;
     }
 
     setState(LicenseState::Unactivated);

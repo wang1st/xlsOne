@@ -1,11 +1,23 @@
 #include "dialog_utils.hpp"
 
+#include "ui_theme.hpp"
+
 #include <QAbstractButton>
 #include <QApplication>
+#include <QClipboard>
+#include <QDesktopServices>
 #include <QDialog>
+#include <QFrame>
+#include <QFont>
+#include <QHBoxLayout>
+#include <QLabel>
+#include <QLineEdit>
+#include <QPixmap>
 #include <QPushButton>
 #include <QScreen>
 #include <QTimer>
+#include <QUrl>
+#include <QVBoxLayout>
 #include <QWidget>
 
 namespace xlsone::ui {
@@ -37,6 +49,79 @@ int execMessageBox(QMessageBox& box, QWidget* parent)
 {
     box.setTextFormat(Qt::AutoText);
     return execDialogCentered(box, parent);
+}
+
+QPushButton* makeAboutButton(const QString& text, QWidget* parent, bool primary)
+{
+    auto* button = new QPushButton(text, parent);
+    button->setCursor(Qt::PointingHandCursor);
+    button->setMinimumHeight(34);
+    if (primary) {
+        stylePrimaryButton(button);
+        return button;
+    }
+
+    const auto& t = theme();
+    button->setStyleSheet(QStringLiteral(
+        "QPushButton { color: %1; background: transparent; border: 1px solid %2;"
+        " border-radius: 7px; padding: 6px 12px; font-size: 12px; font-weight: 600; }"
+        "QPushButton:hover { background: %3; }"
+    ).arg(t.accent.name()).arg(t.border.name()).arg(t.accentSoft.name()));
+    return button;
+}
+
+QFrame* makeHomepageRow(QWidget* parent,
+                        const QString& label,
+                        const QString& url,
+                        bool preferred)
+{
+    const auto& t = theme();
+
+    auto* row = new QFrame(parent);
+    row->setObjectName(QStringLiteral("aboutHomeRow"));
+    row->setStyleSheet(QStringLiteral(
+        "QFrame#aboutHomeRow { background: %1; border: 1px solid %2; border-radius: 8px; }"
+    ).arg(preferred ? t.accentSoft.name() : t.surface.name()).arg(t.border.name()));
+
+    auto* layout = new QHBoxLayout(row);
+    layout->setContentsMargins(12, 10, 12, 10);
+    layout->setSpacing(10);
+
+    auto* labelWidget = new QLabel(label, row);
+    labelWidget->setMinimumWidth(66);
+    labelWidget->setStyleSheet(QStringLiteral(
+        "color: %1; font-size: 13px; font-weight: 600;"
+    ).arg(preferred ? t.accent.name() : t.text.name()));
+    layout->addWidget(labelWidget);
+
+    auto* urlWidget = new QLineEdit(url, row);
+    urlWidget->setReadOnly(true);
+    urlWidget->setCursorPosition(0);
+    urlWidget->setMinimumHeight(30);
+    urlWidget->setStyleSheet(QStringLiteral(
+        "QLineEdit { color: %1; background: %2; border: 1px solid %3;"
+        " border-radius: 6px; padding: 4px 8px; font-size: 12px; }"
+        "QLineEdit:focus { border-color: %4; }"
+    ).arg(t.text.name()).arg(t.bg0.name()).arg(t.borderSoft.name()).arg(t.accent.name()));
+    layout->addWidget(urlWidget, 1);
+
+    auto* openButton = makeAboutButton(QObject::tr("打开"), row, preferred);
+    QObject::connect(openButton, &QPushButton::clicked, row, [url] {
+        QDesktopServices::openUrl(QUrl(url));
+    });
+    layout->addWidget(openButton);
+
+    auto* copyButton = makeAboutButton(QObject::tr("复制"), row, false);
+    QObject::connect(copyButton, &QPushButton::clicked, row, [url, copyButton] {
+        QApplication::clipboard()->setText(url);
+        copyButton->setText(QObject::tr("已复制"));
+        QTimer::singleShot(1200, copyButton, [copyButton] {
+            copyButton->setText(QObject::tr("复制"));
+        });
+    });
+    layout->addWidget(copyButton);
+
+    return row;
 }
 
 } // namespace
@@ -151,6 +236,88 @@ void showAbout(QWidget* parent, const QString& title, const QString& html)
     auto* okButton = box.addButton(QObject::tr("确定"), QMessageBox::AcceptRole);
     box.setDefaultButton(okButton);
     execDialogCentered(box, parent);
+}
+
+void showProductAbout(QWidget* parent, const QString& title, const QString& version, bool domesticBuild)
+{
+    const auto& t = theme();
+    const QString domesticUrl = QStringLiteral("https://z-pulse.cn/xlsone/");
+    const QString internationalUrl = QStringLiteral("https://xlsone.com/");
+
+    QDialog dialog(parent);
+    dialog.setWindowTitle(title);
+    dialog.setModal(true);
+    dialog.setMinimumWidth(560);
+    dialog.setStyleSheet(QStringLiteral(
+        "QDialog { background: %1; }"
+    ).arg(t.bg0.name()));
+
+    auto* root = new QVBoxLayout(&dialog);
+    root->setContentsMargins(24, 24, 24, 20);
+    root->setSpacing(16);
+
+    auto* header = new QHBoxLayout();
+    header->setSpacing(14);
+
+    auto* icon = new QLabel(&dialog);
+    icon->setFixedSize(64, 64);
+    const QPixmap iconPixmap(QStringLiteral(":/resources/xlsOne.png"));
+    icon->setPixmap(iconPixmap.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    header->addWidget(icon, 0, Qt::AlignTop);
+
+    auto* titleBlock = new QVBoxLayout();
+    titleBlock->setSpacing(5);
+
+    auto* nameRow = new QHBoxLayout();
+    nameRow->setSpacing(10);
+    auto* name = new QLabel(QObject::tr("表表归一"), &dialog);
+    QFont nameFont = name->font();
+    nameFont.setPointSize(20);
+    nameFont.setWeight(QFont::DemiBold);
+    name->setFont(nameFont);
+    name->setStyleSheet(QStringLiteral("color: %1;").arg(t.text.name()));
+    nameRow->addWidget(name);
+
+    nameRow->addStretch();
+    titleBlock->addLayout(nameRow);
+
+    auto* subtitle = new QLabel(QObject::tr("多张同格式 Excel 报表一键汇总"), &dialog);
+    subtitle->setStyleSheet(QStringLiteral("color: %1; font-size: 14px;").arg(t.textMuted.name()));
+    titleBlock->addWidget(subtitle);
+
+    auto* versionLabel = new QLabel(QObject::tr("版本 %1").arg(version), &dialog);
+    versionLabel->setStyleSheet(QStringLiteral("color: %1; font-size: 12px;").arg(t.textDisabled.name()));
+    titleBlock->addWidget(versionLabel);
+    header->addLayout(titleBlock, 1);
+    root->addLayout(header);
+
+    auto* summary = new QLabel(
+        QObject::tr("把格式一致的 Excel 表合成一份汇总表。金额、数量等可相加字段会自动合计，名称、编号等文本信息会保留共同特征，适合财务、统计和运营报表整理。"),
+        &dialog);
+    summary->setWordWrap(true);
+    summary->setStyleSheet(QStringLiteral(
+        "color: %1; background: %2; border: 1px solid %3; border-radius: 8px;"
+        " padding: 12px 14px; line-height: 1.45; font-size: 13px;"
+    ).arg(t.text.name()).arg(t.surface.name()).arg(t.border.name()));
+    root->addWidget(summary);
+
+#if !defined(Q_OS_LINUX)
+    auto* homeTitle = new QLabel(QObject::tr("首页地址"), &dialog);
+    homeTitle->setStyleSheet(QStringLiteral("color: %1; font-size: 13px; font-weight: 700;").arg(t.text.name()));
+    root->addWidget(homeTitle);
+
+    const QString homepageUrl = domesticBuild ? domesticUrl : internationalUrl;
+    root->addWidget(makeHomepageRow(&dialog, QObject::tr("官方网站"), homepageUrl, true));
+#endif
+
+    auto* buttons = new QHBoxLayout();
+    buttons->addStretch();
+    auto* closeButton = makeAboutButton(QObject::tr("关闭"), &dialog, true);
+    QObject::connect(closeButton, &QPushButton::clicked, &dialog, &QDialog::accept);
+    buttons->addWidget(closeButton);
+    root->addLayout(buttons);
+
+    execDialogCentered(dialog, parent);
 }
 
 QMessageBox::StandardButton askQuestion(QWidget* parent, const QString& title, const QString& text)

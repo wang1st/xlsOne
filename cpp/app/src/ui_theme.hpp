@@ -36,6 +36,7 @@ struct Theme {
     QColor warning;
     QColor error;
     QColor info;
+    QColor errorSoft;
 
     // Legacy business semantics (kept for compatibility)
     QColor labelBg;

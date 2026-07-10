@@ -159,10 +159,10 @@ cd ~/xlsone
 
 ```text
 # ARM64
-Package: ~/xlsone/cpp/build-linux-release/xlsone-1.0.2-linux-arm64.deb
+Package: ~/xlsone/cpp/build-linux-release/xlsone-1.0.4-linux-arm64.deb
 
 # AMD64
-Package: ~/xlsone/cpp/build-linux-release/xlsone-1.0.2-linux-amd64.deb
+Package: ~/xlsone/cpp/build-linux-release/xlsone-1.0.4-linux-amd64.deb
 ```
 
 ---
@@ -172,7 +172,7 @@ Package: ~/xlsone/cpp/build-linux-release/xlsone-1.0.2-linux-amd64.deb
 ```bash
 cd /tmp
 rm -rf deb_check && mkdir deb_check
-dpkg-deb -x ~/xlsone/cpp/build-linux-release/xlsone-1.0.2-linux-<arch>.deb deb_check
+dpkg-deb -x ~/xlsone/cpp/build-linux-release/xlsone-1.0.4-linux-<arch>.deb deb_check
 
 # 检查 Qt5 库
 find deb_check/usr/lib/xlsone -name "libQt5*.so*" | sort
@@ -198,7 +198,7 @@ find deb_check/usr/lib/xlsone -name "libzstd*"
 
 ```bash
 # 找一台没有 Qt5 开发环境的同架构机器
-sudo dpkg -i xlsone-1.0.2-linux-<arch>.deb
+sudo dpkg -i xlsone-1.0.4-linux-<arch>.deb
 xlsone
 ```
 
@@ -212,11 +212,11 @@ xlsone
 
 ```bash
 # ARM64
-scp ~/xlsone/cpp/build-linux-release/xlsone-1.0.2-linux-arm64.deb \
+scp ~/xlsone/cpp/build-linux-release/xlsone-1.0.4-linux-arm64.deb \
   root@z-pulse.cn:/var/www/z-pulse.cn/downloads/xlsOne-1.0.2-linux-arm64.deb
 
 # AMD64
-scp ~/xlsone/cpp/build-linux-release/xlsone-1.0.2-linux-amd64.deb \
+scp ~/xlsone/cpp/build-linux-release/xlsone-1.0.4-linux-amd64.deb \
   root@z-pulse.cn:/var/www/z-pulse.cn/downloads/xlsOne-1.0.2-linux-amd64.deb
 ```
 

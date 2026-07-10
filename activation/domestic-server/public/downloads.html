@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>表表归一 · 下载</title>
+  <style>
+    :root { --bg:#0f1115; --card:#1a1d24; --fg:#e6e8ec; --muted:#9aa0ab; --brand:#4f8cff; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family:-apple-system,"PingFang SC","Microsoft YaHei",system-ui,sans-serif; background:var(--bg); color:var(--fg); padding:40px 20px; }
+    .wrap { max-width:640px; margin:0 auto; }
+    h1 { font-size:22px; margin:0 0 6px; }
+    p.sub { color:var(--muted); font-size:13px; margin:0 0 28px; }
+    .file { display:flex; align-items:center; justify-content:space-between; background:var(--card); border:1px solid #2a2e37; border-radius:11px; padding:14px 16px; margin-bottom:12px; }
+    .file .name { font-size:14px; font-weight:600; }
+    .file .meta { color:var(--muted); font-size:12px; margin-top:3px; }
+    .file a { color:var(--brand); text-decoration:none; font-size:14px; font-weight:600; padding:8px 14px; border:1px solid #2f3a52; border-radius:8px; }
+    .file a:hover { background:#1d2740; }
+    .empty { color:var(--muted); font-size:14px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>表表归一 · 下载中心</h1>
+    <p class="sub">国内版 Windows 安装包（由 z-pulse.cn 托管，CN 线路）。</p>
+    <div id="list"><div class="empty">加载中…</div></div>
+  </div>
+  <script>
+    fetch('/api/downloads').then(r=>r.json()).then(d=>{
+      const el = document.getElementById('list');
+      if (!d.files || !d.files.length) { el.innerHTML = '<div class="empty">暂无可用安装包。</div>'; return; }
+      // Use relative "./name" links so the page works identically under both
+      // z-pulse.cn/activation/downloads/ and api.z-pulse.cn/downloads/.
+      el.innerHTML = d.files.map(f=>{
+        const sizeMB = (f.size/1048576).toFixed(1);
+        const date = new Date(f.mtime).toISOString().slice(0,10);
+        return `<div class="file"><div><div class="name">${f.name}</div><div class="meta">${sizeMB} MB · ${date}</div></div><a href="./${encodeURIComponent(f.name)}">下载</a></div>`;
+      }).join('');
+    }).catch(e=>{ document.getElementById('list').innerHTML = '<div class="empty">加载失败：'+e.message+'</div>'; });
+  </script>
+</body>
+</html>

@@ -1,29 +1,31 @@
 #requires -Version 5.1
 <#
 .SYNOPSIS
-    Build and package xlsOne for Windows (Qt5 + MinGW + WiX).
+    Build and package xlsOne for Windows (Qt5/Qt6 + MinGW + WiX).
 
 .DESCRIPTION
     This script reproduces the Windows build on a clean machine:
-      1. Validates required tools: CMake, Ninja, Qt5, WiX 3.x, MinGW compiler, zlib.
+      1. Validates required tools: CMake, Ninja, Qt, WiX 3.x, MinGW compiler, (zlib for Qt5).
       2. Configures and builds the C++/Qt project with CMake.
       3. Bundles Qt runtime via windeployqt (integrated in CMake install step).
       4. Produces both a portable ZIP and a WiX MSI installer.
 
+    Supports both Qt5 and Qt6: the Qt major version is auto-detected from qmake.
+    On Qt6 the bundled Qt6::ZlibPrivate is used (no external zlib required); on Qt5
+    an external zlib static library is required.
+
     Prerequisites (one-time setup):
       - CMake >= 3.22   (pip install cmake)
       - Ninja           (pip install ninja)
-      - Qt 5.15.2 for Windows x64 MinGW 8.1:
-            python -m aqt install-qt windows desktop 5.15.2 win64_mingw81 -O C:\Qt
+      - Qt 6.x for Windows x64 MinGW (e.g. 6.11.1 + MinGW 13.1.0 64-bit from the Qt online installer)
       - WiX Toolset v3.11+ (used by CPack WIX generator):
             Download https://github.com/wixtoolset/wix3/releases/download/wix3141rtm/wix314-binaries.zip
             Extract to C:\Qt\Tools\wix314
-      - MinGW-w64 compiler (the Qt5 binaries work with current MinGW-w64/GCC, e.g. MSYS2 UCRT64/MINGW64)
-      - zlib static library (available in MSYS2: pacman -S mingw-w64-x86_64-zlib)
+      - MinGW-w64 compiler matching the Qt build (e.g. C:\Qt\Tools\mingw1310_64)
 
 .PARAMETER QtRoot
-    Root directory of Qt 5.15.2 MinGW installation.
-    Default: C:\Qt\5.15.2\mingw81_64
+    Root directory of the Qt MinGW installation (auto-detects Qt5 vs Qt6).
+    Default: C:\Qt\6.11.1\mingw_64
 
 .PARAMETER WiXRoot
     Directory containing WiX 3.x candle.exe and light.exe.
@@ -42,25 +44,87 @@
 .PARAMETER Clean
     Remove the build directory before configuring to ensure a fully reproducible build.
 
+.PARAMETER Domestic
+    Build the domestic (China mainland) edition. This points the activation
+    endpoint at https://api.z-pulse.cn instead of the default api.xlsone.com,
+    matching the windows-cn-release CMake preset. Output goes to
+    cpp/build-windows-cn-release.
+
+.PARAMETER Sign
+    Code-sign the built xlsOneQt.exe and the resulting .msi with Authenticode
+    (SHA256 + RFC3161 timestamp). Requires a code-signing certificate. Without
+    this switch the package is produced UNSIGNED -- Windows SmartScreen will
+    warn/block end users. The certificate is supplied via -CertFile (PFX) or
+    -CertSha1 (thumbprint in the local cert store); signtool is auto-discovered
+    from the Windows SDK, or pass -SignTool <path>.
+
+.PARAMETER SignTool
+    Path to signtool.exe. Default: auto-discovered from PATH / Windows SDK.
+
+.PARAMETER CertFile
+    Path to a PFX/P12 code-signing certificate used with -Sign.
+
+.PARAMETER CertPassword
+    Password for -CertFile. If omitted, falls back to $env:XLSONE_CODESIGN_PASSWORD.
+    (Prefer the env var over the command line to avoid leaking the password into
+    the process list / shell history.)
+
+.PARAMETER CertSha1
+    SHA1 thumbprint of a code-signing certificate already installed in the
+    current user's / local machine cert store. Alternative to -CertFile.
+
+.PARAMETER TimestampServer
+    RFC3161 timestamp authority URL. Default: http://timestamp.digicert.com
+
 .EXAMPLE
     .\scripts\package_windows_full.ps1
-    .\scripts\package_windows_full.ps1 -QtRoot "D:\Qt\5.15.2\mingw81_64" -WiXRoot "D:\wix314"
+    .\scripts\package_windows_full.ps1 -QtRoot "D:\Qt\6.11.1\mingw_64" -MingwRoot "D:\Qt\Tools\mingw1310_64" -WiXRoot "D:\wix314"
     .\scripts\package_windows_full.ps1 -Clean
+    .\scripts\package_windows_full.ps1 -Domestic        # 国内版（api.z-pulse.cn）
+    # 代码签名（PFX）:
+    .\scripts\package_windows_full.ps1 -Domestic -Sign -CertFile .\codesign.pfx -CertPassword ***
+    # 代码签名（证书存储 thumbprint）:
+    .\scripts\package_windows_full.ps1 -Domestic -Sign -CertSha1 A1B2C3D4...
 #>
 param(
-    [string]$QtRoot = "C:\Qt\5.15.2\mingw81_64",
+    [string]$QtRoot = "C:\Qt\6.11.1\mingw_64",
     [string]$WiXRoot = "C:\Qt\Tools\wix314",
+    [string]$MingwRoot = "C:\Qt\Tools\mingw1310_64",
     [string]$ZlibRoot = "C:\msys64\mingw64",
     [string]$Preset = "Release",
     [string]$BuildDir = "",
-    [switch]$Clean
+    [switch]$Clean,
+    [switch]$Domestic,
+    [switch]$Sign,
+    [string]$SignTool = "",
+    [string]$CertFile = "",
+    [string]$CertPassword = "",
+    [string]$CertSha1 = "",
+    [string]$TimestampServer = "http://timestamp.digicert.com"
 )
 
 $ErrorActionPreference = "Stop"
 
 $RepoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 if ($BuildDir -eq "") {
-    $BuildDir = Join-Path (Join-Path $RepoRoot "cpp") "build-windows-qt5-release"
+    if ($Domestic) {
+        $BuildDir = Join-Path (Join-Path $RepoRoot "cpp") "build-windows-cn-release"
+    } else {
+        $BuildDir = Join-Path (Join-Path $RepoRoot "cpp") "build-windows-qt5-release"
+    }
+}
+
+if ($Domestic) {
+    Write-Host "[Domestic] Activation endpoint baked in: https://api.z-pulse.cn" -ForegroundColor Magenta
+} else {
+    Write-Host "[International] Activation endpoint baked in: https://api.xlsone.com" -ForegroundColor Cyan
+}
+
+if (-not $Sign) {
+    Write-Host "[WARN] Code signing is OFF -- the .exe/.msi will be UNSIGNED and Windows SmartScreen will warn/block users. Pass -Sign with a cert to sign." -ForegroundColor Yellow
+} else {
+    Assert-SignConfig
+    Write-Host "[Sign] Code signing ENABLED (SHA256 + RFC3161 timestamp: $TimestampServer)" -ForegroundColor Magenta
 }
 
 function Test-Tool {
@@ -71,20 +135,86 @@ function Test-Tool {
     Write-Host "[OK] $Name : $Path" -ForegroundColor Green
 }
 
+# --- Code signing helpers (Authenticode) ---
+function Find-SignTool {
+    param([string]$Preferred)
+    if ($Preferred -and (Test-Path $Preferred)) { return $Preferred }
+    $st = Get-Command signtool -ErrorAction SilentlyContinue
+    if ($st) { return $st.Source }
+    $sdkRoots = @(
+        "${env:ProgramFiles(x86)}\Windows Kits\10\bin",
+        "${env:ProgramFiles}\Windows Kits\10\bin"
+    )
+    foreach ($root in $sdkRoots) {
+        if (Test-Path $root) {
+            $cand = Get-ChildItem -Path $root -Recurse -Filter signtool.exe -ErrorAction SilentlyContinue |
+                Select-Object -First 1
+            if ($cand) { return $cand.FullName }
+        }
+    }
+    return $null
+}
+
+function Invoke-Sign {
+    param([string]$FilePath, [string]$SignToolPath)
+    if (-not (Test-Path $FilePath)) { throw "File to sign not found: $FilePath" }
+    $ts = if ($TimestampServer) { $TimestampServer } else { "http://timestamp.digicert.com" }
+    $args = @("sign", "/fd", "SHA256", "/tr", $ts, "/td", "SHA256")
+    if ($CertSha1) {
+        $args += @("/sha1", $CertSha1)
+    } elseif ($CertFile) {
+        $args += @("/f", $CertFile)
+        $pw = if ($CertPassword) { $CertPassword } else { $env:XLSONE_CODESIGN_PASSWORD }
+        if ($pw) { $args += @("/p", $pw) }
+    } else {
+        throw "Code signing requires -CertFile (PFX) or -CertSha1 (store thumbprint)."
+    }
+    $args += @("/v", $FilePath)
+    Write-Host "[Sign] $SignToolPath $($args -join ' ')" -ForegroundColor Magenta
+    & $SignToolPath @args
+    if ($LASTEXITCODE -ne 0) { throw "Signing failed: $FilePath" }
+    Write-Host "[OK] signed: $FilePath" -ForegroundColor Green
+}
+
+function Assert-SignConfig {
+    if (-not $CertFile -and -not $CertSha1) {
+        throw "Code signing (-Sign) requires -CertFile (PFX) or -CertSha1 (store thumbprint)."
+    }
+    if ($CertFile -and -not (Test-Path $CertFile)) {
+        throw "Certificate file not found: $CertFile"
+    }
+}
+
 Write-Host "=== xlsOne Windows Packaging ===" -ForegroundColor Cyan
 Write-Host "Qt root:   $QtRoot"
 Write-Host "WiX root:  $WiXRoot"
+Write-Host "MinGW root: $MingwRoot"
 Write-Host "zlib root: $ZlibRoot"
 Write-Host "Build dir: $BuildDir"
 Write-Host ""
 
+# Prepend the MinGW compiler to PATH up front so the gcc/g++ prerequisite
+# check (below) and CMake both resolve to the toolchain matching this Qt build.
+$env:PATH = "$MingwRoot\bin;$env:PATH"
+
+# --- Detect Qt major version (5 vs 6) ---
+$qtVersion = & (Join-Path (Join-Path $QtRoot "bin") "qmake.exe") -query QT_VERSION 2>$null
+if (-not $qtVersion) { throw "qmake not found or failed under $QtRoot" }
+$qtMajor = ($qtVersion.Split('.'))[0]
+Write-Host "Detected Qt $qtVersion (major $qtMajor)" -ForegroundColor Cyan
+
 # --- Validate prerequisites ---
-Test-Tool "Qt5 qmake"        (Join-Path (Join-Path $QtRoot "bin") "qmake.exe")
-Test-Tool "Qt5 windeployqt"  (Join-Path (Join-Path $QtRoot "bin") "windeployqt.exe")
+Test-Tool "Qt qmake"        (Join-Path (Join-Path $QtRoot "bin") "qmake.exe")
+Test-Tool "Qt windeployqt"  (Join-Path (Join-Path $QtRoot "bin") "windeployqt.exe")
 Test-Tool "WiX candle"       (Join-Path $WiXRoot "candle.exe")
 Test-Tool "WiX light"        (Join-Path $WiXRoot "light.exe")
-Test-Tool "zlib header"      (Join-Path (Join-Path $ZlibRoot "include") "zlib.h")
-Test-Tool "zlib library"     (Join-Path (Join-Path $ZlibRoot "lib") "libz.a")
+if ($qtMajor -eq "5") {
+    # Qt5 needs an external zlib static library.
+    Test-Tool "zlib header"  (Join-Path (Join-Path $ZlibRoot "include") "zlib.h")
+    Test-Tool "zlib library" (Join-Path (Join-Path $ZlibRoot "lib") "libz.a")
+} else {
+    Write-Host "[SKIP] external zlib not required for Qt6 (uses Qt6::ZlibPrivate)" -ForegroundColor DarkGray
+}
 
 # Ensure CMake/Ninja are on PATH.
 $cmake = Get-Command cmake -ErrorAction SilentlyContinue
@@ -101,8 +231,9 @@ Write-Host "[OK] gcc:   $($gcc.Source)" -ForegroundColor Green
 
 # Ensure the requested Qt is found first by CMake and windeployqt.  This must
 # precede CMake configure so that find_package(QT NAMES ...) picks up qmake
-# from $QtRoot instead of any other Qt on the system PATH.
-$env:PATH = "$QtRoot\bin;$env:PATH"
+# from $QtRoot instead of any other Qt on the system PATH.  Also prepend the
+# MinGW compiler so gcc/g++ resolve to the toolchain matching this Qt build.
+$env:PATH = "$MingwRoot\bin;$QtRoot\bin;$env:PATH"
 
 # WiX must be on PATH for CPack to find candle/light.
 $env:PATH = "$WiXRoot;$env:PATH"
@@ -114,17 +245,26 @@ if ($Clean -and (Test-Path $BuildDir)) {
 
 # --- Configure ---
 Write-Host "`n--- Configuring CMake ---" -ForegroundColor Cyan
-$qtCmakeDir = Join-Path (Join-Path (Join-Path $QtRoot "lib") "cmake") "Qt5"
+$qtCmakeDir = Join-Path (Join-Path $QtRoot "lib") "cmake"
+$qtCmakeDir = Join-Path $qtCmakeDir "Qt$qtMajor"
 $cmakeArgs = @(
     "-S", (Join-Path $RepoRoot "cpp"),
     "-B", $BuildDir,
     "-G", "Ninja",
     "-DCMAKE_BUILD_TYPE=$Preset",
-    "-DCMAKE_PREFIX_PATH=$QtRoot;$ZlibRoot",
-    "-DQt5_DIR=$qtCmakeDir",
-    "-DZLIB_LIBRARY=$(Join-Path (Join-Path $ZlibRoot 'lib') 'libz.a')",
-    "-DZLIB_INCLUDE_DIR=$(Join-Path $ZlibRoot 'include')"
+    "-DCMAKE_PREFIX_PATH=$QtRoot",
+    "-DQt${qtMajor}_DIR=$qtCmakeDir"
 )
+if ($qtMajor -eq "5") {
+    # Qt5: pass the external zlib location explicitly.
+    $cmakeArgs += "-DZLIB_LIBRARY=$(Join-Path (Join-Path $ZlibRoot 'lib') 'libz.a')"
+    $cmakeArgs += "-DZLIB_INCLUDE_DIR=$(Join-Path $ZlibRoot 'include')"
+}
+if ($Domestic) {
+    # Point the compiled-in activation base URL at the domestic backend.
+    # Mirrors the windows-cn-release CMake preset so the two paths stay in sync.
+    $cmakeArgs += "-DXLSONE_ACTIVATION_BASE_URL=https://api.z-pulse.cn"
+}
 & cmake @cmakeArgs
 if ($LASTEXITCODE -ne 0) { throw "CMake configure failed" }
 
@@ -149,13 +289,20 @@ if ($LASTEXITCODE -ne 0) { throw "CPack ZIP failed" }
 # Derive the exact package file name from the CPack config so the script
 # stays correct when CMakeLists.txt version is bumped.
 $cpackConfig = Join-Path $BuildDir "CPackConfig.cmake"
-$pkgBase = "xlsone-1.0.3-windows-amd64"
+$pkgBase = "xlsone-1.0.4-windows-amd64"
 if (Test-Path $cpackConfig) {
     $m = Select-String -Path $cpackConfig -Pattern 'set\(CPACK_PACKAGE_FILE_NAME "([^"]+)"\)'
     if ($m) { $pkgBase = $m.Matches[0].Groups[1].Value }
 }
 $msi = Join-Path $BuildDir "$pkgBase.msi"
 $zip = Join-Path $BuildDir "$pkgBase.zip"
+
+# Sign the MSI container (the embedded EXE was already signed before packaging).
+if ($Sign -and (Test-Path $msi)) {
+    $stPath = Find-SignTool $SignTool
+    if (-not $stPath) { throw "signtool not found. Install the Windows SDK or pass -SignTool <path>." }
+    Invoke-Sign $msi $stPath
+}
 
 Write-Host "`n=== Packaging complete ===" -ForegroundColor Green
 Write-Host "MSI: $msi"

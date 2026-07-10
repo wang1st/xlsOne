@@ -1,0 +1,13 @@
+[1/6] Compiling Qt translations
+Updating 'D:/xlsone/cpp/i18n/xlsone_zh_CN.qm'...
+    Generated 212 translation(s) (212 finished and 0 unfinished)
+Updating 'D:/xlsone/cpp/i18n/xlsone_zh_TW.qm'...
+    Generated 212 translation(s) (212 finished and 0 unfinished)
+Updating 'D:/xlsone/cpp/i18n/xlsone_en.qm'...
+    Generated 212 translation(s) (212 finished and 0 unfinished)
+Updating 'D:/xlsone/cpp/i18n/xlsone_ja.qm'...
+    Generated 212 translation(s) (212 finished and 0 unfinished)
+[2/6] Linking CXX executable tests\xlsone_core_tests.exe
+[3/6] Automatic MOC and UIC for target xlsone_gift_code_generator
+[4/5] Building CXX object tools/CMakeFiles/xlsone_gift_code_generator.dir/gift_code_generator.cpp.obj
+[5/5] Linking CXX executable tools\xlsone-gift-code-generator.exe

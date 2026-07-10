@@ -31,10 +31,21 @@
     {
       "name": "windows-release",
       "inherits": "base",
-      "displayName": "Windows x86_64 Release",
+      "displayName": "Windows x86_64 Release (International)",
       "binaryDir": "${sourceDir}/build-windows-release",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release"
+        "CMAKE_BUILD_TYPE": "Release",
+        "XLSONE_ACTIVATION_BASE_URL": "https://api.xlsone.com"
+      }
+    },
+    {
+      "name": "windows-cn-release",
+      "inherits": "windows-release",
+      "displayName": "Windows x86_64 Release (Domestic / z-pulse.cn)",
+      "binaryDir": "${sourceDir}/build-windows-cn-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "XLSONE_ACTIVATION_BASE_URL": "https://api.z-pulse.cn"
       }
     },
     {
@@ -80,6 +91,7 @@
     {"name": "dev", "configurePreset": "dev"},
     {"name": "release", "configurePreset": "release"},
     {"name": "windows-release", "configurePreset": "windows-release"},
+    {"name": "windows-cn-release", "configurePreset": "windows-cn-release"},
     {"name": "linux-release", "configurePreset": "linux-release"},
     {"name": "uos-x86_64-release", "configurePreset": "uos-x86_64-release"},
     {"name": "uos-arm64-release", "configurePreset": "uos-arm64-release"},

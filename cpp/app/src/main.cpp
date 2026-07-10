@@ -1,15 +1,14 @@
-#include "license_activation_dialog.hpp"
 #include "main_window.hpp"
-#include "dialog_utils.hpp"
 #include "xlsone/core/license_manager.hpp"
 #include "algorithm_keywords.hpp"
 
 #include <QApplication>
+#include <QFont>
+#include <QIcon>
 #include <QTranslator>
 #include <QLocale>
 #include <QLibraryInfo>
 #include <QSettings>
-#include <QMessageBox>
 
 int main(int argc, char* argv[])
 {
@@ -62,20 +61,8 @@ int main(int argc, char* argv[])
         return app.exec();
     }
 
-    // Always show the main window first.
-    // If unactivated, the activation dialog appears on top after the window is shown.
     MainWindow window;
     window.resize(1180, 760);
     window.show();
-
-    xlsone::LicenseManager licenseManager;
-    const auto state = licenseManager.state();
-    if (state != xlsone::LicenseState::Activated &&
-        state != xlsone::LicenseState::Trial) {
-        LicenseActivationDialog dialog(&licenseManager, &window);
-        xlsone::ui::execDialogCentered(dialog, &window);
-        // Don't quit — user can dismiss and use the app in limited mode.
-    }
-
     return app.exec();
 }

@@ -47,7 +47,7 @@ public struct LicenseActivationView: View {
                         .font(XFont.panelTitle)
                         .foregroundColor(XColor.primaryLabel)
 
-                    Text(LocaleManager.loc("多单位 Excel 报表一键汇总"))
+                    Text(LocaleManager.loc("多张同格式 Excel 报表一键汇总"))
                         .font(XFont.body)
                         .foregroundColor(XColor.secondaryLabel)
                         .multilineTextAlignment(.center)
@@ -155,7 +155,7 @@ public struct LicenseActivationView: View {
             .textFieldStyle(.plain)
             .font(XFont.monospacedInput)
             .multilineTextAlignment(.center)
-            .frame(width: 64, height: 48)
+            .frame(width: 64, height: 40)
             .background(XColor.surface)
             .clipShape(RoundedRectangle(cornerRadius: XRadius.md, style: .continuous))
             .overlay(
@@ -278,7 +278,7 @@ public struct LicenseActivationView: View {
             Spacer()
 
             Button(LocaleManager.loc("购买激活码 →")) {
-                if let url = URL(string: "https://z-pulse.cn") {
+                if let url = URL(string: "https://z-pulse.cn/xlsone/") {
                     NSWorkspace.shared.open(url)
                 }
             }
@@ -305,7 +305,7 @@ public struct LicenseActivationView: View {
 
             if showOfflineInfo {
                 VStack(alignment: .leading, spacing: XSpacing.sm) {
-                    OfflineStep(number: 1, text: LocaleManager.loc("在联网电脑上访问 z-pulse.cn/offline"))
+                    OfflineStep(number: 1, text: LocaleManager.loc("在联网电脑上访问 z-pulse.cn/xlsone/offline"))
                     OfflineStep(number: 2, text: LocaleManager.loc("输入购买邮箱和本机设备码"))
                     OfflineStep(number: 3, text: LocaleManager.loc("下载授权文件并导入本程序"))
 

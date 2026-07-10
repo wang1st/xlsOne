@@ -5,9 +5,13 @@
 //   POST /api/refresh           — 刷新订阅 Token
 //   POST /api/webhook/lemonsqueezy — Lemon Squeezy 购买回调
 //   POST /api/admin/generate    — 管理后台生成激活码
+//   POST /api/trial/windows  — Windows 版签名试用许可证
 //   POST /api/activate/windows  — Windows 版 Ed25519 许可证激活
-//   POST /api/webhook/afdian    — 爱发电购买回调（Windows 版）
-//   POST /api/admin/generate-windows — 管理后台生成 Windows 激活码
+//   POST /api/admin/generate-windows-keys — 管理后台批量生成 Windows 激活码
+//   GET  /api/admin/pool-stats  — 激活码池统计
+//   POST /api/license/download  — 离线激活：下载签名 .license 文件
+//   Note: 授权码生成器页面 (gift-code-generator.html) 可在本地浏览器打开，
+//         或通过国内服务器 /xlsone/license-console 路由访问（路径可由 ADMIN_PATH 配置）。Worker 不提供静态页面托管。
 
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
@@ -22,9 +26,6 @@ interface Env {
   ACTIVATION_SECRET: string
   LEMON_SQUEEZY_SIGNING_SECRET: string
   ED25519_PRIVATE_KEY?: string
-  AFDIAN_USER_ID?: string
-  AFDIAN_TOKEN?: string
-  AFDIAN_WEBHOOK_TOKEN?: string
   ADMIN_API_KEY?: string
 }
 
@@ -48,11 +49,13 @@ interface WindowsLicensePayload {
 // ========== Constants ==========
 
 const KEY_PATTERN = /^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/
-const WINDOWS_KEY_PATTERN = /^XLS1-[A-Z0-9]{4}-[A-Z0-9]{4}$/
+const WINDOWS_KEY_PATTERN = /^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/
 const TOKEN_LIFETIME = 30 * 24 * 60 * 60  // 30 days in seconds
-const MIGRATION_LIMIT = 3                 // max device migrations per key per year
 const RATE_LIMIT_WINDOW = 60              // 1 minute
 const RATE_LIMIT_MAX = 10                 // max requests per window
+const DEFAULT_MAX_ACTIVATIONS = 3
+const DEFAULT_DURATION_DAYS = 365
+const TRIAL_DURATION_DAYS = 14
 
 // ========== Helpers ==========
 
@@ -127,7 +130,7 @@ async function verifyToken(token: string, secret: string): Promise<LicensePayloa
 function generateKeyId(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789' // no 0/O/I/1 for readability
   const part = () => Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
-  return `XLS1-${part()}-${part()}`
+  return `${part()}-${part()}-${part()}-${part()}`
 }
 
 // Simple in-memory rate limiter (per-IP)
@@ -154,9 +157,28 @@ function getEd25519PrivateKey(env: Env): Uint8Array | null {
   return hexToBytes(hex)
 }
 
-function signWindowsLicense(payload: WindowsLicensePayload, privateKey: Uint8Array): string {
+function canonicalLicensePayload(
+  keyId: string,
+  plan: string,
+  deviceHash: string,
+  deviceComponents: string[],
+  issuedAt: number,
+  expiresAt: number
+): string {
+  // Fixed field order matching the client-side reconstruction.
+  return JSON.stringify({
+    key_id: keyId,
+    plan,
+    device_hash: deviceHash,
+    device_components: deviceComponents,
+    issued_at: issuedAt,
+    expires_at: expiresAt,
+  })
+}
+
+function signWindowsLicense(payloadJson: string, privateKey: Uint8Array): string {
   const encoder = new TextEncoder()
-  const message = encoder.encode(JSON.stringify(payload))
+  const message = encoder.encode(payloadJson)
   const signature = ed25519.sign(message, privateKey)
   return b64enc(signature)
 }
@@ -182,7 +204,15 @@ function buildWindowsLicense(
     expires_at: expiresAt,
   }
 
-  const signature = signWindowsLicense(payload, privateKey)
+  const payloadJson = canonicalLicensePayload(
+    keyRow.key_id,
+    keyRow.plan,
+    deviceHash,
+    deviceComponents,
+    now,
+    expiresAt
+  )
+  const signature = signWindowsLicense(payloadJson, privateKey)
 
   const license = {
     ...payload,
@@ -192,67 +222,302 @@ function buildWindowsLicense(
   return { license, payload }
 }
 
-async function countMigrations(db: D1Database, keyId: string, since: Date): Promise<number> {
-  const result = await db.prepare(
-    'SELECT COUNT(*) as count FROM windows_device_migrations WHERE key_id = ? AND migrated_at >= ?'
-  ).bind(keyId, since.toISOString()).first<{ count: number }>()
-  return result?.count || 0
+// ========== Windows license issuance helper ==========
+
+interface WindowsIssueSuccess {
+  ok: true
+  license: object
+  plan: string
+  expires_at: string | null
+  device_hash: string
+  activation_count: number
+  max_activations: number
 }
 
-// ========== Afdian helpers ==========
-
-function afdianSign(token: string, paramsBase64: string, timestamp: number): string {
-  // 爱发电开放平台签名：MD5(token + params_base64 + timestamp + token)
-  return md5(`${token}${paramsBase64}${timestamp}${token}`)
+interface WindowsIssueFailure {
+  ok: false
+  status: number
+  body: object
 }
 
-async function afdianSendMessage(
+type WindowsIssueResult = WindowsIssueSuccess | WindowsIssueFailure
+
+async function issueWindowsLicense(
   env: Env,
-  receiverId: string,
-  message: string
-): Promise<{ success: boolean; error?: string }> {
-  if (!env.AFDIAN_USER_ID || !env.AFDIAN_TOKEN) {
-    return { success: false, error: 'Afdian credentials not configured' }
+  keyId: string,
+  deviceHash: string,
+  deviceName: string,
+  deviceComponents: string[]
+): Promise<WindowsIssueResult> {
+  const keyRow = await env.DB.prepare(
+    'SELECT * FROM windows_keys WHERE key_id = ?'
+  ).bind(keyId).first<{
+    key_id: string
+    plan: string
+    status: string
+    device_hash: string | null
+    device_components: string | null
+    expires_at: string | null
+    max_activations: number | null
+    activation_count: number | null
+    duration_days: number | null
+  }>()
+
+  if (!keyRow) {
+    return { ok: false, status: 404, body: { error: 'KEY_NOT_FOUND', message: '激活码不存在' } }
   }
 
-  const params = {
-    receiver_id: receiverId,
-    message,
-  }
-  const paramsStr = JSON.stringify(params)
-  const paramsBase64 = utf8ToBase64(paramsStr)
-  const timestamp = Math.floor(Date.now() / 1000)
-  const sign = afdianSign(env.AFDIAN_TOKEN, paramsBase64, timestamp)
+  // 兼容旧状态值
+  const status = keyRow.status === 'unused' ? 'available'
+               : keyRow.status === 'used' ? 'activated'
+               : keyRow.status
 
-  const body = {
-    user_id: env.AFDIAN_USER_ID,
-    params: paramsBase64,
-    ts: timestamp,
-    sign,
+  if (status === 'revoked') {
+    return { ok: false, status: 403, body: { error: 'KEY_REVOKED', message: '激活码已被吊销' } }
+  }
+  if (status === 'exhausted') {
+    return { ok: false, status: 403, body: { error: 'EXHAUSTED', message: '该激活码的激活次数已用尽（最多 3 台设备）' } }
   }
 
-  try {
-    const res = await fetch('https://afdian.net/api/open/send-msg', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    })
-    const data = await res.json<{ ec?: number; msg?: string }>()
-    if (data.ec === 200) {
-      return { success: true }
+  // 兼容旧数据
+  const maxActivations = keyRow.max_activations ?? DEFAULT_MAX_ACTIVATIONS
+  const activationCount = keyRow.activation_count ?? 0
+  const durationDays = keyRow.duration_days ?? (keyRow.plan === 'personal_yearly' ? DEFAULT_DURATION_DAYS : 0)
+
+  const isSameDevice = keyRow.device_hash && keyRow.device_hash === deviceHash
+  const isFirstActivation = !keyRow.device_hash
+
+  // 检查过期（已有 expires_at 的情况）
+  if (keyRow.expires_at) {
+    const expiry = new Date(keyRow.expires_at)
+    if (expiry < new Date()) {
+      return { ok: false, status: 403, body: { error: 'SUBSCRIPTION_EXPIRED', message: '订阅已过期，请购买新的激活码' } }
     }
-    return { success: false, error: data.msg || `ec=${data.ec}` }
-  } catch (err) {
-    return { success: false, error: String(err) }
+  }
+
+  // 换设备检查
+  if (!isSameDevice && !isFirstActivation) {
+    if (activationCount >= maxActivations) {
+      return {
+        ok: false,
+        status: 403,
+        body: { error: 'EXHAUSTED', message: `该激活码最多激活 ${maxActivations} 台设备，已达上限` },
+      }
+    }
+  }
+
+  const privateKey = getEd25519PrivateKey(env)
+  if (!privateKey) {
+    return { ok: false, status: 500, body: { error: 'SERVER_ERROR', message: '签名密钥未配置' } }
+  }
+
+  const now = Math.floor(Date.now() / 1000)
+
+  // 首次激活：设置 expires_at（从激活时刻起算）
+  let expiresAt = 0
+  let expiresAtIso: string | null = keyRow.expires_at
+  if (!expiresAtIso && keyRow.plan === 'personal_yearly' && durationDays > 0) {
+    const expiresDate = new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000)
+    expiresAt = Math.floor(expiresDate.getTime() / 1000)
+    expiresAtIso = expiresDate.toISOString()
+  } else if (expiresAtIso) {
+    expiresAt = Math.floor(new Date(expiresAtIso).getTime() / 1000)
+  }
+  // personal_lifetime → expiresAt 保持 0
+
+  const components = Array.isArray(deviceComponents) ? deviceComponents : []
+  const payloadJson = canonicalLicensePayload(
+    keyRow.key_id,
+    keyRow.plan,
+    deviceHash,
+    components,
+    now,
+    expiresAt
+  )
+  const payload: WindowsLicensePayload = JSON.parse(payloadJson)
+  let signature: string
+  try {
+    signature = signWindowsLicense(payloadJson, privateKey)
+  } catch (e: any) {
+    console.error('[signWindowsLicense] failed:', e?.message || e)
+    return { ok: false, status: 500, body: { error: 'SERVER_ERROR', message: '签名失败: ' + (e?.message || String(e)) } }
+  }
+  const license = { ...payload, signature }
+
+  // 计算新的激活次数
+  const newCount = (isSameDevice || isFirstActivation) ? activationCount : activationCount + 1
+  const newStatus = newCount >= maxActivations ? 'exhausted' : 'activated'
+
+  // Upsert device record
+  try {
+    await env.DB.prepare(`
+      INSERT INTO windows_devices (device_id, key_id, device_name, activated_at, last_seen_at)
+      VALUES (?, ?, ?, datetime('now'), datetime('now'))
+      ON CONFLICT(device_id, key_id) DO UPDATE SET
+        last_seen_at = datetime('now'),
+        revoked = 0
+    `).bind(deviceHash, keyId, deviceName || '').run()
+  } catch (e: any) {
+    console.error('[windows_devices] upsert failed:', e?.message || e)
+    // Non-fatal: continue even if device upsert fails
+  }
+
+  // Update key binding
+  try {
+    await env.DB.prepare(`
+      UPDATE windows_keys
+      SET status = ?,
+          device_hash = ?,
+          device_components = ?,
+          activated_at = COALESCE(activated_at, datetime('now')),
+          activation_count = ?,
+          max_activations = ?,
+          expires_at = ?
+      WHERE key_id = ?
+    `).bind(newStatus, deviceHash, JSON.stringify(components), newCount, maxActivations, expiresAtIso, keyId).run()
+  } catch (e: any) {
+    console.error('[windows_keys] update failed:', e?.message || e)
+    return { ok: false, status: 500, body: { error: 'SERVER_ERROR', message: '数据库更新失败: ' + (e?.message || String(e)) } }
+  }
+
+  return {
+    ok: true,
+    license,
+    plan: keyRow.plan,
+    expires_at: expiresAtIso,
+    device_hash: deviceHash,
+    activation_count: newCount,
+    max_activations: maxActivations,
   }
 }
 
-function verifyAfdianWebhook(token: string, data: string, sign: string): boolean {
-  // Afdian signs over the EXACT raw `data` string: MD5(token + data + token).
-  // `data` MUST be the un-parsed original string — re-serializing a parsed object
-  // changes key order / whitespace and the signature will never match.
-  const expected = md5(`${token}${data}${token}`)
-  return timingSafeEqual(expected, sign.toLowerCase())
+interface WindowsTrialSuccess {
+  ok: true
+  license: object
+  plan: string
+  expires_at: string
+  device_hash: string
+}
+
+type WindowsTrialResult = WindowsTrialSuccess | WindowsIssueFailure
+
+async function issueWindowsTrial(
+  env: Env,
+  deviceHash: string,
+  deviceName: string,
+  deviceComponents: string[]
+): Promise<WindowsTrialResult> {
+  if (!deviceHash || deviceHash.length < 16 || deviceHash.length > 128) {
+    return { ok: false, status: 400, body: { error: 'INVALID_DEVICE', message: '设备指纹无效' } }
+  }
+
+  const privateKey = getEd25519PrivateKey(env)
+  if (!privateKey) {
+    return { ok: false, status: 500, body: { error: 'TRIAL_UNAVAILABLE', message: '签名密钥未配置' } }
+  }
+
+  const now = Math.floor(Date.now() / 1000)
+  const existing = await env.DB.prepare(
+    'SELECT * FROM windows_trials WHERE device_hash = ?'
+  ).bind(deviceHash).first<{
+    device_hash: string
+    key_id: string
+    issued_at: string
+    expires_at: string
+  }>()
+
+  let keyId: string
+  let issuedAt: number
+  let expiresAt: number
+
+  if (existing) {
+    expiresAt = Math.floor(new Date(existing.expires_at).getTime() / 1000)
+    if (expiresAt <= now) {
+      return { ok: false, status: 403, body: { error: 'TRIAL_EXPIRED', message: '这台设备的免费试用已结束' } }
+    }
+    keyId = existing.key_id
+    issuedAt = Math.floor(new Date(existing.issued_at).getTime() / 1000)
+    await env.DB.prepare(`
+      UPDATE windows_trials
+      SET device_name = ?,
+          device_components = ?,
+          last_seen_at = datetime('now')
+      WHERE device_hash = ?
+    `).bind(deviceName || '', JSON.stringify(deviceComponents || []), deviceHash).run()
+  } else {
+    keyId = `TRIAL-${deviceHash.slice(0, 12).toUpperCase()}`
+    issuedAt = now
+    expiresAt = now + TRIAL_DURATION_DAYS * 24 * 60 * 60
+    await env.DB.prepare(`
+      INSERT INTO windows_trials
+        (device_hash, key_id, device_name, device_components, issued_at, expires_at, last_seen_at)
+      VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+    `).bind(
+      deviceHash,
+      keyId,
+      deviceName || '',
+      JSON.stringify(deviceComponents || []),
+      new Date(issuedAt * 1000).toISOString(),
+      new Date(expiresAt * 1000).toISOString()
+    ).run()
+  }
+
+  const components = Array.isArray(deviceComponents) ? deviceComponents : []
+  const payloadJson = canonicalLicensePayload(
+    keyId,
+    'trial',
+    deviceHash,
+    components,
+    issuedAt,
+    expiresAt
+  )
+  const payload: WindowsLicensePayload = JSON.parse(payloadJson)
+  const signature = signWindowsLicense(payloadJson, privateKey)
+  const license = { ...payload, signature }
+
+  return {
+    ok: true,
+    license,
+    plan: 'trial',
+    expires_at: new Date(expiresAt * 1000).toISOString(),
+    device_hash: deviceHash,
+  }
+}
+
+function parseWindowsActivationBody(body: unknown): {
+  key: string
+  device_hash: string
+  device_name?: string
+  device_components?: string[]
+} | null {
+  if (typeof body !== 'object' || body === null) return null
+  const b = body as Record<string, unknown>
+  if (typeof b.key !== 'string' || typeof b.device_hash !== 'string') return null
+  return {
+    key: b.key,
+    device_hash: b.device_hash,
+    device_name: typeof b.device_name === 'string' ? b.device_name : undefined,
+    device_components: Array.isArray(b.device_components)
+      ? b.device_components.filter((x): x is string => typeof x === 'string')
+      : undefined,
+  }
+}
+
+function parseWindowsTrialBody(body: unknown): {
+  device_hash: string
+  device_name?: string
+  device_components?: string[]
+} | null {
+  if (typeof body !== 'object' || body === null) return null
+  const b = body as Record<string, unknown>
+  if (typeof b.device_hash !== 'string') return null
+  return {
+    device_hash: b.device_hash,
+    device_name: typeof b.device_name === 'string' ? b.device_name : undefined,
+    device_components: Array.isArray(b.device_components)
+      ? b.device_components.filter((x): x is string => typeof x === 'string')
+      : undefined,
+  }
 }
 
 // ========== App ==========
@@ -262,7 +527,7 @@ const app = new Hono<{ Bindings: Env }>()
 // CORS
 app.use('*', cors({
   origin: ['https://z-pulse.cn', 'https://xlsone.com', 'app://xlsone'],
-  allowMethods: ['POST', 'OPTIONS'],
+  allowMethods: ['POST', 'GET', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Authorization'],
   maxAge: 86400,
 }))
@@ -549,139 +814,44 @@ app.post('/api/webhook/lemonsqueezy', async (c) => {
   return c.json({ status: 'ignored' })
 })
 
-// ========== Windows license issuance helper ==========
-
-interface WindowsIssueSuccess {
-  ok: true
-  license: object
-  plan: string
-  expires_at: string | null
-  device_hash: string
-}
-
-interface WindowsIssueFailure {
-  ok: false
-  status: number
-  body: object
-}
-
-type WindowsIssueResult = WindowsIssueSuccess | WindowsIssueFailure
-
-async function issueWindowsLicense(
-  env: Env,
-  keyId: string,
-  deviceHash: string,
-  deviceName: string,
-  deviceComponents: string[]
-): Promise<WindowsIssueResult> {
-  const keyRow = await env.DB.prepare(
-    'SELECT * FROM windows_keys WHERE key_id = ?'
-  ).bind(keyId).first<{
-    key_id: string
-    plan: string
-    status: string
-    device_hash: string | null
-    device_components: string | null
-    expires_at: string | null
-  }>()
-
-  if (!keyRow) {
-    return { ok: false, status: 404, body: { error: 'KEY_NOT_FOUND', message: '激活码不存在' } }
-  }
-
-  if (keyRow.status === 'revoked') {
-    return { ok: false, status: 403, body: { error: 'KEY_REVOKED', message: '激活码已被吊销' } }
-  }
-
-  if (keyRow.expires_at) {
-    const expiry = new Date(keyRow.expires_at)
-    if (expiry < new Date()) {
-      return { ok: false, status: 403, body: { error: 'SUBSCRIPTION_EXPIRED', message: '订阅已过期' } }
-    }
-  }
-
-  if (keyRow.device_hash && keyRow.device_hash !== deviceHash) {
-    // Allow migration within limit.
-    const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000)
-    const migrations = await countMigrations(env.DB, keyId, oneYearAgo)
-    if (migrations >= MIGRATION_LIMIT) {
-      return {
-        ok: false,
-        status: 403,
-        body: {
-          error: 'DEVICE_LIMIT',
-          message: `该激活码每年最多换机 ${MIGRATION_LIMIT} 次，已达上限`,
-        },
-      }
-    }
-
-    // Record migration and revoke the previous device.
-    await env.DB.prepare(`
-      INSERT INTO windows_device_migrations (key_id, old_device, new_device)
-      VALUES (?, ?, ?)
-    `).bind(keyId, keyRow.device_hash, deviceHash).run()
-
-    await env.DB.prepare(`
-      UPDATE windows_devices SET revoked = 1 WHERE key_id = ? AND device_id = ? AND revoked = 0
-    `).bind(keyId, keyRow.device_hash).run()
-  }
-
-  const privateKey = getEd25519PrivateKey(env)
-  if (!privateKey) {
-    return { ok: false, status: 500, body: { error: 'SERVER_ERROR', message: '签名密钥未配置' } }
-  }
-
-  const components = Array.isArray(deviceComponents) ? deviceComponents : []
-  const { license } = buildWindowsLicense(keyRow, deviceHash, components, privateKey)
-
-  // Upsert device record.
-  await env.DB.prepare(`
-    INSERT INTO windows_devices (device_id, key_id, device_name, activated_at, last_seen_at)
-    VALUES (?, ?, ?, datetime('now'), datetime('now'))
-    ON CONFLICT(device_id, key_id) DO UPDATE SET
-      last_seen_at = datetime('now'),
-      revoked = 0
-  `).bind(deviceHash, keyId, deviceName || '').run()
-
-  // Update key binding.
-  await env.DB.prepare(`
-    UPDATE windows_keys
-    SET status = 'used',
-        device_hash = ?,
-        device_components = ?,
-        activated_at = datetime('now')
-    WHERE key_id = ?
-  `).bind(deviceHash, JSON.stringify(components), keyId).run()
-
-  return {
-    ok: true,
-    license,
-    plan: keyRow.plan,
-    expires_at: keyRow.expires_at || null,
-    device_hash: deviceHash,
-  }
-}
-
-function parseWindowsActivationBody(body: unknown): {
-  key: string
-  device_hash: string
-  device_name?: string
-  device_components?: string[]
-} | null {
-  if (typeof body !== 'object' || body === null) return null
-  const b = body as Record<string, unknown>
-  if (typeof b.key !== 'string' || typeof b.device_hash !== 'string') return null
-  return {
-    key: b.key,
-    device_hash: b.device_hash,
-    device_name: typeof b.device_name === 'string' ? b.device_name : undefined,
-    device_components: Array.isArray(b.device_components)
-      ? b.device_components.filter((x): x is string => typeof x === 'string')
-      : undefined,
-  }
-}
-
 // ========== POST /api/activate/windows ==========
+
+app.post('/api/trial/windows', async (c) => {
+  const ip = c.req.header('CF-Connecting-IP') || 'unknown'
+  if (!checkRateLimit(ip)) {
+    return c.json({ error: 'RATE_LIMITED', message: '请求过于频繁，请稍后再试' }, 429)
+  }
+
+  let body: unknown
+  try {
+    body = await c.req.json()
+  } catch {
+    return c.json({ error: 'INVALID_JSON' }, 400)
+  }
+
+  const parsed = parseWindowsTrialBody(body)
+  if (!parsed) {
+    return c.json({ error: 'INVALID_PARAMS', message: '请求参数无效' }, 400)
+  }
+
+  const result = await issueWindowsTrial(
+    c.env,
+    parsed.device_hash,
+    parsed.device_name || '',
+    parsed.device_components || []
+  )
+
+  if (!result.ok) {
+    return c.json(result.body, result.status as any)
+  }
+
+  return c.json({
+    license: result.license,
+    plan: result.plan,
+    expires_at: result.expires_at,
+    device_hash: result.device_hash,
+  })
+})
 
 app.post('/api/activate/windows', async (c) => {
   const ip = c.req.header('CF-Connecting-IP') || 'unknown'
@@ -728,6 +898,8 @@ app.post('/api/activate/windows', async (c) => {
     plan: result.plan,
     expires_at: result.expires_at,
     device_hash: result.device_hash,
+    activation_count: result.activation_count,
+    max_activations: result.max_activations,
   })
 })
 
@@ -782,87 +954,6 @@ app.post('/api/license/download', async (c) => {
   })
 })
 
-// ========== POST /api/webhook/afdian ==========
-
-app.post('/api/webhook/afdian', async (c) => {
-  if (!c.env.AFDIAN_WEBHOOK_TOKEN) {
-    return c.json({ error: 'UNAUTHORIZED', message: 'Webhook token not configured' }, 401)
-  }
-
-  // Read the RAW body so we can verify the signature over the exact `data` string.
-  const raw = await c.req.text()
-  let payload: { data?: unknown; sign?: string }
-  try {
-    payload = JSON.parse(raw)
-  } catch {
-    return c.json({ error: 'INVALID_JSON' }, 400)
-  }
-
-  const { data, sign } = payload
-  // `data` must be the original string Afdian signed; do NOT parse it first.
-  if (typeof sign !== 'string' || typeof data !== 'string' || !data) {
-    return c.json({ error: 'INVALID_PAYLOAD' }, 400)
-  }
-
-  if (!verifyAfdianWebhook(c.env.AFDIAN_WEBHOOK_TOKEN, data, sign)) {
-    return c.json({ error: 'INVALID_SIGNATURE' }, 401)
-  }
-
-  // Signature is valid — now parse the order from the verified string.
-  let order: any
-  try {
-    order = JSON.parse(data)
-  } catch {
-    return c.json({ error: 'INVALID_ORDER' }, 400)
-  }
-
-  const orderObj = order?.order ?? order
-  if (!orderObj || !orderObj.out_trade_no) {
-    return c.json({ error: 'INVALID_ORDER' }, 400)
-  }
-
-  // Only issue a license once payment is actually settled. Afdian may send
-  // webhooks for pending/refunding states too — never issue on those.
-  const paid = ['PAID', 'paid', 'SUCCESS', 'success'].includes(
-    orderObj.pay_status ?? orderObj.status ?? orderObj.order_status ?? ''
-  )
-  if (!paid) {
-    return c.json({ status: 'ignored', reason: 'not_paid' })
-  }
-
-  const orderId = orderObj.out_trade_no
-  const userId = orderObj.user_id
-  const email = orderObj.remark || orderObj.user_name || ''
-  // Windows 版当前为买断制；若以后按 SKU 区分档位，在此根据 orderObj.sku/title 映射。
-  const plan = 'personal_lifetime'
-
-  // Idempotency: 同一订单只发一次授权码。
-  const existing = await c.env.DB.prepare(
-    'SELECT key_id FROM windows_keys WHERE order_id = ?'
-  ).bind(orderId).first<{ key_id: string }>()
-
-  if (existing) {
-    return c.json({ key_id: existing.key_id, order_id: orderId, status: 'exists' })
-  }
-
-  const keyId = generateKeyId()
-
-  await c.env.DB.prepare(`
-    INSERT INTO windows_keys (key_id, plan, status, order_id, email)
-    VALUES (?, ?, 'unused', ?, ?)
-  `).bind(keyId, plan, orderId, email).run()
-
-  // Best-effort send private message with the key.
-  let messageStatus = 'pending'
-  if (userId && c.env.AFDIAN_USER_ID && c.env.AFDIAN_TOKEN) {
-    const message = `感谢您的购买！\n表表归一 Windows 版激活码：${keyId}\n请在软件激活窗口输入此激活码完成绑定。激活码永久有效，每年可换机 ${MIGRATION_LIMIT} 次。`
-    const sendResult = await afdianSendMessage(c.env, userId, message)
-    messageStatus = sendResult.success ? 'sent' : `failed: ${sendResult.error}`
-  }
-
-  return c.json({ key_id: keyId, order_id: orderId, status: 'created', message_status: messageStatus })
-})
-
 // ========== POST /api/admin/generate-windows-keys ==========
 
 app.post('/api/admin/generate-windows-keys', async (c) => {
@@ -872,7 +963,7 @@ app.post('/api/admin/generate-windows-keys', async (c) => {
     return c.json({ error: 'UNAUTHORIZED' }, 401)
   }
 
-  let body: { count?: number; plan?: string; expires_at?: string }
+  let body: { count?: number; plan?: string; max_activations?: number; duration_days?: number }
   try {
     body = await c.req.json()
   } catch {
@@ -880,23 +971,280 @@ app.post('/api/admin/generate-windows-keys', async (c) => {
   }
 
   const count = Math.min(body.count || 1, 100)
-  const plan = body.plan || 'personal_lifetime'
+  const plan = body.plan || 'personal_yearly'
+
+  // Plan-specific defaults
+  let maxActivations = DEFAULT_MAX_ACTIVATIONS
+  let durationDays = 0
+  if (plan === 'trial') {
+    maxActivations = 1
+    durationDays = 14
+  } else if (plan === 'personal_yearly') {
+    maxActivations = 3
+    durationDays = 365
+  } else if (plan === 'personal_lifetime') {
+    maxActivations = 3
+    durationDays = 0
+  }
+
+  // Allow explicit override
+  if (body.max_activations !== undefined) maxActivations = body.max_activations
+  if (body.duration_days !== undefined) durationDays = body.duration_days
 
   const keys: string[] = []
   const stmt = c.env.DB.prepare(
-    'INSERT INTO windows_keys (key_id, plan, status) VALUES (?, ?, ?)'
+    'INSERT INTO windows_keys (key_id, plan, status, max_activations, activation_count, duration_days) VALUES (?, ?, ?, ?, ?, ?)'
   )
 
   const batch = []
   for (let i = 0; i < count; i++) {
     const keyId = generateKeyId()
-    batch.push(stmt.bind(keyId, plan, 'unused'))
+    batch.push(stmt.bind(keyId, plan, 'available', maxActivations, 0, durationDays))
     keys.push(keyId)
   }
 
   await c.env.DB.batch(batch)
 
-  return c.json({ keys, count, plan })
+  return c.json({ keys, count, plan, max_activations: maxActivations, duration_days: durationDays })
+})
+
+// ========== GET /api/admin/windows-keys (码列表) ==========
+
+app.get('/api/admin/windows-keys', async (c) => {
+  const auth = c.req.header('Authorization')
+  const apiKey = c.env.ADMIN_API_KEY || c.env.ACTIVATION_SECRET
+  if (!auth || auth !== `Bearer ${apiKey}`) {
+    return c.json({ error: 'UNAUTHORIZED' }, 401)
+  }
+
+  const status = c.req.query('status') || ''
+  const plan = c.req.query('plan') || ''
+  const search = c.req.query('search') || ''
+  const page = Math.max(parseInt(c.req.query('page') || '1', 10), 1)
+  const limit = Math.min(Math.max(parseInt(c.req.query('limit') || '20', 10), 1), 100)
+
+  let sql = 'SELECT * FROM windows_keys WHERE 1=1'
+  const params: (string | number)[] = []
+
+  if (status) {
+    sql += ' AND status = ?'
+    params.push(status)
+  }
+  if (plan) {
+    sql += ' AND plan = ?'
+    params.push(plan)
+  }
+  if (search) {
+    sql += ' AND (key_id LIKE ? OR order_id LIKE ? OR email LIKE ?)'
+    const pattern = `%${search}%`
+    params.push(pattern, pattern, pattern)
+  }
+
+  sql += ' ORDER BY created_at DESC LIMIT ? OFFSET ?'
+  params.push(limit, (page - 1) * limit)
+
+  const rows = await c.env.DB.prepare(sql).bind(...params).all<Record<string, any>>()
+
+  const countSql = 'SELECT COUNT(*) as total FROM windows_keys WHERE 1=1'
+  const countParams: (string | number)[] = []
+  let countSqlStr = countSql
+  if (status) { countSqlStr += ' AND status = ?'; countParams.push(status) }
+  if (plan) { countSqlStr += ' AND plan = ?'; countParams.push(plan) }
+  if (search) { countSqlStr += ' AND (key_id LIKE ? OR order_id LIKE ? OR email LIKE ?)'; countParams.push(`%${search}%`, `%${search}%`, `%${search}%`) }
+
+  const countRow = await c.env.DB.prepare(countSqlStr).bind(...countParams).first<{ total: number }>()
+  const total = countRow?.total || 0
+
+  return c.json({
+    keys: rows.results || [],
+    pagination: { page, limit, total, pages: Math.ceil(total / limit) }
+  })
+})
+
+// ========== GET /api/admin/windows-keys/:key_id (码详情) ==========
+
+app.get('/api/admin/windows-keys/:key_id', async (c) => {
+  const auth = c.req.header('Authorization')
+  const apiKey = c.env.ADMIN_API_KEY || c.env.ACTIVATION_SECRET
+  if (!auth || auth !== `Bearer ${apiKey}`) {
+    return c.json({ error: 'UNAUTHORIZED' }, 401)
+  }
+
+  const keyId = c.req.param('key_id').toUpperCase()
+  const keyRow = await c.env.DB.prepare(
+    'SELECT * FROM windows_keys WHERE key_id = ?'
+  ).bind(keyId).first<Record<string, any>>()
+
+  if (!keyRow) return c.json({ error: 'KEY_NOT_FOUND' }, 404)
+
+  const devices = await c.env.DB.prepare(
+    'SELECT * FROM windows_devices WHERE key_id = ? ORDER BY activated_at DESC'
+  ).bind(keyId).all<Record<string, any>>()
+
+  return c.json({ key: keyRow, devices: devices.results || [] })
+})
+
+// ========== POST /api/admin/windows-keys/:key_id/revoke (吊销码) ==========
+
+app.post('/api/admin/windows-keys/:key_id/revoke', async (c) => {
+  const auth = c.req.header('Authorization')
+  const apiKey = c.env.ADMIN_API_KEY || c.env.ACTIVATION_SECRET
+  if (!auth || auth !== `Bearer ${apiKey}`) {
+    return c.json({ error: 'UNAUTHORIZED' }, 401)
+  }
+
+  const keyId = c.req.param('key_id').toUpperCase()
+  const keyRow = await c.env.DB.prepare(
+    'SELECT status FROM windows_keys WHERE key_id = ?'
+  ).bind(keyId).first<{ status: string }>()
+
+  if (!keyRow) return c.json({ error: 'KEY_NOT_FOUND' }, 404)
+  if (keyRow.status === 'revoked') return c.json({ error: 'ALREADY_REVOKED' }, 400)
+
+  await c.env.DB.prepare(
+    "UPDATE windows_keys SET status = 'revoked', revoked_at = datetime('now') WHERE key_id = ?"
+  ).bind(keyId).run()
+
+  return c.json({ key_id: keyId, status: 'revoked' })
+})
+
+// ========== POST /api/admin/windows-keys/:key_id/restore (恢复码) ==========
+
+app.post('/api/admin/windows-keys/:key_id/restore', async (c) => {
+  const auth = c.req.header('Authorization')
+  const apiKey = c.env.ADMIN_API_KEY || c.env.ACTIVATION_SECRET
+  if (!auth || auth !== `Bearer ${apiKey}`) {
+    return c.json({ error: 'UNAUTHORIZED' }, 401)
+  }
+
+  const keyId = c.req.param('key_id').toUpperCase()
+  const keyRow = await c.env.DB.prepare(
+    'SELECT status, activation_count, max_activations FROM windows_keys WHERE key_id = ?'
+  ).bind(keyId).first<{ status: string; activation_count: number; max_activations: number }>()
+
+  if (!keyRow) return c.json({ error: 'KEY_NOT_FOUND' }, 404)
+  if (keyRow.status !== 'revoked') return c.json({ error: 'NOT_REVOKED' }, 400)
+
+  const newStatus = (keyRow.activation_count || 0) >= (keyRow.max_activations || DEFAULT_MAX_ACTIVATIONS) ? 'exhausted' : 'available'
+
+  await c.env.DB.prepare(
+    "UPDATE windows_keys SET status = ?, revoked_at = NULL WHERE key_id = ?"
+  ).bind(newStatus, keyId).run()
+
+  return c.json({ key_id: keyId, status: newStatus })
+})
+
+// ========== GET /api/admin/windows-devices (设备列表) ==========
+
+app.get('/api/admin/windows-devices', async (c) => {
+  const auth = c.req.header('Authorization')
+  const apiKey = c.env.ADMIN_API_KEY || c.env.ACTIVATION_SECRET
+  if (!auth || auth !== `Bearer ${apiKey}`) {
+    return c.json({ error: 'UNAUTHORIZED' }, 401)
+  }
+
+  const keyId = (c.req.query('key_id') || '').toUpperCase()
+  const search = c.req.query('search') || ''
+  const revoked = c.req.query('revoked')
+  const page = Math.max(parseInt(c.req.query('page') || '1', 10), 1)
+  const limit = Math.min(Math.max(parseInt(c.req.query('limit') || '20', 10), 1), 100)
+
+  let sql = 'SELECT * FROM windows_devices WHERE 1=1'
+  const params: (string | number)[] = []
+
+  if (keyId) {
+    sql += ' AND key_id = ?'
+    params.push(keyId)
+  }
+  if (revoked !== undefined && revoked !== '') {
+    sql += ' AND revoked = ?'
+    params.push(parseInt(revoked, 10))
+  }
+  if (search) {
+    sql += ' AND (device_id LIKE ? OR device_name LIKE ?)'
+    const pattern = `%${search}%`
+    params.push(pattern, pattern)
+  }
+
+  sql += ' ORDER BY activated_at DESC LIMIT ? OFFSET ?'
+  params.push(limit, (page - 1) * limit)
+
+  const rows = await c.env.DB.prepare(sql).bind(...params).all<Record<string, any>>()
+
+  let countSql = 'SELECT COUNT(*) as total FROM windows_devices WHERE 1=1'
+  const countParams: (string | number)[] = []
+  if (keyId) { countSql += ' AND key_id = ?'; countParams.push(keyId) }
+  if (revoked !== undefined && revoked !== '') { countSql += ' AND revoked = ?'; countParams.push(parseInt(revoked, 10)) }
+  if (search) { countSql += ' AND (device_id LIKE ? OR device_name LIKE ?)'; countParams.push(`%${search}%`, `%${search}%`) }
+
+  const countRow = await c.env.DB.prepare(countSql).bind(...countParams).first<{ total: number }>()
+  const total = countRow?.total || 0
+
+  return c.json({
+    devices: rows.results || [],
+    pagination: { page, limit, total, pages: Math.ceil(total / limit) }
+  })
+})
+
+// ========== POST /api/admin/windows-devices/:device_id/revoke (解绑设备) ==========
+
+app.post('/api/admin/windows-devices/:device_id/revoke', async (c) => {
+  const auth = c.req.header('Authorization')
+  const apiKey = c.env.ADMIN_API_KEY || c.env.ACTIVATION_SECRET
+  if (!auth || auth !== `Bearer ${apiKey}`) {
+    return c.json({ error: 'UNAUTHORIZED' }, 401)
+  }
+
+  const deviceId = c.req.param('device_id')
+  const device = await c.env.DB.prepare(
+    'SELECT device_id, key_id, revoked FROM windows_devices WHERE device_id = ?'
+  ).bind(deviceId).first<{ device_id: string; key_id: string; revoked: number }>()
+
+  if (!device) return c.json({ error: 'DEVICE_NOT_FOUND' }, 404)
+  if (device.revoked) return c.json({ error: 'ALREADY_REVOKED' }, 400)
+
+  await c.env.DB.prepare(
+    "UPDATE windows_devices SET revoked = 1, revoked_at = datetime('now') WHERE device_id = ?"
+  ).bind(deviceId).run()
+
+  const keyRow = await c.env.DB.prepare(
+    'SELECT activation_count, status FROM windows_keys WHERE key_id = ?'
+  ).bind(device.key_id).first<{ activation_count: number; status: string }>()
+
+  if (keyRow && keyRow.activation_count > 0) {
+    const newCount = keyRow.activation_count - 1
+    const newStatus = keyRow.status === 'exhausted' ? 'activated' : keyRow.status
+    await c.env.DB.prepare(
+      'UPDATE windows_keys SET activation_count = ?, status = ? WHERE key_id = ?'
+    ).bind(newCount, newStatus, device.key_id).run()
+  }
+
+  return c.json({ device_id: deviceId, revoked: true })
+})
+
+// ========== GET /api/admin/pool-stats ==========
+
+app.get('/api/admin/pool-stats', async (c) => {
+  const auth = c.req.header('Authorization')
+  const apiKey = c.env.ADMIN_API_KEY || c.env.ACTIVATION_SECRET
+  if (!auth || auth !== `Bearer ${apiKey}`) {
+    return c.json({ error: 'UNAUTHORIZED' }, 401)
+  }
+
+  const rows = await c.env.DB.prepare(
+    "SELECT status FROM windows_keys"
+  ).all<{ status: string }>()
+
+  const stats = { available: 0, activated: 0, exhausted: 0, revoked: 0, total: 0 }
+  for (const row of rows.results || []) {
+    const s = row.status === 'unused' ? 'available' : row.status === 'used' ? 'activated' : row.status
+    if (stats[s as keyof typeof stats] !== undefined) {
+      (stats as any)[s]++
+    }
+    stats.total++
+  }
+
+  return c.json(stats)
 })
 
 // ========== POST /api/admin/generate (管理后台生成激活码) ==========
