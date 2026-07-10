@@ -67,10 +67,11 @@
                 <div class="download-card">
                     <div>
                         <div class="platform">Windows</div>
-                        <div class="meta">Windows 10 / 11 · 64 位（便携 ZIP，解压即用）</div>
+                        <div class="meta">Windows 10 / 11 · 64 位</div>
                     </div>
                     <div class="actions">
                         <a id="dl-windows" href="#" class="btn btn-primary">下载 Windows ZIP</a>
+                        <a id="dl-windows-msi" href="#" class="btn btn-outline">下载 Windows MSI 安装包</a>
                     </div>
                 </div>
             </div>
@@ -107,6 +108,8 @@ fetch('/api/version.json?v=0.3.0')
             document.getElementById('dl-linux-amd64').href = data.downloads.linux_amd64;
         if (data.downloads.windows_amd64)
             document.getElementById('dl-windows').href = data.downloads.windows_amd64;
+        if (data.downloads.windows_amd64_msi)
+            document.getElementById('dl-windows-msi').href = data.downloads.windows_amd64_msi;
     })
     .catch(() => {
         document.getElementById('ver').textContent = '加载失败';

@@ -1,9 +1,10 @@
 {
-  "latest_version": "1.0.4",
-  "changelog": "v1.0.4: 授权控制方案完善、Windows安装包支持安装完成后启动选项、服务端支持激活次数限制",
+  "latest_version": "1.0.5",
+  "changelog": "v1.0.5: 优化授权与更新链接、增强 Windows 版代码混淆保护",
   "downloads": {
-    "linux_arm64": "https://z-pulse.cn/downloads/xlsOne-1.0.4-linux-arm64.deb",
-    "linux_amd64": "https://z-pulse.cn/downloads/xlsOne-1.0.4-linux-amd64.deb",
-    "windows_amd64": "https://z-pulse.cn/downloads/xlsone-1.0.4-windows-amd64.zip"
+    "linux_arm64": "https://z-pulse.cn/downloads/xlsOne-1.0.5-linux-arm64.deb",
+    "linux_amd64": "https://z-pulse.cn/downloads/xlsOne-1.0.5-linux-amd64.deb",
+    "windows_amd64": "https://z-pulse.cn/downloads/xlsone-1.0.5-windows-amd64.zip",
+    "windows_amd64_msi": "https://z-pulse.cn/downloads/xlsone-1.0.5-windows-amd64.msi"
   }
 }
