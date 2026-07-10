@@ -6,6 +6,7 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QPixmap>
+#include <QDateTime>
 
 namespace {
 
@@ -46,29 +47,6 @@ void WorkspaceChrome::buildUi()
 
     const auto& t = xlsone::ui::theme();
 
-    // Brand
-    auto* brandWidget = new QWidget(this);
-    auto* brandLayout = new QHBoxLayout(brandWidget);
-    brandLayout->setContentsMargins(0, 0, 0, 0);
-    brandLayout->setSpacing(6);
-
-    auto* brandIcon = new QLabel(brandWidget);
-    brandIcon->setFixedSize(22, 22);
-    brandIcon->setAlignment(Qt::AlignCenter);
-    brandIcon->setPixmap(QPixmap(QStringLiteral(":/resources/xlsOne.png"))
-                             .scaled(22, 22, Qt::KeepAspectRatio, Qt::SmoothTransformation));
-    brandLayout->addWidget(brandIcon);
-
-    auto* brandLabel = new QLabel(tr("表表归一"), brandWidget);
-    QFont brandFont = font();
-    brandFont.setPointSize(13);
-    brandFont.setWeight(QFont::Medium);
-    brandLabel->setFont(brandFont);
-    brandLabel->setStyleSheet(QStringLiteral("color: %1").arg(t.text.name()));
-    brandLayout->addWidget(brandLabel);
-
-    root->addWidget(brandWidget);
-
     // Utility button group
     buttonGroup_ = new QWidget(this);
     buttonGroup_->setObjectName(QStringLiteral("workspaceButtonGroup"));
@@ -86,22 +64,12 @@ void WorkspaceChrome::buildUi()
     root->addWidget(buttonGroup_);
     root->addStretch(1);
 
-    // License status badge
-    auto* badgeWidget = new QWidget(this);
-    auto* badgeLayout = new QHBoxLayout(badgeWidget);
-    badgeLayout->setContentsMargins(0, 0, 0, 0);
-    badgeLayout->setSpacing(6);
-
-    licenseDot_ = new QWidget(badgeWidget);
-    licenseDot_->setFixedSize(6, 6);
-    licenseDot_->setStyleSheet(QStringLiteral("background: transparent; border-radius: 3px;"));
-
-    licenseBadge_ = new QLabel(badgeWidget);
-    licenseBadge_->setStyleSheet(QStringLiteral("color: %1; font-size: 11px;").arg(t.textMuted.name()));
-
-    badgeLayout->addWidget(licenseDot_);
-    badgeLayout->addWidget(licenseBadge_);
-    root->addWidget(badgeWidget);
+    // License status button
+    licenseButton_ = new QPushButton(this);
+    licenseButton_->setCursor(Qt::PointingHandCursor);
+    licenseButton_->setObjectName(QStringLiteral("workspaceLicenseButton"));
+    licenseButton_->setToolTip(tr("查看许可证"));
+    root->addWidget(licenseButton_);
 
     // Export button
     exportButton_ = new QPushButton(tr("导出 XLSX"), this);
@@ -117,12 +85,15 @@ void WorkspaceChrome::buildUi()
     connect(reloadButton_, &QPushButton::clicked, this, &WorkspaceChrome::reloadRequested);
     connect(clearButton_, &QPushButton::clicked, this, &WorkspaceChrome::clearRequested);
     connect(exportButton_, &QPushButton::clicked, this, &WorkspaceChrome::exportRequested);
+    connect(licenseButton_, &QPushButton::clicked, this, &WorkspaceChrome::licenseRequested);
 
     setStyleSheet(QStringLiteral(
         "QWidget#workspaceChrome { background: %1; border-bottom: 1px solid %2; }"
         "QWidget#workspaceButtonGroup { background: %3; border: 1px solid %2; border-radius: 12px; }"
         "QPushButton#workspaceUtilityButton { border: none; border-radius: 8px; padding: 7px 10px; font-weight: 500; color: %4; }"
         "QPushButton#workspaceUtilityButton:hover { background: %5; }"
+        "QPushButton#workspaceLicenseButton { background: transparent; border: 1px solid %2; border-radius: 999px; padding: 5px 10px; font-size: 11px; font-weight: 600; }"
+        "QPushButton#workspaceLicenseButton:hover { background: %5; }"
         "QPushButton#workspacePrimaryButton { background: %6; color: white; border: 1px solid %7; border-radius: 8px; padding: 8px 14px; font-weight: 600; }"
         "QPushButton#workspacePrimaryButton:hover { background: %8; }"
         "QPushButton#workspacePrimaryButton:disabled { background: %9; color: %10; border-color: %2; }"
@@ -153,37 +124,64 @@ void WorkspaceChrome::updateLicenseStatus()
 {
     const auto& t = xlsone::ui::theme();
     if (licenseManager_ == nullptr) {
-        licenseBadge_->setText(QString());
-        licenseDot_->setStyleSheet(QStringLiteral("background: transparent; border-radius: 3px;"));
+        licenseButton_->setText(QString());
+        licenseButton_->setStyleSheet(QStringLiteral("color: %1;").arg(t.textMuted.name()));
         return;
     }
 
-    QColor dotColor;
+    QColor stateColor;
     QString text;
     switch (licenseManager_->state()) {
-    case xlsone::LicenseState::Activated:
-        dotColor = t.success;
-        text = tr("已激活");
+    case xlsone::LicenseState::Activated: {
+        stateColor = t.success;
+        const auto info = licenseManager_->currentInfo();
+        const int graceDays = licenseManager_->graceRemainingDays();
+        if (graceDays > 0) {
+            stateColor = t.warning;
+            text = tr("宽限期 · 剩余 %1 天").arg(graceDays);
+        } else if (info.plan == xlsone::LicensePlan::PersonalYearly && info.expiresAt.isValid()) {
+            const int remainingDays = QDateTime::currentDateTime().daysTo(info.expiresAt);
+            if (remainingDays > 0) {
+                text = tr("已激活 · 剩余 %1 天").arg(remainingDays);
+            } else {
+                text = tr("已激活");
+            }
+        } else {
+            text = tr("已激活");
+        }
         break;
+    }
     case xlsone::LicenseState::Trial: {
-        dotColor = t.info;
+        stateColor = t.info;
         const int remaining = licenseManager_->checkTrial();
-        text = remaining > 0 ? tr("试用 %1 天").arg(remaining) : tr("试用中");
+        const int graceDays = licenseManager_->graceRemainingDays();
+        if (remaining > 0) {
+            text = tr("试用期 · 剩余 %1 天").arg(remaining);
+        } else if (graceDays > 0) {
+            stateColor = t.warning;
+            text = tr("试用宽限 · 剩余 %1 天").arg(graceDays);
+        } else {
+            text = tr("试用期");
+        }
         break;
     }
     case xlsone::LicenseState::Expired:
-        dotColor = t.error;
+        stateColor = t.error;
         text = tr("已过期");
         break;
     case xlsone::LicenseState::Unactivated:
     default:
-        dotColor = t.error;
-        text = tr("未激活");
+        stateColor = t.warning;
+        text = tr("开始试用");
         break;
     }
 
-    licenseBadge_->setText(text);
-    licenseDot_->setStyleSheet(QStringLiteral(
-        "background: %1; border-radius: 3px;"
-    ).arg(dotColor.name()));
+    licenseButton_->setText(text);
+    licenseButton_->setStyleSheet(QStringLiteral(
+        "QPushButton#workspaceLicenseButton { color: %1; background: transparent; border: 1px solid %2; border-radius: 999px; padding: 5px 10px; font-size: 11px; font-weight: 600; }"
+        "QPushButton#workspaceLicenseButton:hover { background: %3; }"
+    )
+        .arg(stateColor.name())
+        .arg(stateColor.name())
+        .arg(t.isDark ? QStringLiteral("rgba(255,255,255,0.06)") : QStringLiteral("rgba(0,0,0,0.06)")));
 }

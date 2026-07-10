@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>表表归一 · 授权码生成器</title>
+<style>
+  :root {
+    --bg:#0f1115; --card:#1a1d24; --card2:#161820; --fg:#e6e8ec; --muted:#9aa0ab;
+    --brand:#4f8cff; --brand-dim:#2a5bb8; --ok:#36c275; --err:#ff6b6b; --warn:#f0a040;
+    --border:#2a2e37; --input:#12141a; --radius:10px;
+  }
+  * { box-sizing:border-box; }
+  body {
+    margin:0; font-family:-apple-system,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    background:var(--bg); color:var(--fg); line-height:1.6; padding:0;
+  }
+  .wrap { max-width:860px; margin:0 auto; padding:32px 24px 80px; }
+
+  /* Header */
+  .header { display:flex; align-items:center; gap:12px; margin-bottom:32px; }
+  .logo { width:36px; height:36px; border-radius:9px; background:var(--brand); display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:700; color:#fff; }
+  .header h1 { font-size:20px; margin:0; font-weight:600; }
+  .header .tag { font-size:12px; color:var(--muted); background:var(--card2); padding:2px 8px; border-radius:5px; border:1px solid var(--border); }
+  .header .spacer { flex:1; }
+  .conn-status { font-size:12px; color:var(--muted); display:flex; align-items:center; gap:6px; }
+  .conn-dot { width:8px; height:8px; border-radius:50%; background:var(--muted); }
+  .conn-dot.ok { background:var(--ok); } .conn-dot.err { background:var(--err); }
+
+  /* Cards */
+  .card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:24px; margin-bottom:20px; }
+  .card-title { font-size:14px; font-weight:600; color:var(--fg); margin:0 0 16px; display:flex; align-items:center; gap:8px; }
+  .card-title .icon { font-size:16px; opacity:0.7; }
+
+  /* Form */
+  .form-row { display:flex; gap:16px; flex-wrap:wrap; }
+  .form-group { flex:1; min-width:180px; }
+  .form-group label { display:block; font-size:12px; color:var(--muted); margin:0 0 6px; }
+  input, select {
+    width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border);
+    background:var(--input); color:var(--fg); font-size:14px; outline:none; transition:border-color .15s;
+  }
+  input:focus, select:focus { border-color:var(--brand); }
+  input::placeholder { color:#5a6070; }
+  select { cursor:pointer; appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%239aa0ab'%3E%3Cpath d='M6 8L2 4h8z'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 10px center; padding-right:30px; }
+
+  /* Platform toggle */
+  .platform-toggle { display:flex; gap:0; border:1px solid var(--border); border-radius:8px; overflow:hidden; }
+  .platform-toggle button {
+    flex:1; padding:10px 16px; border:none; background:var(--input); color:var(--muted);
+    font-size:13px; cursor:pointer; transition:all .15s; border-right:1px solid var(--border);
+  }
+  .platform-toggle button:last-child { border-right:none; }
+  .platform-toggle button.active { background:var(--brand-dim); color:#fff; }
+
+  /* Buttons */
+  .btn {
+    padding:10px 20px; border:none; border-radius:8px; font-size:14px; font-weight:500;
+    cursor:pointer; transition:all .15s; display:inline-flex; align-items:center; gap:6px;
+  }
+  .btn-primary { background:var(--brand); color:#fff; }
+  .btn-primary:hover { background:#3a7aee; }
+  .btn-primary:disabled { opacity:0.4; cursor:default; }
+  .btn-ghost { background:var(--card2); color:var(--muted); border:1px solid var(--border); }
+  .btn-ghost:hover { color:var(--fg); border-color:#3a3e47; }
+  .btn-sm { padding:6px 12px; font-size:12px; }
+  .btn-ok { background:var(--ok); color:#fff; }
+
+  /* Result area */
+  .result-empty { text-align:center; padding:40px 0; color:var(--muted); font-size:14px; }
+  .code-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:12px; }
+  .code-card {
+    background:var(--card2); border:1px solid var(--border); border-radius:8px; padding:16px;
+    position:relative; transition:border-color .15s;
+  }
+  .code-card:hover { border-color:var(--brand-dim); }
+  .code-card .platform-badge {
+    position:absolute; top:10px; right:10px; font-size:10px; padding:2px 7px; border-radius:4px;
+    font-weight:500; text-transform:uppercase;
+  }
+  .platform-badge.win { background:#1a3a5c; color:#5b9cf5; }
+  .platform-badge.mac { background:#2a1a3c; color:#b388e0; }
+  .code-card .code-text {
+    font-family:"SF Mono","Consolas","Monaco",monospace; font-size:18px; font-weight:600;
+    color:var(--fg); letter-spacing:1px; margin:8px 0 12px; user-select:all;
+  }
+  .code-card .meta { font-size:11px; color:var(--muted); display:flex; gap:12px; flex-wrap:wrap; }
+  .code-card .actions { display:flex; gap:6px; margin-top:10px; }
+
+  /* Toast */
+  .toast {
+    position:fixed; bottom:32px; left:50%; transform:translateX(-50%) translateY(60px);
+    background:var(--card); border:1px solid var(--border); border-radius:8px; padding:10px 20px;
+    font-size:13px; color:var(--fg); box-shadow:0 8px 24px rgba(0,0,0,.4);
+    transition:transform .25s ease; z-index:999; pointer-events:none;
+  }
+  .toast.show { transform:translateX(-50%) translateY(0); }
+  .toast.ok { border-color:var(--ok); } .toast.err { border-color:var(--err); }
+
+  /* History */
+  .history-item {
+    display:flex; align-items:center; gap:10px; padding:8px 0;
+    border-bottom:1px solid var(--border); font-size:13px;
+  }
+  .history-item:last-child { border-bottom:none; }
+  .history-item .h-code { font-family:monospace; font-weight:600; color:var(--fg); }
+  .history-item .h-meta { color:var(--muted); font-size:11px; flex:1; }
+  .history-item .h-copy { cursor:pointer; color:var(--brand); font-size:12px; }
+
+  /* Settings */
+  .settings-row { display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; }
+  .settings-row .form-group { flex:1; min-width:200px; }
+
+  /* Spinner */
+  .spinner { width:14px; height:14px; border:2px solid rgba(255,255,255,.2); border-top-color:#fff; border-radius:50%; animation:spin .6s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+
+  /* Responsive */
+  @media (max-width:640px) {
+    .wrap { padding:20px 16px 60px; }
+    .form-row { flex-direction:column; }
+    .form-group { min-width:100%; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="logo">表</div>
+    <h1>授权码生成器</h1>
+    <span class="tag">v1.0</span>
+    <div class="spacer"></div>
+    <div class="conn-status" id="connStatus">
+      <span class="conn-dot" id="connDot"></span>
+      <span id="connText">未连接</span>
+    </div>
+  </div>
+
+  <!-- Settings -->
+  <div class="card">
+    <div class="card-title"><span class="icon">⚙</span> 服务器配置</div>
+    <div class="settings-row">
+      <div class="form-group">
+        <label>API 地址</label>
+        <select id="apiUrl">
+          <option value="https://api.z-pulse.cn">国内 (api.z-pulse.cn)</option>
+          <option value="https://api.xlsone.com">国际 (api.xlsone.com)</option>
+          <option value="custom">自定义...</option>
+        </select>
+      </div>
+      <div class="form-group" id="customUrlGroup" style="display:none;">
+        <label>自定义地址</label>
+        <input type="text" id="customUrl" placeholder="https://your-server.com" />
+      </div>
+      <div class="form-group" style="flex:2;">
+        <label>Admin API Key</label>
+        <input type="password" id="apiKey" placeholder="Bearer Token" />
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="testConnection()">测试连接</button>
+    </div>
+  </div>
+
+  <!-- Generate -->
+  <div class="card">
+    <div class="card-title"><span class="icon">🎁</span> 生成授权码</div>
+
+    <div class="form-group" style="margin-bottom:16px;">
+      <label>平台</label>
+      <div class="platform-toggle">
+        <button class="active" data-platform="windows" onclick="setPlatform('windows')">Windows (Ed25519)</button>
+        <button data-platform="macos" onclick="setPlatform('macos')">macOS (HMAC/JWT)</button>
+      </div>
+    </div>
+
+    <div class="form-row" style="margin-bottom:16px;">
+      <div class="form-group">
+        <label>数量</label>
+        <input type="number" id="count" value="1" min="1" max="100" style="width:80px;" />
+      </div>
+      <div class="form-group">
+        <label>套餐</label>
+        <select id="plan">
+          <option value="personal_lifetime">个人终身版</option>
+          <option value="personal_yearly">个人年度版</option>
+          <option value="team_lifetime">团队终身版</option>
+          <option value="trial">试用版</option>
+        </select>
+      </div>
+      <div class="form-group" id="maxDevicesGroup">
+        <label>最大设备数 (macOS)</label>
+        <input type="number" id="maxDevices" value="1" min="1" max="10" style="width:80px;" />
+      </div>
+      <div class="form-group" id="expiryGroup">
+        <label>过期时间 (可选)</label>
+        <input type="date" id="expiry" style="width:150px;" />
+      </div>
+    </div>
+
+    <div style="display:flex; gap:10px; align-items:center;">
+      <button class="btn btn-primary" id="genBtn" onclick="generate()">
+        <span id="genBtnText">生成授权码</span>
+      </button>
+      <span style="font-size:12px; color:var(--muted);" id="genHint"></span>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div class="card" id="resultCard" style="display:none;">
+    <div class="card-title">
+      <span class="icon">✨</span> 生成结果
+      <span id="resultCount" style="font-size:12px; color:var(--muted); font-weight:400;"></span>
+      <div class="spacer" style="flex:1;"></div>
+      <button class="btn btn-ghost btn-sm" onclick="copyAll()">全部复制</button>
+      <button class="btn btn-ghost btn-sm" onclick="exportTxt()">导出 TXT</button>
+    </div>
+    <div class="code-grid" id="codeGrid"></div>
+  </div>
+
+  <!-- History -->
+  <div class="card" id="historyCard" style="display:none;">
+    <div class="card-title">
+      <span class="icon">📋</span> 生成历史
+      <span id="historyCount" style="font-size:12px; color:var(--muted); font-weight:400;"></span>
+      <div class="spacer" style="flex:1;"></div>
+      <button class="btn btn-ghost btn-sm" onclick="clearHistory()">清空</button>
+    </div>
+    <div id="historyList"></div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ========== State ==========
+let currentPlatform = 'windows';
+let lastGenerated = [];
+
+// ========== Persistence ==========
+function save(k, v) { try { localStorage.setItem('xlsone_admin_' + k, v); } catch(e){} }
+function load(k, d) { try { return localStorage.getItem('xlsone_admin_' + k) || d; } catch(e){ return d; } }
+
+// Restore settings
+(function init() {
+  const url = load('apiUrl', '');
+  if (url) { document.getElementById('apiUrl').value = url; if (url === 'custom') document.getElementById('customUrlGroup').style.display='block'; }
+  const customUrl = load('customUrl', '');
+  if (customUrl) document.getElementById('customUrl').value = customUrl;
+  const key = load('apiKey', '');
+  if (key) document.getElementById('apiKey').value = key;
+  renderHistory();
+})();
+
+// ========== API URL ==========
+document.getElementById('apiUrl').addEventListener('change', function() {
+  save('apiUrl', this.value);
+  document.getElementById('customUrlGroup').style.display = this.value === 'custom' ? 'block' : 'none';
+});
+document.getElementById('customUrl').addEventListener('input', function() { save('customUrl', this.value); });
+document.getElementById('apiKey').addEventListener('input', function() { save('apiKey', this.value); });
+
+function getApiBase() {
+  const sel = document.getElementById('apiUrl').value;
+  if (sel === 'custom') return document.getElementById('customUrl').value.replace(/\/+$/, '');
+  return sel;
+}
+function getApiKey() { return document.getElementById('apiKey').value.trim(); }
+
+// ========== Platform ==========
+function setPlatform(p) {
+  currentPlatform = p;
+  document.querySelectorAll('.platform-toggle button').forEach(b => {
+    b.classList.toggle('active', b.dataset.platform === p);
+  });
+  // macOS-only fields
+  document.getElementById('maxDevicesGroup').style.display = p === 'macos' ? 'block' : 'none';
+  // Expiry available for both, but more relevant for yearly/trial
+}
+
+// ========== Toast ==========
+function toast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (type ? ' ' + type : '');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => { t.className = 'toast'; }, 2200);
+}
+
+// ========== Connection test ==========
+async function testConnection() {
+  const base = getApiBase();
+  const key = getApiKey();
+  if (!base) { toast('请填写 API 地址', 'err'); return; }
+  if (!key) { toast('请填写 Admin API Key', 'err'); return; }
+
+  const dot = document.getElementById('connDot');
+  const text = document.getElementById('connText');
+  dot.className = 'conn-dot';
+  text.textContent = '连接中...';
+
+  try {
+    const resp = await fetch(base + '/api/health', { method: 'GET' });
+    if (resp.ok) {
+      const data = await resp.json();
+      dot.className = 'conn-dot ok';
+      text.textContent = '服务器在线';
+      toast('连接成功', 'ok');
+    } else {
+      dot.className = 'conn-dot err';
+      text.textContent = 'HTTP ' + resp.status;
+      toast('服务器返回 ' + resp.status, 'err');
+    }
+  } catch (e) {
+    dot.className = 'conn-dot err';
+    text.textContent = '连接失败';
+    toast('连接失败: ' + e.message, 'err');
+  }
+}
+
+// ========== Generate ==========
+async function generate() {
+  const base = getApiBase();
+  const key = getApiKey();
+  if (!base) { toast('请填写 API 地址', 'err'); return; }
+  if (!key) { toast('请填写 Admin API Key', 'err'); return; }
+
+  const count = Math.min(Math.max(parseInt(document.getElementById('count').value) || 1, 1), 100);
+  const plan = document.getElementById('plan').value;
+  const maxDevices = parseInt(document.getElementById('maxDevices').value) || 1;
+  const expiryRaw = document.getElementById('expiry').value;
+  const expiry = expiryRaw ? new Date(expiryRaw).toISOString() : null;
+
+  const btn = document.getElementById('genBtn');
+  const btnText = document.getElementById('genBtnText');
+  btn.disabled = true;
+  btnText.innerHTML = '<span class="spinner"></span>';
+  document.getElementById('genHint').textContent = '';
+
+  const endpoint = currentPlatform === 'windows'
+    ? '/api/admin/generate-windows-keys'
+    : '/api/admin/generate';
+
+  const body = currentPlatform === 'windows'
+    ? { count, plan }
+    : { count, plan, max_devices: maxDevices, expires_at: expiry };
+
+  try {
+    const resp = await fetch(base + endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + key,
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (resp.status === 401) {
+      toast('API Key 无效 (401)', 'err');
+      btn.disabled = false; btnText.textContent = '生成授权码';
+      return;
+    }
+    if (!resp.ok) {
+      const errData = await resp.json().catch(() => ({}));
+      toast('失败: ' + (errData.error || errData.message || resp.status), 'err');
+      btn.disabled = false; btnText.textContent = '生成授权码';
+      return;
+    }
+
+    const data = await resp.json();
+    const keys = data.keys || [];
+    lastGenerated = keys.map(k => ({ code: k, platform: currentPlatform, plan, timestamp: Date.now() }));
+
+    renderResults();
+    addToHistory(lastGenerated);
+    toast('成功生成 ' + keys.length + ' 个授权码', 'ok');
+
+  } catch (e) {
+    toast('请求失败: ' + e.message, 'err');
+  } finally {
+    btn.disabled = false;
+    btnText.textContent = '生成授权码';
+  }
+}
+
+// ========== Render results ==========
+function renderResults() {
+  if (!lastGenerated.length) {
+    document.getElementById('resultCard').style.display = 'none';
+    return;
+  }
+
+  const card = document.getElementById('resultCard');
+  const grid = document.getElementById('codeGrid');
+  card.style.display = 'block';
+  document.getElementById('resultCount').textContent = lastGenerated.length + ' 个';
+
+  grid.innerHTML = lastGenerated.map((item, i) => {
+    const isWin = item.platform === 'windows';
+    const badge = isWin ? '<span class="platform-badge win">Win</span>' : '<span class="platform-badge mac">Mac</span>';
+    const planText = formatPlan(item.plan);
+    const time = new Date(item.timestamp).toLocaleString('zh-CN', { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
+    return `
+      <div class="code-card">
+        ${badge}
+        <div class="code-text">${item.code}</div>
+        <div class="meta">
+          <span>${planText}</span>
+          <span>${time}</span>
+        </div>
+        <div class="actions">
+          <button class="btn btn-ghost btn-sm" onclick="copyCode('${item.code}')">复制</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function formatPlan(p) {
+  const map = {
+    'personal_lifetime': '个人终身版',
+    'personal_yearly': '个人年度版',
+    'team_lifetime': '团队终身版',
+    'trial': '试用版',
+  };
+  return map[p] || p;
+}
+
+// ========== Copy ==========
+function copyCode(code) {
+  navigator.clipboard.writeText(code).then(() => {
+    toast('已复制: ' + code, 'ok');
+  }).catch(() => {
+    // Fallback
+    const ta = document.createElement('textarea');
+    ta.value = code; document.body.appendChild(ta);
+    ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+    toast('已复制: ' + code, 'ok');
+  });
+}
+
+function copyAll() {
+  if (!lastGenerated.length) return;
+  const text = lastGenerated.map(i => i.code).join('\n');
+  navigator.clipboard.writeText(text).then(() => {
+    toast('已复制全部 ' + lastGenerated.length + ' 个授权码', 'ok');
+  }).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta);
+    ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+    toast('已复制全部 ' + lastGenerated.length + ' 个授权码', 'ok');
+  });
+}
+
+// ========== Export ==========
+function exportTxt() {
+  if (!lastGenerated.length) return;
+  const lines = [
+    '# 表表归一 授权码',
+    '# 生成时间: ' + new Date().toLocaleString('zh-CN'),
+    '# 平台: ' + (currentPlatform === 'windows' ? 'Windows (Ed25519)' : 'macOS (HMAC/JWT)'),
+    '# 套餐: ' + formatPlan(document.getElementById('plan').value),
+    '# 数量: ' + lastGenerated.length,
+    '',
+  ];
+  lastGenerated.forEach((item, i) => {
+    lines.push(`${i + 1}. ${item.code}`);
+  });
+  lines.push('', '# 激活方式:', '# Windows: 打开软件 → 激活 → 输入授权码', '# macOS: 打开软件 → 激活 → 输入授权码');
+
+  const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `xlsone-codes-${new Date().toISOString().slice(0,10)}.txt`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast('已导出 TXT 文件', 'ok');
+}
+
+// ========== History ==========
+function addToHistory(items) {
+  let history = JSON.parse(load('history', '[]'));
+  history = items.concat(history).slice(0, 200); // Keep last 200
+  save('history', JSON.stringify(history));
+  renderHistory();
+}
+
+function renderHistory() {
+  const history = JSON.parse(load('history', '[]'));
+  const card = document.getElementById('historyCard');
+  if (!history.length) { card.style.display = 'none'; return; }
+
+  card.style.display = 'block';
+  document.getElementById('historyCount').textContent = history.length + ' 条';
+  const list = document.getElementById('historyList');
+  list.innerHTML = history.slice(0, 50).map(item => {
+    const badge = item.platform === 'windows' ? 'Win' : 'Mac';
+    const plan = formatPlan(item.plan);
+    const time = new Date(item.timestamp).toLocaleString('zh-CN', { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
+    return `
+      <div class="history-item">
+        <span class="platform-badge ${item.platform === 'windows' ? 'win' : 'mac'}" style="position:static;">${badge}</span>
+        <span class="h-code">${item.code}</span>
+        <span class="h-meta">${plan} · ${time}</span>
+        <span class="h-copy" onclick="copyCode('${item.code}')">复制</span>
+      </div>`;
+  }).join('');
+}
+
+function clearHistory() {
+  if (!confirm('确定清空全部生成历史吗？')) return;
+  save('history', '[]');
+  renderHistory();
+  toast('历史已清空', 'ok');
+}
+</script>
+</body>
+</html>

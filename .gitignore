@@ -45,3 +45,7 @@ package-lock.json
 # Local secrets (Wrangler local dev) — never commit
 .dev.vars
 *.dev.vars
+.secrets/
+activation/worker/.secrets/
+.wrangler/
+activation/worker/.wrangler/

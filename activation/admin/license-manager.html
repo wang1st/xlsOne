@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>表表归一 · 授权码管理</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;background:#f8fafc;color:#1e293b;font-size:15px;line-height:1.5;min-height:100vh}
+
+/* Header */
+.header{background:#fff;padding:14px 18px;position:sticky;top:0;z-index:100;box-shadow:0 1px 8px rgba(0,0,0,.08);border-bottom:1px solid #e2e8f0}
+.header-title{font-size:17px;font-weight:700;display:flex;align-items:center;gap:10px;color:#0f172a}
+.header-title .logo{width:34px;height:34px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.header-title .logo svg{width:34px;height:34px}
+.header-sub{font-size:12px;color:#64748b;margin-top:2px}
+
+/* Bottom Nav */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #e2e8f0;display:flex;justify-content:space-around;padding:6px 0;z-index:100}
+.nav-btn{flex:1;background:none;border:none;color:#94a3b8;font-size:11px;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:4px 0;transition:.2s}
+.nav-btn .icon{font-size:20px}
+.nav-btn.active{color:#0ea5e9}
+
+/* Content */
+.content{padding:16px;padding-bottom:80px;max-width:600px;margin:0 auto}
+
+/* Cards */
+.card{background:#fff;border-radius:14px;padding:16px;margin-bottom:12px;border:1px solid #e2e8f0;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.card-title{font-size:16px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px;color:#0f172a}
+
+/* Stats */
+.stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+.stat-item{background:#fff;border-radius:12px;padding:14px 8px;text-align:center;border:1px solid #e2e8f0;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.stat-value{font-size:22px;font-weight:700;color:#0ea5e9}
+.stat-value.ok{color:#10b981}
+.stat-value.warn{color:#f59e0b}
+.stat-value.err{color:#ef4444}
+.stat-label{font-size:11px;color:#64748b;margin-top:4px}
+
+/* Forms */
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-size:13px;font-weight:600;color:#475569;margin-bottom:6px}
+input,select{width:100%;padding:12px 14px;border-radius:10px;border:1px solid #cbd5e1;background:#fff;color:#1e293b;font-size:15px;outline:none;-webkit-appearance:none}
+input:focus,select:focus{border-color:#0ea5e9;box-shadow:0 0 0 3px rgba(14,165,233,.15)}
+select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2364748b'%3E%3Cpath d='M6 8L2 4h8z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:36px}
+
+/* Buttons */
+.btn{width:100%;padding:14px;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;transition:.2s;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-primary{background:#0ea5e9;color:#fff}
+.btn-primary:active{background:#0284c7}
+.btn-ghost{background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0}
+.btn-sm{padding:8px 12px;font-size:13px;width:auto}
+.btn-ok{background:#10b981;color:#fff}
+.btn-err{background:#ef4444;color:#fff}
+
+/* Code cards */
+.code-card{background:#f8fafc;border-radius:10px;padding:14px;margin-bottom:10px;border:1px solid #e2e8f0;position:relative}
+.code-text{font-family:"SF Mono",Monaco,monospace;font-size:18px;font-weight:600;color:#0f172a;letter-spacing:1px}
+.code-meta{font-size:12px;color:#64748b;margin-top:6px}
+.copy-btn{position:absolute;top:14px;right:14px;background:#e2e8f0;color:#475569;border:none;border-radius:6px;padding:6px 10px;font-size:12px;cursor:pointer;font-weight:600}
+.copy-btn:active{background:#cbd5e1}
+
+/* List items */
+.list-item{background:#fff;border-radius:12px;padding:14px;margin-bottom:8px;border:1px solid #e2e8f0;box-shadow:0 1px 3px rgba(0,0,0,.04);display:flex;align-items:center;gap:12px}
+.list-item-main{flex:1;min-width:0}
+.list-item-title{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#0f172a}
+.list-item-sub{font-size:12px;color:#64748b;margin-top:2px}
+.status-badge{display:inline-block;padding:3px 10px;border-radius:6px;font-size:11px;font-weight:600}
+.status-available{background:#d1fae5;color:#065f46}
+.status-activated{background:#dbeafe;color:#1e40af}
+.status-exhausted{background:#fef3c7;color:#92400e}
+.status-revoked{background:#fee2e2;color:#991b1b}
+
+/* Detail view */
+.detail-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #e2e8f0;font-size:14px}
+.detail-row:last-child{border-bottom:none}
+.detail-label{color:#64748b}
+.detail-value{font-weight:600;color:#0f172a}
+
+/* Search */
+.search-box{position:relative;margin-bottom:12px}
+.search-box input{padding-left:40px}
+.search-box::before{content:"🔍";position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:14px;opacity:.5}
+
+/* Filter chips */
+.filter-chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:8px;margin-bottom:12px;-webkit-overflow-scrolling:touch}
+.filter-chips::-webkit-scrollbar{display:none}
+.chip{background:#f1f5f9;border:1px solid #e2e8f0;border-radius:20px;padding:6px 14px;font-size:13px;color:#64748b;white-space:nowrap;cursor:pointer}
+.chip.active{background:#0ea5e9;color:#fff;border-color:#0ea5e9}
+
+/* Pagination */
+.pagination{display:flex;gap:8px;justify-content:center;margin-top:16px}
+.page-btn{padding:8px 14px;border-radius:8px;border:1px solid #e2e8f0;background:#fff;color:#64748b;font-size:13px;cursor:pointer}
+.page-btn.active{background:#0ea5e9;color:#fff;border-color:#0ea5e9}
+.page-btn:disabled{opacity:.4}
+
+/* Toast */
+.toast{position:fixed;top:60px;left:50%;transform:translateX(-50%) translateY(-100px);background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:12px 20px;font-size:14px;font-weight:600;box-shadow:0 10px 40px rgba(0,0,0,.15);transition:transform .3s;z-index:200;pointer-events:none;opacity:0;color:#0f172a}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+.toast.ok{border-color:#10b981;color:#065f46}
+.toast.err{border-color:#ef4444;color:#991b1b}
+
+/* Modal */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:150;display:none;align-items:flex-end}
+.modal.show{display:flex}
+.modal-content{background:#fff;border-radius:16px 16px 0 0;padding:20px;max-height:85vh;overflow-y:auto;width:100%;animation:slideUp .3s}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.modal-header h3{font-size:18px;color:#0f172a}
+.modal-close{background:none;border:none;color:#94a3b8;font-size:24px;cursor:pointer}
+
+/* Empty state */
+.empty{text-align:center;padding:40px 20px;color:#94a3b8}
+.empty-icon{font-size:48px;margin-bottom:12px;opacity:.5}
+
+/* Loading */
+.spinner{width:20px;height:20px;border:2px solid rgba(14,165,233,.15);border-top-color:#0ea5e9;border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Section toggle */
+.section{margin-bottom:16px}
+.section-header{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #e2e8f0;margin-bottom:12px}
+.section-title{font-size:13px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px}
+
+/* Quick action grid */
+.quick-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.quick-item{background:#fff;border-radius:12px;padding:16px;text-align:center;border:1px solid #e2e8f0;cursor:pointer;transition:.2s}
+.quick-item:active{background:#f1f5f9}
+.quick-item .icon{font-size:28px;margin-bottom:6px}
+.quick-item .label{font-size:13px;font-weight:600;color:#0f172a}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-title">
+    <div class="logo">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="34" height="34" role="img" aria-label="表表归一">
+        <rect x="10" y="10" width="100" height="100" rx="24" fill="#3f3f46"/>
+        <rect x="22" y="22" width="76" height="14" rx="4" fill="#374151"/>
+        <g stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.9">
+          <line x1="22" y1="44" x2="98" y2="44"/>
+          <line x1="22" y1="60" x2="98" y2="60"/>
+          <line x1="22" y1="76" x2="98" y2="76"/>
+          <line x1="22" y1="92" x2="98" y2="92"/>
+          <line x1="22" y1="44" x2="22" y2="92"/>
+          <line x1="48" y1="44" x2="48" y2="92"/>
+          <line x1="74" y1="44" x2="74" y2="92"/>
+          <line x1="98" y1="44" x2="98" y2="92"/>
+        </g>
+        <rect x="50" y="62" width="22" height="12" rx="3" fill="#f59e0b"/>
+        <rect x="22" y="96" width="76" height="6" rx="3" fill="#f59e0b" opacity="0.9"/>
+      </svg>
+    </div>
+    <div>授权码管理</div>
+  </div>
+  <div class="header-sub" id="connStatus">未连接</div>
+</div>
+
+<!-- Content -->
+<div class="content" id="content">
+  <!-- Dynamic content loaded here -->
+</div>
+
+<!-- Bottom Nav -->
+<div class="bottom-nav">
+  <button class="nav-btn active" data-page="dashboard" onclick="nav('dashboard')">
+    <span class="icon">📊</span><span>总览</span>
+  </button>
+  <button class="nav-btn" data-page="generate" onclick="nav('generate')">
+    <span class="icon">➕</span><span>生成</span>
+  </button>
+  <button class="nav-btn" data-page="keys" onclick="nav('keys')">
+    <span class="icon">🔑</span><span>码列表</span>
+  </button>
+  <button class="nav-btn" data-page="devices" onclick="nav('devices')">
+    <span class="icon">💻</span><span>设备</span>
+  </button>
+  <button class="nav-btn" data-page="settings" onclick="nav('settings')">
+    <span class="icon">⚙</span><span>设置</span>
+  </button>
+</div>
+
+<!-- Modal -->
+<div class="modal" id="modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal-content" id="modalContent">
+    <!-- Modal content -->
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ========== State ==========
+let currentPage = 'dashboard';
+let lastGenerated = [];
+let pageState = { keys: 1, devices: 1 };
+
+// ========== Persistence ==========
+function save(k, v) { try { localStorage.setItem('xlsone_' + k, v); } catch(e) {} }
+function load(k, d) { try { return localStorage.getItem('xlsone_' + k) || d; } catch(e) { return d; } }
+
+function init() {
+  const url = load('apiUrl', 'https://z-pulse.cn');
+  const key = load('apiKey', '');
+  testConnection(true);
+  renderPage();
+}
+
+// ========== API ==========
+function getApiBase() { return load('apiUrl', 'https://z-pulse.cn'); }
+function getApiKey() { return load('apiKey', ''); }
+
+async function apiCall(path, opts = {}) {
+  const base = getApiBase();
+  const key = getApiKey();
+  const resp = await fetch(base + path, {
+    ...opts,
+    headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json', ...opts.headers }
+  });
+  return resp;
+}
+
+// ========== Toast ==========
+function toast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast ' + (type || '');
+  requestAnimationFrame(() => t.classList.add('show'));
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ========== Connection ==========
+async function testConnection(silent) {
+  const base = getApiBase();
+  const key = getApiKey();
+  const el = document.getElementById('connStatus');
+  if (!base) { el && (el.textContent = '未配置 API'); return false; }
+  if (!key) { el && (el.textContent = '未配置 API Key'); !silent && toast('请输入 API Key', 'err'); return false; }
+  try {
+    const resp = await fetch(base + '/api/admin/pool-stats', {
+      headers: { 'Authorization': 'Bearer ' + key }
+    });
+    if (resp.ok) {
+      el && (el.textContent = '已连接: ' + base.replace('https://', ''));
+      !silent && toast('连接成功', 'ok');
+      return true;
+    } else if (resp.status === 401) {
+      el && (el.textContent = 'API Key 无效');
+      !silent && toast('API Key 无效 (401)', 'err');
+      return false;
+    } else {
+      el && (el.textContent = '连接失败: ' + resp.status);
+      !silent && toast('连接失败: ' + resp.status, 'err');
+      return false;
+    }
+  } catch (e) {
+    el && (el.textContent = '连接失败');
+    !silent && toast('连接失败', 'err');
+    return false;
+  }
+}
+
+// ========== Navigation ==========
+function nav(page) {
+  currentPage = page;
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.dataset.page === page));
+  renderPage();
+}
+
+function renderPage() {
+  const c = document.getElementById('content');
+  switch (currentPage) {
+    case 'dashboard': renderDashboard(c); break;
+    case 'generate': renderGenerate(c); break;
+    case 'keys': renderKeys(c); break;
+    case 'devices': renderDevices(c); break;
+    case 'settings': renderSettings(c); break;
+  }
+}
+
+// ========== Dashboard ==========
+async function renderDashboard(c) {
+  c.innerHTML = '<div style="text-align:center;padding:40px"><div class="spinner" style="margin:0 auto"></div><p style="color:#94a3b8;margin-top:16px">加载中...</p></div>';
+  try {
+    const resp = await apiCall('/api/admin/pool-stats');
+    const data = resp.ok ? await resp.json() : {};
+    c.innerHTML = `
+      <div class="stats-grid">
+        <div class="stat-item"><div class="stat-value">${data.available || 0}</div><div class="stat-label">可用</div></div>
+        <div class="stat-item"><div class="stat-value ok">${data.activated || 0}</div><div class="stat-label">已激活</div></div>
+        <div class="stat-item"><div class="stat-value warn">${data.exhausted || 0}</div><div class="stat-label">已用尽</div></div>
+        <div class="stat-item"><div class="stat-value err">${data.revoked || 0}</div><div class="stat-label">已吊销</div></div>
+        <div class="stat-item"><div class="stat-value">${data.total || 0}</div><div class="stat-label">总数</div></div>
+      </div>
+      <div class="card">
+        <div class="card-title">⚡ 快捷操作</div>
+        <div class="quick-grid">
+          <div class="quick-item" onclick="nav('generate')">
+            <div class="icon">➕</div>
+            <div class="label">生成授权码</div>
+          </div>
+          <div class="quick-item" onclick="nav('keys')">
+            <div class="icon">🔑</div>
+            <div class="label">查看码列表</div>
+          </div>
+        </div>
+      </div>
+    `;
+  } catch (e) { c.innerHTML = '<div class="empty"><div class="empty-icon">📊</div><p>加载失败</p></div>'; }
+}
+
+// ========== Generate ==========
+function renderGenerate(c) {
+  c.innerHTML = `
+    <div class="card">
+      <div class="card-title">➕ 生成授权码</div>
+      <div class="form-group">
+        <label>套餐</label>
+        <select id="plan" onchange="updatePlanDefaults()">
+          <option value="personal_lifetime">个人终身版</option>
+          <option value="personal_yearly">个人年度版</option>
+          <option value="trial">试用版 (14天)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>数量</label>
+        <input type="number" id="count" value="1" min="1" max="100">
+      </div>
+      <div class="form-group">
+        <label>最大激活次数</label>
+        <input type="number" id="maxActivations" value="3" min="1" max="10">
+        <div style="font-size:12px;color:#94a3b8;margin-top:4px">同一授权码可在几台设备上激活使用</div>
+      </div>
+      <button class="btn btn-primary" id="genBtn" onclick="generate()">生成</button>
+    </div>
+    <div id="genResult"></div>
+  `;
+  updatePlanDefaults();
+}
+
+function updatePlanDefaults() {
+  const plan = document.getElementById('plan')?.value;
+  const ma = document.getElementById('maxActivations');
+  if (!ma) return;
+  if (plan === 'trial') ma.value = 1;
+  else if (plan === 'personal_yearly') ma.value = 3;
+  else if (plan === 'personal_lifetime') ma.value = 3;
+}
+
+async function generate() {
+  const btn = document.getElementById('genBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> 生成中...';
+
+  const count = parseInt(document.getElementById('count').value) || 1;
+  const plan = document.getElementById('plan').value;
+  const maxActivations = parseInt(document.getElementById('maxActivations').value) || 3;
+
+  try {
+    const resp = await apiCall('/api/admin/generate-windows-keys', {
+      method: 'POST',
+      body: JSON.stringify({ count, plan, max_activations: maxActivations })
+    });
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      toast('生成失败: ' + (err.message || resp.status), 'err');
+      return;
+    }
+    const data = await resp.json();
+    lastGenerated = (data.keys || []).map(k => ({ code: k, plan }));
+    renderGenResult();
+    toast('生成成功: ' + data.keys.length + ' 个', 'ok');
+  } catch (e) { toast('生成失败: ' + e.message, 'err'); }
+  finally { btn.disabled = false; btn.textContent = '生成'; }
+}
+
+function renderGenResult() {
+  const c = document.getElementById('genResult');
+  if (!lastGenerated.length) { c.innerHTML = ''; return; }
+  c.innerHTML = '<div class="section"><div class="section-header"><span class="section-title">生成结果</span></div>' +
+    lastGenerated.map(item => `
+      <div class="code-card">
+        <div class="code-text">${item.code}</div>
+        <div class="code-meta">${formatPlan(item.plan)}</div>
+        <button class="copy-btn" onclick="copy('${item.code}')">复制</button>
+      </div>
+    `).join('') +
+    '<button class="btn btn-ghost" onclick="copyAll()">复制全部</button></div>';
+}
+
+function copy(text) {
+  navigator.clipboard.writeText(text).then(() => toast('已复制', 'ok')).catch(() => toast('复制失败', 'err'));
+}
+function copyAll() {
+  const text = lastGenerated.map(i => i.code).join('\n');
+  navigator.clipboard.writeText(text).then(() => toast('已复制全部', 'ok')).catch(() => toast('复制失败', 'err'));
+}
+
+// ========== Keys List ==========
+async function renderKeys(c) {
+  c.innerHTML = `
+    <div class="search-box"><input type="text" id="keySearch" placeholder="搜索授权码..." onkeydown="if(event.key==='Enter')loadKeys()"></div>
+    <div class="filter-chips">
+      <span class="chip active" onclick="setKeyFilter(this,'')">全部</span>
+      <span class="chip" onclick="setKeyFilter(this,'available')">可用</span>
+      <span class="chip" onclick="setKeyFilter(this,'activated')">已激活</span>
+      <span class="chip" onclick="setKeyFilter(this,'exhausted')">已用尽</span>
+      <span class="chip" onclick="setKeyFilter(this,'revoked')">已吊销</span>
+    </div>
+    <div id="keysList"><div class="empty"><div class="empty-icon">🔑</div><p>点击查询加载</p></div></div>
+    <div class="pagination" id="keysPagination"></div>
+    <button class="btn btn-primary" style="margin-top:12px" onclick="loadKeys()">查询</button>
+  `;
+}
+
+let keyFilterStatus = '';
+function setKeyFilter(el, status) {
+  keyFilterStatus = status;
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+}
+
+async function loadKeys(page) {
+  page = page || pageState.keys;
+  pageState.keys = page;
+  const list = document.getElementById('keysList');
+  list.innerHTML = '<div style="text-align:center;padding:20px"><div class="spinner" style="margin:0 auto"></div></div>';
+
+  try {
+    const params = new URLSearchParams({ page: String(page), limit: '20' });
+    if (keyFilterStatus) params.append('status', keyFilterStatus);
+    const search = document.getElementById('keySearch')?.value;
+    if (search) params.append('search', search);
+
+    const resp = await apiCall('/api/admin/windows-keys?' + params);
+    if (!resp.ok) { list.innerHTML = '<div class="empty">加载失败</div>'; return; }
+    const data = await resp.json();
+    renderKeysList(data.keys || [], data.pagination);
+  } catch (e) { list.innerHTML = '<div class="empty">加载失败</div>'; }
+}
+
+function renderKeysList(keys, pagination) {
+  const list = document.getElementById('keysList');
+  if (!keys.length) { list.innerHTML = '<div class="empty"><div class="empty-icon">🔑</div><p>暂无数据</p></div>'; return; }
+
+  list.innerHTML = keys.map(k => {
+    const statusClass = 'status-' + k.status;
+    const statusText = { available: '可用', activated: '已激活', exhausted: '已用尽', revoked: '已吊销' }[k.status] || k.status;
+    return `
+      <div class="list-item" onclick="showKeyDetail('${k.key_id}')">
+        <div class="list-item-main">
+          <div class="list-item-title">${k.key_id}</div>
+          <div class="list-item-sub">${formatPlan(k.plan)} · ${k.activation_count || 0}/${k.max_activations}次</div>
+        </div>
+        <span class="status-badge ${statusClass}">${statusText}</span>
+      </div>
+    `;
+  }).join('');
+
+  renderPageBtns('keysPagination', pagination, loadKeys);
+}
+
+// ========== Devices ==========
+async function renderDevices(c) {
+  c.innerHTML = `
+    <div class="search-box"><input type="text" id="deviceSearch" placeholder="搜索设备..." onkeydown="if(event.key==='Enter')loadDevices()"></div>
+    <div id="devicesList"><div class="empty"><div class="empty-icon">💻</div><p>点击查询加载</p></div></div>
+    <div class="pagination" id="devicesPagination"></div>
+    <button class="btn btn-primary" style="margin-top:12px" onclick="loadDevices()">查询</button>
+  `;
+}
+
+async function loadDevices(page) {
+  page = page || pageState.devices;
+  pageState.devices = page;
+  const list = document.getElementById('devicesList');
+  list.innerHTML = '<div style="text-align:center;padding:20px"><div class="spinner" style="margin:0 auto"></div></div>';
+
+  try {
+    const params = new URLSearchParams({ page: String(page), limit: '20' });
+    const search = document.getElementById('deviceSearch')?.value;
+    if (search) params.append('search', search);
+
+    const resp = await apiCall('/api/admin/windows-devices?' + params);
+    if (!resp.ok) { list.innerHTML = '<div class="empty">加载失败</div>'; return; }
+    const data = await resp.json();
+    renderDevicesList(data.devices || [], data.pagination);
+  } catch (e) { list.innerHTML = '<div class="empty">加载失败</div>'; }
+}
+
+function renderDevicesList(devices, pagination) {
+  const list = document.getElementById('devicesList');
+  if (!devices.length) { list.innerHTML = '<div class="empty"><div class="empty-icon">💻</div><p>暂无数据</p></div>'; return; }
+
+  list.innerHTML = devices.map(d => `
+    <div class="list-item">
+      <div class="list-item-main">
+        <div class="list-item-title">${d.device_name || '未命名设备'}</div>
+        <div class="list-item-sub">${d.key_id}</div>
+      </div>
+      ${d.revoked ? '<span class="status-badge status-revoked">已解绑</span>' : '<button class="btn btn-err btn-sm" onclick="event.stopPropagation();revokeDevice(\'' + d.device_id + '\')">解绑</button>'}
+    </div>
+  `).join('');
+
+  renderPageBtns('devicesPagination', pagination, loadDevices);
+}
+
+async function revokeDevice(id) {
+  if (!confirm('解绑该设备？')) return;
+  try {
+    const resp = await apiCall('/api/admin/windows-devices/' + id + '/revoke', { method: 'POST' });
+    if (!resp.ok) { toast('解绑失败', 'err'); return; }
+    toast('已解绑', 'ok');
+    loadDevices(pageState.devices);
+  } catch (e) { toast('解绑失败', 'err'); }
+}
+
+// ========== Key Detail Modal ==========
+async function showKeyDetail(keyId) {
+  const modal = document.getElementById('modal');
+  const content = document.getElementById('modalContent');
+  modal.classList.add('show');
+  content.innerHTML = '<div style="text-align:center;padding:40px"><div class="spinner" style="margin:0 auto"></div></div>';
+
+  try {
+    const resp = await apiCall('/api/admin/windows-keys/' + keyId);
+    if (!resp.ok) { content.innerHTML = '<div class="empty">加载失败</div>'; return; }
+    const data = await resp.json();
+    const k = data.key;
+    const devices = data.devices || [];
+    const statusText = { available: '可用', activated: '已激活', exhausted: '已用尽', revoked: '已吊销' }[k.status] || k.status;
+
+    content.innerHTML = `
+      <div class="modal-header"><h3>授权码详情</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+      <div class="detail-row"><span class="detail-label">授权码</span><span class="detail-value">${k.key_id}</span></div>
+      <div class="detail-row"><span class="detail-label">套餐</span><span class="detail-value">${formatPlan(k.plan)}</span></div>
+      <div class="detail-row"><span class="detail-label">状态</span><span class="detail-value"><span class="status-badge status-${k.status}">${statusText}</span></span></div>
+      <div class="detail-row"><span class="detail-label">激活次数</span><span class="detail-value">${k.activation_count || 0} / ${k.max_activations}</span></div>
+      <div class="detail-row"><span class="detail-label">有效期</span><span class="detail-value">${k.duration_days ? k.duration_days + '天' : '永久'}</span></div>
+      <div class="detail-row"><span class="detail-label">创建时间</span><span class="detail-value">${new Date(k.created_at).toLocaleDateString('zh-CN')}</span></div>
+      ${devices.length ? '<div class="section"><div class="section-header"><span class="section-title">设备 (' + devices.length + ')</span></div>' + devices.map(d => `
+        <div class="list-item">
+          <div class="list-item-main"><div class="list-item-title">${d.device_name || '未命名'}</div><div class="list-item-sub">${new Date(d.activated_at).toLocaleDateString('zh-CN')}</div></div>
+          ${d.revoked ? '<span class="status-badge status-revoked">已解绑</span>' : '<span class="status-badge status-available">正常</span>'}
+        </div>
+      `).join('') + '</div>' : ''}
+      <div style="margin-top:16px;display:flex;gap:10px">
+        ${k.status !== 'revoked' ? `<button class="btn btn-err" onclick="revokeKey('${k.key_id}');closeModal()">吊销授权码</button>` : `<button class="btn btn-ok" onclick="restoreKey('${k.key_id}');closeModal()">恢复授权码</button>`}
+      </div>
+    `;
+  } catch (e) { content.innerHTML = '<div class="empty">加载失败</div>'; }
+}
+
+async function revokeKey(id) {
+  if (!confirm('吊销该授权码？')) return;
+  try {
+    const resp = await apiCall('/api/admin/windows-keys/' + id + '/revoke', { method: 'POST' });
+    if (!resp.ok) { toast('吊销失败', 'err'); return; }
+    toast('已吊销', 'ok');
+    if (currentPage === 'keys') loadKeys(pageState.keys);
+  } catch (e) { toast('吊销失败', 'err'); }
+}
+
+async function restoreKey(id) {
+  if (!confirm('恢复该授权码？')) return;
+  try {
+    const resp = await apiCall('/api/admin/windows-keys/' + id + '/restore', { method: 'POST' });
+    if (!resp.ok) { toast('恢复失败', 'err'); return; }
+    toast('已恢复', 'ok');
+    if (currentPage === 'keys') loadKeys(pageState.keys);
+  } catch (e) { toast('恢复失败', 'err'); }
+}
+
+function closeModal() { document.getElementById('modal').classList.remove('show'); }
+
+// ========== Settings ==========
+function renderSettings(c) {
+  c.innerHTML = `
+    <div class="card">
+      <div class="card-title">⚙ 服务器配置</div>
+      <div class="form-group">
+        <label>API 地址</label>
+        <select id="apiUrl" onchange="saveApiUrl()">
+          <option value="https://z-pulse.cn">国内 (z-pulse.cn)</option>
+          <option value="https://api.z-pulse.cn">国内独立子域 (api.z-pulse.cn)</option>
+          <option value="https://api.xlsone.com">国际 (api.xlsone.com)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Admin API Key</label>
+        <input type="password" id="apiKey" placeholder="输入 API Key" oninput="saveApiKey()">
+      </div>
+      <button class="btn btn-primary" onclick="testConnection()">测试连接</button>
+    </div>
+  `;
+  const url = load('apiUrl', 'https://z-pulse.cn');
+  document.getElementById('apiUrl').value = url;
+  document.getElementById('apiKey').value = load('apiKey', '');
+}
+
+function saveApiUrl() { save('apiUrl', document.getElementById('apiUrl').value); }
+function saveApiKey() { save('apiKey', document.getElementById('apiKey').value); }
+
+// ========== Helpers ==========
+function formatPlan(p) {
+  const map = { 'personal_lifetime': '个人终身版', 'personal_yearly': '个人年度版', 'trial': '试用版' };
+  return map[p] || p;
+}
+
+function renderPageBtns(id, pagination, callback) {
+  const el = document.getElementById(id);
+  if (!pagination || pagination.pages <= 1) { el.innerHTML = ''; return; }
+  let html = '';
+  if (pagination.page > 1) html += `<button class="page-btn" onclick="${callback.name}(${pagination.page - 1})">上一页</button>`;
+  html += `<button class="page-btn active">${pagination.page} / ${pagination.pages}</button>`;
+  if (pagination.page < pagination.pages) html += `<button class="page-btn" onclick="${callback.name}(${pagination.page + 1})">下一页</button>`;
+  el.innerHTML = html;
+}
+
+// ========== Init ==========
+init();
+</script>
+</body>
+</html>

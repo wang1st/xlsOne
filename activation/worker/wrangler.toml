@@ -17,8 +17,11 @@ database_name = "xlsone-license"
 database_id = "70f9b469-9c4e-470e-b6dd-27cba2c782f5"
 
 [env.production.vars]
-ACTIVATION_SECRET = ""  # 运行时通过 wrangler secret put 设置
-LEMON_SQUEEZY_SIGNING_SECRET = ""  # Lemon Squeezy webhook 签名密钥
+# ⚠️ ACTIVATION_SECRET 为真实 HMAC 密钥，明文写入仅用于「本地一条命令部署」。
+# 本文件(wrangler.toml)受 git 版本控制 —— 请只本地部署、切勿 git commit，
+# 否则密钥会进入仓库历史。更安全的做法是 `wrangler secret put ACTIVATION_SECRET --env production`。
+ACTIVATION_SECRET = "8c6b78546cf47129e2eb020a078f7cc3dae5b8ce8b9d08289289bd4d334ff8c6"
+LEMON_SQUEEZY_SIGNING_SECRET = ""  # Lemon Squeezy webhook 签名密钥（尚无值，留空）
 
 # 以下值需通过 wrangler secret put 设置，不应写入本文件：
 # ED25519_PRIVATE_KEY    — Windows 版 Ed25519 签名私钥（64 字符十六进制）

@@ -38,6 +38,7 @@
 #include <QShowEvent>
 #include <QSplitter>
 #include <QStatusBar>
+#include <QTimer>
 #include <QUrl>
 #include <QVBoxLayout>
 
@@ -342,6 +343,9 @@ void MainWindow::buildUi()
     xlsone::ui::applyAppStyle(this);
 
     licenseManager_ = new xlsone::LicenseManager(this);
+    if (licenseManager_->state() == xlsone::LicenseState::Unactivated) {
+        licenseManager_->requestTrial(xlsone::LicenseManager::deviceFingerprint());
+    }
 
     auto* openAction = new QAction(tr("导入文件..."), this);
     openAction->setShortcut(QKeySequence::Open);
@@ -377,7 +381,7 @@ void MainWindow::buildUi()
     auto* saveSchemaAction = new QAction(tr("保存当前修正规则"), this);
     connect(saveSchemaAction, &QAction::triggered, this, &MainWindow::saveCurrentSchema);
 
-    auto* licenseActivateAction = new QAction(tr("激活/导入许可证..."), this);
+    auto* licenseActivateAction = new QAction(tr("管理许可证..."), this);
     connect(licenseActivateAction, &QAction::triggered, this, &MainWindow::showLicenseActivation);
 
     // ---- 文件 ----
@@ -459,13 +463,9 @@ void MainWindow::buildUi()
             .arg(XLSONE_VERSION_MAJOR)
             .arg(XLSONE_VERSION_MINOR)
             .arg(XLSONE_VERSION_PATCH);
-        xlsone::ui::showAbout(this, tr("关于 表表归一"),
-            tr("<h3>表表归一  V%1</h3>"
-               "<p>多张同格式 Excel 报表一键汇总</p>"
-               "<p>把多张格式一致的 Excel 表合成一份汇总表。"
-               "金额、数量等能相加的数会自动合计；"
-               "名称、编号等不该相加的信息，会保留各文件里最常见的共同前缀。</p>"
-               "<p><b>联系方式：</b>831261@qq.com</p>").arg(ver));
+        const bool domesticBuild = xlsone::LicenseManager::activationBaseUrl()
+            .contains(QStringLiteral("z-pulse.cn"), Qt::CaseInsensitive);
+        xlsone::ui::showProductAbout(this, tr("关于 表表归一"), ver, domesticBuild);
     });
 
     auto* checkUpdateAction = new QAction(tr("检查更新"), this);
@@ -491,6 +491,7 @@ void MainWindow::buildUi()
     connect(chrome_, &WorkspaceChrome::reloadRequested, this, &MainWindow::reloadFiles);
     connect(chrome_, &WorkspaceChrome::clearRequested, this, &MainWindow::clearWorkspace);
     connect(chrome_, &WorkspaceChrome::exportRequested, this, &MainWindow::exportResult);
+    connect(chrome_, &WorkspaceChrome::licenseRequested, this, &MainWindow::showLicenseActivation);
 
     contentStack_ = new QStackedWidget(root);
     rootLayout->addWidget(contentStack_, 1);
@@ -601,6 +602,10 @@ void MainWindow::showEvent(QShowEvent* event)
     QMainWindow::showEvent(event);
     if (firstShow_) {
         firstShow_ = false;
+        if (licenseManager_ != nullptr &&
+            licenseManager_->state() == xlsone::LicenseState::Expired) {
+            QTimer::singleShot(250, this, &MainWindow::showLicenseActivation);
+        }
         checkForUpdates();
     }
 }
@@ -637,7 +642,7 @@ void MainWindow::checkForUpdates(bool silent)
                                                 this);
                 connect(dialog, &QDialog::accepted, this, [] {
                     QDesktopServices::openUrl(QUrl(
-                        QStringLiteral(XLSONE_UPDATE_BASE_URL "/products/xlsone/download.html")));
+                        QStringLiteral(XLSONE_UPDATE_BASE_URL "/xlsone/download.html")));
                 });
                 xlsone::ui::showDialogCentered(dialog, this);
             });
@@ -756,6 +761,20 @@ void MainWindow::loadFiles(const QStringList& paths, bool append)
 {
     if (paths.isEmpty()) {
         return;
+    }
+
+    // 未授权或过期限制：每次最多处理 3 个文件。
+    const auto licenseState = licenseManager_->state();
+    if (licenseState != xlsone::LicenseState::Activated &&
+        licenseState != xlsone::LicenseState::Trial) {
+        const int maxFiles = 3;
+        const int currentCount = selectedPaths_.size();
+        const int newCount = append ? currentCount + paths.size() : paths.size();
+        if (newCount > maxFiles) {
+            xlsone::ui::showInformation(this, tr("功能限制"),
+                tr("未激活或授权已过期，每次最多处理 %1 个文件。请输入激活码以解除限制。").arg(maxFiles));
+            return;
+        }
     }
 
     selectedPaths_ = append ? selectedPaths_ + paths : paths;
@@ -1559,7 +1578,10 @@ void MainWindow::exportResult()
             outputPath += QStringLiteral(".xlsx");
         }
         const QString templatePath = selectedPaths_.isEmpty() ? QString() : selectedPaths_.front();
-        xlsone::TemplateWorkbookExporter().exportWorkbook(templatePath, results_, outputPath);
+        const auto licenseState = licenseManager_->state();
+        const bool addWatermark = licenseState != xlsone::LicenseState::Activated &&
+            licenseState != xlsone::LicenseState::Trial;
+        xlsone::TemplateWorkbookExporter().exportWorkbook(templatePath, results_, outputPath, addWatermark);
     } catch (const std::exception& error) {
         xlsone::ui::showCritical(this, tr("导出失败"), QString::fromUtf8(error.what()));
     }
@@ -1587,4 +1609,5 @@ void MainWindow::showLicenseActivation()
 {
     LicenseActivationDialog dialog(licenseManager_, this);
     xlsone::ui::execDialogCentered(dialog, this);
+    updateChromeState();
 }

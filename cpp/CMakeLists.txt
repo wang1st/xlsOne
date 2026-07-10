@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.22)
 
 project(xlsOneQt
-    VERSION 1.0.3
+    VERSION 1.0.4
     DESCRIPTION "Cross-platform C++/Qt port of xlsOne"
     LANGUAGES C CXX
 )
@@ -21,7 +21,7 @@ enable_testing()
 
 # Translations — use lrelease to compile .ts → .qm
 set(_i18n_dir "${CMAKE_CURRENT_SOURCE_DIR}/i18n")
-find_program(LRELEASE_EXECUTABLE lrelease)
+find_program(LRELEASE_EXECUTABLE NAMES lrelease lrelease-qt5)
 if(LRELEASE_EXECUTABLE)
     add_custom_target(translations ALL
         COMMAND ${LRELEASE_EXECUTABLE}
@@ -207,7 +207,7 @@ set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "同构 Excel 工作簿智能合并与校�
 set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
 set(CPACK_PACKAGE_CONTACT "831261@qq.com")
 
-# Architecture-tagged package filename (e.g. xlsone-1.0.2-linux-arm64.deb / xlsone-1.0.2-windows-amd64.zip)
+# Architecture-tagged package filename (e.g. xlsone-1.0.4-linux-arm64.deb / xlsone-1.0.4-windows-amd64.zip)
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64")
     set(_xlsone_pkg_arch "arm64")
 elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64")
@@ -229,6 +229,9 @@ if(WIN32)
     # Fixed upgrade GUID for xlsOne Windows installer. Do not change between releases.
     set(CPACK_WIX_UPGRADE_GUID "A1B2C3D4-E5F6-7890-1234-567890ABCDEF")
     set(CPACK_WIX_PROPERTY_ARPURLINFOABOUT "https://xlsone.com")
+    # Skip ICE validation — fails on systems where Windows Installer service is unavailable
+    # (common in CI/sandbox environments). ICE checks are install-time validations, not build-time.
+    set(CPACK_WIX_LIGHT_EXTRA_OPTIONS "-sice:ICE")
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/app/resources/xlsOne.ico")
         set(CPACK_WIX_PRODUCT_ICON "${CMAKE_CURRENT_SOURCE_DIR}/app/resources/xlsOne.ico")
     elseif(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/app/resources/xlsOne_256x256.png")
@@ -247,12 +250,12 @@ if(WIN32)
         message(FATAL_ERROR "Unsupported XLSONE_INSTALLER_LANGUAGE: ${XLSONE_INSTALLER_LANGUAGE}")
     endif()
 
-    set(_xlsone_license_txt
-        "${CMAKE_CURRENT_SOURCE_DIR}/packaging/windows/licenses/EULA_${XLSONE_INSTALLER_LANGUAGE}.txt")
-    if(NOT EXISTS "${_xlsone_license_txt}")
-        message(FATAL_ERROR "License file not found: ${_xlsone_license_txt}")
+    set(_xlsone_license_rtf
+        "${CMAKE_CURRENT_SOURCE_DIR}/packaging/windows/licenses/EULA_${XLSONE_INSTALLER_LANGUAGE}.rtf")
+    if(NOT EXISTS "${_xlsone_license_rtf}")
+        message(FATAL_ERROR "License file not found: ${_xlsone_license_rtf}")
     endif()
-    set(CPACK_RESOURCE_FILE_LICENSE "${_xlsone_license_txt}")
+    set(CPACK_RESOURCE_FILE_LICENSE "${_xlsone_license_rtf}")
     set(CPACK_WIX_CULTURES "${_xlsone_wix_culture}")
 
     # Optional Start Menu / Desktop shortcuts via a configured Wix patch.
@@ -261,21 +264,25 @@ if(WIN32)
         set(XLSONE_WIX_FEATURE_START_MENU_DESC "在开始菜单中创建 xlsOne 快捷方式。")
         set(XLSONE_WIX_FEATURE_DESKTOP_TITLE "桌面快捷方式")
         set(XLSONE_WIX_FEATURE_DESKTOP_DESC "在桌面上创建 xlsOne 快捷方式。")
+        set(XLSONE_WIX_LAUNCH_CHECKBOX_TEXT "启动 xlsOne")
     elseif(XLSONE_INSTALLER_LANGUAGE STREQUAL "zh_TW")
         set(XLSONE_WIX_FEATURE_START_MENU_TITLE "開始功能表捷徑")
         set(XLSONE_WIX_FEATURE_START_MENU_DESC "在開始功能表中建立 xlsOne 捷徑。")
         set(XLSONE_WIX_FEATURE_DESKTOP_TITLE "桌面捷徑")
         set(XLSONE_WIX_FEATURE_DESKTOP_DESC "在桌面上建立 xlsOne 捷徑。")
+        set(XLSONE_WIX_LAUNCH_CHECKBOX_TEXT "啟動 xlsOne")
     elseif(XLSONE_INSTALLER_LANGUAGE STREQUAL "ja")
         set(XLSONE_WIX_FEATURE_START_MENU_TITLE "スタートメニューのショートカット")
         set(XLSONE_WIX_FEATURE_START_MENU_DESC "スタートメニューに xlsOne のショートカットを作成します。")
         set(XLSONE_WIX_FEATURE_DESKTOP_TITLE "デスクトップのショートカット")
         set(XLSONE_WIX_FEATURE_DESKTOP_DESC "デスクトップに xlsOne のショートカットを作成します。")
+        set(XLSONE_WIX_LAUNCH_CHECKBOX_TEXT "xlsOne を起動する")
     else()
         set(XLSONE_WIX_FEATURE_START_MENU_TITLE "Start Menu shortcut")
         set(XLSONE_WIX_FEATURE_START_MENU_DESC "Create a shortcut for xlsOne in the Start Menu.")
         set(XLSONE_WIX_FEATURE_DESKTOP_TITLE "Desktop shortcut")
         set(XLSONE_WIX_FEATURE_DESKTOP_DESC "Create a shortcut for xlsOne on the Desktop.")
+        set(XLSONE_WIX_LAUNCH_CHECKBOX_TEXT "Launch xlsOne")
     endif()
 
     set(_xlsone_wix_patch_in
@@ -284,8 +291,14 @@ if(WIN32)
         "${CMAKE_CURRENT_BINARY_DIR}/packaging/windows/shortcuts.wxs.patch")
     configure_file("${_xlsone_wix_patch_in}" "${_xlsone_wix_patch_out}" @ONLY)
     set(CPACK_WIX_PATCH_FILE "${_xlsone_wix_patch_out}")
-    set(CPACK_WIX_EXTRA_SOURCES
-        "${CMAKE_CURRENT_SOURCE_DIR}/packaging/windows/shortcuts.wxs")
+
+    # Generate shortcuts.wxs from template so the launch checkbox text is localized.
+    set(_xlsone_wix_shortcuts_in
+        "${CMAKE_CURRENT_SOURCE_DIR}/packaging/windows/shortcuts.wxs.in")
+    set(_xlsone_wix_shortcuts_out
+        "${CMAKE_CURRENT_BINARY_DIR}/packaging/windows/shortcuts.wxs")
+    configure_file("${_xlsone_wix_shortcuts_in}" "${_xlsone_wix_shortcuts_out}" @ONLY)
+    set(CPACK_WIX_EXTRA_SOURCES "${_xlsone_wix_shortcuts_out}")
 
     # Use FeatureTree so users can opt out of optional shortcuts.
     set(CPACK_WIX_UI_REF "WixUI_FeatureTree")
@@ -296,7 +309,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../LICENSE" AND NOT WIN32)
 endif()
 
 if(WIN32)
-    set(CPACK_GENERATOR "ZIP")
+    set(CPACK_GENERATOR "ZIP;WIX")
 elseif(UNIX AND NOT APPLE)
     set(CPACK_GENERATOR "DEB")
     set(CPACK_PACKAGING_INSTALL_PREFIX "/usr")
@@ -337,28 +350,111 @@ elseif(UNIX AND NOT APPLE)
     )
 endif()
 
-# Windows: bundle Qt runtime via windeployqt during installation/packaging.
+# Windows: bundle Qt runtime + MinGW runtime during installation/packaging.
 if(WIN32)
-    find_program(WINDEPLOYQT_EXECUTABLE windeployqt
-        HINTS "${Qt${QT_VERSION_MAJOR}_DIR}/../../../bin"
+    # Qt bin dir holds Qt5*.dll PLUS the support libs (ICU, PCRE2, double-conversion,
+    # zlib) that MinGW builds of Qt load dynamically. windeployqt is unreliable about
+    # copying these on MinGW, which is exactly why clean Windows machines saw
+    # "missing libicuin/libicuuc/libpcre2-16-0/libdouble-conversion". So we copy
+    # them deterministically below instead of trusting windeployqt alone.
+    get_filename_component(_qt_bin_dir "${Qt${QT_VERSION_MAJOR}_DIR}/../../../bin" ABSOLUTE)
+    # MinGW bin dir holds the compiler runtime (libgcc/libstdc++/libwinpthread).
+    get_filename_component(_mingw_bin_dir "${CMAKE_CXX_COMPILER}" DIRECTORY)
+
+    find_program(WINDEPLOYQT_EXECUTABLE NAMES windeployqt windeployqt-qt5
+        HINTS "${_qt_bin_dir}"
         DOC "Path to windeployqt"
     )
+
+    # 1) windeployqt: best-effort deployment of Qt5*.dll + plugin discovery.
+    #    Kept for completeness; the explicit copies below are the real guarantee.
     if(WINDEPLOYQT_EXECUTABLE)
         install(CODE "
             set(_exe \"$<TARGET_FILE:xlsone_app>\")
             set(_bindir \"\${CMAKE_INSTALL_PREFIX}/bin\")
-            message(STATUS \"Running windeployqt: ${WINDEPLOYQT_EXECUTABLE} --dir \${_bindir} \${_exe}\")
+            message(STATUS \"Running windeployqt: ${WINDEPLOYQT_EXECUTABLE} --release --no-opengl-sw --no-system-d3d-compiler --dir \${_bindir} \${_exe}\")
             execute_process(
-                COMMAND \"${WINDEPLOYQT_EXECUTABLE}\" --dir \${_bindir} \${_exe}
+                COMMAND \"${WINDEPLOYQT_EXECUTABLE}\" --release --no-opengl-sw --no-system-d3d-compiler --dir \${_bindir} \${_exe}
                 RESULT_VARIABLE _deploy_result
             )
             if(NOT _deploy_result EQUAL 0)
                 message(WARNING \"windeployqt returned non-zero exit code: \${_deploy_result}\")
             endif()
         ")
-    else()
-        message(WARNING "windeployqt not found — Windows package may be missing Qt runtime libraries")
     endif()
+
+    # 2) GUARANTEED: copy EVERY *.dll from the Qt bin dir into the package bin/.
+    #    This deterministically includes libicuin*/libicuuc*/libicudt*/libpcre2-16-0/
+    #    libdouble-conversion/zlib1 (and any Qt5*.dll windeployqt may skip),
+    #    eliminating the "missing DLL on clean Windows" failures.
+    if(EXISTS "${_qt_bin_dir}")
+        install(DIRECTORY "${_qt_bin_dir}/"
+            DESTINATION bin
+            FILES_MATCHING PATTERN "*.dll")
+    else()
+        message(FATAL_ERROR "Qt bin dir not found at ${_qt_bin_dir} — cannot bundle Qt runtime DLLs")
+    endif()
+
+    # 3) MinGW compiler runtime. Note: windeployqt --compiler-runtime only handles
+    #    MSVC redistributables, so we copy these explicitly for MinGW builds.
+    set(_mingw_runtime_dlls
+        libgcc_s_seh-1.dll
+        libstdc++-6.dll
+        libwinpthread-1.dll)
+    foreach(_dll ${_mingw_runtime_dlls})
+        install(FILES "${_mingw_bin_dir}/${_dll}"
+            DESTINATION bin
+            OPTIONAL)
+    endforeach()
+
+    # 4) Qt plugins (platforms + imageformats + styles + iconengines + tls) as a safety net.
+    #    MSYS2 layout: <prefix>/share/qt5/plugins/; aqt layout: <prefix>/plugins/
+    set(_qt_plugin_search_dirs
+        "${Qt${QT_VERSION_MAJOR}_DIR}/../../../share/qt${QT_VERSION_MAJOR}/plugins"
+        "${Qt${QT_VERSION_MAJOR}_DIR}/../../../plugins")
+    foreach(_qpd_raw ${_qt_plugin_search_dirs})
+        # Normalize to forward slashes. Qt6_DIR arrives on Windows with
+        # backslashes (e.g. C:\Qt\6.11.1\...); an un-normalized path would be
+        # written into cmake_install.cmake and fail to re-parse ("\Q" escape).
+        get_filename_component(_qpd "${_qpd_raw}" ABSOLUTE)
+        if(EXISTS "${_qpd}/platforms")
+            install(DIRECTORY "${_qpd}/platforms/"
+                DESTINATION bin/platforms
+                FILES_MATCHING PATTERN "qwindows*.dll")
+            install(DIRECTORY "${_qpd}/imageformats/"
+                DESTINATION bin/imageformats
+                FILES_MATCHING PATTERN "*.dll")
+            if(EXISTS "${_qpd}/styles")
+                install(DIRECTORY "${_qpd}/styles/"
+                    DESTINATION bin/styles
+                    FILES_MATCHING PATTERN "*.dll")
+            endif()
+            if(EXISTS "${_qpd}/iconengines")
+                install(DIRECTORY "${_qpd}/iconengines/"
+                    DESTINATION bin/iconengines
+                    FILES_MATCHING PATTERN "*.dll")
+            endif()
+            # TLS backends: include OpenSSL backend + cert-only backend as fallback
+            if(EXISTS "${_qpd}/tls")
+                install(DIRECTORY "${_qpd}/tls/"
+                    DESTINATION bin/tls
+                    FILES_MATCHING PATTERN "*.dll")
+            endif()
+            break()
+        endif()
+    endforeach()
+
+    # 5) OpenSSL runtime DLLs required by qopensslbackend.dll for HTTPS on clean Windows.
+    #    aqt sometimes installs these next to Qt6*.dll; MSYS2/MinGW places them under
+    #    <mingw>/opt/bin. We copy from both locations as fallback.
+    foreach(_ssl_dll libssl-3-x64.dll libcrypto-3-x64.dll libssl-1_1-x64.dll libcrypto-1_1-x64.dll)
+        install(FILES "${_qt_bin_dir}/${_ssl_dll}"
+            DESTINATION bin
+            OPTIONAL)
+        install(FILES "${_mingw_bin_dir}/opt/bin/${_ssl_dll}"
+            DESTINATION bin
+            OPTIONAL)
+    endforeach()
 endif()
 
 include(CPack)

@@ -1139,15 +1139,15 @@ void CoreTests::updateCheckerFindsNewVersionOnline()
 
 void CoreTests::licenseManagerAcceptsValidEd25519License()
 {
-    // Signed with production Ed25519 key pair (seed kept in Worker secret).
+    // Signed with production Ed25519 key pair (seed kept in Worker secret / domestic server). Rotated 2026-07-09.
     const QByteArray license = R"({
-        "key_id": "XLS1-TEST-0001",
+        "key_id": "ABCD-1234-EFGH-5678",
         "plan": "personal_lifetime",
         "device_hash": "",
         "device_components": [],
         "issued_at": 1719830400,
         "expires_at": 0,
-        "signature": "kIPZ0K77COo35s_whFUjT6Cg06wmsSZ8CyoRxSGPWa8wODVteaceUEJqaH8p1k_SiSnQYcRLDttXiZbyKopTDQ"
+        "signature": "Qmbz_H3cNPGioojg0ZzvRlSwj8XGLMkPFzdRdTCFWi-bJlfUXlC2cHmYkTO7zvrc3z3qipk26vksyXhCreV3Cw"
     })";
 
     xlsone::LicenseManager manager;
@@ -1155,20 +1155,20 @@ void CoreTests::licenseManagerAcceptsValidEd25519License()
     QString errorMessage;
     QVERIFY(manager.applyLicenseFile(license, QString(), &info, &errorMessage));
     QCOMPARE(manager.state(), xlsone::LicenseState::Activated);
-    QCOMPARE(info.keyId, QStringLiteral("XLS1-TEST-0001"));
+    QCOMPARE(info.keyId, QStringLiteral("ABCD-1234-EFGH-5678"));
     QCOMPARE(info.plan, xlsone::LicensePlan::PersonalLifetime);
 }
 
 void CoreTests::licenseManagerRejectsTamperedEd25519License()
 {
     QByteArray license = R"({
-        "key_id": "XLS1-TEST-0001",
+        "key_id": "ABCD-1234-EFGH-5678",
         "plan": "personal_lifetime",
         "device_hash": "",
         "device_components": [],
         "issued_at": 1719830400,
         "expires_at": 0,
-        "signature": "kIPZ0K77COo35s_whFUjT6Cg06wmsSZ8CyoRxSGPWa8wODVteaceUEJqaH8p1k_SiSnQYcRLDttXiZbyKopTDQ"
+        "signature": "Qmbz_H3cNPGioojg0ZzvRlSwj8XGLMkPFzdRdTCFWi-bJlfUXlC2cHmYkTO7zvrc3z3qipk26vksyXhCreV3Cw"
     })";
     // Tamper with the payload.
     license.replace("personal_lifetime", "enterprise_10");

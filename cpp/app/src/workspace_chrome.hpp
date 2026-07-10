@@ -20,6 +20,7 @@ signals:
     void reloadRequested();
     void clearRequested();
     void exportRequested();
+    void licenseRequested();
 
 private:
     void buildUi();
@@ -31,6 +32,5 @@ private:
     QPushButton* clearButton_ = nullptr;
     QPushButton* exportButton_ = nullptr;
     QWidget* buttonGroup_ = nullptr;
-    QLabel* licenseBadge_ = nullptr;
-    QWidget* licenseDot_ = nullptr;
+    QPushButton* licenseButton_ = nullptr;
 };

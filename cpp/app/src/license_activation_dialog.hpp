@@ -9,6 +9,7 @@
 class QLabel;
 class QLineEdit;
 class QPushButton;
+class QStackedWidget;
 class QWidget;
 
 class LicenseActivationDialog final : public QDialog {
@@ -25,12 +26,16 @@ private slots:
     void onActivationFinished(const xlsone::ActivationResult& result);
     void onKeyPartChanged(int index);
     void onKeyPartBackspace(int index);
-    void toggleOfflineInfo();
+    void switchToPage(int index);
+    bool eventFilter(QObject* watched, QEvent* event) override;
+    void distributePastedKey(const QString& rawText);
 
 private:
     void buildUi();
     void buildBrandPanel(QWidget* container);
     void buildFormPanel(QWidget* container);
+    void buildOnlinePage(QWidget* container);
+    void buildOfflinePage(QWidget* container);
     void updateActivateButton();
     void setMessage(const QString& message, bool error);
     void focusNextPart(int fromIndex);
@@ -40,8 +45,10 @@ private:
     QVector<QLineEdit*> keyParts_;
     QPushButton* activateButton_ = nullptr;
     QPushButton* trialButton_ = nullptr;
-    QPushButton* offlineToggle_ = nullptr;
-    QWidget* offlineInfo_ = nullptr;
     QLabel* messageLabel_ = nullptr;
-    bool showOffline_ = false;
+    QStackedWidget* pageStack_ = nullptr;
+    QPushButton* onlineTab_ = nullptr;
+    QPushButton* offlineTab_ = nullptr;
+    QLabel* expiredBanner_ = nullptr;
+    QPushButton* purchaseButton_ = nullptr;
 };

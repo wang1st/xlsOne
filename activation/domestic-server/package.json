@@ -1,0 +1,14 @@
+{
+  "name": "xlsone-domestic-activation",
+  "version": "1.0.0",
+  "description": "xlsOne 国内激活 API（z-pulse.cn），与 Cloudflare Worker 等价，共用同一 Ed25519 私钥。",
+  "main": "server.js",
+  "engines": {
+    "node": ">=16"
+  },
+  "scripts": {
+    "start": "node server.js"
+  },
+  "license": "UNLICENSED",
+  "private": true
+}

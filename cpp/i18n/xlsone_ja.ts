@@ -373,8 +373,8 @@ Skipped sheets: %3</translation>
     </message>
     <message>
         <location line="+10" />
-        <source>多单位 Excel 报表一键汇总</source>
-        <translation>複数単位のExcel報告書をワンクリックで集計</translation>
+        <source>将多张格式一致的 Excel 表合成一份汇总表</source>
+        <translation>形式が一致する複数のExcel表を1つの集計表にまとめる</translation>
     </message>
     <message>
         <location line="+18" />
@@ -416,6 +416,11 @@ Skipped sheets: %3</translation>
         <location line="-214" />
         <source>免费试用 14 天</source>
         <translation>14日間無料トライアル</translation>
+    </message>
+    <message>
+        <location line="+16" />
+        <source>获取激活码</source>
+        <translation>認証コードを取得</translation>
     </message>
     <message>
         <location line="+54" />
@@ -1150,6 +1155,11 @@ Skipped sheets: %3</translation>
         <location line="+5" />
         <source>未激活</source>
         <translation>未有効化</translation>
+    </message>
+    <message>
+        <location filename="../app/src/license_activation_dialog.cpp" line="131" />
+        <source>多张同格式 Excel 报表一键汇总</source>
+        <translation>同じ形式の複数 Excel 報告書をワンクリックで集計</translation>
     </message>
 </context>
 </TS>

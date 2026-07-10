@@ -1,0 +1,18 @@
+[Unit]
+Description=xlsOne Domestic Activation API (z-pulse.cn)
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/xlsone-activation
+ExecStart=/opt/node16/bin/node /opt/xlsone-activation/server.js
+EnvironmentFile=/opt/xlsone-activation/.env
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=xlsone-activation
+
+[Install]
+WantedBy=multi-user.target

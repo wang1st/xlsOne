@@ -3,7 +3,11 @@
 #include <QFile>
 #include <QtEndian>
 #include <stdexcept>
+#if __has_include(<QtZlib/zlib.h>)
+#include <QtZlib/zlib.h>
+#else
 #include <zlib.h>
+#endif
 
 namespace xlsone {
 

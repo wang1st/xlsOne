@@ -18,4 +18,29 @@
             <ComponentRef Id="DesktopShortcut"/>
         </Feature>
     </CPackWiXFragment>
+
+    <!-- Launch the application from the installer's finish page.
+         Injected into the Product element so Property/CustomAction/UI
+         are linked to the main installer. -->
+    <CPackWiXFragment Id="#PRODUCT">
+        <!-- Label shown next to the optional checkbox on ExitDialog. -->
+        <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="@XLSONE_WIX_LAUNCH_CHECKBOX_TEXT@" />
+
+        <!-- Custom action that launches the installed executable via cmd /c start.
+             Uses ExeCommand instead of WixShellExec to avoid WixUtilExtension dependency. -->
+        <CustomAction Id="LaunchApplication"
+                      Directory="INSTALL_ROOT"
+                      ExeCommand="[SystemFolder]cmd.exe /c start &quot;&quot; &quot;[INSTALL_ROOT]bin\xlsOneQt.exe&quot;"
+                      Return="asyncNoWait"
+                      Impersonate="yes" />
+
+        <!-- Wire Finish-button click → LaunchApplication (only when checked). -->
+        <UI>
+            <Publish Dialog="ExitDialog"
+                     Control="Finish"
+                     Event="DoAction"
+                     Value="LaunchApplication"
+                     Order="1">WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1</Publish>
+        </UI>
+    </CPackWiXFragment>
 </CPackWiXPatch>

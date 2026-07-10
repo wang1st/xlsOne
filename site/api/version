@@ -1,8 +1,8 @@
 {
-  "latest_version": "1.0.3",
-  "changelog": "v1.0.3: 完整支持简/繁/日/英四语言、统一对话框按钮样式、新增检查更新对话框",
+  "latest_version": "1.0.4",
+  "changelog": "v1.0.4: 轮换 Ed25519 授权密钥（客户端内嵌公钥同步更新）、统一版本号到 1.0.4、Windows 安装包支持代码签名",
   "downloads": {
-    "linux_arm64": "https://z-pulse.cn/downloads/xlsOne-1.0.3-linux-arm64.deb",
-    "linux_amd64": "https://z-pulse.cn/downloads/xlsOne-1.0.2-linux-amd64.deb"
+    "linux_arm64": "https://z-pulse.cn/downloads/xlsOne-1.0.4-linux-arm64.deb",
+    "linux_amd64": "https://z-pulse.cn/downloads/xlsOne-1.0.4-linux-amd64.deb"
   }
 }

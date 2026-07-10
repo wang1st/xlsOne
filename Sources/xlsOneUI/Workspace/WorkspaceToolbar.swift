@@ -11,17 +11,6 @@ struct WorkspaceToolbar: View {
         let hasWorkspace = !viewModel.selectedFilePaths.isEmpty
 
         HStack(spacing: XSpacing.lg) {
-            // Brand
-            HStack(spacing: XSpacing.sm) {
-                Image(systemName: "tablecells.badge.ellipsis")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundColor(XColor.accent)
-
-                Text(LocaleManager.loc("表表归一"))
-                    .font(XFont.toolbarButton)
-                    .foregroundColor(XColor.primaryLabel)
-            }
-
             if hasWorkspace {
                 HStack(spacing: XSpacing.xs) {
                     utilityButton(

@@ -352,8 +352,8 @@
     </message>
     <message>
         <location filename="../app/src/license_activation_dialog.cpp" line="127" />
-        <source>多单位 Excel 报表一键汇总</source>
-        <translation>多单位 Excel 报表一键汇总</translation>
+        <source>将多张格式一致的 Excel 表合成一份汇总表</source>
+        <translation>将多张格式一致的 Excel 表合成一份汇总表</translation>
     </message>
     <message>
         <location filename="../app/src/license_activation_dialog.cpp" line="145" />
@@ -403,7 +403,12 @@
         <translation>免费试用 14 天</translation>
     </message>
     <message>
-        <location filename="../app/src/license_activation_dialog.cpp" line="251" />
+        <location filename="../app/src/license_activation_dialog.cpp" line="248" />
+        <source>获取激活码</source>
+        <translation>获取激活码</translation>
+    </message>
+    <message>
+        <location filename="../app/src/license_activation_dialog.cpp" line="260" />
         <location filename="../app/src/license_activation_dialog.cpp" line="397" />
         <source>离线激活</source>
         <translation>离线激活</translation>
@@ -1150,6 +1155,11 @@
         <location filename="../app/src/workspace_chrome.cpp" line="182" />
         <source>未激活</source>
         <translation>未激活</translation>
+    </message>
+    <message>
+        <location filename="../app/src/license_activation_dialog.cpp" line="131" />
+        <source>多张同格式 Excel 报表一键汇总</source>
+        <translation>多张同格式 Excel 报表一键汇总</translation>
     </message>
 </context>
 </TS>

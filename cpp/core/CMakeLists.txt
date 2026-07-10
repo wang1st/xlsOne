@@ -1,5 +1,3 @@
-find_package(ZLIB REQUIRED)
-
 add_library(xlsone_core STATIC
     src/algorithm_keywords.cpp
     src/biff8_xls_parser.cpp
@@ -24,13 +22,31 @@ target_include_directories(xlsone_core
         ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
+# zlib: on Qt6 use the bundled Qt6::ZlibPrivate (no external libz.a needed);
+# on Qt5 fall back to a system-provided ZLIB.
+if(QT_VERSION_MAJOR EQUAL 6)
+    find_package(Qt6 COMPONENTS ZlibPrivate REQUIRED)
+    set(_xlsone_zlib_target Qt6::ZlibPrivate)
+else()
+    find_package(ZLIB REQUIRED)
+    set(_xlsone_zlib_target ZLIB::ZLIB)
+endif()
+
 target_link_libraries(xlsone_core
     PUBLIC
         Qt${QT_VERSION_MAJOR}::Core
         Qt${QT_VERSION_MAJOR}::Network
     PRIVATE
-        ZLIB::ZLIB
+        ${_xlsone_zlib_target}
 )
+
+# XLSONE_ACTIVATION_BASE_URL: licensing/activation endpoint.
+# Default = international (Cloudflare, api.xlsone.com). Override (e.g. via a build
+# preset) to point the domestic Windows build at api.z-pulse.cn. Mirrors the
+# existing XLSONE_UPDATE_BASE_URL mechanism.
+if(NOT DEFINED XLSONE_ACTIVATION_BASE_URL)
+    set(XLSONE_ACTIVATION_BASE_URL "https://api.xlsone.com")
+endif()
 
 target_compile_definitions(xlsone_core
     PRIVATE
@@ -38,4 +54,5 @@ target_compile_definitions(xlsone_core
         XLSONE_VERSION_MAJOR=${PROJECT_VERSION_MAJOR}
         XLSONE_VERSION_MINOR=${PROJECT_VERSION_MINOR}
         XLSONE_VERSION_PATCH=${PROJECT_VERSION_PATCH}
+        XLSONE_ACTIVATION_BASE_URL="${XLSONE_ACTIVATION_BASE_URL}"
 )

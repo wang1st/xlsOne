@@ -37,6 +37,7 @@ struct LicenseInfo {
 
 struct ActivationResult {
     bool success = false;
+    bool trial = false;
     QString errorMessage;
 };
 
@@ -53,16 +54,28 @@ public:
     /// Current license state.
     LicenseState state() const;
 
-    /// Start a 14-day trial. Returns remaining days.
-    int startTrial();
+    /// Current license info (populated after successful applyLicenseFile).
+    LicenseInfo currentInfo() const;
+
+    /// Request a signed 14-day trial license from the activation server.
+    void requestTrial(const QString& deviceFingerprint);
 
     /// Check trial status. Returns remaining days, or -1 if not in trial / expired.
     int checkTrial() const;
+
+    /// Remaining local grace days after a signed license expires.
+    int graceRemainingDays() const;
 
     /// Compute a stable device fingerprint for this machine.
     /// On Windows this uses WMIC + MachineGuid; elsewhere it falls back to
     /// QSysInfo::machineUniqueId(). The result is cached for the process lifetime.
     static QString deviceFingerprint();
+
+    /// Activation API base URL (region-dependent). International builds resolve
+    /// to https://api.xlsone.com; domestic builds (XLSONE_ACTIVATION_BASE_URL)
+    /// resolve to https://api.z-pulse.cn. Used by the offline-activation dialog
+    /// to open the matching /offline page.
+    static QString activationBaseUrl();
 
     /// Clear the cached device fingerprint (rarely needed, e.g. after major hardware change).
     static void clearDeviceFingerprintCache();
@@ -94,6 +107,7 @@ private:
 
     QNetworkAccessManager* networkManager_ = nullptr;
     LicenseState state_ = LicenseState::Unactivated;
+    LicenseInfo currentInfo_;
 };
 
 } // namespace xlsone

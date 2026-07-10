@@ -352,8 +352,8 @@ Skipped sheets: %3</translation>
     </message>
     <message>
         <location filename="../app/src/license_activation_dialog.cpp" line="127" />
-        <source>多单位 Excel 报表一键汇总</source>
-        <translation>One-click summary of multi-unit Excel reports</translation>
+        <source>将多张格式一致的 Excel 表合成一份汇总表</source>
+        <translation>Merge multiple Excel sheets with consistent formats into one summary</translation>
     </message>
     <message>
         <location filename="../app/src/license_activation_dialog.cpp" line="145" />
@@ -403,7 +403,12 @@ Skipped sheets: %3</translation>
         <translation>Free 14-day trial</translation>
     </message>
     <message>
-        <location filename="../app/src/license_activation_dialog.cpp" line="251" />
+        <location filename="../app/src/license_activation_dialog.cpp" line="248" />
+        <source>获取激活码</source>
+        <translation>Get Activation Code</translation>
+    </message>
+    <message>
+        <location filename="../app/src/license_activation_dialog.cpp" line="260" />
         <location filename="../app/src/license_activation_dialog.cpp" line="397" />
         <source>离线激活</source>
         <translation>Offline Activation</translation>
@@ -1150,6 +1155,11 @@ After manually correcting cells in the summary, create one via Correction Rules 
         <location filename="../app/src/workspace_chrome.cpp" line="182" />
         <source>未激活</source>
         <translation>Not activated</translation>
+    </message>
+    <message>
+        <location filename="../app/src/license_activation_dialog.cpp" line="131" />
+        <source>多张同格式 Excel 报表一键汇总</source>
+        <translation>Merge identically structured Excel workbooks with one click</translation>
     </message>
 </context>
 </TS>

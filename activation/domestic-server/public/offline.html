@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>表表归一 · 离线激活</title>
+  <style>
+    :root { --bg:#0f1115; --card:#1a1d24; --fg:#e6e8ec; --muted:#9aa0ab; --brand:#4f8cff; --ok:#36c275; --err:#ff6b6b; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: -apple-system, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+           background: var(--bg); color: var(--fg); display:flex; min-height:100vh; align-items:center; justify-content:center; padding:24px; }
+    .card { background: var(--card); border:1px solid #2a2e37; border-radius:14px; padding:32px; width:100%; max-width:440px; box-shadow:0 10px 40px rgba(0,0,0,.4); }
+    h1 { font-size:20px; margin:0 0 4px; }
+    p.sub { color: var(--muted); font-size:13px; margin:0 0 24px; line-height:1.6; }
+    label { display:block; font-size:13px; color: var(--muted); margin:16px 0 6px; }
+    input { width:100%; padding:11px 12px; border-radius:9px; border:1px solid #2f343f; background:#12141a; color:var(--fg); font-size:14px; outline:none; }
+    input:focus { border-color: var(--brand); }
+    button { margin-top:22px; width:100%; padding:12px; border:none; border-radius:9px; background:var(--brand); color:#fff; font-size:15px; font-weight:600; cursor:pointer; }
+    button:disabled { opacity:.5; cursor:default; }
+    .msg { margin-top:16px; font-size:13px; min-height:18px; }
+    .msg.err { color: var(--err); }
+    .msg.ok { color: var(--ok); }
+    code { background:#12141a; padding:2px 6px; border-radius:5px; font-size:12px; }
+    .steps { font-size:12px; color:var(--muted); line-height:1.7; margin-top:8px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>离线激活</h1>
+    <p class="sub">适用于无法联网激活的场景。请先在软件「激活」窗口复制本机设备码，填写下方表单后下载授权文件，再回到软件导入即可。</p>
+    <form id="f">
+      <label>激活码（XXXX-XXXX-XXXX-XXXX）</label>
+      <input id="key" placeholder="ABCD-1234-EFGH-5678" autocomplete="off" spellcheck="false" />
+      <label>本机设备码</label>
+      <input id="device" placeholder="从软件激活窗口复制" autocomplete="off" spellcheck="false" />
+      <label>设备名称（可选）</label>
+      <input id="name" placeholder="如：我的办公室电脑" autocomplete="off" />
+      <button id="submit" type="submit">生成并下载授权文件</button>
+    </form>
+    <div id="msg" class="msg"></div>
+    <div class="steps">
+      步骤：① 软件内点击「离线激活」→ 复制设备码；② 在此页填写并下载 <code>.license</code> 文件；③ 回到软件点击「导入授权文件」完成激活。
+    </div>
+  </div>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const msg = $('msg');
+    $('f').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      msg.className = 'msg'; msg.textContent = '';
+      const key = $('key').value.trim();
+      const device_hash = $('device').value.trim();
+      const device_name = $('name').value.trim();
+      if (!key || !device_hash) { msg.className='msg err'; msg.textContent='请填写激活码和设备码'; return; }
+      $('submit').disabled = true; msg.textContent = '正在生成授权文件…';
+      try {
+        const resp = await fetch('/api/license/download', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key, device_hash, device_name })
+        });
+        if (!resp.ok) {
+          let detail = '';
+          try { detail = (await resp.json()).message || (await resp.json()).error; } catch {}
+          msg.className='msg err'; msg.textContent = '激活失败：' + (detail || ('HTTP ' + resp.status));
+          $('submit').disabled = false; return;
+        }
+        const blob = await resp.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const disp = resp.headers.get('Content-Disposition') || '';
+        const m = disp.match(/filename="?([^"]+)"?/);
+        a.download = m ? m[1] : 'license.license';
+        document.body.appendChild(a); a.click(); a.remove();
+        URL.revokeObjectURL(url);
+        msg.className='msg ok'; msg.textContent = '已生成授权文件，正在下载…请用软件导入。';
+      } catch (err) {
+        msg.className='msg err'; msg.textContent = '网络错误：' + err.message;
+      } finally {
+        $('submit').disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
