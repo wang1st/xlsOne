@@ -4,7 +4,7 @@
   "downloads": {
     "linux_arm64": "https://z-pulse.cn/downloads/xlsOne-1.0.5-linux-arm64.deb",
     "linux_amd64": "https://z-pulse.cn/downloads/xlsOne-1.0.5-linux-amd64.deb",
-    "windows_amd64": "https://z-pulse.cn/downloads/xlsone-1.0.5-windows-amd64.zip",
-    "windows_amd64_msi": "https://z-pulse.cn/downloads/xlsone-1.0.5-windows-amd64.msi"
+    "windows_amd64": "https://z-pulse.cn/downloads/xlsone-1.0.5-windows-amd64.msi",
+    "windows_amd64_zip": "https://z-pulse.cn/downloads/xlsone-1.0.5-windows-amd64.zip"
   }
 }

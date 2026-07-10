@@ -106,10 +106,10 @@ fetch('/api/version?v=1.0.5')
             document.getElementById('dl-linux-arm64').href = data.downloads.linux_arm64;
         if (data.downloads.linux_amd64)
             document.getElementById('dl-linux-amd64').href = data.downloads.linux_amd64;
+        if (data.downloads.windows_amd64_zip)
+            document.getElementById('dl-windows').href = data.downloads.windows_amd64_zip;
         if (data.downloads.windows_amd64)
-            document.getElementById('dl-windows').href = data.downloads.windows_amd64;
-        if (data.downloads.windows_amd64_msi)
-            document.getElementById('dl-windows-msi').href = data.downloads.windows_amd64_msi;
+            document.getElementById('dl-windows-msi').href = data.downloads.windows_amd64;
     })
     .catch(() => {
         document.getElementById('ver').textContent = '加载失败';
