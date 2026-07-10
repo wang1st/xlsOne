@@ -98,7 +98,7 @@
 </footer>
 
 <script>
-fetch('/api/version.json?v=0.3.0')
+fetch('/api/version?v=1.0.5')
     .then(r => r.json())
     .then(data => {
         document.getElementById('ver').textContent = 'v' + data.latest_version;
