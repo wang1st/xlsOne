@@ -2,6 +2,7 @@
 #include "dialog_utils.hpp"
 #include "ui_theme.hpp"
 #include "xlsone/core/license_manager.hpp"
+#include "xlsone/core/obfuscation.hpp"
 
 #include <QApplication>
 #include <QClipboard>
@@ -497,7 +498,7 @@ void LicenseActivationDialog::buildOnlinePage(QWidget* container)
         "QPushButton:hover { background: %3; }"
     ).arg(t.accent.name()).arg(t.border.name()).arg(t.accentSoft.name()));
     connect(purchaseButton, &QPushButton::clicked, this, []() {
-        QDesktopServices::openUrl(QUrl(QStringLiteral("https://z-pulse.cn/xlsone/")));
+        QDesktopServices::openUrl(QUrl(XLSONE_OBF_STRING("https://z-pulse.cn/xlsone/buy.html")));
     });
     linkRow->addWidget(purchaseButton);
     purchaseButton_ = purchaseButton;
@@ -525,8 +526,13 @@ void LicenseActivationDialog::buildOfflinePage(QWidget* container)
         "background: %1; border-radius: 8px; border: 1px solid %2;"
     ).arg(t.surface.name()).arg(t.border.name()));
 
+#ifdef XLSONE_OBFUSCATE
+    const QString offlinePageUrl = xlsone::LicenseManager::activationBaseUrl()
+        + XLSONE_OBF_STRING("/offline");
+#else
     const QString offlinePageUrl = xlsone::LicenseManager::activationBaseUrl()
         + QStringLiteral("/offline");
+#endif
 
     auto addStep = [&](int number, const QString& text) {
         auto* row = new QHBoxLayout();
@@ -608,7 +614,7 @@ void LicenseActivationDialog::buildOfflinePage(QWidget* container)
         "QPushButton:hover { text-decoration: underline; }"
     ).arg(t.accent.name()));
     connect(purchaseLink, &QPushButton::clicked, this, []() {
-        QDesktopServices::openUrl(QUrl(QStringLiteral("https://z-pulse.cn/xlsone/")));
+        QDesktopServices::openUrl(QUrl(XLSONE_OBF_STRING("https://z-pulse.cn/xlsone/buy.html")));
     });
     stepsLayout->addWidget(purchaseLink, 0, Qt::AlignLeft);
 

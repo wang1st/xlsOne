@@ -1,10 +1,24 @@
 cmake_minimum_required(VERSION 3.22)
 
 project(xlsOneQt
-    VERSION 1.0.4
+    VERSION 1.0.5
     DESCRIPTION "Cross-platform C++/Qt port of xlsOne"
     LANGUAGES C CXX
 )
+
+# --- Obfuscation / hardening options ---
+option(XLSONE_OBFUSCATE "Enable compile-time obfuscation of secrets and strings" OFF)
+set(XLSONE_LICENSE_PUBLIC_KEY "" CACHE STRING
+    "Ed25519 public key for license verification (64 hex chars). Required for a working obfuscated build.")
+
+# Service base URLs.  Defined as CMake variables so they can be passed to the
+# obfuscation generator in addition to being used as compile definitions.
+if(NOT DEFINED XLSONE_ACTIVATION_BASE_URL)
+    set(XLSONE_ACTIVATION_BASE_URL "https://api.xlsone.com")
+endif()
+if(NOT DEFINED XLSONE_UPDATE_BASE_URL)
+    set(XLSONE_UPDATE_BASE_URL "https://z-pulse.cn")
+endif()
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -18,6 +32,51 @@ find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core Gui Widgets Network Test)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Gui Widgets Network Test)
 
 enable_testing()
+
+# Obfuscated secrets: when XLSONE_OBFUSCATE is ON, regenerate the secrets file
+# in the build tree from the current public key / URLs.  When OFF, the getters
+# are not compiled and the source code falls back to the XLSONE_*_BASE_URL
+# compile definitions, preserving the original dev-build behavior.
+set(XLSONE_OBFUSCATED_SECRETS "")
+
+if(XLSONE_OBFUSCATE)
+    find_package(Python3 REQUIRED)
+    set(_xlsone_obf_secrets_out
+        "${CMAKE_CURRENT_BINARY_DIR}/core/src/obfuscated_secrets.cpp")
+    file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/core/src")
+    add_custom_command(
+        OUTPUT "${_xlsone_obf_secrets_out}"
+        COMMAND Python3::Interpreter
+            "${CMAKE_CURRENT_SOURCE_DIR}/scripts/generate_obfuscation.py"
+            --public-key "${XLSONE_LICENSE_PUBLIC_KEY}"
+            --activation-url "${XLSONE_ACTIVATION_BASE_URL}"
+            --update-url "${XLSONE_UPDATE_BASE_URL}"
+            --output "${_xlsone_obf_secrets_out}"
+        DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/scripts/generate_obfuscation.py"
+        COMMENT "Generating obfuscated secrets"
+        VERBATIM
+    )
+    add_custom_target(xlsone_obf_secrets DEPENDS "${_xlsone_obf_secrets_out}")
+    set(XLSONE_OBFUSCATED_SECRETS "${_xlsone_obf_secrets_out}")
+
+    # Hardening flags for release-like builds.
+    string(TOUPPER "${CMAKE_BUILD_TYPE}" _xlsone_build_type_upper)
+    if(_xlsone_build_type_upper MATCHES "RELEASE|MINSIZEREL|RELWITHDEBINFO")
+        if(NOT MSVC)
+            add_compile_options(
+                -O3
+                -fvisibility=hidden
+                -fvisibility-inlines-hidden
+                -fmerge-all-constants
+                -fno-ident
+            )
+            add_link_options(-s)
+        else()
+            add_compile_options(/O2)
+            add_link_options(/DEBUG:NONE /OPT:REF /OPT:ICF)
+        endif()
+    endif()
+endif()
 
 # Translations — use lrelease to compile .ts → .qm
 set(_i18n_dir "${CMAKE_CURRENT_SOURCE_DIR}/i18n")

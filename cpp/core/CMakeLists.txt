@@ -13,6 +13,7 @@ add_library(xlsone_core STATIC
     src/update_checker.cpp
     src/validator.cpp
     src/zip_archive.cpp
+    ${XLSONE_OBFUSCATED_SECRETS}
     include/xlsone/core/license_manager.hpp
     include/xlsone/core/update_checker.hpp
 )
@@ -40,13 +41,10 @@ target_link_libraries(xlsone_core
         ${_xlsone_zlib_target}
 )
 
-# XLSONE_ACTIVATION_BASE_URL: licensing/activation endpoint.
-# Default = international (Cloudflare, api.xlsone.com). Override (e.g. via a build
-# preset) to point the domestic Windows build at api.z-pulse.cn. Mirrors the
-# existing XLSONE_UPDATE_BASE_URL mechanism.
-if(NOT DEFINED XLSONE_ACTIVATION_BASE_URL)
-    set(XLSONE_ACTIVATION_BASE_URL "https://api.xlsone.com")
-endif()
+# XLSONE_ACTIVATION_BASE_URL is defined as a CMake variable in the top-level
+# CMakeLists.txt so it can be passed to the obfuscation generator.  When
+# obfuscation is disabled, the URL is passed through as a compile definition
+# exactly as before so dev builds with custom endpoints keep working.
 
 target_compile_definitions(xlsone_core
     PRIVATE
@@ -54,5 +52,16 @@ target_compile_definitions(xlsone_core
         XLSONE_VERSION_MAJOR=${PROJECT_VERSION_MAJOR}
         XLSONE_VERSION_MINOR=${PROJECT_VERSION_MINOR}
         XLSONE_VERSION_PATCH=${PROJECT_VERSION_PATCH}
-        XLSONE_ACTIVATION_BASE_URL="${XLSONE_ACTIVATION_BASE_URL}"
 )
+
+if(XLSONE_OBFUSCATE)
+    target_compile_definitions(xlsone_core PRIVATE XLSONE_OBFUSCATE)
+    if(TARGET xlsone_obf_secrets)
+        add_dependencies(xlsone_core xlsone_obf_secrets)
+    endif()
+else()
+    target_compile_definitions(xlsone_core
+        PRIVATE
+            XLSONE_ACTIVATION_BASE_URL="${XLSONE_ACTIVATION_BASE_URL}"
+    )
+endif()

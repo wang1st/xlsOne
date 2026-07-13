@@ -17,6 +17,14 @@ finally {
 }
 
 $Exe = Join-Path $BuildDir "app\xlsOneQt.exe"
+
+# Strip symbol tables from the release binary to reduce size and hinder
+# static analysis.  CMake also passes -s when XLSONE_OBFUSCATE is enabled.
+$Strip = Get-Command strip -ErrorAction SilentlyContinue
+if ($Strip -and (Test-Path $Exe)) {
+    & $Strip.Source $Exe
+}
+
 if ($QtBin -ne "" -and (Test-Path $Exe)) {
     & (Join-Path $QtBin "windeployqt.exe") $Exe
 }
