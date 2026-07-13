@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>小红书推广软文 - 表表归一</title>
+<style>
+  body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; max-width: 680px; margin: 40px auto; padding: 0 20px; line-height: 1.8; color: #333; }
+  h1 { font-size: 1.2em; text-align: center; color: #666; margin-bottom: 32px; }
+  .card { background: #fffbf5; border-radius: 12px; padding: 32px 28px; border: 1px solid #f0e6d2; }
+  .title { font-size: 1.15em; font-weight: bold; margin-bottom: 20px; line-height: 1.6; }
+  p { margin: 0 0 14px; }
+  .highlight { background: #fff3cd; padding: 2px 6px; border-radius: 3px; }
+  .emoji-point { padding-left: 4px; }
+  .tags { color: #888; font-size: 0.92em; margin-top: 24px; }
+  .copy-btn { display: block; margin: 24px auto 0; padding: 10px 32px; font-size: 0.95em; background: #ff2442; color: #fff; border: none; border-radius: 20px; cursor: pointer; }
+  .copy-btn:hover { background: #e01e39; }
+  .tip { text-align: center; color: #999; font-size: 0.82em; margin-top: 12px; }
+</style>
+</head>
+<body>
+
+<h1>📕 小红书推广软文</h1>
+
+<div class="card" id="content">
+
+<div class="title">😭每月月底，我都要把20张表粘成一张……直到发现了这个</div>
+
+<p>姐妹们谁懂啊！每到月底/季末，领导轻飘飘一句"把各部门的报表汇总一下"，噩梦就开始了——</p>
+
+<p>👇 打开A部门的表，复制B2到H50<br>
+👇 打开B部门的表，再复制一遍<br>
+👇 打开C部门……已经眼花了<br>
+👇 好不容易贴完，一检查：金额列求和公式写错了行😇</p>
+
+<p>而且表一多特别容易漏文件、贴错单元格，出一个错就全白干。</p>
+
+<p>直到同事安利了这个：<strong>表表归一</strong>（xlsOne），打开的那一瞬间我差点哭出来。</p>
+
+<p>✨ <strong>它能干什么？</strong><br>
+把一堆格式一样的Excel表拖进去，自动给你合成一张总表！金额列自动求和，编号列自动识别保留，不用手写一个公式。</p>
+
+<p>✨ <strong>几个让我离不开的点：</strong><br>
+- 一次能处理 <strong>20+ 个文件</strong>，几秒钟出结果<br>
+- 点任意单元格能看到每个源文件里的原始值，查源头超方便<br>
+- <strong>完全离线运行</strong>，数据不上网，财务人不慌<br>
+- 自动判断有疑问的地方可以手动修正，不会瞎猜<br>
+- 支持 .xlsx 和 .xls 老格式，单位的老表也能用</p>
+
+<p>👉 适用场景：财务报表合并、乡镇统计汇总、项目台账、任何"多张同格式表合并"的活儿</p>
+
+<p>💡 一句话：<strong>重复的粘贴不用再做了，省下来的时间喝杯咖啡不香吗</strong></p>
+
+<p>🔗 官网：z-pulse.cn &nbsp; 免费下载，Windows / Linux 都能用</p>
+
+<p class="tags">#Excel #财务 #效率工具 #办公必备 #打工人的一天 #报表汇总 #摸鱼技巧</p>
+
+</div>
+
+<button class="copy-btn" onclick="copyContent()">📋 一键复制全文</button>
+<p class="tip">点击按钮后，到小红书直接粘贴即可</p>
+
+<script>
+function copyContent() {
+  const el = document.getElementById('content');
+  const text = el.innerText;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.querySelector('.copy-btn');
+    btn.textContent = '✅ 已复制！';
+    btn.style.background = '#07c160';
+    setTimeout(() => { btn.textContent = '📋 一键复制全文'; btn.style.background = '#ff2442'; }, 2000);
+  }).catch(() => alert('复制失败，请手动选中全文 Ctrl+C'));
+}
+</script>
+
+</body>
+</html>

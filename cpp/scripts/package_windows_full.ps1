@@ -273,6 +273,19 @@ Write-Host "`n--- Building xlsone_app ---" -ForegroundColor Cyan
 & cmake --build $BuildDir --target xlsone_app --config $Preset
 if ($LASTEXITCODE -ne 0) { throw "CMake build failed" }
 
+# --- Strip symbols ---
+Write-Host "`n--- Stripping xlsOneQt.exe ---" -ForegroundColor Cyan
+$exePath = Join-Path $BuildDir "app\xlsOneQt.exe"
+$strip = Get-Command strip -ErrorAction SilentlyContinue
+if ($strip -and (Test-Path $exePath)) {
+    & $strip.Source $exePath
+    Write-Host "[OK] stripped: $exePath" -ForegroundColor Green
+} elseif (-not (Test-Path $exePath)) {
+    Write-Host "[WARN] xlsOneQt.exe not found at $exePath; skipping strip" -ForegroundColor Yellow
+} else {
+    Write-Host "[WARN] strip tool not found on PATH; skipping" -ForegroundColor Yellow
+}
+
 # --- Package ---
 Write-Host "`n--- Packaging ---" -ForegroundColor Cyan
 

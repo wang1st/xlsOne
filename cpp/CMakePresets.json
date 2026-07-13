@@ -25,7 +25,9 @@
       "displayName": "Native Release",
       "binaryDir": "${sourceDir}/build-release",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release"
+        "CMAKE_BUILD_TYPE": "Release",
+        "XLSONE_OBFUSCATE": "ON",
+        "XLSONE_LICENSE_PUBLIC_KEY": "$env{XLSONE_LICENSE_PUBLIC_KEY}"
       }
     },
     {
@@ -35,7 +37,9 @@
       "binaryDir": "${sourceDir}/build-windows-release",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "XLSONE_ACTIVATION_BASE_URL": "https://api.xlsone.com"
+        "XLSONE_ACTIVATION_BASE_URL": "https://api.xlsone.com",
+        "XLSONE_OBFUSCATE": "ON",
+        "XLSONE_LICENSE_PUBLIC_KEY": "$env{XLSONE_LICENSE_PUBLIC_KEY}"
       }
     },
     {
@@ -45,7 +49,9 @@
       "binaryDir": "${sourceDir}/build-windows-cn-release",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "XLSONE_ACTIVATION_BASE_URL": "https://api.z-pulse.cn"
+        "XLSONE_ACTIVATION_BASE_URL": "https://api.z-pulse.cn",
+        "XLSONE_OBFUSCATE": "ON",
+        "XLSONE_LICENSE_PUBLIC_KEY": "$env{XLSONE_LICENSE_PUBLIC_KEY}"
       }
     },
     {
@@ -54,7 +60,9 @@
       "displayName": "Linux x86_64 Release",
       "binaryDir": "${sourceDir}/build-linux-release",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release"
+        "CMAKE_BUILD_TYPE": "Release",
+        "XLSONE_OBFUSCATE": "ON",
+        "XLSONE_LICENSE_PUBLIC_KEY": "$env{XLSONE_LICENSE_PUBLIC_KEY}"
       }
     },
     {
@@ -63,7 +71,9 @@
       "displayName": "UOS x86_64 Release",
       "binaryDir": "${sourceDir}/build-uos-x86_64-release",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release"
+        "CMAKE_BUILD_TYPE": "Release",
+        "XLSONE_OBFUSCATE": "ON",
+        "XLSONE_LICENSE_PUBLIC_KEY": "$env{XLSONE_LICENSE_PUBLIC_KEY}"
       }
     },
     {
@@ -73,7 +83,9 @@
       "binaryDir": "${sourceDir}/build-uos-arm64-release",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "CMAKE_TOOLCHAIN_FILE": "$env{UOS_ARM64_TOOLCHAIN_FILE}"
+        "CMAKE_TOOLCHAIN_FILE": "$env{UOS_ARM64_TOOLCHAIN_FILE}",
+        "XLSONE_OBFUSCATE": "ON",
+        "XLSONE_LICENSE_PUBLIC_KEY": "$env{XLSONE_LICENSE_PUBLIC_KEY}"
       }
     },
     {
@@ -83,7 +95,9 @@
       "binaryDir": "${sourceDir}/build-uos-loongarch64-release",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "CMAKE_TOOLCHAIN_FILE": "$env{UOS_LOONGARCH64_TOOLCHAIN_FILE}"
+        "CMAKE_TOOLCHAIN_FILE": "$env{UOS_LOONGARCH64_TOOLCHAIN_FILE}",
+        "XLSONE_OBFUSCATE": "ON",
+        "XLSONE_LICENSE_PUBLIC_KEY": "$env{XLSONE_LICENSE_PUBLIC_KEY}"
       }
     }
   ],

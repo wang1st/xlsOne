@@ -10,6 +10,7 @@
 #include "ui_theme.hpp"
 #include "xlsone/core/exporter.hpp"
 #include "xlsone/core/license_manager.hpp"
+#include "xlsone/core/obfuscation.hpp"
 
 #include <QAction>
 #include <QActionGroup>
@@ -464,7 +465,7 @@ void MainWindow::buildUi()
             .arg(XLSONE_VERSION_MINOR)
             .arg(XLSONE_VERSION_PATCH);
         const bool domesticBuild = xlsone::LicenseManager::activationBaseUrl()
-            .contains(QStringLiteral("z-pulse.cn"), Qt::CaseInsensitive);
+            .contains(XLSONE_OBF_STRING("z-pulse.cn"), Qt::CaseInsensitive);
         xlsone::ui::showProductAbout(this, tr("关于 表表归一"), ver, domesticBuild);
     });
 
@@ -617,8 +618,13 @@ void MainWindow::checkForUpdates(bool silent)
     }
     checkingUpdates_ = true;
 
+#ifdef XLSONE_OBFUSCATE
+    const QString apiUrl = xlsone::obf::updateBaseUrl()
+        + XLSONE_OBF_STRING("/api/version");
+#else
     const QString apiUrl = QStringLiteral(
         XLSONE_UPDATE_BASE_URL "/api/version");
+#endif
 
     if (silent) {
         // Silent auto-check: only show dialog when an update is available.
@@ -641,8 +647,13 @@ void MainWindow::checkForUpdates(bool silent)
                                                 info.downloadUrl,
                                                 this);
                 connect(dialog, &QDialog::accepted, this, [] {
+#ifdef XLSONE_OBFUSCATE
+                    QDesktopServices::openUrl(QUrl(
+                        xlsone::obf::updateBaseUrl() + XLSONE_OBF_STRING("/xlsone/download.html")));
+#else
                     QDesktopServices::openUrl(QUrl(
                         QStringLiteral(XLSONE_UPDATE_BASE_URL "/xlsone/download.html")));
+#endif
                 });
                 xlsone::ui::showDialogCentered(dialog, this);
             });

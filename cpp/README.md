@@ -67,6 +67,40 @@ cmake --build cpp/build
 ctest --test-dir cpp/build --output-on-failure
 ```
 
+## Obfuscation / Release Hardening
+
+The Qt build supports a lightweight, targeted obfuscation layer controlled by
+the CMake option `XLSONE_OBFUSCATE`.
+
+What it protects:
+- Ed25519 license verification public key
+- Activation base URL and API paths (`/api/trial/windows`, `/api/activate/windows`)
+- Update base URL and download page path
+- Hard-coded product URLs (`https://z-pulse.cn/xlsone/`, `https://xlsone.com/`)
+
+What it does **not** do:
+- Full control-flow flattening or VM protection (would break Qt MOC / signals / slots)
+- Obfuscate third-party libraries (Qt, zlib, monocypher)
+- Hide user-visible strings or persisted settings keys (preserves compatibility)
+
+Enable it for a release build:
+
+```bash
+export XLSONE_LICENSE_PUBLIC_KEY="acc209fbd4e9e198c94aef7fc3faaf44f80e278357045959e1d6a2afb1044ceb"
+cmake --preset windows-release
+cmake --build --preset windows-release
+```
+
+When `XLSONE_OBFUSCATE=ON`:
+- `scripts/generate_obfuscation.py` regenerates `core/src/obfuscated_secrets.cpp`
+  in the build tree from the current public key and base URLs.
+- Release-like builds also receive hardening flags (`-O3`, `-fvisibility=hidden`,
+  `-fmerge-all-constants`, `-fno-ident`) and link-time stripping (`-s`).
+- Windows packaging scripts run an additional `strip` step.
+
+The checked-in `core/src/obfuscated_secrets.cpp` is a fallback for non-obfuscated
+builds and uses plaintext literals.  It is **not** used when obfuscation is enabled.
+
 ## Known Gaps
 
 - BIFF8 `.xls` parsing now covers OLE Compound File workbooks and common BIFF8 records used by the current fixtures: BoundSheet, SST/CONTINUE, FORMAT, XF, LABELSST, LABEL/RSTRING, NUMBER, RK/MULRK, BOOLERR, cached FORMULA results, and MERGEDCELLS expansion. It is not yet a full replacement for every legacy Excel edge case.

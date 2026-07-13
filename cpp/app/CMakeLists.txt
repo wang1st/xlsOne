@@ -82,17 +82,25 @@ target_include_directories(xlsone_app
         "${CMAKE_CURRENT_SOURCE_DIR}/../core/src"
 )
 
-# XLSONE_UPDATE_BASE_URL: override with -D for local dev (http) vs release (https)
-if(NOT DEFINED XLSONE_UPDATE_BASE_URL)
-    set(XLSONE_UPDATE_BASE_URL "https://z-pulse.cn")
-endif()
+# XLSONE_UPDATE_BASE_URL is defined as a CMake variable in the top-level
+# CMakeLists.txt so it can be passed to the obfuscation generator.  When
+# obfuscation is disabled, the URL is passed through as a compile definition
+# exactly as before so dev builds with custom endpoints keep working.
 target_compile_definitions(xlsone_app
     PRIVATE
         XLSONE_VERSION_MAJOR=${PROJECT_VERSION_MAJOR}
         XLSONE_VERSION_MINOR=${PROJECT_VERSION_MINOR}
         XLSONE_VERSION_PATCH=${PROJECT_VERSION_PATCH}
-        XLSONE_UPDATE_BASE_URL="${XLSONE_UPDATE_BASE_URL}"
 )
+
+if(XLSONE_OBFUSCATE)
+    target_compile_definitions(xlsone_app PRIVATE XLSONE_OBFUSCATE)
+else()
+    target_compile_definitions(xlsone_app
+        PRIVATE
+            XLSONE_UPDATE_BASE_URL="${XLSONE_UPDATE_BASE_URL}"
+    )
+endif()
 
 install(TARGETS xlsone_app
     BUNDLE DESTINATION .

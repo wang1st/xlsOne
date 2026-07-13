@@ -1,6 +1,7 @@
 #include "dialog_utils.hpp"
 
 #include "ui_theme.hpp"
+#include "xlsone/core/obfuscation.hpp"
 
 #include <QAbstractButton>
 #include <QApplication>
@@ -241,8 +242,8 @@ void showAbout(QWidget* parent, const QString& title, const QString& html)
 void showProductAbout(QWidget* parent, const QString& title, const QString& version, bool domesticBuild)
 {
     const auto& t = theme();
-    const QString domesticUrl = QStringLiteral("https://z-pulse.cn/xlsone/");
-    const QString internationalUrl = QStringLiteral("https://xlsone.com/");
+    const QString domesticUrl = XLSONE_OBF_STRING("https://z-pulse.cn/xlsone/");
+    const QString internationalUrl = XLSONE_OBF_STRING("https://xlsone.com/");
 
     QDialog dialog(parent);
     dialog.setWindowTitle(title);
