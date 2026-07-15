@@ -9,6 +9,7 @@
     "macos": "https://z-pulse.cn/downloads/xlsOne-1.0.6-macos.dmg"
   },
   "checksums": {
-    "xlsOne-1.0.6-linux-amd64.deb": "0e246c7cb7317697bfc5cadade9d50279d95b37ebc7fb82782c249622a3f7d61"
+    "xlsOne-1.0.6-linux-amd64.deb": "0e246c7cb7317697bfc5cadade9d50279d95b37ebc7fb82782c249622a3f7d61",
+    "xlsOne-1.0.6-macos.dmg": "0e246c7cb7317697bfc5cadade9d50279d95b37ebc7fb82782c249622a3f7d61"
   }
 }
