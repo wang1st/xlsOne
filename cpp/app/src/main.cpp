@@ -1,5 +1,4 @@
 #include "main_window.hpp"
-#include "xlsone/core/license_manager.hpp"
 #include "algorithm_keywords.hpp"
 
 #include <QApplication>
@@ -51,14 +50,6 @@ int main(int argc, char* argv[])
             app.installTranslator(&appTranslator);
             break;
         }
-    }
-
-    // Domestic ARM64 Linux (UOS/Kylin/Phytium/Kunpeng) — always free, no license check
-    if (xlsone::LicenseManager::isFreePlatform()) {
-        MainWindow window;
-        window.resize(1180, 760);
-        window.show();
-        return app.exec();
     }
 
     MainWindow window;

@@ -1,10 +1,14 @@
 {
-  "latest_version": "1.0.5",
-  "changelog": "v1.0.5: Windows 版新增 MSI 安装包，安装更便捷；优化下载与更新体验",
+  "latest_version": "1.0.6",
+  "changelog": "修复了某些已知错误",
   "downloads": {
-    "linux_arm64": "https://z-pulse.cn/downloads/xlsOne-1.0.5-linux-arm64.deb",
-    "linux_amd64": "https://z-pulse.cn/downloads/xlsOne-1.0.5-linux-amd64.deb",
-    "windows_amd64": "https://z-pulse.cn/downloads/xlsone-1.0.5-windows-amd64.msi",
-    "windows_amd64_zip": "https://z-pulse.cn/downloads/xlsone-1.0.5-windows-amd64.zip"
+    "linux_arm64": "https://z-pulse.cn/downloads/xlsOne-1.0.6-linux-arm64.deb",
+    "linux_amd64": "https://z-pulse.cn/downloads/xlsOne-1.0.6-linux-amd64.deb",
+    "windows_amd64": "https://z-pulse.cn/downloads/xlsone-1.0.6-windows-amd64.msi",
+    "windows_amd64_zip": "https://z-pulse.cn/downloads/xlsone-1.0.6-windows-amd64.zip",
+    "macos": "https://z-pulse.cn/downloads/xlsOne-1.0.6-macos.dmg"
+  },
+  "checksums": {
+    "xlsOne-1.0.6-linux-amd64.deb": "0e246c7cb7317697bfc5cadade9d50279d95b37ebc7fb82782c249622a3f7d61"
   }
 }

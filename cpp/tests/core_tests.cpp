@@ -9,6 +9,7 @@
 
 #include <QFile>
 #include <QFileInfo>
+#include <QSettings>
 #include <QTemporaryDir>
 #include <QTest>
 #include <QtEndian>
@@ -34,6 +35,7 @@ class CoreTests final : public QObject {
     Q_OBJECT
 
 private slots:
+    void initTestCase();
     void parsesNumbers();
     void mergesNumericAmounts();
     void preservesCodeSemantics();
@@ -69,6 +71,9 @@ private slots:
     void updateCheckerFindsNewVersionOnline();
     void licenseManagerAcceptsValidEd25519License();
     void licenseManagerRejectsTamperedEd25519License();
+
+private:
+    QTemporaryDir settingsTempDir_;
 };
 
 namespace {
@@ -370,6 +375,12 @@ QByteArray minimalBiff8Workbook()
 }
 
 } // namespace
+
+void CoreTests::initTestCase()
+{
+    QVERIFY(settingsTempDir_.isValid());
+    QSettings::setPath(QSettings::NativeFormat, QSettings::UserScope, settingsTempDir_.path());
+}
 
 void CoreTests::parsesNumbers()
 {
