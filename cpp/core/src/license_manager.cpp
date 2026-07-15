@@ -27,6 +27,7 @@ static constexpr int kClockRollbackToleranceSecs = 60 * 60;
 static const QString kTokenKey = QStringLiteral("license/token");
 static const QString kOfflineTokenKey = QStringLiteral("license/offline");
 static const QString kLastSeenUtcKey = QStringLiteral("license/lastSeenUtc");
+static const QString kLinuxDefaultLicenseKey = QStringLiteral("license/linuxDefaultLifetime");
 static const QString kClockErrorMessage = QStringLiteral("系统时间异常，请校准系统时间后重试");
 
 // Process-level cache for the device fingerprint to avoid repeated WMIC/PowerShell calls.
@@ -290,15 +291,6 @@ LicenseManager::LicenseManager(QObject* parent)
 }
 
 LicenseManager::~LicenseManager() = default;
-
-bool LicenseManager::isFreePlatform()
-{
-#if defined(Q_OS_LINUX) && (defined(__aarch64__) || defined(__arm64__))
-    return true;
-#else
-    return false;
-#endif
-}
 
 LicenseState LicenseManager::state() const
 {
@@ -733,12 +725,6 @@ void LicenseManager::setState(LicenseState s)
 
 void LicenseManager::loadPersistedState()
 {
-    // Domestic ARM64 Linux OS (UOS/Kylin/Phytium/Kunpeng) — always free
-    if (isFreePlatform()) {
-        setState(LicenseState::Activated);
-        return;
-    }
-
     QSettings settings;
 
     // Check for existing signed license file
@@ -798,7 +784,36 @@ void LicenseManager::loadPersistedState()
         settings.remove(kOfflineTokenKey);
     }
 
+    // Linux builds default to a persisted PersonalLifetime license so that the
+    // authorization can be revoked later by clearing the stored key, forcing the
+    // normal activation/trial flow on the next launch.
+    if (loadOrCreateLinuxDefaultLicense()) {
+        return;
+    }
+
     setState(LicenseState::Unactivated);
+}
+
+bool LicenseManager::loadOrCreateLinuxDefaultLicense()
+{
+#if !defined(Q_OS_LINUX)
+    return false;
+#else
+    QSettings settings;
+    const bool alreadyGranted = settings.value(kLinuxDefaultLicenseKey).toBool();
+    if (!alreadyGranted) {
+        settings.setValue(kLinuxDefaultLicenseKey, true);
+    }
+
+    currentInfo_.keyId = QStringLiteral("LINUX-BUILTIN");
+    currentInfo_.plan = LicensePlan::PersonalLifetime;
+    currentInfo_.deviceHash = deviceFingerprint();
+    currentInfo_.issuedAt = QDateTime::currentDateTimeUtc();
+    currentInfo_.expiresAt = QDateTime();
+    currentInfo_.rawPayload.clear();
+    setState(LicenseState::Activated);
+    return true;
+#endif
 }
 
 } // namespace xlsone

@@ -48,9 +48,6 @@ public:
     explicit LicenseManager(QObject* parent = nullptr);
     ~LicenseManager() override;
 
-    /// True when running on domestic ARM64 Linux (UOS/Kylin/Phytium/Kunpeng) — always free.
-    static bool isFreePlatform();
-
     /// Current license state.
     LicenseState state() const;
 
@@ -102,6 +99,7 @@ private slots:
 private:
     void setState(LicenseState s);
     void loadPersistedState();
+    bool loadOrCreateLinuxDefaultLicense();
     bool verifyEd25519Signature(const QByteArray& message, const QByteArray& signature) const;
     bool checkDeviceHash(const QJsonObject& licenseObj, const QString& actualFingerprint) const;
 
