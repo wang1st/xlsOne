@@ -32,6 +32,7 @@ opencode.json
 cpp/_CPack_Packages/
 cpp/deepin-qt5.15/
 *.deb
+!cpp/third_party/runtime-debs/*.deb
 
 # Deployment credentials
 ssh-passwd.txt

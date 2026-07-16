@@ -228,18 +228,27 @@ if [ "$BUNDLE_MODE" = "bundle" ]; then
         mkdir -p "$PROJECT_ROOT/deepin-qt5.15"
         _qt_tar="$PROJECT_ROOT/deepin-qt5.15/$DEEPIN_QT_FILENAME"
 
-        if ! command -v wget >/dev/null 2>&1 && ! command -v curl >/dev/null 2>&1; then
-            echo "Error: neither wget nor curl is available for downloading Qt5 bundle." >&2
+        if ! command -v aria2c >/dev/null 2>&1 && ! command -v wget >/dev/null 2>&1 && ! command -v curl >/dev/null 2>&1; then
+            echo "Error: none of aria2c/wget/curl is available for downloading Qt5 bundle." >&2
+            echo "  Recommended: sudo apt install aria2 (multi-connection, much faster)" >&2
             exit 1
         fi
 
-        if command -v wget >/dev/null 2>&1; then
-            wget -q --show-progress -O "$_qt_tar" "$DEEPIN_QT_URL" || {
+        if command -v aria2c >/dev/null 2>&1; then
+            aria2c -x 16 -s 16 -k 1M -c \
+                --dir "$PROJECT_ROOT/deepin-qt5.15" \
+                -o "$DEEPIN_QT_FILENAME" \
+                "$DEEPIN_QT_URL" || {
+                echo "Error: failed to download Qt5 bundle from $DEEPIN_QT_URL" >&2
+                exit 1
+            }
+        elif command -v wget >/dev/null 2>&1; then
+            wget -q --show-progress -c -O "$_qt_tar" "$DEEPIN_QT_URL" || {
                 echo "Error: failed to download Qt5 bundle from $DEEPIN_QT_URL" >&2
                 exit 1
             }
         else
-            curl -L --progress-bar -o "$_qt_tar" "$DEEPIN_QT_URL" || {
+            curl -L --progress-bar -C - -o "$_qt_tar" "$DEEPIN_QT_URL" || {
                 echo "Error: failed to download Qt5 bundle from $DEEPIN_QT_URL" >&2
                 exit 1
             }
@@ -270,6 +279,39 @@ if [ "$BUNDLE_MODE" = "bundle" ]; then
     # Override Qt paths so CMake bundles the downloaded libraries instead of system Qt
     QT_LIB_DIR="$DEEPIN_QT_DIR/lib"
     QT_PLUGIN_DIR="$DEEPIN_QT_DIR/plugins"
+
+    # -----------------------------------------------------------------------
+    # Extract runtime dependency debs (ICU 63 + OpenSSL 1.1) shipped in-repo.
+    # The bundled deepin Qt5.15 links against ICU 63 and OpenSSL 1.x, which
+    # newer build hosts no longer provide.
+    # -----------------------------------------------------------------------
+    DEB_ARCH="$(dpkg --print-architecture)"
+    RUNTIME_DEBS_DIR="$PROJECT_ROOT/third_party/runtime-debs"
+    ICU_DEB="$(ls "$RUNTIME_DEBS_DIR"/libicu63_*_"$DEB_ARCH".deb 2>/dev/null | head -1)"
+    SSL_DEB="$(ls "$RUNTIME_DEBS_DIR"/libssl1.1_*_"$DEB_ARCH".deb 2>/dev/null | head -1)"
+
+    if [ ! -f "$PROJECT_ROOT/deepin-qt5.15/icu63/usr/lib/$(g++ -dumpmachine 2>/dev/null || echo unknown)/libicuuc.so.63" ] \
+       && ! ls "$PROJECT_ROOT"/deepin-qt5.15/icu63/usr/lib/*/libicuuc.so.63 >/dev/null 2>&1; then
+        if [ -n "$ICU_DEB" ]; then
+            echo "==> Extracting bundled ICU 63 runtime ($ICU_DEB) ..."
+            mkdir -p "$PROJECT_ROOT/deepin-qt5.15/icu63"
+            dpkg-deb -x "$ICU_DEB" "$PROJECT_ROOT/deepin-qt5.15/icu63/"
+        else
+            echo "⚠  WARNING: libicu63 deb for $DEB_ARCH not found in $RUNTIME_DEBS_DIR"
+            echo "   The package may fail at runtime with: libicui18n.so.63 not found"
+        fi
+    fi
+
+    if ! ls "$PROJECT_ROOT"/deepin-qt5.15/openssl1.1/usr/lib/*/libssl.so.1.1 >/dev/null 2>&1; then
+        if [ -n "$SSL_DEB" ]; then
+            echo "==> Extracting bundled OpenSSL 1.1 runtime ($SSL_DEB) ..."
+            mkdir -p "$PROJECT_ROOT/deepin-qt5.15/openssl1.1"
+            dpkg-deb -x "$SSL_DEB" "$PROJECT_ROOT/deepin-qt5.15/openssl1.1/"
+        else
+            echo "⚠  WARNING: libssl1.1 deb for $DEB_ARCH not found in $RUNTIME_DEBS_DIR"
+            echo "   Qt5Network TLS will fail on OpenSSL 3.x systems"
+        fi
+    fi
 fi
 
 # ---------------------------------------------------------------------------
@@ -312,6 +354,8 @@ fi
 CMAKE_EXTRA_ARGS=""
 if [ "$BUNDLE_MODE" = "system" ]; then
     CMAKE_EXTRA_ARGS="-DXLSONE_BUNDLE_QT=OFF"
+else
+    CMAKE_EXTRA_ARGS="-DXLSONE_BUNDLE_QT=ON"
 fi
 
 cmake -S "$PROJECT_ROOT" -B "$BUILD_DIR" \
