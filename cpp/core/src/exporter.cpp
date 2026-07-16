@@ -287,7 +287,7 @@ QString rewriteCell(QString xml, const QString& reference, const MergedCell& cel
     return xml;
 }
 
-QByteArray rewriteWorksheet(QByteArray data, const MergedResult& result, bool addExpiredWatermark)
+QByteArray rewriteWorksheet(QByteArray data, const MergedResult& result, const QString& watermarkText)
 {
     QString xml = QString::fromUtf8(data);
     for (int row = 0; row < static_cast<int>(result.rows.size()); ++row) {
@@ -296,24 +296,37 @@ QByteArray rewriteWorksheet(QByteArray data, const MergedResult& result, bool ad
             xml = rewriteCell(xml, cellReference(row, column), rowData[static_cast<size_t>(column)]);
         }
     }
-    // 过期水印：在第一行标题后添加水印文本
-    if (addExpiredWatermark && !result.rows.empty()) {
-        // 查找第一个数据行并在其后插入水印行
-        static const QRegularExpression firstRowRegex(QStringLiteral("(<row[^>]*>)(.*?)(</row>)"), QRegularExpression::DotMatchesEverythingOption);
-        auto match = firstRowRegex.match(xml);
-        if (match.hasMatch()) {
-            const QString watermarkRow = QStringLiteral(
-                "<row r=\"1\" spans=\"1:1\">"
-                "<c r=\"A1\" t=\"inlineStr\"><is><t>%1</t></is></c>"
-                "</row>"
-            ).arg(escapeXml(QStringLiteral("（试用过期版）")));
-            xml.insert(match.capturedEnd(), watermarkRow);
+    // 受限水印：在数据末尾追加一行醒目的水印声明
+    if (!watermarkText.isEmpty() && !result.rows.empty()) {
+        static const QRegularExpression lastRowRegex(QStringLiteral("<row[^>]*\\br=\"(\\d+)\""));
+        int maxRowNumber = 0;
+        auto it = lastRowRegex.globalMatch(xml);
+        while (it.hasNext()) {
+            const auto match = it.next();
+            const int rowNumber = match.captured(1).toInt();
+            if (rowNumber > maxRowNumber) {
+                maxRowNumber = rowNumber;
+            }
+        }
+
+        const int watermarkRowNumber = maxRowNumber + 1;
+        const QString watermarkRef = QStringLiteral("A%1").arg(watermarkRowNumber);
+        const QString watermarkRow = QStringLiteral(
+            "<row r=\"%1\" spans=\"1:1\">"
+            "<c r=\"%2\" t=\"inlineStr\"><is><t>%3</t></is></c>"
+            "</row>"
+        ).arg(watermarkRowNumber).arg(watermarkRef).arg(escapeXml(watermarkText));
+
+        // Insert before the closing </sheetData>
+        const int sheetDataEnd = xml.lastIndexOf(QStringLiteral("</sheetData>"));
+        if (sheetDataEnd >= 0) {
+            xml.insert(sheetDataEnd, watermarkRow);
         }
     }
     return xml.toUtf8();
 }
 
-void exportCsvBaseline(const std::vector<MergedResult>& results, const QString& outputPath)
+void exportCsvBaseline(const std::vector<MergedResult>& results, const QString& outputPath, const QString& watermarkText)
 {
     if (results.empty()) {
         throw std::runtime_error("没有可导出的汇总结果");
@@ -325,6 +338,9 @@ void exportCsvBaseline(const std::vector<MergedResult>& results, const QString& 
     }
 
     QTextStream stream(&file);
+    if (!watermarkText.isEmpty()) {
+        stream << QStringLiteral("# %1\n").arg(watermarkText);
+    }
     const auto& result = results.front();
     for (const auto& row : result.rows) {
         QStringList values;
@@ -337,7 +353,7 @@ void exportCsvBaseline(const std::vector<MergedResult>& results, const QString& 
     }
 }
 
-void exportXlsxWorkbook(const QString& templatePath, const std::vector<MergedResult>& results, const QString& outputPath, bool addExpiredWatermark)
+void exportXlsxWorkbook(const QString& templatePath, const std::vector<MergedResult>& results, const QString& outputPath, const QString& watermarkText)
 {
     if (templatePath.isEmpty()) {
         throw std::runtime_error("导出 .xlsx 需要模板工作簿路径");
@@ -360,7 +376,7 @@ void exportXlsxWorkbook(const QString& templatePath, const std::vector<MergedRes
         if (worksheetPath.isEmpty() || !entries.contains(worksheetPath)) {
             continue;
         }
-        entries.insert(worksheetPath, rewriteWorksheet(entries.value(worksheetPath), result, addExpiredWatermark));
+        entries.insert(worksheetPath, rewriteWorksheet(entries.value(worksheetPath), result, watermarkText));
     }
 
     writeZipFile(outputPath, entries);
@@ -372,15 +388,15 @@ void TemplateWorkbookExporter::exportWorkbook(
     const QString& templatePath,
     const std::vector<MergedResult>& results,
     const QString& outputPath,
-    bool addExpiredWatermark
+    const QString& watermarkText
 ) const
 {
     const auto suffix = QFileInfo(outputPath).suffix().toLower();
     if (suffix == QStringLiteral("xlsx")) {
-        exportXlsxWorkbook(templatePath, results, outputPath, addExpiredWatermark);
+        exportXlsxWorkbook(templatePath, results, outputPath, watermarkText);
         return;
     }
-    exportCsvBaseline(results, outputPath);
+    exportCsvBaseline(results, outputPath, watermarkText);
 }
 
 } // namespace xlsone

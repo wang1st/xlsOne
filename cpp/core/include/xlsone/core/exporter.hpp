@@ -10,7 +10,7 @@ public:
         const QString& templatePath,
         const std::vector<MergedResult>& results,
         const QString& outputPath,
-        bool addExpiredWatermark = false
+        const QString& watermarkText = QString()
     ) const;
 };
 

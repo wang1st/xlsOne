@@ -10,12 +10,10 @@
 #include "ui_theme.hpp"
 #include "xlsone/core/exporter.hpp"
 #include "xlsone/core/license_manager.hpp"
-#include "xlsone/core/obfuscation.hpp"
 
 #include <QAction>
 #include <QActionGroup>
 #include <QApplication>
-#include <QCoreApplication>
 #include <QDateTime>
 #include <QDesktopServices>
 #include <QDragEnterEvent>
@@ -52,23 +50,23 @@ QString fileStatusName(xlsone::FileValidationStatus status)
 {
     switch (status) {
     case xlsone::FileValidationStatus::Included:
-        return QObject::tr("参与");
+        return QStringLiteral("参与");
     case xlsone::FileValidationStatus::Warning:
-        return QObject::tr("警告");
+        return QStringLiteral("警告");
     case xlsone::FileValidationStatus::Blocked:
-        return QObject::tr("阻断");
+        return QStringLiteral("阻断");
     }
-    return QObject::tr("未知");
+    return QStringLiteral("未知");
 }
 
 QString readinessName(xlsone::MergeReadiness readiness)
 {
-    return readiness == xlsone::MergeReadiness::Ready ? QObject::tr("可合并") : QObject::tr("阻断");
+    return readiness == xlsone::MergeReadiness::Ready ? QStringLiteral("可合并") : QStringLiteral("阻断");
 }
 
 QString severityName(xlsone::ValidationSeverity severity)
 {
-    return severity == xlsone::ValidationSeverity::Blocking ? QObject::tr("阻断") : QObject::tr("警告");
+    return severity == xlsone::ValidationSeverity::Blocking ? QStringLiteral("阻断") : QStringLiteral("警告");
 }
 
 bool sameOverrideCell(const xlsone::SchemaCellOverride& lhs, const xlsone::SchemaCellOverride& rhs)
@@ -268,7 +266,7 @@ QString suggestedWorkbookName(const QStringList& filenames)
     }
 
     if (stems.isEmpty()) {
-        return QCoreApplication::translate("MainWindow", "汇总结果");
+        return QStringLiteral("汇总结果");
     }
 
     QString baseName;
@@ -284,19 +282,18 @@ QString suggestedWorkbookName(const QStringList& filenames)
         } else if (prefix.size() >= 2) {
             baseName = prefix;
         } else {
-            baseName = QCoreApplication::translate("MainWindow", "汇总结果");
+            baseName = QStringLiteral("汇总结果");
         }
     }
 
     const auto sanitized = sanitizeSuggestedFileName(baseName);
     if (sanitized.isEmpty()) {
-        return QCoreApplication::translate("MainWindow", "汇总结果");
+        return QStringLiteral("汇总结果");
     }
-    const QString summarySuffix = QCoreApplication::translate("MainWindow", "汇总");
-    if (sanitized.endsWith(summarySuffix)) {
+    if (sanitized.endsWith(QStringLiteral("汇总"))) {
         return sanitized;
     }
-    return sanitized + QLatin1Char('_') + summarySuffix;
+    return sanitized + QStringLiteral("_汇总");
 }
 
 QStringList exportNamingFilenames(
@@ -344,9 +341,6 @@ void MainWindow::buildUi()
     xlsone::ui::applyAppStyle(this);
 
     licenseManager_ = new xlsone::LicenseManager(this);
-    if (licenseManager_->state() == xlsone::LicenseState::Unactivated) {
-        licenseManager_->requestTrial(xlsone::LicenseManager::deviceFingerprint());
-    }
 
     auto* openAction = new QAction(tr("导入文件..."), this);
     openAction->setShortcut(QKeySequence::Open);
@@ -382,7 +376,7 @@ void MainWindow::buildUi()
     auto* saveSchemaAction = new QAction(tr("保存当前修正规则"), this);
     connect(saveSchemaAction, &QAction::triggered, this, &MainWindow::saveCurrentSchema);
 
-    auto* licenseActivateAction = new QAction(tr("管理许可证..."), this);
+    auto* licenseActivateAction = new QAction(tr("激活/导入许可证..."), this);
     connect(licenseActivateAction, &QAction::triggered, this, &MainWindow::showLicenseActivation);
 
     // ---- 文件 ----
@@ -410,12 +404,8 @@ void MainWindow::buildUi()
     adjustmentMemoryMenu->addAction(saveSchemaAction);
 
     // ---- 许可 ----
-#if !defined(__aarch64__) && !defined(__arm64__)
     auto* licenseMenu = menuBar()->addMenu(tr("许可"));
     licenseMenu->addAction(licenseActivateAction);
-#else
-    delete licenseActivateAction;
-#endif
 
     // ---- 语言 ----
     auto* languageMenu = menuBar()->addMenu(tr("语言"));
@@ -451,7 +441,7 @@ void MainWindow::buildUi()
     }
 
     auto* helpAction = new QAction(tr("快速参考指南"), this);
-    helpAction->setShortcut(QKeySequence(Qt::Key_F1));
+    helpAction->setShortcuts({QKeySequence(Qt::Key_F1), QKeySequence(QStringLiteral("Ctrl+?"))});
     connect(helpAction, &QAction::triggered, this, [this] {
         auto* dialog = new HelpDialog(this);
         dialog->setAttribute(Qt::WA_DeleteOnClose);
@@ -464,9 +454,16 @@ void MainWindow::buildUi()
             .arg(XLSONE_VERSION_MAJOR)
             .arg(XLSONE_VERSION_MINOR)
             .arg(XLSONE_VERSION_PATCH);
-        const bool domesticBuild = xlsone::LicenseManager::activationBaseUrl()
-            .contains(XLSONE_OBF_STRING("z-pulse.cn"), Qt::CaseInsensitive);
-        xlsone::ui::showProductAbout(this, tr("关于 表表归一"), ver, domesticBuild);
+        xlsone::ui::showAbout(this, tr("关于 表表归一"),
+            tr("<h3>表表归一  V%1</h3>"
+               "<p>多张同格式 Excel 报表一键汇总</p>"
+               "<p>把多张格式一致的 Excel 表合成一份汇总表。"
+               "金额、数量等能相加的数会自动合计；"
+               "名称、编号等不该相加的信息，会保留各文件里最常见的共同前缀。</p>"
+               "<p><b>作者：</b>王臻<br>"
+               "<b>技术：</b>C++ / Qt<br>"
+               "<b>联系方式：</b>831261@qq.com</p>"
+               "<p>© 2026 王臻. 保留所有权利.</p>").arg(ver));
     });
 
     auto* checkUpdateAction = new QAction(tr("检查更新"), this);
@@ -551,8 +548,6 @@ void MainWindow::buildUi()
     correctionLabel_ = new QLabel(correctionBar_);
     undoButton_ = new QPushButton(tr("撤销修正"), correctionBar_);
     clearOverridesButton_ = new QPushButton(tr("清除所有修正"), correctionBar_);
-    xlsone::ui::stylePrimaryButton(undoButton_);
-    xlsone::ui::stylePrimaryButton(clearOverridesButton_);
     correctionLayout->addWidget(correctionLabel_);
     correctionLayout->addStretch(1);
     correctionLayout->addWidget(undoButton_);
@@ -603,11 +598,18 @@ void MainWindow::showEvent(QShowEvent* event)
     QMainWindow::showEvent(event);
     if (firstShow_) {
         firstShow_ = false;
-        if (licenseManager_ != nullptr &&
-            licenseManager_->state() == xlsone::LicenseState::Expired) {
-            QTimer::singleShot(250, this, &MainWindow::showLicenseActivation);
-        }
         checkForUpdates();
+
+        // First-launch nag: show the license dialog once if the app is not
+        // already activated or in an active trial.
+        if (licenseManager_->state() == xlsone::LicenseState::Unactivated) {
+            QSettings settings;
+            const QString key = QStringLiteral("license/firstLaunchDialogShown");
+            if (!settings.value(key).toBool()) {
+                settings.setValue(key, true);
+                QTimer::singleShot(0, this, &MainWindow::showLicenseActivation);
+            }
+        }
     }
 }
 
@@ -618,13 +620,8 @@ void MainWindow::checkForUpdates(bool silent)
     }
     checkingUpdates_ = true;
 
-#ifdef XLSONE_OBFUSCATE
-    const QString apiUrl = xlsone::obf::updateBaseUrl()
-        + XLSONE_OBF_STRING("/api/version");
-#else
     const QString apiUrl = QStringLiteral(
         XLSONE_UPDATE_BASE_URL "/api/version");
-#endif
 
     if (silent) {
         // Silent auto-check: only show dialog when an update is available.
@@ -647,13 +644,8 @@ void MainWindow::checkForUpdates(bool silent)
                                                 info.downloadUrl,
                                                 this);
                 connect(dialog, &QDialog::accepted, this, [] {
-#ifdef XLSONE_OBFUSCATE
                     QDesktopServices::openUrl(QUrl(
-                        xlsone::obf::updateBaseUrl() + XLSONE_OBF_STRING("/xlsone/download.html")));
-#else
-                    QDesktopServices::openUrl(QUrl(
-                        QStringLiteral(XLSONE_UPDATE_BASE_URL "/xlsone/download.html")));
-#endif
+                        QStringLiteral(XLSONE_UPDATE_BASE_URL "/products/xlsone/download.html")));
                 });
                 xlsone::ui::showDialogCentered(dialog, this);
             });
@@ -774,18 +766,20 @@ void MainWindow::loadFiles(const QStringList& paths, bool append)
         return;
     }
 
-    // 未授权或过期限制：每次最多处理 3 个文件。
-    const auto licenseState = licenseManager_->state();
-    if (licenseState != xlsone::LicenseState::Activated &&
-        licenseState != xlsone::LicenseState::Trial) {
-        const int maxFiles = 3;
-        const int currentCount = selectedPaths_.size();
-        const int newCount = append ? currentCount + paths.size() : paths.size();
-        if (newCount > maxFiles) {
-            xlsone::ui::showInformation(this, tr("功能限制"),
-                tr("未激活或授权已过期，每次最多处理 %1 个文件。请输入激活码以解除限制。").arg(maxFiles));
-            return;
+    const int maxFiles = licenseManager_->maxImportFiles();
+    const int totalFiles = append ? selectedPaths_.size() + paths.size() : paths.size();
+    if (maxFiles >= 0 && totalFiles > maxFiles) {
+        const QString message = append
+            ? tr("当前已选 %1 个文件，再追加会超过单次限制 %2 个。\n\n%3\n\n是否现在激活或申请试用？")
+                  .arg(selectedPaths_.size()).arg(maxFiles).arg(licenseManager_->restrictionMessage())
+            : tr("一次最多处理 %1 个文件。\n\n%2\n\n是否现在激活或申请试用？")
+                  .arg(maxFiles).arg(licenseManager_->restrictionMessage());
+
+        const auto button = xlsone::ui::askQuestion(this, tr("使用受限"), message);
+        if (button == QMessageBox::Yes) {
+            showLicenseActivation();
         }
+        return;
     }
 
     selectedPaths_ = append ? selectedPaths_ + paths : paths;
@@ -1112,17 +1106,15 @@ void MainWindow::syncWorkspaceSchemaBase(const std::optional<xlsone::MergeSchema
 QString MainWindow::suggestedAdjustmentMemoryName() const
 {
     auto exportName = suggestedWorkbookName(exportNamingFilenames(validation_.report, selectedPaths_));
-    const QString summarySuffix = tr("汇总");
-    const QString correctionSuffix = tr("修正规则");
-    if (exportName.endsWith(QLatin1Char('_') + summarySuffix)) {
-        exportName.chop((QLatin1Char('_') + summarySuffix).size());
-        return exportName + QLatin1Char('_') + correctionSuffix;
+    if (exportName.endsWith(QStringLiteral("_汇总"))) {
+        exportName.chop(QStringLiteral("_汇总").size());
+        return exportName + QStringLiteral("_修正规则");
     }
-    if (exportName.endsWith(summarySuffix)) {
-        exportName.chop(summarySuffix.size());
-        return exportName + correctionSuffix;
+    if (exportName.endsWith(QStringLiteral("汇总"))) {
+        exportName.chop(QStringLiteral("汇总").size());
+        return exportName + QStringLiteral("修正规则");
     }
-    return exportName + QLatin1Char('_') + correctionSuffix;
+    return exportName + QStringLiteral("_修正规则");
 }
 
 void MainWindow::persistAdjustmentMemory()
@@ -1589,10 +1581,8 @@ void MainWindow::exportResult()
             outputPath += QStringLiteral(".xlsx");
         }
         const QString templatePath = selectedPaths_.isEmpty() ? QString() : selectedPaths_.front();
-        const auto licenseState = licenseManager_->state();
-        const bool addWatermark = licenseState != xlsone::LicenseState::Activated &&
-            licenseState != xlsone::LicenseState::Trial;
-        xlsone::TemplateWorkbookExporter().exportWorkbook(templatePath, results_, outputPath, addWatermark);
+        const QString watermarkText = licenseManager_->exportWatermarkText();
+        xlsone::TemplateWorkbookExporter().exportWorkbook(templatePath, results_, outputPath, watermarkText);
     } catch (const std::exception& error) {
         xlsone::ui::showCritical(this, tr("导出失败"), QString::fromUtf8(error.what()));
     }
@@ -1620,5 +1610,4 @@ void MainWindow::showLicenseActivation()
 {
     LicenseActivationDialog dialog(licenseManager_, this);
     xlsone::ui::execDialogCentered(dialog, this);
-    updateChromeState();
 }

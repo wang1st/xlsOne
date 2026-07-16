@@ -6260,31 +6260,31 @@
         }
       }
     },
-    "按 1 或 2": {
+    "按 1、2 或 3": {
       "extractionState": "manual",
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "按 1 或 2"
+            "value": "按 1、2 或 3"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "按 1 或 2"
+            "value": "按 1、2 或 3"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Press 1 or 2"
+            "value": "Press 1, 2 or 3"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Press 1 or 2"
+            "value": "Press 1, 2 or 3"
           }
         }
       }
@@ -6474,6 +6474,1079 @@
           "stringUnit": {
             "state": "translated",
             "value": "识别到 %lld 个结构分组"
+          }
+        }
+      }
+    },
+    "帮助_穿透查阅": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "穿透查阅"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "穿透查閱"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drill-down"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ドリルダウン"
+          }
+        }
+      }
+    },
+    "帮助_穿透查阅_介绍": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "汇总表的每个单元格都支持穿透查阅，帮助追溯数据来源。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "汇总表的每个单元格都支持穿透查阅，帮助追溯数据来源。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Each cell in the merged table supports drill-down to trace data sources."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "マージされた表の各セルは、データソースをたどるドリルダウンをサポートしています。"
+          }
+        }
+      }
+    },
+    "帮助_穿透查阅_步骤标题": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "操作步骤"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "操作步驟"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Steps"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "手順"
+          }
+        }
+      }
+    },
+    "帮助_穿透查阅_步骤1": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在汇总表格中单击任意单元格。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在汇总表格中单击任意单元格。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Click any cell in the merged table."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "マージされた表の任意のセルをクリックします。"
+          }
+        }
+      }
+    },
+    "帮助_穿透查阅_步骤2": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "右侧面板列出该单元格在各源文件中的原始值，标注文件名和具体数值。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "右侧面板列出该单元格在各源文件中的原始值，标注文件名和具体数值。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The right panel lists the original values of that cell across source files."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "右側のパネルに、ソースファイルごとのセルの元の値が表示されます。"
+          }
+        }
+      }
+    },
+    "帮助_穿透查阅_步骤3": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "若某个文件的值与其他文件差异较大，可快速定位该文件进行核实。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "若某个文件的值与其他文件差异较大，可快速定位该文件进行核实。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "If a file's value differs significantly, locate that file for verification."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイルの値が大きく異なる場合は、そのファイルを特定して確認します。"
+          }
+        }
+      }
+    },
+    "帮助_穿透查阅_提示": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "财务审计中，可逐个单元格穿透查看各子公司的原始填报数据，验证汇总结果。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "财务审计中，可逐个单元格穿透查看各子公司的原始填报数据，验证汇总结果。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In financial audits, drill down cell by cell to verify merged results."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "財務監査では、セルごとにドリルダウンして集計結果を確認します。"
+          }
+        }
+      }
+    },
+    "帮助_导出结果": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导出结果"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "匯出結果"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export Results"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "結果をエクスポート"
+          }
+        }
+      }
+    },
+    "帮助_导出结果_介绍": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "汇总校验完毕后，将结果保存为标准 Excel 文件。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "汇总校验完毕后，将结果保存为标准 Excel 文件。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "After verification, save the merged result as a standard Excel file."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "検証後、マージ結果を標準的な Excel ファイルとして保存します。"
+          }
+        }
+      }
+    },
+    "帮助_导出结果_步骤标题": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "操作步骤"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "操作步驟"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Steps"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "手順"
+          }
+        }
+      }
+    },
+    "帮助_导出结果_步骤1": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "确认汇总表数据无误（必要时可进行单元格修正后导出）。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "确认汇总表数据无误（必要时可进行单元格修正后导出）。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Confirm the merged data is correct (apply cell corrections if needed)."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "マージされたデータが正しいことを確認します（必要に応じてセルを修正）。"
+          }
+        }
+      }
+    },
+    "帮助_导出结果_步骤2": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "点击工具栏导出 XLSX 或使用快捷键 ⌘S。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "点击工具栏导出 XLSX 或使用快捷键 ⌘S。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Click Export XLSX in the toolbar or press ⌘S."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ツールバーの「XLSX をエクスポート」をクリックするか、⌘S を押します。"
+          }
+        }
+      }
+    },
+    "帮助_导出结果_步骤3": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在文件对话框中选择保存路径和文件名。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在文件对话框中选择保存路径和文件名。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose the save path and file name in the dialog."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダイアログで保存先とファイル名を選択します。"
+          }
+        }
+      }
+    },
+    "帮助_导出结果_步骤4": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导出的 .xlsx 文件可用 Excel / WPS / LibreOffice 打开。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导出的 .xlsx 文件可用 Excel / WPS / LibreOffice 打开。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The exported .xlsx file can be opened in Excel / WPS / LibreOffice."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "エクスポートされた .xlsx ファイルは Excel / WPS / LibreOffice で開けます。"
+          }
+        }
+      }
+    },
+    "帮助_导出结果_内容说明标题": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导出内容说明"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "匯出內容說明"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export Contents"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "エクスポート内容"
+          }
+        }
+      }
+    },
+    "帮助_导出结果_内容说明1": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每个可合并的工作表在导出文件中保留为独立 Sheet。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每个可合并的工作表在导出文件中保留为独立 Sheet。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Each mergeable sheet is kept as an independent sheet in the exported file."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "マージ可能なシートは、エクスポートファイル内で独立したシートとして保持されます。"
+          }
+        }
+      }
+    },
+    "帮助_导出结果_内容说明2": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "数值格式（千分位、小数位、百分比等）尽可能保留原始样式。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "数值格式（千分位、小数位、百分比等）尽可能保留原始样式。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Numeric formats (thousands separator, decimals, percentages) are preserved as much as possible."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "数値形式（桁区切り、小数点、パーセンテージ）は可能な限り保持されます。"
+          }
+        }
+      }
+    },
+    "帮助_导出结果_内容说明3": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "单元格修正结果会反映在最终导出文件中。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "单元格修正结果会反映在最终导出文件中。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cell correction results are reflected in the final exported file."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "セルの修正結果は最終的なエクスポートファイルに反映されます。"
+          }
+        }
+      }
+    },
+    "帮助_导出结果_内容说明4": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已跳过的 Sheet 不出现在导出文件中。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已跳过的 Sheet 不出现在导出文件中。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skipped sheets do not appear in the exported file."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スキップされたシートはエクスポートファイルに表示されません。"
+          }
+        }
+      }
+    },
+    "帮助_快捷键_单值": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "将选中单元格标记为单值"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "將選中單元格標記為單值"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mark selected cells as Single"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選択セルを単値としてマーク"
+          }
+        }
+      }
+    },
+    "帮助_快捷键_帮助": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打开快速参考指南"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打開快速參考指南"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Quick Reference Guide"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "クイックリファレンスガイドを開く"
+          }
+        }
+      }
+    },
+    "帮助_单元格修正_类型3": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "单值：保留当前单元格的显示值，并将其标记为手动修正。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "單值：保留目前儲存格的顯示值，並將其標記為手動修正。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Single: Keep the current cell display value and mark it as a manual correction."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "単値：現在のセルの表示値を保持し、手動修正としてマークします。"
+          }
+        }
+      }
+    },
+    "帮助_修正规则": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "修正规则"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "修正規則"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Correction Rules"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "修正ルール"
+          }
+        }
+      }
+    },
+    "帮助_修正规则_介绍": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "修正规则（Schema）是一组可复用的单元格修正规则。特别适用于周期性重复汇总的场景（如月度/季度财务报表合并）。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "修正規則（Schema）是一組可複用的儲存格修正規則。特別適用於週期性重複匯總的場景（如月度/季度財務報表合併）。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Correction rules (Schema) are reusable cell correction rules. They are especially useful for recurring merge tasks such as monthly/quarterly financial reports."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "修正ルール（Schema）は再利用可能なセル修正ルールです。月次/四半期財務レポートなど、繰り返し行われるマージ作業に特に便利です。"
+          }
+        }
+      }
+    },
+    "帮助_修正规则_核心功能标题": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "核心功能"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "核心功能"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Core Features"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "核心機能"
+          }
+        }
+      }
+    },
+    "帮助_修正规则_自动匹配": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自动匹配：导入文件时，程序自动检测是否存在匹配的修正规则。若文件结构与已保存的规则高度吻合，自动应用已有修正规则。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自動匹配：匯入檔案時，程式自動檢測是否存在匹配的修正規則。若檔案結構與已儲存的規則高度吻合，自動套用已有修正規則。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auto-match: When importing files, the app automatically detects matching correction rules and applies them when the file structure closely matches."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自動一致：ファイルをインポートするとき、アプリは一致する修正ルールを自動検出し、ファイル構造が密接に一致する場合に適用します。"
+          }
+        }
+      }
+    },
+    "帮助_修正规则_保存规则": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保存规则：通过「修正规则 → 保存当前修正规则」（⌘S）将当前工作区的所有修正规则持久化保存。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "儲存規則：透過「修正規則 → 儲存目前修正規則」（⌘S）將目前工作區的所有修正規則持久化儲存。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save Rules: Use Correction Rules → Save Current Correction Rules (⌘S) to persist all current correction rules."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ルールの保存：「修正ルール → 現在の修正ルールを保存」（⌘S）を使用して、現在のすべての修正ルールを永続化します。"
+          }
+        }
+      }
+    },
+    "帮助_修正规则_管理规则": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "管理规则：通过「修正规则 → 查看当前修正规则」管理已保存的规则：查看修正明细、导入/导出 JSON 文件、清除过时规则。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "管理規則：透過「修正規則 → 查看目前修正規則」管理已儲存的規則：查看修正明細、匯入/匯出 JSON 檔案、清除過時規則。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Manage Rules: Use Correction Rules → View Current Correction Rules to inspect details, import/export JSON files, and remove outdated rules."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ルールの管理：「修正ルール → 現在の修正ルールを表示」を使用して、詳細の確認、JSON ファイルのインポート/エクスポート、古いルールの削除を行います。"
+          }
+        }
+      }
+    },
+    "帮助_修正规则_最佳实践标题": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最佳实践"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最佳實踐"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Best Practices"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ベストプラクティス"
+          }
+        }
+      }
+    },
+    "帮助_修正规则_最佳实践1": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "为每个报表模板创建独立的修正规则，命名规则如「华东区月度销售报表」。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "為每個報表範本建立獨立的修正規則，命名規則如「華東區月度銷售報表」。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create independent correction rules for each report template, e.g., \"East China Monthly Sales Report\"."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "各レポートテンプレートに対して独立した修正ルールを作成します。例：「東中国地域月次売上レポート」。"
+          }
+        }
+      }
+    },
+    "帮助_修正规则_最佳实践2": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "使用 .json 格式导出/导入修正规则，便于团队共享和版本管理。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "使用 .json 格式匯出/匯入修正規則，便於團隊共享和版本管理。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export/import correction rules in .json format for easy team sharing and version control."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "チームでの共有とバージョン管理のために、修正ルールを .json 形式でエクスポート/インポートします。"
+          }
+        }
+      }
+    },
+    "帮助_修正规则_最佳实践3": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "结构发生变化时，及时更新修正规则以避免旧规则错误应用。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "結構發生變化時，及時更新修正規則以避免舊規則錯誤套用。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Update correction rules promptly when the structure changes to avoid incorrect application of old rules."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "構造が変更された場合は、古いルールが誤って適用されるのを防ぐために、修正ルールを適切に更新してください。"
+          }
+        }
+      }
+    },
+    "帮助_修正规则_技术说明": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "技术说明：修正规则基于「结构指纹」（列名 + 行位置 + 数据类型）进行匹配，而非文件名。因此即使文件来源不同，只要结构一致即可复用规则。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "技術說明：修正規則基於「結構指紋」（列名 + 行位置 + 資料類型）進行匹配，而非檔案名。因此即使檔案來源不同，只要結構一致即可複用規則。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Technical Note: Correction rules are matched based on a structural fingerprint (column names + row positions + data types), not file names. Therefore, rules can be reused across different files as long as the structure matches."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "技術的な注意：修正ルールは、ファイル名ではなく構造フィンガープリント（列名 + 行位置 + データ型）に基づいて一致します。そのため、構造が一致していれば、異なるファイル間でルールを再利用できます。"
+          }
+        }
+      }
+    },
+    "帮助_联系方式": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "联系方式"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "聯絡方式"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Contact"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "連絡先"
+          }
+        }
+      }
+    },
+    "帮助_联系方式_介绍": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "如有问题或建议，请联系："
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "如有問題或建議，請聯繫："
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "For questions or suggestions, please contact:"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ご質問やご提案がございましたら、お問い合わせください："
+          }
+        }
+      }
+    },
+    "帮助_联系方式_邮箱标签": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "邮箱"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "郵箱"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Email"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メール"
+          }
+        }
+      }
+    },
+    "帮助_联系方式_邮箱值": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "831261@qq.com"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "831261@qq.com"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "831261@qq.com"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "831261@qq.com"
           }
         }
       }

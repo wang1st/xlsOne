@@ -68,17 +68,27 @@ public final class LocaleManager: ObservableObject {
     }
 
     private func loadTranslations() {
-        guard let url = Bundle.module.url(forResource: "Localizable", withExtension: "xcstrings"),
-              let data = try? Data(contentsOf: url),
-              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let strings = json["strings"] as? [String: Any] else {
+        // Prefer the source String Catalog when it is bundled (SwiftPM debug builds).
+        if let url = Bundle.module.url(forResource: "Localizable", withExtension: "xcstrings"),
+           loadFromXCStrings(at: url) {
             return
         }
+        // Fall back to compiled .strings files produced by Xcode release builds.
+        loadFromCompiledStrings()
+    }
 
+    private func loadFromXCStrings(at url: URL) -> Bool {
+        guard let data = try? Data(contentsOf: url),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let strings = json["strings"] as? [String: Any] else {
+            return false
+        }
+
+        var result: [String: [String: String]] = [:]
         for (key, value) in strings {
             guard let dict = value as? [String: Any],
                   let localizations = dict["localizations"] as? [String: Any] else { continue }
-            
+
             var langDict: [String: String] = [:]
             for (lang, langData) in localizations {
                 guard let langDictData = langData as? [String: Any],
@@ -86,8 +96,36 @@ public final class LocaleManager: ObservableObject {
                       let val = stringUnit["value"] as? String else { continue }
                 langDict[lang] = val
             }
-            translations[key] = langDict
+            result[key] = langDict
         }
+        translations = result
+        return !result.isEmpty
+    }
+
+    private func loadFromCompiledStrings() {
+        var result: [String: [String: String]] = [:]
+        let bundle = Bundle.module
+        let resourceURL = bundle.resourceURL ?? bundle.bundleURL
+
+        guard let contents = try? FileManager.default.contentsOfDirectory(
+            at: resourceURL,
+            includingPropertiesForKeys: nil
+        ) else {
+            return
+        }
+
+        for url in contents where url.pathExtension == "lproj" {
+            let lang = url.deletingPathExtension().lastPathComponent
+            let stringsURL = url.appendingPathComponent("Localizable.strings")
+            guard let dict = NSDictionary(contentsOf: stringsURL) as? [String: String] else { continue }
+            for (key, value) in dict {
+                if result[key] == nil {
+                    result[key] = [:]
+                }
+                result[key]?[lang] = value
+            }
+        }
+        translations = result
     }
 
     public func applyToFoundation() {
@@ -126,6 +164,10 @@ public final class LocaleManager: ObservableObject {
             if let text = langDict["en"] { return text }
             if let text = langDict["zh-Hans"] { return text }
         }
+
+        // Final fallback to the standard localization tables compiled by Xcode.
+        let fallback = NSLocalizedString(key, bundle: .module, comment: "")
+        if fallback != key { return fallback }
 
         return key
     }

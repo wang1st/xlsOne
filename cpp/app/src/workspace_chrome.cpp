@@ -172,11 +172,16 @@ void WorkspaceChrome::updateLicenseStatus()
     case xlsone::LicenseState::Unactivated:
     default:
         stateColor = t.warning;
-        text = tr("开始试用");
+        text = tr("未授权 · 功能受限");
         break;
     }
 
     licenseButton_->setText(text);
+    if (licenseManager_->isFullyLicensed()) {
+        licenseButton_->setToolTip(tr("许可证有效"));
+    } else {
+        licenseButton_->setToolTip(licenseManager_->restrictionMessage());
+    }
     licenseButton_->setStyleSheet(QStringLiteral(
         "QPushButton#workspaceLicenseButton { color: %1; background: transparent; border: 1px solid %2; border-radius: 999px; padding: 5px 10px; font-size: 11px; font-weight: 600; }"
         "QPushButton#workspaceLicenseButton:hover { background: %3; }"

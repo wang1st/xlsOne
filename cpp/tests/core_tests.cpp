@@ -13,6 +13,7 @@
 #include <QTemporaryDir>
 #include <QTest>
 #include <QtEndian>
+#include <climits>
 #include <cstring>
 #include <algorithm>
 
@@ -58,6 +59,7 @@ private slots:
     void matchesWorkbookSchemasByDominantDimensions();
     void appliesSchemaOverrides();
     void exportsCsvBaseline();
+    void exportsCsvBaselineWithWatermark();
     void parsesXlsxSampleWorkbook();
     void parsesMergedXlsxCells();
     void exportsXlsxUsingTemplateWorkbook();
@@ -69,8 +71,11 @@ private slots:
     void updateCheckerParseInvalidJson();
     void updateCheckerPlatformKeyIsNotEmpty();
     void updateCheckerFindsNewVersionOnline();
-    void licenseManagerAcceptsValidEd25519License();
-    void licenseManagerRejectsTamperedEd25519License();
+    void licenseManagerUnactivatedRestrictsImportsAndExports();
+    void licenseManagerActivatedGrantsFullCapabilities();
+    void licenseManagerExpiredBlocksWatermarkAndLimitsFiles();
+    void licenseManagerGracePeriodKeepsFullCapabilities();
+    void licenseManagerActiveTrialGrantsFullCapabilities();
 
 private:
     QTemporaryDir settingsTempDir_;
@@ -894,6 +899,28 @@ void CoreTests::exportsCsvBaseline()
     QVERIFY(QFile::exists(path));
 }
 
+void CoreTests::exportsCsvBaselineWithWatermark()
+{
+    QTemporaryDir temp;
+    QVERIFY(temp.isValid());
+    const auto path = temp.filePath(QStringLiteral("summary.csv"));
+    const std::vector<CellMergeInput> cells = {
+        {QStringLiteral("a.xlsx"), QStringLiteral("/a.xlsx"), CellData(QStringLiteral("1000"))},
+    };
+    MergedResult result;
+    result.sheetName = QStringLiteral("Sheet1");
+    result.rows = {{MergedCell::from(cells)}};
+
+    const QString watermark = QStringLiteral("未激活试用版");
+    TemplateWorkbookExporter().exportWorkbook({}, {result}, path, watermark);
+    QVERIFY(QFile::exists(path));
+
+    QFile file(path);
+    QVERIFY(file.open(QIODevice::ReadOnly | QIODevice::Text));
+    const QString firstLine = QString::fromUtf8(file.readLine()).trimmed();
+    QCOMPARE(firstLine, QStringLiteral("# %1").arg(watermark));
+}
+
 void CoreTests::parsesXlsxSampleWorkbook()
 {
     const QString path = QStringLiteral(XLSONE_REPO_ROOT)
@@ -1148,46 +1175,90 @@ void CoreTests::updateCheckerFindsNewVersionOnline()
         QStringLiteral("0.1.0")) > 0);
 }
 
-void CoreTests::licenseManagerAcceptsValidEd25519License()
+void CoreTests::licenseManagerUnactivatedRestrictsImportsAndExports()
 {
-    // Signed with production Ed25519 key pair (seed kept in Worker secret / domestic server). Rotated 2026-07-09.
-    const QByteArray license = R"({
-        "key_id": "ABCD-1234-EFGH-5678",
-        "plan": "personal_lifetime",
-        "device_hash": "",
-        "device_components": [],
-        "issued_at": 1719830400,
-        "expires_at": 0,
-        "signature": "Qmbz_H3cNPGioojg0ZzvRlSwj8XGLMkPFzdRdTCFWi-bJlfUXlC2cHmYkTO7zvrc3z3qipk26vksyXhCreV3Cw"
-    })";
+    // Make sure no persisted license from a previous test leaks into this one.
+    QSettings().clear();
 
     xlsone::LicenseManager manager;
-    xlsone::LicenseInfo info;
-    QString errorMessage;
-    QVERIFY(manager.applyLicenseFile(license, QString(), &info, &errorMessage));
-    QCOMPARE(manager.state(), xlsone::LicenseState::Activated);
-    QCOMPARE(info.keyId, QStringLiteral("ABCD-1234-EFGH-5678"));
-    QCOMPARE(info.plan, xlsone::LicensePlan::PersonalLifetime);
+    QCOMPARE(manager.state(), xlsone::LicenseState::Unactivated);
+    QVERIFY(!manager.isFullyLicensed());
+    QVERIFY(manager.canUse(xlsone::LicenseFeature::ImportFiles));
+    QVERIFY(manager.canUse(xlsone::LicenseFeature::BatchExport));
+    QVERIFY(!manager.canUse(xlsone::LicenseFeature::NoExportWatermark));
+    QCOMPARE(manager.maxImportFiles(), 3);
+    QVERIFY(!manager.exportWatermarkText().isEmpty());
+    QVERIFY(!manager.restrictionMessage().isEmpty());
 }
 
-void CoreTests::licenseManagerRejectsTamperedEd25519License()
+void CoreTests::licenseManagerActivatedGrantsFullCapabilities()
 {
-    QByteArray license = R"({
-        "key_id": "ABCD-1234-EFGH-5678",
-        "plan": "personal_lifetime",
-        "device_hash": "",
-        "device_components": [],
-        "issued_at": 1719830400,
-        "expires_at": 0,
-        "signature": "Qmbz_H3cNPGioojg0ZzvRlSwj8XGLMkPFzdRdTCFWi-bJlfUXlC2cHmYkTO7zvrc3z3qipk26vksyXhCreV3Cw"
-    })";
-    // Tamper with the payload.
-    license.replace("personal_lifetime", "enterprise_10");
+    QSettings().clear();
+
+    xlsone::LicenseInfo info;
+    info.plan = xlsone::LicensePlan::PersonalLifetime;
 
     xlsone::LicenseManager manager;
-    QString errorMessage;
-    QVERIFY(!manager.applyLicenseFile(license, QString(), nullptr, &errorMessage));
-    QVERIFY(!errorMessage.isEmpty());
+    manager.applyTestLicense(info, xlsone::LicenseState::Activated);
+    QCOMPARE(manager.state(), xlsone::LicenseState::Activated);
+    QVERIFY(manager.isFullyLicensed());
+    QVERIFY(manager.canUse(xlsone::LicenseFeature::NoExportWatermark));
+    QCOMPARE(manager.maxImportFiles(), INT_MAX);
+    QVERIFY(manager.exportWatermarkText().isEmpty());
+    QVERIFY(manager.restrictionMessage().isEmpty());
+}
+
+void CoreTests::licenseManagerExpiredBlocksWatermarkAndLimitsFiles()
+{
+    QSettings().clear();
+
+    xlsone::LicenseInfo info;
+    info.plan = xlsone::LicensePlan::PersonalYearly;
+    info.expiresAt = QDateTime::currentDateTimeUtc().addDays(-14);
+
+    xlsone::LicenseManager manager;
+    manager.applyTestLicense(info, xlsone::LicenseState::Expired);
+    QCOMPARE(manager.state(), xlsone::LicenseState::Expired);
+    QVERIFY(!manager.isFullyLicensed());
+    QVERIFY(!manager.isInGracePeriod());
+    QVERIFY(!manager.canUse(xlsone::LicenseFeature::NoExportWatermark));
+    QCOMPARE(manager.maxImportFiles(), 3);
+    QVERIFY(!manager.exportWatermarkText().isEmpty());
+    QVERIFY(!manager.restrictionMessage().isEmpty());
+}
+
+void CoreTests::licenseManagerGracePeriodKeepsFullCapabilities()
+{
+    QSettings().clear();
+
+    xlsone::LicenseInfo info;
+    info.plan = xlsone::LicensePlan::PersonalYearly;
+    info.expiresAt = QDateTime::currentDateTimeUtc().addSecs(-3600);
+
+    xlsone::LicenseManager manager;
+    manager.applyTestLicense(info, xlsone::LicenseState::Expired);
+    QVERIFY(manager.isInGracePeriod());
+    QVERIFY(manager.isFullyLicensed());
+    QVERIFY(manager.canUse(xlsone::LicenseFeature::NoExportWatermark));
+    QCOMPARE(manager.maxImportFiles(), INT_MAX);
+    QVERIFY(manager.exportWatermarkText().isEmpty());
+    QVERIFY(manager.restrictionMessage().isEmpty());
+}
+
+void CoreTests::licenseManagerActiveTrialGrantsFullCapabilities()
+{
+    QSettings().clear();
+
+    xlsone::LicenseInfo info;
+    info.plan = xlsone::LicensePlan::Trial;
+    info.expiresAt = QDateTime::currentDateTimeUtc().addDays(5);
+
+    xlsone::LicenseManager manager;
+    manager.applyTestLicense(info, xlsone::LicenseState::Trial);
+    QCOMPARE(manager.state(), xlsone::LicenseState::Trial);
+    QVERIFY(manager.isFullyLicensed());
+    QCOMPARE(manager.maxImportFiles(), INT_MAX);
+    QVERIFY(manager.exportWatermarkText().isEmpty());
 }
 
 #include "core_tests.moc"

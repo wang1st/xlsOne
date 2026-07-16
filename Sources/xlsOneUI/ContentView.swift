@@ -865,6 +865,8 @@ struct ExcelGridView: View {
             applyQuickOverride(.label)
         case "2":
             applyQuickOverride(.sum)
+        case "3":
+            applyQuickOverride(.single)
         case "j":
             onJumpNextAnomaly?()
         case "k":
@@ -905,6 +907,9 @@ struct ExcelGridView: View {
                 }
                 Button(LocaleManager.loc("求和")) {
                     onApplyOverride?(position.row, position.col, .sum)
+                }
+                Button(LocaleManager.loc("单值")) {
+                    onApplyOverride?(position.row, position.col, .single)
                 }
             }
         }
@@ -1319,6 +1324,9 @@ struct InspectionSidebar: View {
                     overrideButton(title: LocaleManager.loc("求和"), tint: .blue, isActive: matches(cell.type, overrideType: .sum)) {
                         applyOverride(.sum)
                     }
+                    overrideButton(title: LocaleManager.loc("单值"), tint: .orange, isActive: matches(cell.type, overrideType: .single)) {
+                        applyOverride(.single)
+                    }
                 }
 
                 if viewModel.canRestoreSelectedCellAutomatic {
@@ -1330,7 +1338,7 @@ struct InspectionSidebar: View {
                     .foregroundStyle(.secondary)
                 }
 
-                Text(LocaleManager.loc("按 1 或 2"))
+                Text(LocaleManager.loc("按 1、2 或 3"))
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
             }
@@ -1424,7 +1432,7 @@ struct InspectionSidebar: View {
 
     private func matches(_ cellType: MergedCell.CellType, overrideType: CellOverrideType) -> Bool {
         switch (cellType, overrideType) {
-        case (.label, .label), (.sum, .sum):
+        case (.label, .label), (.sum, .sum), (.single, .single):
             return true
         default:
             return false
@@ -1445,6 +1453,8 @@ struct InspectionSidebar: View {
         switch cellType {
         case .sum:
             return LocaleManager.loc("求和")
+        case .single:
+            return LocaleManager.loc("单值")
         default:
             return LocaleManager.loc("标签")
         }
