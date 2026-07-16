@@ -224,6 +224,31 @@ if(UNIX AND NOT APPLE)
             message(WARNING "libzstd not found — Qt may require it")
         endif()
 
+        # Bundle OpenSSL 1.1 (dlopen'ed by Qt5Network at runtime; the bundled
+        # Qt5.15 was built against OpenSSL 1.x and is incompatible with the
+        # OpenSSL 3.x shipped by newer distros).
+        set(_ssl_search_dirs
+            "${PROJECT_SOURCE_DIR}/deepin-qt5.15/openssl1.1/usr/lib/${CMAKE_LIBRARY_ARCHITECTURE}"
+            "${XLSONE_QT_BUNDLE_DIR}"
+        )
+        set(_ssl_found OFF)
+        foreach(_dir ${_ssl_search_dirs})
+            if(NOT _ssl_found)
+                file(GLOB _ssl_files
+                    "${_dir}/libssl.so.1.1"
+                    "${_dir}/libcrypto.so.1.1"
+                )
+                if(_ssl_files)
+                    install(FILES ${_ssl_files} DESTINATION ${XLSONE_BUNDLE_LIB_DEST})
+                    set(_ssl_found ON)
+                    message(STATUS "Bundling OpenSSL 1.1 libraries from ${_dir}")
+                endif()
+            endif()
+        endforeach()
+        if(NOT _ssl_found)
+            message(WARNING "OpenSSL 1.1 libraries not found — Qt5Network TLS will fail on OpenSSL 3.x systems")
+        endif()
+
         # Bundle Qt platform, image, and input-method plugins
         if(IS_DIRECTORY "${XLSONE_QT_PLUGIN_DIR}")
             install(DIRECTORY "${XLSONE_QT_PLUGIN_DIR}/platforms/"
@@ -241,6 +266,15 @@ if(UNIX AND NOT APPLE)
         else()
             message(WARNING "Qt plugin bundle directory not found: ${XLSONE_QT_PLUGIN_DIR}")
         endif()
+
+        # The bundled Qt plugins carry RUNPATH=$ORIGIN/../../lib, which resolves
+        # to /usr/lib/xlsone/lib. Install a "lib -> ." symlink there so the
+        # plugins find the bundled Qt libraries instead of falling back to the
+        # (ABI-incompatible) system Qt.
+        file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bundle-symlink")
+        file(CREATE_LINK "." "${CMAKE_CURRENT_BINARY_DIR}/bundle-symlink/lib" SYMBOLIC)
+        install(FILES "${CMAKE_CURRENT_BINARY_DIR}/bundle-symlink/lib"
+            DESTINATION "${XLSONE_BUNDLE_LIB_DEST}")
     else()
         # Native Kylin/Debian build: rely on distro Qt packages.
         # CPACK_DEBIAN_PACKAGE_DEPENDS is set below.
