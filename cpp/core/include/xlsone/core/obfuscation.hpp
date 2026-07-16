@@ -35,7 +35,7 @@ struct EncryptedString {
 };
 
 template <std::size_t N>
-consteval EncryptedString<N> encryptString(const char (&str)[N])
+constexpr EncryptedString<N> encryptString(const char (&str)[N])
 {
     EncryptedString<N> out;
     out.len = N - 1;
@@ -63,7 +63,7 @@ inline QString decryptString(const uint8_t* data, std::size_t len)
 // ---------- Byte-array obfuscation ----------
 
 template <std::size_t N>
-consteval std::array<uint8_t, N> encryptByteArray(const uint8_t (&bytes)[N])
+constexpr std::array<uint8_t, N> encryptByteArray(const uint8_t (&bytes)[N])
 {
     std::array<uint8_t, N> out{};
     for (std::size_t i = 0; i < N; ++i) {
