@@ -28,12 +28,14 @@ public enum CellOverrideType: String, Codable, Sendable, CaseIterable {
     case label    // 标签型（直接显示值）
     case sum      // 求和型（数值求和）
     case mixed    // 混合型（显示条数）
+    case single   // 单值型（保留当前显示值，仅做标记）
 
     public var displayName: String {
         switch self {
         case .label: return LocaleManager.loc("标签")
         case .sum: return LocaleManager.loc("求和")
         case .mixed: return LocaleManager.loc("混合")
+        case .single: return LocaleManager.loc("单值")
         }
     }
 
@@ -45,6 +47,8 @@ public enum CellOverrideType: String, Codable, Sendable, CaseIterable {
             return "将所有文件的数值累加求和"
         case .mixed:
             return "值不一致时显示不同值的数量"
+        case .single:
+            return "保留当前显示值并标记为手动单值"
         }
     }
 }

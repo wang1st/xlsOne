@@ -389,26 +389,118 @@ MergedResult SimpleMerger::merge(const std::vector<ExcelFile>& files, const QStr
 
 MergedResult SimpleMerger::mergeFirstSheets(const std::vector<ExcelFile>& files) const
 {
+    struct Entry {
+        QString filename;
+        QString filepath;
+        const SheetData* sheet = nullptr;
+    };
+
+    std::vector<Entry> entries;
     for (const auto& file : files) {
         if (!file.sheets.empty()) {
-            return merge(files, file.sheets.front().name);
+            entries.push_back({file.filename, file.filepath, &file.sheets.front()});
         }
     }
-    return {};
+
+    MergedResult result;
+    result.sheetName = entries.empty() ? QStringLiteral("Sheet1") : entries.front().sheet->name;
+    for (const auto& entry : entries) {
+        result.sourceFiles.append(entry.filename);
+    }
+    if (entries.empty()) {
+        return result;
+    }
+
+    std::vector<const SheetData*> sheets;
+    sheets.reserve(entries.size());
+    for (const auto& entry : entries) {
+        sheets.push_back(entry.sheet);
+    }
+
+    int maxRows = 0;
+    int maxColumns = 0;
+    for (const auto& entry : entries) {
+        maxRows = std::max(maxRows, static_cast<int>(entry.sheet->rows.size()));
+        for (const auto& row : entry.sheet->rows) {
+            maxColumns = std::max(maxColumns, static_cast<int>(row.size()));
+        }
+    }
+
+    std::vector<double> columnMetricTendencies(static_cast<size_t>(maxColumns), 0.0);
+    for (int column = 0; column < maxColumns; ++column) {
+        columnMetricTendencies[static_cast<size_t>(column)] = buildColumnMetricTendency(sheets, column);
+    }
+
+    result.rows.reserve(static_cast<size_t>(maxRows));
+    for (int row = 0; row < maxRows; ++row) {
+        std::vector<MergedCell> mergedRow;
+        mergedRow.reserve(static_cast<size_t>(maxColumns));
+        for (int column = 0; column < maxColumns; ++column) {
+            std::vector<CellMergeInput> inputs;
+            std::vector<CellMergeInput> leftInputs;
+            inputs.reserve(entries.size());
+            leftInputs.reserve(entries.size());
+
+            for (const auto& entry : entries) {
+                const auto* cell = entry.sheet->cellAt(row, column);
+                inputs.push_back({
+                    entry.filename,
+                    entry.filepath,
+                    cell == nullptr ? std::optional<CellData>{} : std::optional<CellData>{*cell}
+                });
+                const auto* leftCell = column > 0 ? entry.sheet->cellAt(row, column - 1) : nullptr;
+                leftInputs.push_back({
+                    entry.filename,
+                    entry.filepath,
+                    leftCell == nullptr ? std::optional<CellData>{} : std::optional<CellData>{*leftCell}
+                });
+            }
+
+            mergedRow.push_back(MergedCell::from(
+                inputs,
+                leftInputs,
+                buildNeighborContext(sheets, row, column, columnMetricTendencies[static_cast<size_t>(column)]),
+                row,
+                column
+            ));
+        }
+        result.rows.push_back(std::move(mergedRow));
+    }
+
+    return result;
 }
 
 QStringList SimpleMerger::availableSheetNames(const std::vector<ExcelFile>& files) const
 {
-    QStringList names;
-    QSet<QString> seen;
+    if (files.empty()) {
+        return {};
+    }
+
+    QSet<QString> allNames;
     for (const auto& file : files) {
         for (const auto& sheet : file.sheets) {
-            if (!seen.contains(sheet.name)) {
-                seen.insert(sheet.name);
-                names.append(sheet.name);
-            }
+            allNames.insert(sheet.name);
         }
     }
+
+    QStringList names;
+    QSet<QString> seen;
+    for (const auto& sheet : files.front().sheets) {
+        if (allNames.contains(sheet.name) && !seen.contains(sheet.name)) {
+            names.append(sheet.name);
+            seen.insert(sheet.name);
+        }
+    }
+
+    QStringList remaining;
+    for (const auto& name : allNames) {
+        if (!seen.contains(name)) {
+            remaining.append(name);
+        }
+    }
+    std::sort(remaining.begin(), remaining.end());
+    names.append(remaining);
+
     return names;
 }
 

@@ -528,3 +528,119 @@ In the future, please omit this parameter.
 ==============================Suggested follow-up:==============================
 * Please use 'aqt list-qt windows desktop --modules 5.15.2 <arch>' to show modules available.
 2026-07-09 17:19:13,461 - aqt.helper - DEBUG - helper 22900 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt5_5152/Updates.xml.sha256
+2026-07-16 18:05:07,037 - aqt.helper - DEBUG - helper 8394092800 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/mac_x64/desktop/qt6_663/Updates.xml.sha256
+2026-07-16 18:05:07,037 - aqt.helper - DEBUG - helper 8394092800 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/mac_x64/desktop/qt5_5152/Updates.xml.sha256
+2026-07-16 18:05:07,038 - aqt.helper - DEBUG - helper 8394092800 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/mac_x64/desktop/qt6_683/qt6_683/Updates.xml.sha256
+2026-07-16 18:05:11,693 - aqt.helper - DEBUG - helper 8394092800 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/mac_x64/desktop/qt5_5152_wasm/Updates.xml.sha256
+2026-07-16 18:05:12,223 - aqt.helper - DEBUG - helper 8394092800 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/mac_x64/desktop/qt6_663_wasm_singlethread/Updates.xml.sha256
+2026-07-16 18:05:16,874 - aqt.helper - DEBUG - helper 8394092800 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/mac_x64/desktop/qt6_663_wasm_multithread/Updates.xml.sha256
+2026-07-16 18:05:43,185 - aqt.main - INFO - installer 8394092800 aqtinstall(aqt) v3.3.0 on Python 3.14.5 [CPython Clang 21.0.0 (clang-2100.0.123.102)]
+2026-07-16 18:05:43,185 - aqt.helper - DEBUG - helper 8394092800 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/mac_x64/desktop/qt6_683/qt6_683/Updates.xml.sha256
+2026-07-16 18:05:47,997 - aqt.helper - DEBUG - helper 8394092800 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/mac_x64/extensions/qtwebengine/683/clang_64/Updates.xml.sha256
+2026-07-16 18:05:53,651 - aqt.archives - INFO - archives 8394092800 Found extension qtwebengine
+2026-07-16 18:05:53,652 - aqt.helper - DEBUG - helper 8394092800 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/mac_x64/extensions/qtpdf/683/clang_64/Updates.xml.sha256
+2026-07-16 18:06:01,182 - aqt.archives - INFO - archives 8394092800 Found extension qtpdf
+2026-07-16 18:06:01,408 - aqt.helper - DEBUG - helper 8394092800 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/mac_x64/desktop/qt6_683/qt6_683/qt.qt6.683.clang_64/6.8.3-0-202503201723qttools-MacOS-MacOS_14-Clang-MacOS-MacOS_14-X86_64-ARM64.7z.sha256
+2026-07-16 18:06:01,408 - aqt.helper - DEBUG - helper 8394092800 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/mac_x64/desktop/qt6_683/qt6_683/qt.qt6.683.clang_64/6.8.3-0-202503201723qtbase-MacOS-MacOS_14-Clang-MacOS-MacOS_14-X86_64-ARM64.7z.sha256
+2026-07-16 18:06:01,408 - aqt.helper - DEBUG - helper 8394092800 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/mac_x64/desktop/qt6_683/qt6_683/qt.qt6.683.clang_64/6.8.3-0-202503201723qttranslations-MacOS-MacOS_14-Clang-MacOS-MacOS_14-X86_64-ARM64.7z.sha256
+2026-07-16 18:06:03,971 - aqt.helper - INFO - helper 8394092800 Downloading qtbase...
+2026-07-16 18:06:03,971 - aqt.installer - DEBUG - installer 8394092800 Download URL: https://download.qt.io/online/qtsdkrepository/mac_x64/desktop/qt6_683/qt6_683/qt.qt6.683.clang_64/6.8.3-0-202503201723qtbase-MacOS-MacOS_14-Clang-MacOS-MacOS_14-X86_64-ARM64.7z
+2026-07-16 18:06:04,479 - aqt.helper - INFO - helper 8394092800 Downloading qttools...
+2026-07-16 18:06:04,479 - aqt.installer - DEBUG - installer 8394092800 Download URL: https://download.qt.io/online/qtsdkrepository/mac_x64/desktop/qt6_683/qt6_683/qt.qt6.683.clang_64/6.8.3-0-202503201723qttools-MacOS-MacOS_14-Clang-MacOS-MacOS_14-X86_64-ARM64.7z
+2026-07-16 18:06:04,572 - aqt.helper - INFO - helper 8394092800 Downloading qttranslations...
+2026-07-16 18:06:04,573 - aqt.installer - DEBUG - installer 8394092800 Download URL: https://download.qt.io/online/qtsdkrepository/mac_x64/desktop/qt6_683/qt6_683/qt.qt6.683.clang_64/6.8.3-0-202503201723qttranslations-MacOS-MacOS_14-Clang-MacOS-MacOS_14-X86_64-ARM64.7z
+2026-07-16 18:06:06,237 - aqt.helper - DEBUG - helper 8394092800 Asked to redirect(302) to: https://ftp.jaist.ac.jp/pub/qtproject/online/qtsdkrepository/mac_x64/desktop/qt6_683/qt6_683/qt.qt6.683.clang_64/6.8.3-0-202503201723qtbase-MacOS-MacOS_14-Clang-MacOS-MacOS_14-X86_64-ARM64.7z
+2026-07-16 18:06:06,238 - aqt.helper - INFO - helper 8394092800 Redirected: ftp.jaist.ac.jp
+2026-07-16 18:06:06,859 - aqt.helper - DEBUG - helper 8394092800 Asked to redirect(302) to: https://ftp.jaist.ac.jp/pub/qtproject/online/qtsdkrepository/mac_x64/desktop/qt6_683/qt6_683/qt.qt6.683.clang_64/6.8.3-0-202503201723qttools-MacOS-MacOS_14-Clang-MacOS-MacOS_14-X86_64-ARM64.7z
+2026-07-16 18:06:06,859 - aqt.helper - INFO - helper 8394092800 Redirected: ftp.jaist.ac.jp
+2026-07-16 18:06:06,869 - aqt.helper - DEBUG - helper 8394092800 Asked to redirect(302) to: https://ftp.jaist.ac.jp/pub/qtproject/online/qtsdkrepository/mac_x64/desktop/qt6_683/qt6_683/qt.qt6.683.clang_64/6.8.3-0-202503201723qttranslations-MacOS-MacOS_14-Clang-MacOS-MacOS_14-X86_64-ARM64.7z
+2026-07-16 18:06:06,870 - aqt.helper - INFO - helper 8394092800 Redirected: ftp.jaist.ac.jp
+2026-07-16 18:06:29,986 - aqt.installer - INFO - installer 8394092800 Finished installation of qttranslations-MacOS-MacOS_14-Clang-MacOS-MacOS_14-X86_64-ARM64.7z in 28.57859904
+2026-07-16 18:11:15,206 - aqt.installer - WARNING - installer 8394092800 Caught KeyboardInterrupt, terminating installer workers
+2026-07-16 18:11:15,224 - aqt.main - ERROR - installer 8394092800 Installer halted by keyboard interrupt.
+2026-07-16 18:11:32,759 - aqt.main - INFO - installer 8394092800 aqtinstall(aqt) v3.3.0 on Python 3.14.5 [CPython Clang 21.0.0 (clang-2100.0.123.102)]
+2026-07-16 18:11:32,759 - aqt.helper - DEBUG - helper 8394092800 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/mac_x64/desktop/qt6_683/qt6_683/Updates.xml.sha256
+2026-07-16 18:11:35,447 - aqt.helper - DEBUG - helper 8394092800 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/mac_x64/extensions/qtwebengine/683/clang_64/Updates.xml.sha256
+2026-07-16 18:11:40,271 - aqt.archives - INFO - archives 8394092800 Found extension qtwebengine
+2026-07-16 18:11:40,271 - aqt.helper - DEBUG - helper 8394092800 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/mac_x64/extensions/qtpdf/683/clang_64/Updates.xml.sha256
+2026-07-16 18:11:45,649 - aqt.archives - INFO - archives 8394092800 Found extension qtpdf
+2026-07-16 18:11:45,866 - aqt.helper - DEBUG - helper 8394092800 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/mac_x64/desktop/qt6_683/qt6_683/qt.qt6.683.clang_64/6.8.3-0-202503201723qtbase-MacOS-MacOS_14-Clang-MacOS-MacOS_14-X86_64-ARM64.7z.sha256
+2026-07-16 18:11:45,866 - aqt.helper - DEBUG - helper 8394092800 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/mac_x64/desktop/qt6_683/qt6_683/qt.qt6.683.clang_64/6.8.3-0-202503201723qttranslations-MacOS-MacOS_14-Clang-MacOS-MacOS_14-X86_64-ARM64.7z.sha256
+2026-07-16 18:11:45,866 - aqt.helper - DEBUG - helper 8394092800 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/mac_x64/desktop/qt6_683/qt6_683/qt.qt6.683.clang_64/6.8.3-0-202503201723qttools-MacOS-MacOS_14-Clang-MacOS-MacOS_14-X86_64-ARM64.7z.sha256
+2026-07-16 18:11:47,932 - aqt.helper - INFO - helper 8394092800 Downloading qttools...
+2026-07-16 18:11:47,932 - aqt.helper - INFO - helper 8394092800 Downloading qtbase...
+2026-07-16 18:11:47,932 - aqt.helper - INFO - helper 8394092800 Downloading qttranslations...
+2026-07-16 18:11:47,932 - aqt.installer - DEBUG - installer 8394092800 Download URL: https://mirrors.tuna.tsinghua.edu.cn/qt/online/qtsdkrepository/mac_x64/desktop/qt6_683/qt6_683/qt.qt6.683.clang_64/6.8.3-0-202503201723qttools-MacOS-MacOS_14-Clang-MacOS-MacOS_14-X86_64-ARM64.7z
+2026-07-16 18:11:47,932 - aqt.installer - DEBUG - installer 8394092800 Download URL: https://mirrors.tuna.tsinghua.edu.cn/qt/online/qtsdkrepository/mac_x64/desktop/qt6_683/qt6_683/qt.qt6.683.clang_64/6.8.3-0-202503201723qtbase-MacOS-MacOS_14-Clang-MacOS-MacOS_14-X86_64-ARM64.7z
+2026-07-16 18:11:47,932 - aqt.installer - DEBUG - installer 8394092800 Download URL: https://mirrors.tuna.tsinghua.edu.cn/qt/online/qtsdkrepository/mac_x64/desktop/qt6_683/qt6_683/qt.qt6.683.clang_64/6.8.3-0-202503201723qttranslations-MacOS-MacOS_14-Clang-MacOS-MacOS_14-X86_64-ARM64.7z
+2026-07-16 18:11:48,647 - aqt.helper - INFO - helper 8394092800 Downloading qttranslations: attempt #2...
+2026-07-16 18:11:48,647 - aqt.installer - DEBUG - installer 8394092800 Download URL: https://mirrors.tuna.tsinghua.edu.cn/qt/online/qtsdkrepository/mac_x64/desktop/qt6_683/qt6_683/qt.qt6.683.clang_64/6.8.3-0-202503201723qttranslations-MacOS-MacOS_14-Clang-MacOS-MacOS_14-X86_64-ARM64.7z
+2026-07-16 18:11:48,690 - aqt.helper - INFO - helper 8394092800 Downloading qttools: attempt #2...
+2026-07-16 18:11:48,690 - aqt.installer - DEBUG - installer 8394092800 Download URL: https://mirrors.tuna.tsinghua.edu.cn/qt/online/qtsdkrepository/mac_x64/desktop/qt6_683/qt6_683/qt.qt6.683.clang_64/6.8.3-0-202503201723qttools-MacOS-MacOS_14-Clang-MacOS-MacOS_14-X86_64-ARM64.7z
+2026-07-16 18:11:48,713 - aqt.helper - INFO - helper 8394092800 Downloading qtbase: attempt #2...
+2026-07-16 18:11:48,713 - aqt.installer - DEBUG - installer 8394092800 Download URL: https://mirrors.tuna.tsinghua.edu.cn/qt/online/qtsdkrepository/mac_x64/desktop/qt6_683/qt6_683/qt.qt6.683.clang_64/6.8.3-0-202503201723qtbase-MacOS-MacOS_14-Clang-MacOS-MacOS_14-X86_64-ARM64.7z
+2026-07-16 18:11:49,343 - aqt.helper - INFO - helper 8394092800 Downloading qttranslations: attempt #3...
+2026-07-16 18:11:49,343 - aqt.installer - DEBUG - installer 8394092800 Download URL: https://mirrors.tuna.tsinghua.edu.cn/qt/online/qtsdkrepository/mac_x64/desktop/qt6_683/qt6_683/qt.qt6.683.clang_64/6.8.3-0-202503201723qttranslations-MacOS-MacOS_14-Clang-MacOS-MacOS_14-X86_64-ARM64.7z
+2026-07-16 18:11:49,461 - aqt.helper - INFO - helper 8394092800 Downloading qttools: attempt #3...
+2026-07-16 18:11:49,461 - aqt.installer - DEBUG - installer 8394092800 Download URL: https://mirrors.tuna.tsinghua.edu.cn/qt/online/qtsdkrepository/mac_x64/desktop/qt6_683/qt6_683/qt.qt6.683.clang_64/6.8.3-0-202503201723qttools-MacOS-MacOS_14-Clang-MacOS-MacOS_14-X86_64-ARM64.7z
+2026-07-16 18:11:49,466 - aqt.helper - INFO - helper 8394092800 Downloading qtbase: attempt #3...
+2026-07-16 18:11:49,466 - aqt.installer - DEBUG - installer 8394092800 Download URL: https://mirrors.tuna.tsinghua.edu.cn/qt/online/qtsdkrepository/mac_x64/desktop/qt6_683/qt6_683/qt.qt6.683.clang_64/6.8.3-0-202503201723qtbase-MacOS-MacOS_14-Clang-MacOS-MacOS_14-X86_64-ARM64.7z
+2026-07-16 18:11:50,087 - aqt.helper - INFO - helper 8394092800 Downloading qttranslations: attempt #4...
+2026-07-16 18:11:50,087 - aqt.installer - DEBUG - installer 8394092800 Download URL: https://mirrors.tuna.tsinghua.edu.cn/qt/online/qtsdkrepository/mac_x64/desktop/qt6_683/qt6_683/qt.qt6.683.clang_64/6.8.3-0-202503201723qttranslations-MacOS-MacOS_14-Clang-MacOS-MacOS_14-X86_64-ARM64.7z
+2026-07-16 18:11:50,216 - aqt.helper - INFO - helper 8394092800 Downloading qttools: attempt #4...
+2026-07-16 18:11:50,216 - aqt.installer - DEBUG - installer 8394092800 Download URL: https://mirrors.tuna.tsinghua.edu.cn/qt/online/qtsdkrepository/mac_x64/desktop/qt6_683/qt6_683/qt.qt6.683.clang_64/6.8.3-0-202503201723qttools-MacOS-MacOS_14-Clang-MacOS-MacOS_14-X86_64-ARM64.7z
+2026-07-16 18:11:50,228 - aqt.helper - INFO - helper 8394092800 Downloading qtbase: attempt #4...
+2026-07-16 18:11:50,228 - aqt.installer - DEBUG - installer 8394092800 Download URL: https://mirrors.tuna.tsinghua.edu.cn/qt/online/qtsdkrepository/mac_x64/desktop/qt6_683/qt6_683/qt.qt6.683.clang_64/6.8.3-0-202503201723qtbase-MacOS-MacOS_14-Clang-MacOS-MacOS_14-X86_64-ARM64.7z
+2026-07-16 18:11:50,826 - aqt.helper - INFO - helper 8394092800 Downloading qttranslations: attempt #5...
+2026-07-16 18:11:50,827 - aqt.installer - DEBUG - installer 8394092800 Download URL: https://mirrors.tuna.tsinghua.edu.cn/qt/online/qtsdkrepository/mac_x64/desktop/qt6_683/qt6_683/qt.qt6.683.clang_64/6.8.3-0-202503201723qttranslations-MacOS-MacOS_14-Clang-MacOS-MacOS_14-X86_64-ARM64.7z
+2026-07-16 18:11:50,930 - aqt.helper - INFO - helper 8394092800 Downloading qttools: attempt #5...
+2026-07-16 18:11:50,930 - aqt.helper - INFO - helper 8394092800 Downloading qtbase: attempt #5...
+2026-07-16 18:11:50,930 - aqt.installer - DEBUG - installer 8394092800 Download URL: https://mirrors.tuna.tsinghua.edu.cn/qt/online/qtsdkrepository/mac_x64/desktop/qt6_683/qt6_683/qt.qt6.683.clang_64/6.8.3-0-202503201723qttools-MacOS-MacOS_14-Clang-MacOS-MacOS_14-X86_64-ARM64.7z
+2026-07-16 18:11:50,931 - aqt.installer - DEBUG - installer 8394092800 Download URL: https://mirrors.tuna.tsinghua.edu.cn/qt/online/qtsdkrepository/mac_x64/desktop/qt6_683/qt6_683/qt.qt6.683.clang_64/6.8.3-0-202503201723qtbase-MacOS-MacOS_14-Clang-MacOS-MacOS_14-X86_64-ARM64.7z
+2026-07-16 18:11:51,722 - aqt.installer - WARNING - installer 8394092800 Caught ArchiveChecksumError, terminating installer workers
+2026-07-16 18:11:51,734 - aqt.main - ERROR - installer 8394092800 Downloaded file 6.8.3-0-202503201723qttranslations-MacOS-MacOS_14-Clang-MacOS-MacOS_14-X86_64-ARM64.7z is corrupted! Detect checksum error.
+Expect 8d68157133a0c7c1ca6bfb83de2141c7956cba8d51978571a8166bd642830376: https://mirrors.tuna.tsinghua.edu.cn/qt/online/qtsdkrepository/mac_x64/desktop/qt6_683/qt6_683/qt.qt6.683.clang_64/6.8.3-0-202503201723qttranslations-MacOS-MacOS_14-Clang-MacOS-MacOS_14-X86_64-ARM64.7z
+Actual 042b60be89502d54703602a9f7131409ddeef536a3a75251606d840411053235: qttranslations-MacOS-MacOS_14-Clang-MacOS-MacOS_14-X86_64-ARM64.7z
+2026-07-16 18:12:01,758 - aqt.main - INFO - installer 8394092800 aqtinstall(aqt) v3.3.0 on Python 3.14.5 [CPython Clang 21.0.0 (clang-2100.0.123.102)]
+2026-07-16 18:12:01,759 - aqt.helper - DEBUG - helper 8394092800 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/mac_x64/desktop/qt6_683/qt6_683/Updates.xml.sha256
+2026-07-16 18:12:05,199 - aqt.main - ERROR - installer 8394092800 Failed to locate XML data for Qt version '6.8.3'.
+==============================Suggested follow-up:==============================
+* Please use 'aqt list-qt mac desktop' to show versions available.
+2026-07-16 18:12:35,155 - aqt.main - INFO - installer 8394092800 aqtinstall(aqt) v3.3.0 on Python 3.14.5 [CPython Clang 21.0.0 (clang-2100.0.123.102)]
+2026-07-16 18:12:35,155 - aqt.helper - DEBUG - helper 8394092800 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/mac_x64/desktop/qt6_683/qt6_683/Updates.xml.sha256
+2026-07-16 18:12:38,773 - aqt.helper - DEBUG - helper 8394092800 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/mac_x64/extensions/qtwebengine/683/clang_64/Updates.xml.sha256
+2026-07-16 18:12:41,428 - aqt.archives - INFO - archives 8394092800 Found extension qtwebengine
+2026-07-16 18:12:41,429 - aqt.helper - DEBUG - helper 8394092800 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/mac_x64/extensions/qtpdf/683/clang_64/Updates.xml.sha256
+2026-07-16 18:12:45,357 - aqt.archives - INFO - archives 8394092800 Found extension qtpdf
+2026-07-16 18:12:45,570 - aqt.helper - DEBUG - helper 8394092800 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/mac_x64/desktop/qt6_683/qt6_683/qt.qt6.683.clang_64/6.8.3-0-202503201723qttools-MacOS-MacOS_14-Clang-MacOS-MacOS_14-X86_64-ARM64.7z.sha256
+2026-07-16 18:12:45,570 - aqt.helper - DEBUG - helper 8394092800 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/mac_x64/desktop/qt6_683/qt6_683/qt.qt6.683.clang_64/6.8.3-0-202503201723qtbase-MacOS-MacOS_14-Clang-MacOS-MacOS_14-X86_64-ARM64.7z.sha256
+2026-07-16 18:12:45,570 - aqt.helper - DEBUG - helper 8394092800 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/mac_x64/desktop/qt6_683/qt6_683/qt.qt6.683.clang_64/6.8.3-0-202503201723qttranslations-MacOS-MacOS_14-Clang-MacOS-MacOS_14-X86_64-ARM64.7z.sha256
+2026-07-16 18:12:48,083 - aqt.helper - INFO - helper 8394092800 Downloading qtbase...
+2026-07-16 18:12:48,083 - aqt.installer - DEBUG - installer 8394092800 Download URL: https://mirrors.cloud.tencent.com/qt/online/qtsdkrepository/mac_x64/desktop/qt6_683/qt6_683/qt.qt6.683.clang_64/6.8.3-0-202503201723qtbase-MacOS-MacOS_14-Clang-MacOS-MacOS_14-X86_64-ARM64.7z
+2026-07-16 18:12:48,467 - aqt.helper - INFO - helper 8394092800 Downloading qttools...
+2026-07-16 18:12:48,467 - aqt.helper - INFO - helper 8394092800 Downloading qttranslations...
+2026-07-16 18:12:48,467 - aqt.installer - DEBUG - installer 8394092800 Download URL: https://mirrors.cloud.tencent.com/qt/online/qtsdkrepository/mac_x64/desktop/qt6_683/qt6_683/qt.qt6.683.clang_64/6.8.3-0-202503201723qttools-MacOS-MacOS_14-Clang-MacOS-MacOS_14-X86_64-ARM64.7z
+2026-07-16 18:12:48,467 - aqt.installer - DEBUG - installer 8394092800 Download URL: https://mirrors.cloud.tencent.com/qt/online/qtsdkrepository/mac_x64/desktop/qt6_683/qt6_683/qt.qt6.683.clang_64/6.8.3-0-202503201723qttranslations-MacOS-MacOS_14-Clang-MacOS-MacOS_14-X86_64-ARM64.7z
+2026-07-16 18:12:52,127 - aqt.installer - INFO - installer 8394092800 Finished installation of qttranslations-MacOS-MacOS_14-Clang-MacOS-MacOS_14-X86_64-ARM64.7z in 6.55766287
+2026-07-16 18:16:35,490 - aqt.installer - INFO - installer 8394092800 Finished installation of qttools-MacOS-MacOS_14-Clang-MacOS-MacOS_14-X86_64-ARM64.7z in 229.91668821
+2026-07-16 18:18:44,977 - aqt.installer - WARNING - installer 8394092800 Caught ArchiveDownloadError, terminating installer workers
+2026-07-16 18:18:45,006 - aqt.main - ERROR - installer 8394092800 Download of 6.8.3-0-202503201723qtbase-MacOS-MacOS_14-Clang-MacOS-MacOS_14-X86_64-ARM64.7z has error: ('Connection broken: IncompleteRead(176349698 bytes read, 13593772 more expected)', IncompleteRead(176349698 bytes read, 13593772 more expected))
+2026-07-16 18:19:49,252 - aqt.main - INFO - installer 8394092800 aqtinstall(aqt) v3.3.0 on Python 3.14.5 [CPython Clang 21.0.0 (clang-2100.0.123.102)]
+2026-07-16 18:19:49,819 - aqt.helper - DEBUG - helper 8394092800 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/mac_x64/desktop/qt6_683/qt6_683/Updates.xml.sha256
+2026-07-16 18:19:52,673 - aqt.helper - DEBUG - helper 8394092800 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/mac_x64/extensions/qtwebengine/683/clang_64/Updates.xml.sha256
+2026-07-16 18:19:55,158 - aqt.archives - INFO - archives 8394092800 Found extension qtwebengine
+2026-07-16 18:19:55,158 - aqt.helper - DEBUG - helper 8394092800 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/mac_x64/extensions/qtpdf/683/clang_64/Updates.xml.sha256
+2026-07-16 18:19:57,558 - aqt.archives - INFO - archives 8394092800 Found extension qtpdf
+2026-07-16 18:19:57,779 - aqt.helper - DEBUG - helper 8394092800 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/mac_x64/desktop/qt6_683/qt6_683/qt.qt6.683.clang_64/6.8.3-0-202503201723qttranslations-MacOS-MacOS_14-Clang-MacOS-MacOS_14-X86_64-ARM64.7z.sha256
+2026-07-16 18:19:57,779 - aqt.helper - DEBUG - helper 8394092800 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/mac_x64/desktop/qt6_683/qt6_683/qt.qt6.683.clang_64/6.8.3-0-202503201723qttools-MacOS-MacOS_14-Clang-MacOS-MacOS_14-X86_64-ARM64.7z.sha256
+2026-07-16 18:19:57,779 - aqt.helper - DEBUG - helper 8394092800 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/mac_x64/desktop/qt6_683/qt6_683/qt.qt6.683.clang_64/6.8.3-0-202503201723qtbase-MacOS-MacOS_14-Clang-MacOS-MacOS_14-X86_64-ARM64.7z.sha256
+2026-07-16 18:19:59,846 - aqt.helper - INFO - helper 8394092800 Downloading qtbase...
+2026-07-16 18:19:59,846 - aqt.installer - DEBUG - installer 8394092800 Download URL: https://mirrors.cloud.tencent.com/qt/online/qtsdkrepository/mac_x64/desktop/qt6_683/qt6_683/qt.qt6.683.clang_64/6.8.3-0-202503201723qtbase-MacOS-MacOS_14-Clang-MacOS-MacOS_14-X86_64-ARM64.7z
+2026-07-16 18:20:00,067 - aqt.helper - INFO - helper 8394092800 Downloading qttranslations...
+2026-07-16 18:20:00,067 - aqt.helper - INFO - helper 8394092800 Downloading qttools...
+2026-07-16 18:20:00,067 - aqt.installer - DEBUG - installer 8394092800 Download URL: https://mirrors.cloud.tencent.com/qt/online/qtsdkrepository/mac_x64/desktop/qt6_683/qt6_683/qt.qt6.683.clang_64/6.8.3-0-202503201723qttranslations-MacOS-MacOS_14-Clang-MacOS-MacOS_14-X86_64-ARM64.7z
+2026-07-16 18:20:00,067 - aqt.installer - DEBUG - installer 8394092800 Download URL: https://mirrors.cloud.tencent.com/qt/online/qtsdkrepository/mac_x64/desktop/qt6_683/qt6_683/qt.qt6.683.clang_64/6.8.3-0-202503201723qttools-MacOS-MacOS_14-Clang-MacOS-MacOS_14-X86_64-ARM64.7z
+2026-07-16 18:20:03,886 - aqt.installer - DEBUG - installer 8394092800 b'\n7-Zip [64] 17.05 : Copyright (c) 1999-2021 Igor Pavlov : 2017-08-28\np7zip Version 17.05 (locale=utf8,Utf16=on,HugeFiles=on,64 bits,10 CPUs LE)\n\nScanning the drive for archives:\n1 file, 1841493 bytes (1799 KiB)\n\nExtracting archive: .build/aqt-archives/qttranslations-MacOS-MacOS_14-Clang-MacOS-MacOS_14-X86_64-ARM64.7z\n--\nPath = .build/aqt-archives/qttranslations-MacOS-MacOS_14-Clang-MacOS-MacOS_14-X86_64-ARM64.7z\nType = 7z\nPhysical Size = 1841493\nHeaders Size = 4292\nMethod = LZMA:23\nSolid = +\nBlocks = 1\n\nEverything is Ok\n\nFolders: 2\nFiles: 287\nSize:       15212713\nCompressed: 1841493\n'
+2026-07-16 18:20:03,886 - aqt.installer - INFO - installer 8394092800 Finished installation of qttranslations-MacOS-MacOS_14-Clang-MacOS-MacOS_14-X86_64-ARM64.7z in 6.10826892
+2026-07-16 18:21:03,131 - aqt.installer - WARNING - installer 8394092800 Caught ArchiveDownloadError, terminating installer workers
+2026-07-16 18:21:03,142 - aqt.main - ERROR - installer 8394092800 Download of 6.8.3-0-202503201723qttools-MacOS-MacOS_14-Clang-MacOS-MacOS_14-X86_64-ARM64.7z has error: HTTPSConnectionPool(host='mirrors.cloud.tencent.com', port=443): Read timed out.

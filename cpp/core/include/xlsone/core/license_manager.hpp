@@ -1,5 +1,7 @@
 #pragma once
 
+#include <climits>
+
 #include <QByteArray>
 #include <QDateTime>
 #include <QJsonObject>
@@ -24,6 +26,13 @@ enum class LicensePlan {
     PersonalLifetime,
     PersonalYearly,
     Enterprise10
+};
+
+/// Features that can be gated by license state.
+enum class LicenseFeature {
+    ImportFiles,      ///< Importing / appending workbooks
+    BatchExport,      ///< Exporting merged results
+    NoExportWatermark ///< Exporting without a watermark
 };
 
 struct LicenseInfo {
@@ -53,6 +62,26 @@ public:
 
     /// Current license info (populated after successful applyLicenseFile).
     LicenseInfo currentInfo() const;
+
+    /// Whether the current license grants full functionality.
+    bool isFullyLicensed() const;
+
+    /// Whether the user is in the post-expiration grace period.
+    bool isInGracePeriod() const;
+
+    /// Check whether a specific feature is allowed in the current state.
+    bool canUse(LicenseFeature feature) const;
+
+    /// Maximum number of files allowed in a single import batch.
+    /// Returns INT_MAX when unlimited.
+    int maxImportFiles() const;
+
+    /// Watermark text to embed in exported files when restricted.
+    /// Returns an empty string when no watermark should be applied.
+    QString exportWatermarkText() const;
+
+    /// Human-readable message explaining the current restriction.
+    QString restrictionMessage() const;
 
     /// Request a signed 14-day trial license from the activation server.
     void requestTrial(const QString& deviceFingerprint);
@@ -89,6 +118,16 @@ public:
     bool importOfflineLicenseFile(const QString& path, const QString& deviceFingerprint,
                                   QString* errorMessage = nullptr);
 
+#ifdef XLSONE_BUILD_TESTS
+    /// Test seam: force a license state without signature verification.
+    /// Only available when the test target is built with XLSONE_BUILD_TESTS.
+    void applyTestLicense(const LicenseInfo& info, LicenseState state)
+    {
+        currentInfo_ = info;
+        setState(state);
+    }
+#endif
+
 signals:
     void stateChanged();
     void activationFinished(const ActivationResult& result);
@@ -102,6 +141,12 @@ private:
     bool loadOrCreateLinuxDefaultLicense();
     bool verifyEd25519Signature(const QByteArray& message, const QByteArray& signature) const;
     bool checkDeviceHash(const QJsonObject& licenseObj, const QString& actualFingerprint) const;
+
+    /// Parse and verify a stored license without checking expiry.
+    /// Used to preserve Expired state for valid-but-expired licenses.
+    static bool parseVerifiedLicenseInfo(const QByteArray& licenseData,
+                                         const QString& fingerprint,
+                                         LicenseInfo* info);
 
     QNetworkAccessManager* networkManager_ = nullptr;
     LicenseState state_ = LicenseState::Unactivated;

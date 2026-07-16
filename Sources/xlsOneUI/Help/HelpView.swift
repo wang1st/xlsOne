@@ -87,11 +87,13 @@ enum HelpContent {
         importFiles,
         viewingResults,
         sheetStatus,
+        drillDown,
+        exportResult,
         cellCorrection,
-        adjustmentMemory,
+        schemaRules,
         keyboardShortcuts,
         faq,
-        contact
+        support
     ]
 
     private static let quickStart = HelpTopic(
@@ -167,6 +169,45 @@ enum HelpContent {
         ]
     )
 
+    private static let drillDown = HelpTopic(
+        id: "drilldown",
+        icon: "magnifyingglass.circle",
+        titleKey: "帮助_穿透查阅",
+        blocks: [
+            .paragraph("帮助_穿透查阅_介绍"),
+            .heading("帮助_穿透查阅_步骤标题"),
+            .numbered([
+                "帮助_穿透查阅_步骤1",
+                "帮助_穿透查阅_步骤2",
+                "帮助_穿透查阅_步骤3"
+            ]),
+            .tip("帮助_穿透查阅_提示")
+        ]
+    )
+
+    private static let exportResult = HelpTopic(
+        id: "export",
+        icon: "square.and.arrow.up",
+        titleKey: "帮助_导出结果",
+        blocks: [
+            .paragraph("帮助_导出结果_介绍"),
+            .heading("帮助_导出结果_步骤标题"),
+            .numbered([
+                "帮助_导出结果_步骤1",
+                "帮助_导出结果_步骤2",
+                "帮助_导出结果_步骤3",
+                "帮助_导出结果_步骤4"
+            ]),
+            .heading("帮助_导出结果_内容说明标题"),
+            .bullets([
+                "帮助_导出结果_内容说明1",
+                "帮助_导出结果_内容说明2",
+                "帮助_导出结果_内容说明3",
+                "帮助_导出结果_内容说明4"
+            ])
+        ]
+    )
+
     private static let cellCorrection = HelpTopic(
         id: "cell-correction",
         icon: "pencil.circle",
@@ -176,7 +217,8 @@ enum HelpContent {
             .heading("帮助_单元格修正_类型标题"),
             .bullets([
                 "帮助_单元格修正_类型1",
-                "帮助_单元格修正_类型2"
+                "帮助_单元格修正_类型2",
+                "帮助_单元格修正_类型3"
             ]),
             .heading("帮助_单元格修正_操作标题"),
             .numbered([
@@ -189,21 +231,25 @@ enum HelpContent {
         ]
     )
 
-    private static let adjustmentMemory = HelpTopic(
-        id: "adjustment-memory",
+    private static let schemaRules = HelpTopic(
+        id: "schema-rules",
         icon: "brain",
-        titleKey: "帮助_调整记忆",
+        titleKey: "帮助_修正规则",
         blocks: [
-            .paragraph("帮助_调整记忆_介绍"),
-            .heading("帮助_调整记忆_作用标题"),
+            .paragraph("帮助_修正规则_介绍"),
+            .heading("帮助_修正规则_核心功能标题"),
             .bullets([
-                "帮助_调整记忆_作用1",
-                "帮助_调整记忆_作用2",
-                "帮助_调整记忆_作用3"
+                "帮助_修正规则_自动匹配",
+                "帮助_修正规则_保存规则",
+                "帮助_修正规则_管理规则"
             ]),
-            .heading("帮助_调整记忆_管理标题"),
-            .paragraph("帮助_调整记忆_管理说明"),
-            .note("帮助_调整记忆_注意")
+            .heading("帮助_修正规则_最佳实践标题"),
+            .bullets([
+                "帮助_修正规则_最佳实践1",
+                "帮助_修正规则_最佳实践2",
+                "帮助_修正规则_最佳实践3"
+            ]),
+            .note("帮助_修正规则_技术说明")
         ]
     )
 
@@ -222,8 +268,10 @@ enum HelpContent {
                 (key: "⌘Z", action: "帮助_快捷键_撤销"),
                 (key: "1", action: "帮助_快捷键_标签"),
                 (key: "2", action: "帮助_快捷键_求和"),
+                (key: "3", action: "帮助_快捷键_单值"),
                 (key: "J", action: "帮助_快捷键_下一个异常"),
-                (key: "K", action: "帮助_快捷键_上一个异常")
+                (key: "K", action: "帮助_快捷键_上一个异常"),
+                (key: "⌘?", action: "帮助_快捷键_帮助")
             ])
         ]
     )
@@ -244,15 +292,13 @@ enum HelpContent {
         ]
     )
 
-    private static let contact = HelpTopic(
-        id: "contact",
+    private static let support = HelpTopic(
+        id: "support",
         icon: "envelope",
-        titleKey: "帮助_联系我们",
+        titleKey: "帮助_联系方式",
         blocks: [
-            .paragraph("帮助_联系我们_介绍"),
-            .contact(icon: "envelope", label: "帮助_联系我们_邮箱标签", value: "帮助_联系我们_邮箱值"),
-            .contact(icon: "globe", label: "帮助_联系我们_网站标签", value: "帮助_联系我们_网站值"),
-            .note("帮助_联系我们_版权")
+            .paragraph("帮助_联系方式_介绍"),
+            .contact(icon: "envelope", label: "帮助_联系方式_邮箱标签", value: "帮助_联系方式_邮箱值")
         ]
     )
 }
@@ -533,6 +579,10 @@ public struct HelpView: View {
             .clipShape(RoundedRectangle(cornerRadius: XRadius.md, style: .continuous))
 
         case .contact(let icon, let labelKey, let valueKey):
+            let value = LocaleManager.loc(valueKey)
+            let isEmail = value.contains("@")
+            let url = isEmail ? URL(string: "mailto:\(value)") : URL(string: "https://\(value)")
+
             HStack(spacing: XSpacing.md) {
                 Image(systemName: icon)
                     .font(XFont.body)
@@ -543,10 +593,16 @@ public struct HelpView: View {
                     Text(LocaleManager.loc(labelKey))
                         .font(XFont.caption)
                         .foregroundColor(XColor.tertiaryLabel)
-                    Text(LocaleManager.loc(valueKey))
-                        .font(XFont.body)
-                        .foregroundColor(XColor.primaryLabel)
-                        .textSelection(.enabled)
+                    if let url {
+                        Link(value, destination: url)
+                            .font(XFont.body)
+                            .foregroundColor(XColor.accent)
+                    } else {
+                        Text(value)
+                            .font(XFont.body)
+                            .foregroundColor(XColor.primaryLabel)
+                            .textSelection(.enabled)
+                    }
                 }
 
                 Spacer()

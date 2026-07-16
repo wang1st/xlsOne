@@ -14,6 +14,7 @@ target_link_libraries(xlsone_core_tests
 target_compile_definitions(xlsone_core_tests
     PRIVATE
         XLSONE_REPO_ROOT="${CMAKE_SOURCE_DIR}/.."
+        XLSONE_BUILD_TESTS
 )
 
 add_test(NAME xlsone_core_tests COMMAND xlsone_core_tests)

@@ -165,6 +165,8 @@ public actor SmartMerger {
                         .map(\.value)
                 ).count
                 newType = .mixed(uniqueCount)
+            case .single:
+                newType = .single(originalCell.displayValue)
             }
 
             let adjustedDecision = MergedCellDecision(
@@ -364,6 +366,8 @@ extension CellOverrideType {
             return .sum(0)  // 数值会在应用时重新计算
         case .mixed:
             return .mixed(0)  // 计数会在应用时重新计算
+        case .single:
+            return .single("")  // 显示值会在应用时重新计算
         }
     }
 }

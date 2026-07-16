@@ -462,7 +462,7 @@ final class WorkspaceDiagnosticsTests: XCTestCase {
     }
 
     func testToolbarPresentationUsesImportAsPrimaryActionWhenWorkspaceIsEmpty() {
-        let presentation = WorkspaceToolbar.buildPresentation(
+        let presentation = WorkspaceToolbarBuilder.buildPresentation(
             selectedFileCount: 0,
             canExport: false
         )
@@ -474,7 +474,7 @@ final class WorkspaceDiagnosticsTests: XCTestCase {
     }
 
     func testToolbarPresentationPromotesExportWhenWorkspaceCanExport() {
-        let presentation = WorkspaceToolbar.buildPresentation(
+        let presentation = WorkspaceToolbarBuilder.buildPresentation(
             selectedFileCount: 3,
             canExport: true
         )

@@ -23,7 +23,9 @@
 namespace xlsone {
 
 static constexpr int kServerOutageGraceDays = 3;
+static constexpr int kPostExpirationGraceDays = 7;
 static constexpr int kClockRollbackToleranceSecs = 60 * 60;
+static constexpr int kRestrictedModeMaxFiles = 3;
 static const QString kTokenKey = QStringLiteral("license/token");
 static const QString kOfflineTokenKey = QStringLiteral("license/offline");
 static const QString kLastSeenUtcKey = QStringLiteral("license/lastSeenUtc");
@@ -300,6 +302,75 @@ LicenseState LicenseManager::state() const
 LicenseInfo LicenseManager::currentInfo() const
 {
     return currentInfo_;
+}
+
+bool LicenseManager::isFullyLicensed() const
+{
+    if (state_ == LicenseState::Activated) {
+        return true;
+    }
+    if (state_ == LicenseState::Trial) {
+        return checkTrial() > 0;
+    }
+    if (state_ == LicenseState::Expired) {
+        return isInGracePeriod();
+    }
+    return false;
+}
+
+bool LicenseManager::isInGracePeriod() const
+{
+    if (state_ != LicenseState::Expired || !currentInfo_.expiresAt.isValid()) {
+        return false;
+    }
+    const qint64 secondsSinceExpiry = currentInfo_.expiresAt.secsTo(QDateTime::currentDateTimeUtc());
+    return secondsSinceExpiry >= 0
+        && secondsSinceExpiry < kPostExpirationGraceDays * 24 * 60 * 60;
+}
+
+bool LicenseManager::canUse(LicenseFeature feature) const
+{
+    switch (feature) {
+    case LicenseFeature::ImportFiles:
+        return true;
+    case LicenseFeature::BatchExport:
+        return true;
+    case LicenseFeature::NoExportWatermark:
+        return isFullyLicensed();
+    }
+    return false;
+}
+
+int LicenseManager::maxImportFiles() const
+{
+    return isFullyLicensed() ? INT_MAX : kRestrictedModeMaxFiles;
+}
+
+QString LicenseManager::exportWatermarkText() const
+{
+    if (canUse(LicenseFeature::NoExportWatermark)) {
+        return QString();
+    }
+    if (state_ == LicenseState::Expired) {
+        return tr("授权已过期 — xlsOne");
+    }
+    return tr("未激活试用版 — xlsOne");
+}
+
+QString LicenseManager::restrictionMessage() const
+{
+    if (isFullyLicensed()) {
+        return QString();
+    }
+    if (isInGracePeriod()) {
+        return tr("授权已过期，宽限期内仍可全功能使用 %1 天。").arg(graceRemainingDays());
+    }
+    if (state_ == LicenseState::Expired) {
+        return tr("授权已过期，每次最多处理 %1 个文件，导出将带水印。请激活以解除限制。")
+            .arg(kRestrictedModeMaxFiles);
+    }
+    return tr("未激活，每次最多处理 %1 个文件，导出将带水印。可申请 14 天免费试用或输入激活码。")
+        .arg(kRestrictedModeMaxFiles);
 }
 
 int LicenseManager::checkTrial() const
@@ -618,6 +689,54 @@ bool LicenseManager::checkDeviceHash(const QJsonObject& licenseObj,
     return matchCount >= threshold;
 }
 
+bool LicenseManager::parseVerifiedLicenseInfo(const QByteArray& licenseData,
+                                              const QString& fingerprint,
+                                              LicenseInfo* info)
+{
+    const QJsonDocument doc = QJsonDocument::fromJson(licenseData);
+    if (!doc.isObject()) {
+        return false;
+    }
+    const QJsonObject obj = doc.object();
+    const QString sigB64 = obj.value(QStringLiteral("signature")).toString();
+    if (sigB64.isEmpty()) {
+        return false;
+    }
+    const QByteArray payloadJson = canonicalPayloadJson(obj);
+    const QByteArray sig = base64UrlDecodeBytes(sigB64);
+    if (sig.size() != 64) {
+        return false;
+    }
+
+    // We need an instance to call the non-static verification helpers.
+    // A temporary LicenseManager with no parent is sufficient because these
+    // helpers do not access member state.
+    LicenseManager temp(nullptr);
+    if (!temp.verifyEd25519Signature(payloadJson, sig)) {
+        return false;
+    }
+    if (!temp.checkDeviceHash(obj, fingerprint)) {
+        return false;
+    }
+
+    const qint64 issuedAt = static_cast<qint64>(
+        obj.value(QStringLiteral("issued_at")).toDouble());
+    const qint64 expiresAt = static_cast<qint64>(
+        obj.value(QStringLiteral("expires_at")).toDouble());
+
+    info->keyId = obj.value(QStringLiteral("key_id")).toString();
+    info->plan = planFromString(obj.value(QStringLiteral("plan")).toString());
+    info->deviceHash = obj.value(QStringLiteral("device_hash")).toString();
+    info->issuedAt = issuedAt > 0
+        ? QDateTime::fromSecsSinceEpoch(issuedAt).toUTC()
+        : QDateTime();
+    info->expiresAt = expiresAt > 0
+        ? QDateTime::fromSecsSinceEpoch(expiresAt).toUTC()
+        : QDateTime();
+    info->rawPayload = payloadJson;
+    return true;
+}
+
 void LicenseManager::onActivationReply(QNetworkReply* reply)
 {
     reply->deleteLater();
@@ -742,41 +861,17 @@ void LicenseManager::loadPersistedState()
             return;
         }
 
-        // Check if the license is expired but otherwise valid (signature OK,
-        // device OK). In that case, set Expired state instead of clearing it.
-        const QJsonDocument doc = QJsonDocument::fromJson(licenseData);
-        if (doc.isObject()) {
-            const QJsonObject obj = doc.object();
-            const qint64 expiresAt = static_cast<qint64>(
-                obj.value(QStringLiteral("expires_at")).toDouble());
-            if (expiresAt > 0) {
-                const QDateTime expiry = QDateTime::fromSecsSinceEpoch(expiresAt).toUTC();
-                if (expiry <= QDateTime::currentDateTimeUtc()) {
-                    // License is expired — verify signature + device to confirm
-                    // it's a genuine license (not tampered), then set Expired.
-                    const QString sigB64 = obj.value(QStringLiteral("signature")).toString();
-                    if (!sigB64.isEmpty()) {
-                        const QByteArray payloadJson = canonicalPayloadJson(obj);
-                        const QByteArray sig = base64UrlDecodeBytes(sigB64);
-                        if (sig.size() == 64 &&
-                            verifyEd25519Signature(payloadJson, sig) &&
-                            checkDeviceHash(obj, fingerprint)) {
-                            currentInfo_.keyId = obj.value(QStringLiteral("key_id")).toString();
-                            currentInfo_.plan = planFromString(obj.value(QStringLiteral("plan")).toString());
-                            currentInfo_.deviceHash = obj.value(QStringLiteral("device_hash")).toString();
-                            const qint64 issuedAt = static_cast<qint64>(
-                                obj.value(QStringLiteral("issued_at")).toDouble());
-                            currentInfo_.issuedAt = issuedAt > 0
-                                ? QDateTime::fromSecsSinceEpoch(issuedAt).toUTC()
-                                : QDateTime();
-                            currentInfo_.expiresAt = expiry;
-                            currentInfo_.rawPayload = payloadJson;
-                            setState(LicenseState::Expired);
-                            return;
-                        }
-                    }
-                }
-            }
+        // If the license is expired but still cryptographically valid and bound
+        // to this device, preserve the Expired state so the UI can show a clear
+        // "expired" message and offer renewal instead of silently reverting to
+        // "unactivated".
+        LicenseInfo expiredInfo;
+        if (parseVerifiedLicenseInfo(licenseData, fingerprint, &expiredInfo) &&
+            expiredInfo.expiresAt.isValid() &&
+            expiredInfo.expiresAt <= QDateTime::currentDateTimeUtc()) {
+            currentInfo_ = expiredInfo;
+            setState(LicenseState::Expired);
+            return;
         }
 
         // Invalid or tampered stored license: clear it.

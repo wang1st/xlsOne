@@ -45,11 +45,15 @@ QString formatDate(const QDateTime& value)
 
 xlsone::SchemaCellOverrideType overrideTypeFromString(const QString& value)
 {
-    if (value == QStringLiteral("sum")) {
+    const auto lower = value.toLower();
+    if (lower == QStringLiteral("sum")) {
         return xlsone::SchemaCellOverrideType::Sum;
     }
-    if (value == QStringLiteral("mixed")) {
+    if (lower == QStringLiteral("mixed")) {
         return xlsone::SchemaCellOverrideType::Mixed;
+    }
+    if (lower == QStringLiteral("single")) {
+        return xlsone::SchemaCellOverrideType::Single;
     }
     return xlsone::SchemaCellOverrideType::Label;
 }

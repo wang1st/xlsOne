@@ -254,6 +254,49 @@ int distinctSourceValueCount(const MergedCell& cell)
     return static_cast<int>(values.size());
 }
 
+QString overrideTypeToString(SchemaCellOverrideType type)
+{
+    switch (type) {
+    case SchemaCellOverrideType::Sum:
+        return QStringLiteral("sum");
+    case SchemaCellOverrideType::Mixed:
+        return QStringLiteral("mixed");
+    case SchemaCellOverrideType::Single:
+        return QStringLiteral("single");
+    case SchemaCellOverrideType::Label:
+        return QStringLiteral("label");
+    }
+    return QStringLiteral("label");
+}
+
+SchemaCellOverrideType overrideTypeFromJsonValue(const QJsonValue& value)
+{
+    if (value.isString()) {
+        const auto text = value.toString().toLower();
+        if (text == QStringLiteral("sum")) {
+            return SchemaCellOverrideType::Sum;
+        }
+        if (text == QStringLiteral("mixed")) {
+            return SchemaCellOverrideType::Mixed;
+        }
+        if (text == QStringLiteral("single")) {
+            return SchemaCellOverrideType::Single;
+        }
+        return SchemaCellOverrideType::Label;
+    }
+    const int legacy = value.toInt(0);
+    switch (legacy) {
+    case 1:
+        return SchemaCellOverrideType::Sum;
+    case 2:
+        return SchemaCellOverrideType::Mixed;
+    case 3:
+        return SchemaCellOverrideType::Single;
+    default:
+        return SchemaCellOverrideType::Label;
+    }
+}
+
 QJsonObject sheetFingerprintToJson(const SheetRuleFingerprint& fingerprint)
 {
     QJsonObject object;
@@ -498,7 +541,7 @@ QJsonObject toJson(const MergeSchema& schema)
         QJsonObject object;
         object.insert(QStringLiteral("row"), override.position.row);
         object.insert(QStringLiteral("column"), override.position.column);
-        object.insert(QStringLiteral("type"), static_cast<int>(override.type));
+        object.insert(QStringLiteral("type"), overrideTypeToString(override.type));
         object.insert(QStringLiteral("sheetName"), override.sheetName);
         overrides.append(object);
     }
@@ -544,7 +587,7 @@ MergeSchema schemaFromJson(const QJsonObject& object)
         const auto item = value.toObject();
         schema.overrides.push_back({
             {item.value(QStringLiteral("row")).toInt(), item.value(QStringLiteral("column")).toInt()},
-            static_cast<SchemaCellOverrideType>(item.value(QStringLiteral("type")).toInt()),
+            overrideTypeFromJsonValue(item.value(QStringLiteral("type"))),
             item.value(QStringLiteral("sheetName")).toString()
         });
     }

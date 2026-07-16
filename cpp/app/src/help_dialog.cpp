@@ -1,12 +1,10 @@
 #include "help_dialog.hpp"
 
 #include "dialog_utils.hpp"
-#include "ui_theme.hpp"
 
 #include <QDialogButtonBox>
 #include <QHBoxLayout>
-#include <QLocale>
-#include <QSettings>
+#include <QLineEdit>
 #include <QSplitter>
 #include <QTextBrowser>
 #include <QTreeWidget>
@@ -28,6 +26,11 @@ HelpDialog::HelpDialog(QWidget* parent)
 
 void HelpDialog::buildUi()
 {
+    // ── Search box ──
+    searchEdit_ = new QLineEdit(this);
+    searchEdit_->setPlaceholderText(tr("搜索主题..."));
+    searchEdit_->setClearButtonEnabled(true);
+
     // ── Tree (sidebar) ──
     tree_ = new QTreeWidget(this);
     tree_->setHeaderHidden(true);
@@ -84,44 +87,40 @@ void HelpDialog::buildUi()
     // ── Text Browser (content) ──
     browser_ = new QTextBrowser(this);
     browser_->setOpenExternalLinks(true);
+    browser_->setSource(QUrl(QStringLiteral("qrc:/help/index.html")));
 
-    // Pick help document based on saved language or system locale.
-    QString helpDoc = QStringLiteral("qrc:/help/index.html");
-    const QString savedLang = QSettings().value(QStringLiteral("AppLanguage")).toString();
-    const QString locale = savedLang.isEmpty() ? QLocale::system().name() : savedLang;
-    if (locale == QStringLiteral("en") || locale.startsWith(QStringLiteral("en_"))) {
-        helpDoc = QStringLiteral("qrc:/help/index_en.html");
-    } else if (locale == QStringLiteral("zh_TW") || locale == QStringLiteral("zh_Hant") || locale == QStringLiteral("zh_HK")) {
-        helpDoc = QStringLiteral("qrc:/help/index_zh_TW.html");
-    } else if (locale == QStringLiteral("ja") || locale.startsWith(QStringLiteral("ja_"))) {
-        helpDoc = QStringLiteral("qrc:/help/index_ja.html");
-    }
-    browser_->setSource(QUrl(helpDoc));
+    // ── Sidebar container ──
+    auto* sidebar = new QWidget(this);
+    auto* sidebarLayout = new QVBoxLayout(sidebar);
+    sidebarLayout->setContentsMargins(0, 0, 0, 0);
+    sidebarLayout->setSpacing(8);
+    sidebarLayout->addWidget(searchEdit_);
+    sidebarLayout->addWidget(tree_, 1);
 
     // ── Splitter ──
     auto* splitter = new QSplitter(Qt::Horizontal, this);
     splitter->setChildrenCollapsible(false);
-    splitter->addWidget(tree_);
+    splitter->addWidget(sidebar);
     splitter->addWidget(browser_);
     splitter->setStretchFactor(0, 0);
     splitter->setStretchFactor(1, 1);
     splitter->setSizes({220, 780});
 
-    // ── Close button ──
-    auto* closeButton = new QPushButton(tr("关闭"), this);
-    xlsone::ui::stylePrimaryButton(closeButton);
-    connect(closeButton, &QPushButton::clicked, this, &QDialog::close);
+    // ── Button Box ──
+    auto* buttonBox = new QDialogButtonBox(QDialogButtonBox::Close, Qt::Horizontal, this);
+    connect(buttonBox, &QDialogButtonBox::rejected, this, &QDialog::close);
 
     // ── Layout ──
     auto* mainLayout = new QVBoxLayout(this);
     mainLayout->setContentsMargins(16, 16, 16, 12);
     mainLayout->setSpacing(12);
     mainLayout->addWidget(splitter, 1);
-    mainLayout->addWidget(closeButton, 0, Qt::AlignRight);
+    mainLayout->addWidget(buttonBox, 0);
     setLayout(mainLayout);
 
     // ── Connections ──
     connect(tree_, &QTreeWidget::itemClicked, this, &HelpDialog::onItemClicked);
+    connect(searchEdit_, &QLineEdit::textChanged, this, &HelpDialog::onSearchTextChanged);
 }
 
 void HelpDialog::addTopic(const QString& title, const QString& anchor, QTreeWidgetItem* parent)
@@ -143,4 +142,49 @@ void HelpDialog::onItemClicked(QTreeWidgetItem* item, int /*column*/)
         return;
     }
     browser_->scrollToAnchor(QStringLiteral("topic-") + anchor);
+}
+
+void HelpDialog::collectTopicItems(QTreeWidgetItem* root, std::vector<QTreeWidgetItem*>& out) const
+{
+    for (int i = 0; i < root->childCount(); ++i) {
+        auto* child = root->child(i);
+        if (!child->data(0, Qt::UserRole).toString().isEmpty()) {
+            out.push_back(child);
+        }
+        collectTopicItems(child, out);
+    }
+}
+
+bool HelpDialog::itemMatches(QTreeWidgetItem* item, const QString& text) const
+{
+    return item->text(0).contains(text, Qt::CaseInsensitive);
+}
+
+void HelpDialog::onSearchTextChanged(const QString& text)
+{
+    const QString trimmed = text.trimmed();
+    std::vector<QTreeWidgetItem*> topics;
+    for (int i = 0; i < tree_->topLevelItemCount(); ++i) {
+        collectTopicItems(tree_->topLevelItem(i), topics);
+    }
+
+    for (auto* item : topics) {
+        const bool visible = trimmed.isEmpty() || itemMatches(item, trimmed);
+        item->setHidden(!visible);
+    }
+
+    for (int i = 0; i < tree_->topLevelItemCount(); ++i) {
+        auto* header = tree_->topLevelItem(i);
+        bool anyVisible = false;
+        for (int j = 0; j < header->childCount(); ++j) {
+            if (!header->child(j)->isHidden()) {
+                anyVisible = true;
+                break;
+            }
+        }
+        header->setHidden(!anyVisible && !trimmed.isEmpty());
+        if (anyVisible) {
+            tree_->expandItem(header);
+        }
+    }
 }

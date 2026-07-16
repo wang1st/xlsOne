@@ -538,7 +538,59 @@ private enum WorkspaceMenuLocalizer {
         "Show Toolbar": "显示工具栏",
         "Hide Toolbar": "隐藏工具栏",
         "Customize Toolbar...": "自定工具栏...",
-        "Customize Toolbar…": "自定工具栏…"
+        "Customize Toolbar…": "自定工具栏…",
+        "Open Recent": "打开最近使用",
+        "Clear Menu": "清除菜单",
+        "Spelling and Grammar": "拼写和语法",
+        "Show Spelling and Grammar": "显示拼写和语法",
+        "Check Document Now": "立即检查文稿",
+        "Check Spelling": "检查拼写",
+        "Check Spelling While Typing": "键入时检查拼写",
+        "Check Grammar With Spelling": "拼写和语法检查",
+        "Substitutions": "替换",
+        "Show Substitutions": "显示替换",
+        "Smart Copy/Paste": "智能拷贝/粘贴",
+        "Smart Quotes": "智能引号",
+        "Smart Dashes": "智能破折号",
+        "Smart Links": "智能链接",
+        "Text Replacement": "文本替换",
+        "Transformations": "转换",
+        "Make Upper Case": "变为大写",
+        "Make Lower Case": "变为小写",
+        "Capitalize": "首字母大写",
+        "Speech": "语音",
+        "Start Speaking": "开始朗读",
+        "Stop Speaking": "停止朗读",
+        "Font": "字体",
+        "Show Fonts": "显示字体",
+        "Bold": "粗体",
+        "Italic": "斜体",
+        "Underline": "下划线",
+        "Bigger": "增大",
+        "Smaller": "缩小",
+        "Baseline": "基线",
+        "Show Colors": "显示颜色",
+        "Use Default": "使用默认",
+        "Unhide": "取消隐藏",
+        "Move Tab to New Window": "将标签页移到新窗口",
+        "Find": "查找",
+        "Find...": "查找...",
+        "Find…": "查找…",
+        "Find and Replace...": "查找与替换...",
+        "Find and Replace…": "查找与替换…",
+        "Find Next": "查找下一个",
+        "Find Previous": "查找上一个",
+        "Use Selection for Find": "使用所选查找",
+        "Jump to Selection": "跳到所选内容",
+        "Format": "格式",
+        "Font Styles": "字体样式",
+        "Show Styles": "显示样式",
+        "Copy Style": "拷贝样式",
+        "Paste Style": "粘贴样式",
+        "Page Setup...": "页面设置...",
+        "Page Setup…": "页面设置…",
+        "Print...": "打印...",
+        "Print…": "打印…"
     ]
 
     @MainActor
@@ -999,6 +1051,9 @@ class AppViewModel: ObservableObject {
         let effectiveOverrides = effectiveWorkspaceOverrides()
         var resultsBySheet: [String: MergedResult] = [:]
         for sheetName in availableSheets {
+            // 先对每张工作表做基础合并；schema 的 base overrides 已通过
+            // syncWorkspaceMemoryBase 进入 effectiveOverrides，在此处统一应用，
+            // 与 Qt 版本“先 merge 全部 sheet → 匹配 schema → 应用 overrides”语义对齐。
             let result = await smartMerger.merge(
                 files: files,
                 sheetName: sheetName,
