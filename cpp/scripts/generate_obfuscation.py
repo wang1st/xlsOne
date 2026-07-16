@@ -29,6 +29,7 @@ warning comment is written into the generated file.
 
 import argparse
 import sys
+from typing import List, Optional, Tuple
 
 _OBF_KEY = bytes([
     0x7a, 0x19, 0x4c, 0x83, 0xe2, 0x5f, 0xa1, 0x66,
@@ -40,11 +41,11 @@ def _mix_index(i: int) -> int:
     return (i * 173 + 251) & 0xFF
 
 
-def _encrypt_bytes(data: bytes) -> list[int]:
+def _encrypt_bytes(data: bytes) -> List[int]:
     return [b ^ _OBF_KEY[i % len(_OBF_KEY)] ^ _mix_index(i) for i, b in enumerate(data)]
 
 
-def _format_array(values: list[int], width: int = 8) -> str:
+def _format_array(values: List[int], width: int = 8) -> str:
     lines = []
     for i in range(0, len(values), width):
         row = ", ".join(f"0x{v:02x}" for v in values[i : i + width])
@@ -52,7 +53,7 @@ def _format_array(values: list[int], width: int = 8) -> str:
     return "\n".join(lines)
 
 
-def _parse_public_key(key_hex: str | None) -> tuple[bytes, bool]:
+def _parse_public_key(key_hex: Optional[str]) -> Tuple[bytes, bool]:
     if not key_hex:
         return bytes(32), False
     key_hex = key_hex.strip().replace("0x", "").replace(",", "").replace(" ", "")
@@ -68,7 +69,7 @@ def _c_escape(s: str) -> str:
     return s.replace("\\", "\\\\").replace('"', '\\"')
 
 
-def main(argv: list[str] | None = None) -> int:
+def main(argv: Optional[List[str]] = None) -> int:
     parser = argparse.ArgumentParser(description="Generate obfuscated secrets for xlsOne Qt")
     parser.add_argument("--public-key", default="", help="32-byte Ed25519 public key as 64 hex chars")
     parser.add_argument("--activation-url", default="https://api.xlsone.com", help="Activation API base URL")
