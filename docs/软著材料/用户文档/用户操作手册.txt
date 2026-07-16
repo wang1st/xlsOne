@@ -97,7 +97,7 @@
 
   如果您的系统安装了 GNU Guix，可以直接使用预编译环境运行：
           guix shell --manifest=manifest.scm
-          ./run-app.sh
+          ./scripts/build_and_open_app.sh
 
 ======================================================================
                                                                 第 4 页

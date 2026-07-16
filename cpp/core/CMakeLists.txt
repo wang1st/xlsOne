@@ -23,11 +23,16 @@ target_include_directories(xlsone_core
         ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
-# zlib: on Qt6 use the bundled Qt6::ZlibPrivate (no external libz.a needed);
-# on Qt5 fall back to a system-provided ZLIB.
+# zlib: prefer Qt6::ZlibPrivate when available; fall back to system ZLIB for
+# Qt distributions that do not ship private package configs.
 if(QT_VERSION_MAJOR EQUAL 6)
-    find_package(Qt6 COMPONENTS ZlibPrivate REQUIRED)
-    set(_xlsone_zlib_target Qt6::ZlibPrivate)
+    find_package(Qt6 COMPONENTS ZlibPrivate QUIET)
+    if(TARGET Qt6::ZlibPrivate)
+        set(_xlsone_zlib_target Qt6::ZlibPrivate)
+    else()
+        find_package(ZLIB REQUIRED)
+        set(_xlsone_zlib_target ZLIB::ZLIB)
+    endif()
 else()
     find_package(ZLIB REQUIRED)
     set(_xlsone_zlib_target ZLIB::ZLIB)

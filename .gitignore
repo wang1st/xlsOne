@@ -34,6 +34,10 @@ cpp/deepin-qt5.15/
 *.deb
 !cpp/third_party/runtime-debs/*.deb
 
+# macOS packaging artifacts
+build-dmg-release/
+cpp/xlsOne-*-macos*.dmg
+
 # Deployment credentials
 ssh-passwd.txt
 sudo-passwd.txt

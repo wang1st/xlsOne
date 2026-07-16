@@ -42,7 +42,7 @@ swift build -c release
 
 ### 构建并打开 macOS app
 ```bash
-./run-app.sh
+./scripts/build_and_open_app.sh
 ```
 
 ### 运行测试

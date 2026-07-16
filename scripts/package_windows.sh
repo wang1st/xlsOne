@@ -8,7 +8,7 @@
 #   - Linux + 配置 WINDOWS_BUILD_HOST -> 通过 SSH 在远程 Windows 机器上构建
 #   - 其他情况 -> 输出手动打包指引
 #
-# 用法：bash scripts/package-windows.sh [选项]
+# 用法：bash scripts/package_windows.sh [选项]
 #
 
 set -euo pipefail
@@ -28,7 +28,7 @@ CYAN='\033[36m'
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 CPP_DIR="${PROJECT_ROOT}/cpp"
-PS_SCRIPT="${CPP_DIR}/scripts/package_windows_full.ps1"
+PS_SCRIPT="${CPP_DIR}/scripts/package_windows_msi_zip.ps1"
 BUILD_DIR="${CPP_DIR}/build-windows-cn-release"
 
 # 远程构建默认配置（可通过环境变量覆盖）
@@ -205,7 +205,7 @@ run_remote_build() {
 
     if [[ "$DRY_RUN" -eq 1 ]]; then
         print_info "[DRY-RUN] 将执行远程构建:"
-        echo "ssh ${ssh_opts} ${target} \"cd ${WINDOWS_BUILD_DIR} && git pull && powershell -ExecutionPolicy Bypass -File cpp\\\\scripts\\\\package_windows_full.ps1 -Domestic ${CLEAN_FLAG}\""
+        echo "ssh ${ssh_opts} ${target} \"cd ${WINDOWS_BUILD_DIR} && git pull && powershell -ExecutionPolicy Bypass -File cpp\\\\scripts\\\\package_windows_msi_zip.ps1 -Domestic ${CLEAN_FLAG}\""
         echo "scp ${target}:\"${WINDOWS_BUILD_DIR}\\\\cpp\\\\build-windows-cn-release\\\\*.msi\" ${BUILD_DIR}/"
         echo "scp ${target}:\"${WINDOWS_BUILD_DIR}\\\\cpp\\\\build-windows-cn-release\\\\*.zip\" ${BUILD_DIR}/"
         return
@@ -222,7 +222,7 @@ run_remote_build() {
 
     print_info "在远程机器上构建 Windows 安装包..."
     "${ssh_prefix[@]}" ssh $ssh_opts "$target" \
-        "cd ${WINDOWS_BUILD_DIR} && powershell -ExecutionPolicy Bypass -File cpp\\scripts\\package_windows_full.ps1 -Domestic ${CLEAN_FLAG}" || {
+        "cd ${WINDOWS_BUILD_DIR} && powershell -ExecutionPolicy Bypass -File cpp\\scripts\\package_windows_msi_zip.ps1 -Domestic ${CLEAN_FLAG}" || {
         print_error "远程构建失败"
         exit 1
     }
@@ -246,7 +246,7 @@ show_help() {
 xlsOne Windows 安装包一键打包脚本
 
 用法:
-  bash scripts/package-windows.sh [选项]
+  bash scripts/package_windows.sh [选项]
 
 选项:
   -c, --clean          清理构建目录后重新构建
@@ -345,7 +345,7 @@ export WINDOWS_BUILD_PASSWORD='your-password'
 
 EOF
                 print_info "  3. 手动在 Windows 上运行："
-                print_info "     powershell -ExecutionPolicy Bypass -File cpp\\scripts\\package_windows_full.ps1 -Domestic"
+                print_info "     powershell -ExecutionPolicy Bypass -File cpp\\scripts\\package_windows_msi_zip.ps1 -Domestic"
                 exit 1
             fi
             ;;

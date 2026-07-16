@@ -31,6 +31,25 @@ set(CMAKE_AUTOUIC ON)
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core Gui Widgets Network Test)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Gui Widgets Network Test)
 
+if(APPLE AND TARGET WrapOpenGL::WrapOpenGL)
+    execute_process(
+        COMMAND xcrun --sdk macosx --show-sdk-path
+        OUTPUT_VARIABLE XLSONE_MACOS_SDK_PATH
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET
+    )
+    if(XLSONE_MACOS_SDK_PATH
+       AND NOT EXISTS "${XLSONE_MACOS_SDK_PATH}/System/Library/Frameworks/AGL.framework")
+        get_target_property(_xlsone_wrap_opengl_libs WrapOpenGL::WrapOpenGL INTERFACE_LINK_LIBRARIES)
+        if(_xlsone_wrap_opengl_libs)
+            list(FILTER _xlsone_wrap_opengl_libs EXCLUDE REGEX "(^|/)AGL\\.framework$|^-framework AGL$")
+            set_target_properties(WrapOpenGL::WrapOpenGL PROPERTIES
+                INTERFACE_LINK_LIBRARIES "${_xlsone_wrap_opengl_libs}"
+            )
+        endif()
+    endif()
+endif()
+
 enable_testing()
 
 # Obfuscated secrets: when XLSONE_OBFUSCATE is ON, regenerate the secrets file

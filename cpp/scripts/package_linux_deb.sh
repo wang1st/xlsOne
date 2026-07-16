@@ -8,7 +8,7 @@ set -euo pipefail
 # instead (recommended when building on the same OS as the target, e.g. UOS).
 #
 # Usage:
-#   ./cpp/scripts/build_deb.sh [--system-qt] [build-dir]
+#   ./cpp/scripts/package_linux_deb.sh [--system-qt] [build-dir]
 
 ORIG_DIR="$(pwd)"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
