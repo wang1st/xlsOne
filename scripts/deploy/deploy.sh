@@ -3,8 +3,9 @@
 # xlsOne 一键部署脚本
 # 交互式选择平台、版本，输入 z-pulse.cn root 密码后自动：
 #   1. 更新 cpp/CMakeLists.txt、site/api/version.json、站点页面缓存戳
-#   2. 构建（Linux）或定位（Windows/macOS）安装包
-#   3. 上传安装包与站点文件到服务器
+#   2. 构建或定位安装包
+#   3. 将待发布安装包收集到 .build/release-artifacts/<version>/
+#   4. 上传安装包与站点文件到服务器
 #
 # 用法：bash scripts/deploy/deploy.sh
 #
@@ -29,6 +30,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 SITE_DIR="${PROJECT_ROOT}/site"
 CPP_DIR="${PROJECT_ROOT}/cpp"
+RELEASE_ARTIFACTS_DIR="${PROJECT_ROOT}/.build/release-artifacts"
+DEPLOY_ARTIFACT_DIR=""
 
 SERVER="z-pulse.cn"
 SERVER_USER="root"
@@ -117,7 +120,7 @@ select_platform() {
             "[1] Linux AMD64 (.deb)" \
             "[2] Linux ARM64 (.deb)" \
             "[3] Windows AMD64 (.msi + .zip)" \
-            "[4] macOS (.dmg)" \
+            "[4] macOS Universal (.dmg)" \
             "[5] 全部平台（仅上传本地已存在的包）" \
             "[q] 退出"
         printf "\n请输入选项 [1-5/q]: " >&2
@@ -211,8 +214,21 @@ p.write_text(text, encoding='utf-8')
 PYEOF
 
     print_info "更新站点页面 CSS/JS 缓存戳: v${version}-1"
-    find "$SITE_DIR" -name "*.html" -type f -print0 | xargs -0 \
-        sed -i -E "s/\?v=[0-9]+\.[0-9]+\.[0-9]+-[0-9]+/?v=${version}-1/g"
+    python3 - "$version" "$SITE_DIR" <<'PYEOF'
+import re
+import sys
+from pathlib import Path
+
+version, site_dir = sys.argv[1:3]
+pattern = re.compile(r"\?v=[0-9]+\.[0-9]+\.[0-9]+-[0-9]+")
+replacement = f"?v={version}-1"
+
+for path in Path(site_dir).rglob("*.html"):
+    text = path.read_text(encoding="utf-8")
+    updated = pattern.sub(replacement, text)
+    if updated != text:
+        path.write_text(updated, encoding="utf-8")
+PYEOF
 
     print_info "更新 site/api/version.json"
     python3 - "$version" "$changelog" "$SITE_DIR/api/version.json" <<'PYEOF'
@@ -238,8 +254,6 @@ new_downloads = {}
 for key, url in data.get("downloads", {}).items():
     new_downloads[key] = url.replace(old_version, version)
 
-# 确保 macos 字段存在
-template = "https://z-pulse.cn/downloads/xlsOne-{}-{}.deb"
 if "linux_arm64" not in new_downloads:
     new_downloads["linux_arm64"] = f"https://z-pulse.cn/downloads/xlsOne-{version}-linux-arm64.deb"
 if "linux_amd64" not in new_downloads:
@@ -248,8 +262,9 @@ if "windows_amd64" not in new_downloads:
     new_downloads["windows_amd64"] = f"https://z-pulse.cn/downloads/xlsone-{version}-windows-amd64.msi"
 if "windows_amd64_zip" not in new_downloads:
     new_downloads["windows_amd64_zip"] = f"https://z-pulse.cn/downloads/xlsone-{version}-windows-amd64.zip"
-if "macos" not in new_downloads:
-    new_downloads["macos"] = f"https://z-pulse.cn/downloads/xlsOne-{version}-macos.dmg"
+
+# macOS 直发统一使用 Qt universal DMG，单个包覆盖 Intel + Apple Silicon。
+new_downloads["macos"] = f"https://z-pulse.cn/downloads/xlsOne-{version}-macos-universal.dmg"
 
 data["downloads"] = new_downloads
 
@@ -269,6 +284,62 @@ PYEOF
 }
 
 # -----------------------------------------------------------------------------
+# 发版产物目录
+# -----------------------------------------------------------------------------
+artifact_staging_dir() {
+    if [[ -z "${DEPLOY_ARTIFACT_DIR:-}" ]]; then
+        local version_json="$SITE_DIR/api/version.json"
+        local version
+        version="$(python3 - "$version_json" <<'PYEOF'
+import json
+import sys
+from pathlib import Path
+
+data = json.loads(Path(sys.argv[1]).read_text(encoding='utf-8'))
+print(data.get('latest_version', 'unknown'))
+PYEOF
+        )"
+        DEPLOY_ARTIFACT_DIR="${RELEASE_ARTIFACTS_DIR}/${version}"
+    fi
+    mkdir -p "$DEPLOY_ARTIFACT_DIR"
+    echo "$DEPLOY_ARTIFACT_DIR"
+}
+
+# -----------------------------------------------------------------------------
+# Linux .deb 统一打包入口
+# -----------------------------------------------------------------------------
+linux_host_package_arch() {
+    case "$(uname -m)" in
+        x86_64|amd64) echo "amd64" ;;
+        aarch64|arm64) echo "arm64" ;;
+        *) echo "unknown" ;;
+    esac
+}
+
+build_linux_deb_package() {
+    local expected_arch="$1"
+    local expected_path="$2"
+
+    if [[ "$(uname -s)" != "Linux" ]]; then
+        print_error "Linux .deb 只能在 Linux 构建机上直接构建"
+        print_info "请在对应架构 Linux 机器运行 cpp/scripts/package_linux_deb.sh --bundle"
+        print_info "然后把产物放到: $expected_path"
+        return 1
+    fi
+
+    local host_arch
+    host_arch="$(linux_host_package_arch)"
+    if [[ "$host_arch" != "$expected_arch" ]]; then
+        print_error "当前 Linux 主机架构是 ${host_arch}，不能构建 linux-${expected_arch} 包"
+        print_info "请在 linux-${expected_arch} 构建机运行 cpp/scripts/package_linux_deb.sh --bundle"
+        print_info "然后把产物放到: $expected_path"
+        return 1
+    fi
+
+    "${CPP_DIR}/scripts/package_linux_deb.sh" --bundle
+}
+
+# -----------------------------------------------------------------------------
 # 构建或定位安装包
 # -----------------------------------------------------------------------------
 locate_or_build_package() {
@@ -284,15 +355,11 @@ locate_or_build_package() {
             else
                 printf "\n"
                 print_warning "未找到 Linux AMD64 包: $package_path"
-                printf "是否立即构建？${YELLOW}(需要 ninja)${RESET} [y/N]: " >&2
+                printf "是否立即调用统一 Linux 打包脚本构建？${YELLOW}(需要 Linux + Qt5 + CPack)${RESET} [y/N]: " >&2
                 local build
                 read -r build
                 if [[ "$build" =~ ^[yY]$ ]]; then
-                    if [[ ! -d "${CPP_DIR}/build-linux-release" ]]; then
-                        print_error "未找到 build-linux-release 目录，请先配置 CMake 构建"
-                        exit 1
-                    fi
-                    (cd "${CPP_DIR}/build-linux-release" && ninja && ninja package)
+                    build_linux_deb_package "amd64" "$package_path" || exit 1
                     if [[ ! -f "$package_path" ]]; then
                         print_error "构建后仍未找到包: $package_path"
                         exit 1
@@ -310,15 +377,26 @@ locate_or_build_package() {
             if [[ -f "$package_path" ]]; then
                 print_info "找到已构建的 Linux ARM64 包: $package_path"
             else
-                print_warning "Linux ARM64 包需交叉编译或在 ARM64 设备上构建"
-                print_info "请手动构建后放到: $package_path"
-                printf "是否继续不上传此包？ [Y/n]: " >&2
-                local cont
-                read -r cont
-                if [[ "$cont" =~ ^[nN]$ ]]; then
-                    exit 0
+                print_warning "未找到 Linux ARM64 包: $package_path"
+                printf "是否立即调用统一 Linux 打包脚本构建？${YELLOW}(需要 ARM64 Linux + Qt5 + CPack)${RESET} [y/N]: " >&2
+                local build
+                read -r build
+                if [[ "$build" =~ ^[yY]$ ]]; then
+                    build_linux_deb_package "arm64" "$package_path" || exit 1
+                    if [[ ! -f "$package_path" ]]; then
+                        print_error "构建后仍未找到包: $package_path"
+                        exit 1
+                    fi
+                else
+                    print_info "请手动构建后放到: $package_path"
+                    printf "是否继续不上传此包？ [Y/n]: " >&2
+                    local cont
+                    read -r cont
+                    if [[ "$cont" =~ ^[nN]$ ]]; then
+                        exit 0
+                    fi
+                    return
                 fi
-                return
             fi
             normalize_package_name "linux_arm64" "$package_path"
             return
@@ -346,18 +424,75 @@ locate_or_build_package() {
             fi
             ;;
         macos)
-            package_path="${CPP_DIR}/build-macos-release/xlsOne-${version}-macos.dmg"
-            if [[ -f "$package_path" ]]; then
-                print_info "找到 macOS 安装包: $package_path"
-            else
-                print_warning "未找到 macOS 包，期望路径: $package_path"
-                printf "是否继续不上传 macOS 包？ [Y/n]: " >&2
-                local cont
-                read -r cont
-                if [[ "$cont" =~ ^[nN]$ ]]; then
-                    exit 0
+            local expected_name="xlsOne-${version}-macos-universal.dmg"
+            local staging_dir
+            staging_dir="$(artifact_staging_dir)"
+            local candidates=(
+                "${staging_dir}/${expected_name}"
+                "${CPP_DIR}/${expected_name}"
+                "${CPP_DIR}/build-macos-release/${expected_name}"
+                "${PROJECT_ROOT}/.build/${expected_name}"
+            )
+
+            for candidate in "${candidates[@]}"; do
+                if [[ -f "$candidate" ]]; then
+                    package_path="$candidate"
+                    break
                 fi
-                return
+            done
+
+            if [[ -n "$package_path" && -f "$package_path" ]]; then
+                print_info "找到 macOS Universal 安装包: $package_path"
+            else
+                print_warning "未找到 macOS Universal DMG，已检查："
+                for candidate in "${candidates[@]}"; do
+                    print_info "  $candidate"
+                done
+                printf "是否立即构建 Qt universal DMG？${YELLOW}(未签名自测包)${RESET} [y/N]: " >&2
+                local build
+                read -r build
+                if [[ "$build" =~ ^[yY]$ ]]; then
+                    package_path="${CPP_DIR}/${expected_name}"
+                    XLSONE_USE_CREATE_DMG=0 "${CPP_DIR}/scripts/package_macos_qt_dmg.sh" \
+                        --arch universal \
+                        --version "$version" \
+                        --output "$package_path"
+                    if [[ ! -f "$package_path" ]]; then
+                        print_error "构建后仍未找到 macOS Universal 包: $package_path"
+                        exit 1
+                    fi
+                else
+                    printf "是否继续不上传 macOS 包？ [Y/n]: " >&2
+                    local cont
+                    read -r cont
+                    if [[ "$cont" =~ ^[nN]$ ]]; then
+                        exit 0
+                    fi
+                    return
+                fi
+            fi
+
+            if command -v lipo >/dev/null 2>&1; then
+                local app_binary="${CPP_DIR}/build-macos-universal-release/universal/xlsOneQt.app/Contents/MacOS/xlsOneQt"
+                if [[ -f "$app_binary" ]]; then
+                    local archs
+                    archs="$(lipo -archs "$app_binary" 2>/dev/null || true)"
+                    if [[ " $archs " != *" x86_64 "* || " $archs " != *" arm64 "* ]]; then
+                        print_error "macOS app 不是 universal: $app_binary => $archs"
+                        exit 1
+                    fi
+                    print_success "macOS app 架构: $archs"
+                else
+                    print_warning "未找到可检查架构的 app bundle: $app_binary"
+                fi
+            fi
+
+            if command -v hdiutil >/dev/null 2>&1; then
+                if ! hdiutil verify "$package_path" >/dev/null; then
+                    print_error "DMG 校验失败: $package_path"
+                    exit 1
+                fi
+                print_success "DMG 校验通过"
             fi
             normalize_package_name "macos" "$package_path"
             return
@@ -370,7 +505,7 @@ locate_or_build_package() {
 }
 
 # -----------------------------------------------------------------------------
-# 规范化安装包文件名，使其与 version.json 中的 URL 一致
+# 规范化安装包文件名，使其与 version.json 中的 URL 一致，并收集到发版目录
 # -----------------------------------------------------------------------------
 normalize_package_name() {
     local platform="$1"
@@ -401,18 +536,25 @@ print(urlparse(url).path.split('/')[-1])
 PYEOF
     )"
 
-    local src_fname
-    src_fname="$(basename "$src_path")"
-    if [[ "$src_fname" == "$expected_fname" ]]; then
-        echo "$src_path"
-        return
+    if [[ -z "$expected_fname" ]]; then
+        print_error "version.json 中缺少 downloads.${json_key}"
+        exit 1
     fi
 
-    local dest_dir="/tmp/xlsone-deploy-packages"
-    mkdir -p "$dest_dir"
+    local dest_dir
+    dest_dir="$(artifact_staging_dir)"
     local dest_path="${dest_dir}/${expected_fname}"
-    cp -f "$src_path" "$dest_path"
-    print_info "规范化文件名: $src_fname -> $expected_fname"
+    local src_abs dest_abs
+    src_abs="$(cd "$(dirname "$src_path")" && pwd)/$(basename "$src_path")"
+    dest_abs="$(cd "$dest_dir" && pwd)/${expected_fname}"
+
+    if [[ "$src_abs" != "$dest_abs" ]]; then
+        cp -f "$src_path" "$dest_path"
+        print_info "收集发版文件: $(basename "$src_path") -> ${dest_path}"
+    else
+        print_info "发版文件已在收口目录: $dest_path"
+    fi
+
     echo "$dest_path"
 }
 
@@ -425,7 +567,11 @@ update_checksum() {
     local fname
     fname="$(basename "$package_path")"
     local checksum
-    checksum="$(sha256sum "$package_path" | awk '{print $1}')"
+    if command -v sha256sum >/dev/null 2>&1; then
+        checksum="$(sha256sum "$package_path" | awk '{print $1}')"
+    else
+        checksum="$(shasum -a 256 "$package_path" | awk '{print $1}')"
+    fi
     print_info "计算 checksum: $fname = $checksum"
     python3 - "$fname" "$checksum" "$version_json" <<'PYEOF'
 import json
@@ -552,6 +698,7 @@ main() {
     platform="$(select_platform)"
     local version
     version="$(input_version)"
+    DEPLOY_ARTIFACT_DIR="${RELEASE_ARTIFACTS_DIR}/${version}"
     local changelog
     changelog="$(input_changelog)"
 
@@ -559,6 +706,7 @@ main() {
         "平台: ${platform}" \
         "版本: ${version}" \
         "说明: ${changelog}" \
+        "发版目录: ${DEPLOY_ARTIFACT_DIR}" \
         "服务器: ${SERVER_USER}@${SERVER}"
 
     printf "\n确认开始部署？ [y/N]: " >&2

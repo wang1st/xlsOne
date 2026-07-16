@@ -14,7 +14,7 @@
 | Windows 客户端可编译 | ✅ 已产出 `xlsOneQt.exe`（Qt 6.11.1 / MinGW 13.1，构建目录 `build-windows-cn-release`） | `cpp/build-windows-cn-release/app/xlsOneQt.exe` |
 | Windows 授权引擎 | ✅ Ed25519 签名校验、设备绑定、换机容差（2/3 组件匹配）、14 天试用、离线导入 | `cpp/core/src/license_manager.cpp` |
 | 激活对话框 UI | ✅ 在线激活 + 试用按钮 + 离线激活（含设备码展示/复制/导入） | `cpp/app/src/license_activation_dialog.cpp` |
-| 安装包（MSI/ZIP） | ✅ WiX + CPack 可产出 MSI 与便携 ZIP | `cpp/scripts/package_windows_full.ps1`、`cpp/packaging/windows/` |
+| 安装包（MSI/ZIP） | ✅ WiX + CPack 可产出 MSI 与便携 ZIP | `cpp/scripts/package_windows_msi_zip.ps1`、`cpp/packaging/windows/` |
 | 服务端（激活 API） | ✅ Cloudflare Worker 已实现 `/api/activate/windows`、`/api/license/download`、爱发电 webhook、管理后台生成码 | `activation/worker/src/index.ts`、`schema.sql` |
 | 更新检查 | ✅ 已指向 `z-pulse.cn`（`XLSONE_UPDATE_BASE_URL`） | `moc_predefs.h` 中 `#define XLSONE_UPDATE_BASE_URL "https://z-pulse.cn"` |
 | EULA / 软著材料 | ✅ 中文 EULA 已存在；软著资料生成中 | `cpp/packaging/windows/licenses/EULA_zh_CN.txt`、`软件著作权申请资料/` |
@@ -71,7 +71,7 @@
 - [ ] 对话框中「离线激活」步骤改为指向 `z-pulse.cn/offline`（去掉「联系邮箱」人工步骤）。
 - [ ] 验证：国内口味构建在大陆网络下可完成**在线激活、离线下载、换机迁移**。
 - [ ] 验证**试用到期封锁逻辑**生效 + 14 天试用按钮完整流程。
-- [x] 锁定 Windows 发货目标为 **Qt 6.11.1**（打包脚本 `package_windows_full.ps1` 面向 Qt6，Qt5 工具链已弃用）。
+- [x] 锁定 Windows 发货目标为 **Qt 6.11.1**（打包脚本 `package_windows_msi_zip.ps1` 面向 Qt6，Qt5 工具链已弃用）。
 
 ### 阶段 3 — 离线激活页 & 产品页（约 1 周）
 - [ ] 搭建 `z-pulse.cn/offline`：用户输入设备码 → 调国内 `/api/license/download` → 下载 `.license`（与客户端 `importOfflineLicenseFile` 兼容）。
@@ -81,7 +81,7 @@
 
 ### 阶段 4 — 代码签名 + 安装包 + 分发（约 3–5 天）
 - [ ] 采购代码签名证书，对 `xlsOneQt.exe` 与最终 `MSI` 签名（建议二者都签）。
-- [ ] 用 `package_windows_full.ps1` 产出**已签名** MSI + ZIP。
+- [ ] 用 `package_windows_msi_zip.ps1` 产出**已签名** MSI + ZIP。
 - [ ] 部署到国内下载渠道：**阿里云 OSS + CDN**（或 `z-pulse.cn` 自托管 + 已有 `nginx.conf`），更新下载页与 `version.json`（更新检查已指向 `z-pulse.cn`）。
 - [ ] 确认 Windows 端自动更新的下载链接走国内地址。
 

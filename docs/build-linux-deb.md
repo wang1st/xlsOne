@@ -37,7 +37,7 @@ git pull origin main
 
 ## 3. 下载 deepin Qt5.15 库
 
-`build_deb.sh` 会根据当前机器架构自动下载对应的 deepin Qt5 包，也可以手动提前下载。
+`package_linux_deb.sh` 会根据当前机器架构自动下载对应的 deepin Qt5 包，也可以手动提前下载。`scripts/deploy/deploy.sh` 的 Linux 分支也复用这个脚本，不再单独跑 `ninja package`。
 
 ### 自动下载（推荐）
 
@@ -152,7 +152,7 @@ cp -r /tmp/icu63_extract/usr/* ~/xlsone/cpp/deepin-qt5.15/icu63/
 
 ```bash
 cd ~/xlsone
-./cpp/scripts/build_deb.sh --bundle
+./cpp/scripts/package_linux_deb.sh --bundle
 ```
 
 构建完成后输出：

@@ -4,7 +4,7 @@
     One-time check of the xlsOne Windows build environment.
 
 .DESCRIPTION
-    Verifies the toolchain required by package_windows_full.ps1:
+    Verifies the toolchain required by package_windows_msi_zip.ps1:
       - Python packages: cmake, ninja (installed via pip if missing)
       - Qt 6.11.1 for Windows x64 MinGW (installed via the Qt online installer)
       - MinGW 13.1 (ships with Qt 6.11.1 as Tools\mingw1310_64)
@@ -120,4 +120,4 @@ if ((Test-Path $candle) -and (Test-Path $light) -and -not $Force) {
 
 Write-Host ""
 Write-Host "=== Setup complete ===" -ForegroundColor Green
-Write-Host "You can now run: .\scripts\package_windows_full.ps1 -Domestic"
+Write-Host "You can now run: .\scripts\package_windows_msi_zip.ps1 -Domestic"

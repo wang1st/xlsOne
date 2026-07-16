@@ -7,7 +7,7 @@ usage() {
 Build the macOS app and package it into a .dmg.
 
 Usage:
-  scripts/package_macos_dmg.sh [options]
+  scripts/package_macos_swift_dmg.sh [options]
 
 Options:
       --signed                  Enable code signing. Requires --team-id or
@@ -29,13 +29,13 @@ Environment:
 
 Examples:
   # Unsigned DMG for local testing
-  scripts/package_macos_dmg.sh
+  scripts/package_macos_swift_dmg.sh
 
   # Signed DMG
-  scripts/package_macos_dmg.sh --signed --team-id ABCDE12345 --version 0.3.0
+  scripts/package_macos_swift_dmg.sh --signed --team-id ABCDE12345 --version 0.3.0
 
   # Signed + notarized DMG
-  scripts/package_macos_dmg.sh --signed --team-id ABCDE12345 --version 0.3.0 --notarize
+  scripts/package_macos_swift_dmg.sh --signed --team-id ABCDE12345 --version 0.3.0 --notarize
 EOF
 }
 

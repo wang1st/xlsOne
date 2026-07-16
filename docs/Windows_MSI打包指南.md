@@ -1,10 +1,10 @@
-﻿# xlsOne Windows MSI 打包指南
+﻿# xlsOne Windows MSI/ZIP 打包指南
 
 ## 概述
 
-本文档说明如何使用 `package_msi.ps1` 脚本构建 xlsOne Windows 安装包（MSI）。
+本文档说明如何使用 `package_windows_msi_zip.ps1` 脚本构建 xlsOne Windows 安装包（MSI + 便携 ZIP）。
 
-生成的 MSI 安装包包含：
+生成的安装包包含：
 - 开始菜单快捷方式
 - 桌面快捷方式（可选安装）
 - **安装完成后自动启动选项**（可选，默认不勾选）
@@ -57,10 +57,10 @@ cd D:\xlsone\cpp\scripts
 
 ```powershell
 # 国际版（默认，激活服务器: api.xlsone.com）
-.\package_msi.ps1
+.\package_windows_msi_zip.ps1
 
 # 国内版（激活服务器: api.z-pulse.cn）
-.\package_msi.ps1 -Domestic
+.\package_windows_msi_zip.ps1 -Domestic
 ```
 
 ### 3. 输出文件
@@ -116,23 +116,23 @@ cpp\build-windows-cn-release\xlsone-1.0.4-windows-amd64.msi
 
 ```powershell
 # 默认构建（国际版）
-.\package_msi.ps1
+.\package_windows_msi_zip.ps1
 
 # 国内版
-.\package_msi.ps1 -Domestic
+.\package_windows_msi_zip.ps1 -Domestic
 
 # 完全重新构建（清理 + 构建）
-.\package_msi.ps1 -Clean
+.\package_windows_msi_zip.ps1 -Clean
 
 # 国内版 + 完全重新构建
-.\package_msi.ps1 -Domestic -Clean
+.\package_windows_msi_zip.ps1 -Domestic -Clean
 ```
 
 ### 自定义路径
 
 ```powershell
 # Qt 安装在非默认位置
-.\package_msi.ps1 `
+.\package_windows_msi_zip.ps1 `
     -QtRoot "D:\Qt\6.11.1\mingw_64" `
     -MingwRoot "D:\Qt\Tools\mingw1310_64" `
     -WiXRoot "D:\Tools\wix314"
@@ -142,17 +142,17 @@ cpp\build-windows-cn-release\xlsone-1.0.4-windows-amd64.msi
 
 ```powershell
 # 使用 PFX 证书
-.\package_msi.ps1 -Sign -CertFile ".\codesign.pfx" -CertPassword "密码"
+.\package_windows_msi_zip.ps1 -Sign -CertFile ".\codesign.pfx" -CertPassword "密码"
 
 # 使用环境变量存储密码（更安全）
 $env:XLSONE_CODESIGN_PASSWORD = "密码"
-.\package_msi.ps1 -Sign -CertFile ".\codesign.pfx"
+.\package_windows_msi_zip.ps1 -Sign -CertFile ".\codesign.pfx"
 
 # 使用证书存储指纹
-.\package_msi.ps1 -Sign -CertSha1 "A1B2C3D4E5F6789012345678901234567890ABCD"
+.\package_windows_msi_zip.ps1 -Sign -CertSha1 "A1B2C3D4E5F6789012345678901234567890ABCD"
 
 # 国内版 + 签名
-.\package_msi.ps1 -Domestic -Sign -CertFile ".\codesign.pfx"
+.\package_windows_msi_zip.ps1 -Domestic -Sign -CertFile ".\codesign.pfx"
 ```
 
 ### 完整示例（生产环境）
@@ -160,7 +160,7 @@ $env:XLSONE_CODESIGN_PASSWORD = "密码"
 ```powershell
 # 生产构建：国内版 + 清理 + 签名
 $env:XLSONE_CODESIGN_PASSWORD = (Read-Host "输入证书密码" -AsSecureString | ConvertFrom-SecureString)
-.\package_msi.ps1 `
+.\package_windows_msi_zip.ps1 `
     -Domestic `
     -Clean `
     -Sign `
@@ -204,7 +204,7 @@ $env:XLSONE_CODESIGN_PASSWORD = (Read-Host "输入证书密码" -AsSecureString 
 ```powershell
 # 在 CMakeLists.txt 中配置，或构建时指定
 $env:XLSONE_INSTALLER_LANGUAGE = "zh_CN"
-.\package_msi.ps1
+.\package_windows_msi_zip.ps1
 ```
 
 ### 快捷方式
@@ -224,7 +224,7 @@ $env:XLSONE_INSTALLER_LANGUAGE = "zh_CN"
 
 ```powershell
 # 手动指定 Qt 路径
-.\package_msi.ps1 -QtRoot "C:\Qt\6.11.1\mingw_64"
+.\package_windows_msi_zip.ps1 -QtRoot "C:\Qt\6.11.1\mingw_64"
 ```
 
 ### Q: 提示 "缺少 WiX 工具"
@@ -233,7 +233,7 @@ $env:XLSONE_INSTALLER_LANGUAGE = "zh_CN"
 
 ```powershell
 # 或使用自定义路径
-.\package_msi.ps1 -WiXRoot "D:\wix314"
+.\package_windows_msi_zip.ps1 -WiXRoot "D:\wix314"
 ```
 
 ### Q: 代码签名失败
@@ -245,7 +245,7 @@ $env:XLSONE_INSTALLER_LANGUAGE = "zh_CN"
 Get-Command signtool
 
 # 或手动指定
-.\package_msi.ps1 -Sign -SignTool "C:\Program Files (x86)\Windows Kits\10\bin\10.0.22621.0\x64\signtool.exe"
+.\package_windows_msi_zip.ps1 -Sign -SignTool "C:\Program Files (x86)\Windows Kits\10\bin\10.0.22621.0\x64\signtool.exe"
 ```
 
 ### Q: 构建失败（Qt5 需要 zlib）
@@ -257,7 +257,7 @@ Qt5 构建需要外部 zlib：
 pacman -S mingw-w64-x86_64-zlib
 
 # 然后指定路径
-.\package_msi.ps1 -ZlibRoot "C:\msys64\mingw64"
+.\package_windows_msi_zip.ps1 -ZlibRoot "C:\msys64\mingw64"
 ```
 
 ### Q: 如何验证生成的 MSI
@@ -281,7 +281,7 @@ msiexec /x xlsone-1.0.4-windows-amd64.msi /qn
 
 ```powershell
 # 构建时保留详细输出
-.\package_msi.ps1 -Clean 2>&1 | Tee-Object build.log
+.\package_windows_msi_zip.ps1 -Clean 2>&1 | Tee-Object build.log
 ```
 
 ### 手动清理构建目录
@@ -303,8 +303,8 @@ cmake -S . -B build-test -G Ninja -DCMAKE_BUILD_TYPE=Release
 
 | 文件 | 说明 |
 |------|------|
-| `cpp/scripts/package_msi.ps1` | 本文档对应的打包脚本 |
-| `cpp/scripts/package_windows_full.ps1` | 完整版打包脚本（含 ZIP + 更多选项） |
+| `cpp/scripts/package_windows_msi_zip.ps1` | Windows 唯一打包入口，生成 MSI + ZIP |
+| `scripts/package_windows.sh` | macOS/Linux/WSL 上调用 Windows 打包机的包装入口 |
 | `cpp/packaging/windows/shortcuts.wxs.in` | WiX 快捷方式模板（含启动选项） |
 | `cpp/packaging/windows/shortcuts.wxs.patch.in` | WiX 功能补丁模板 |
 | `cpp/CMakeLists.txt` | CMake 主配置（版本号、打包配置） |

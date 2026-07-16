@@ -77,14 +77,14 @@
     RFC3161 timestamp authority URL. Default: http://timestamp.digicert.com
 
 .EXAMPLE
-    .\scripts\package_windows_full.ps1
-    .\scripts\package_windows_full.ps1 -QtRoot "D:\Qt\6.11.1\mingw_64" -MingwRoot "D:\Qt\Tools\mingw1310_64" -WiXRoot "D:\wix314"
-    .\scripts\package_windows_full.ps1 -Clean
-    .\scripts\package_windows_full.ps1 -Domestic        # 国内版（api.z-pulse.cn）
+    .\scripts\package_windows_msi_zip.ps1
+    .\scripts\package_windows_msi_zip.ps1 -QtRoot "D:\Qt\6.11.1\mingw_64" -MingwRoot "D:\Qt\Tools\mingw1310_64" -WiXRoot "D:\wix314"
+    .\scripts\package_windows_msi_zip.ps1 -Clean
+    .\scripts\package_windows_msi_zip.ps1 -Domestic        # 国内版（api.z-pulse.cn）
     # 代码签名（PFX）:
-    .\scripts\package_windows_full.ps1 -Domestic -Sign -CertFile .\codesign.pfx -CertPassword ***
+    .\scripts\package_windows_msi_zip.ps1 -Domestic -Sign -CertFile .\codesign.pfx -CertPassword ***
     # 代码签名（证书存储 thumbprint）:
-    .\scripts\package_windows_full.ps1 -Domestic -Sign -CertSha1 A1B2C3D4...
+    .\scripts\package_windows_msi_zip.ps1 -Domestic -Sign -CertSha1 A1B2C3D4...
 #>
 param(
     [string]$QtRoot = "C:\Qt\6.11.1\mingw_64",

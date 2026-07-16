@@ -26,8 +26,8 @@ Preset/script entry points:
 ```bash
 cpp/scripts/build.sh dev
 cpp/scripts/build.sh release
-cpp/scripts/package_deb.sh linux-release
-cpp/scripts/package_deb.sh uos-x86_64-release
+cpp/scripts/package_linux_deb.sh --bundle
+cpp/scripts/package_linux_cpack_deb.sh uos-x86_64-release
 ```
 
 Golden Swift/C++ parity check:
@@ -42,7 +42,7 @@ Snapshots are written to `tmp/golden/swift.json` and `tmp/golden/cpp.json` by de
 Windows packaging entry point:
 
 ```powershell
-cpp\scripts\package_windows.ps1 -Preset windows-release -QtBin C:\Qt\6.6.0\msvc2019_64\bin
+cpp\scripts\package_windows_msi_zip.ps1 -Domestic
 ```
 
 ## Windows 授权与激活
