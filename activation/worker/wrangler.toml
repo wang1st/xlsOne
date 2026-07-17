@@ -17,13 +17,13 @@ database_name = "xlsone-license"
 database_id = "70f9b469-9c4e-470e-b6dd-27cba2c782f5"
 
 [env.production.vars]
-# ⚠️ ACTIVATION_SECRET 为真实 HMAC 密钥，明文写入仅用于「本地一条命令部署」。
-# 本文件(wrangler.toml)受 git 版本控制 —— 请只本地部署、切勿 git commit，
-# 否则密钥会进入仓库历史。更安全的做法是 `wrangler secret put ACTIVATION_SECRET --env production`。
-ACTIVATION_SECRET = "8c6b78546cf47129e2eb020a078f7cc3dae5b8ce8b9d08289289bd4d334ff8c6"
+# ⚠️ 切勿在此写入任何真实密钥。本文件(wrangler.toml)受 git 版本控制，
+# 历史上的 ACTIVATION_SECRET 明文曾因提交入仓而泄露并已于 2026-07-17 轮换作废。
+# 所有密钥一律通过 `wrangler secret put <NAME> --env production` 设置。
 LEMON_SQUEEZY_SIGNING_SECRET = ""  # Lemon Squeezy webhook 签名密钥（尚无值，留空）
 
 # 以下值需通过 wrangler secret put 设置，不应写入本文件：
+# ACTIVATION_SECRET      — macOS 版 HMAC 密钥（64 字符十六进制）
 # ED25519_PRIVATE_KEY    — Windows 版 Ed25519 签名私钥（64 字符十六进制）
 #   ⚠️ 切勿把真实私钥写入本文件或提交到仓库。生产环境用下方命令设置：
 #       wrangler secret put ED25519_PRIVATE_KEY --env production
@@ -32,4 +32,4 @@ LEMON_SQUEEZY_SIGNING_SECRET = ""  # Lemon Squeezy webhook 签名密钥（尚无
 # AFDIAN_USER_ID         — 爱发电用户 ID
 # AFDIAN_TOKEN           — 爱发电开放平台 Token
 # AFDIAN_WEBHOOK_TOKEN   — 爱发电 Webhook Token
-# ADMIN_API_KEY          — 管理后台接口密钥（可选，默认使用 ACTIVATION_SECRET）
+# ADMIN_API_KEY          — 管理后台接口密钥（必填，独立于 ACTIVATION_SECRET）

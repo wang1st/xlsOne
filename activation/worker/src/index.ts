@@ -13,7 +13,7 @@
 //   Note: 授权码生成器页面 (gift-code-generator.html) 可在本地浏览器打开，
 //         或通过国内服务器 /xlsone/license-console 路由访问（路径可由 ADMIN_PATH 配置）。Worker 不提供静态页面托管。
 
-import { Hono } from 'hono'
+import { Hono, Context } from 'hono'
 import { cors } from 'hono/cors'
 import { ed25519 } from '@noble/curves/ed25519'
 import { createHmac, timingSafeEqual } from './crypto'
@@ -53,6 +53,7 @@ const WINDOWS_KEY_PATTERN = /^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/
 const TOKEN_LIFETIME = 30 * 24 * 60 * 60  // 30 days in seconds
 const RATE_LIMIT_WINDOW = 60              // 1 minute
 const RATE_LIMIT_MAX = 10                 // max requests per window
+const ADMIN_RATE_LIMIT_MAX = 30           // admin endpoints: looser (console pages batch calls) but still bounded
 const DEFAULT_MAX_ACTIVATIONS = 3
 const DEFAULT_DURATION_DAYS = 365
 const TRIAL_DURATION_DAYS = 14
@@ -146,6 +147,39 @@ function checkRateLimit(ip: string): boolean {
   if (entry.count >= RATE_LIMIT_MAX) return false
   entry.count++
   return true
+}
+
+// ========== Admin auth ==========
+// 管理接口必须使用独立的 ADMIN_API_KEY，不回退为 ACTIVATION_SECRET ——
+// ACTIVATION_SECRET 泄露时不应连带交出管理后台。未配置时管理 API 整体停用。
+// 另加每 IP 限流，减缓 Bearer 暴力破解（进程内 Map，实例重启后重置）。
+const adminRateMap = new Map<string, { count: number; reset: number }>()
+
+function checkAdminRateLimit(ip: string): boolean {
+  const now = Math.floor(Date.now() / 1000)
+  const entry = adminRateMap.get(ip)
+  if (!entry || entry.reset < now) {
+    adminRateMap.set(ip, { count: 1, reset: now + RATE_LIMIT_WINDOW })
+    return true
+  }
+  if (entry.count >= ADMIN_RATE_LIMIT_MAX) return false
+  entry.count++
+  return true
+}
+
+function checkAdminAuth(c: Context<{ Bindings: Env }>): Response | null {
+  const ip = c.req.header('CF-Connecting-IP') || 'unknown'
+  if (!checkAdminRateLimit(ip)) {
+    return c.json({ error: 'RATE_LIMITED', message: '请求过于频繁，请稍后再试' }, 429)
+  }
+  if (!c.env.ADMIN_API_KEY) {
+    return c.json({ error: 'ADMIN_NOT_CONFIGURED', message: '管理接口未配置（缺少 ADMIN_API_KEY）' }, 503)
+  }
+  const auth = c.req.header('Authorization')
+  if (!auth || auth !== `Bearer ${c.env.ADMIN_API_KEY}`) {
+    return c.json({ error: 'UNAUTHORIZED' }, 401)
+  }
+  return null
 }
 
 // ========== Ed25519 license helpers ==========
@@ -957,11 +991,8 @@ app.post('/api/license/download', async (c) => {
 // ========== POST /api/admin/generate-windows-keys ==========
 
 app.post('/api/admin/generate-windows-keys', async (c) => {
-  const auth = c.req.header('Authorization')
-  const apiKey = c.env.ADMIN_API_KEY || c.env.ACTIVATION_SECRET
-  if (!auth || auth !== `Bearer ${apiKey}`) {
-    return c.json({ error: 'UNAUTHORIZED' }, 401)
-  }
+  const adminError = checkAdminAuth(c)
+  if (adminError) return adminError
 
   let body: { count?: number; plan?: string; max_activations?: number; duration_days?: number }
   try {
@@ -1011,11 +1042,8 @@ app.post('/api/admin/generate-windows-keys', async (c) => {
 // ========== GET /api/admin/windows-keys (码列表) ==========
 
 app.get('/api/admin/windows-keys', async (c) => {
-  const auth = c.req.header('Authorization')
-  const apiKey = c.env.ADMIN_API_KEY || c.env.ACTIVATION_SECRET
-  if (!auth || auth !== `Bearer ${apiKey}`) {
-    return c.json({ error: 'UNAUTHORIZED' }, 401)
-  }
+  const adminError = checkAdminAuth(c)
+  if (adminError) return adminError
 
   const status = c.req.query('status') || ''
   const plan = c.req.query('plan') || ''
@@ -1064,11 +1092,8 @@ app.get('/api/admin/windows-keys', async (c) => {
 // ========== GET /api/admin/windows-keys/:key_id (码详情) ==========
 
 app.get('/api/admin/windows-keys/:key_id', async (c) => {
-  const auth = c.req.header('Authorization')
-  const apiKey = c.env.ADMIN_API_KEY || c.env.ACTIVATION_SECRET
-  if (!auth || auth !== `Bearer ${apiKey}`) {
-    return c.json({ error: 'UNAUTHORIZED' }, 401)
-  }
+  const adminError = checkAdminAuth(c)
+  if (adminError) return adminError
 
   const keyId = c.req.param('key_id').toUpperCase()
   const keyRow = await c.env.DB.prepare(
@@ -1087,11 +1112,8 @@ app.get('/api/admin/windows-keys/:key_id', async (c) => {
 // ========== POST /api/admin/windows-keys/:key_id/revoke (吊销码) ==========
 
 app.post('/api/admin/windows-keys/:key_id/revoke', async (c) => {
-  const auth = c.req.header('Authorization')
-  const apiKey = c.env.ADMIN_API_KEY || c.env.ACTIVATION_SECRET
-  if (!auth || auth !== `Bearer ${apiKey}`) {
-    return c.json({ error: 'UNAUTHORIZED' }, 401)
-  }
+  const adminError = checkAdminAuth(c)
+  if (adminError) return adminError
 
   const keyId = c.req.param('key_id').toUpperCase()
   const keyRow = await c.env.DB.prepare(
@@ -1111,11 +1133,8 @@ app.post('/api/admin/windows-keys/:key_id/revoke', async (c) => {
 // ========== POST /api/admin/windows-keys/:key_id/restore (恢复码) ==========
 
 app.post('/api/admin/windows-keys/:key_id/restore', async (c) => {
-  const auth = c.req.header('Authorization')
-  const apiKey = c.env.ADMIN_API_KEY || c.env.ACTIVATION_SECRET
-  if (!auth || auth !== `Bearer ${apiKey}`) {
-    return c.json({ error: 'UNAUTHORIZED' }, 401)
-  }
+  const adminError = checkAdminAuth(c)
+  if (adminError) return adminError
 
   const keyId = c.req.param('key_id').toUpperCase()
   const keyRow = await c.env.DB.prepare(
@@ -1137,11 +1156,8 @@ app.post('/api/admin/windows-keys/:key_id/restore', async (c) => {
 // ========== GET /api/admin/windows-devices (设备列表) ==========
 
 app.get('/api/admin/windows-devices', async (c) => {
-  const auth = c.req.header('Authorization')
-  const apiKey = c.env.ADMIN_API_KEY || c.env.ACTIVATION_SECRET
-  if (!auth || auth !== `Bearer ${apiKey}`) {
-    return c.json({ error: 'UNAUTHORIZED' }, 401)
-  }
+  const adminError = checkAdminAuth(c)
+  if (adminError) return adminError
 
   const keyId = (c.req.query('key_id') || '').toUpperCase()
   const search = c.req.query('search') || ''
@@ -1189,11 +1205,8 @@ app.get('/api/admin/windows-devices', async (c) => {
 // ========== POST /api/admin/windows-devices/:device_id/revoke (解绑设备) ==========
 
 app.post('/api/admin/windows-devices/:device_id/revoke', async (c) => {
-  const auth = c.req.header('Authorization')
-  const apiKey = c.env.ADMIN_API_KEY || c.env.ACTIVATION_SECRET
-  if (!auth || auth !== `Bearer ${apiKey}`) {
-    return c.json({ error: 'UNAUTHORIZED' }, 401)
-  }
+  const adminError = checkAdminAuth(c)
+  if (adminError) return adminError
 
   const deviceId = c.req.param('device_id')
   const device = await c.env.DB.prepare(
@@ -1225,11 +1238,8 @@ app.post('/api/admin/windows-devices/:device_id/revoke', async (c) => {
 // ========== GET /api/admin/pool-stats ==========
 
 app.get('/api/admin/pool-stats', async (c) => {
-  const auth = c.req.header('Authorization')
-  const apiKey = c.env.ADMIN_API_KEY || c.env.ACTIVATION_SECRET
-  if (!auth || auth !== `Bearer ${apiKey}`) {
-    return c.json({ error: 'UNAUTHORIZED' }, 401)
-  }
+  const adminError = checkAdminAuth(c)
+  if (adminError) return adminError
 
   const rows = await c.env.DB.prepare(
     "SELECT status FROM windows_keys"
@@ -1250,11 +1260,8 @@ app.get('/api/admin/pool-stats', async (c) => {
 // ========== POST /api/admin/generate (管理后台生成激活码) ==========
 
 app.post('/api/admin/generate', async (c) => {
-  const auth = c.req.header('Authorization')
-  const apiKey = c.env.ADMIN_API_KEY || c.env.ACTIVATION_SECRET
-  if (!auth || auth !== `Bearer ${apiKey}`) {
-    return c.json({ error: 'UNAUTHORIZED' }, 401)
-  }
+  const adminError = checkAdminAuth(c)
+  if (adminError) return adminError
 
   let body: { count?: number; plan?: string; max_devices?: number; expires_at?: string }
   try {

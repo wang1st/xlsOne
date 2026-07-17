@@ -59,6 +59,15 @@ enable_testing()
 set(XLSONE_OBFUSCATED_SECRETS "")
 
 if(XLSONE_OBFUSCATE)
+    # An obfuscated build without the real public key would silently embed the
+    # all-zero fallback and fail every license verification — refuse to
+    # configure instead of shipping a broken binary.
+    if(NOT XLSONE_LICENSE_PUBLIC_KEY)
+        message(FATAL_ERROR
+            "XLSONE_OBFUSCATE=ON requires XLSONE_LICENSE_PUBLIC_KEY (64 hex chars). "
+            "Set it via -DXLSONE_LICENSE_PUBLIC_KEY=... or the environment; "
+            "refusing to build an obfuscated binary with the all-zero fallback key.")
+    endif()
     find_package(Python3 REQUIRED)
     set(_xlsone_obf_secrets_out
         "${CMAKE_CURRENT_BINARY_DIR}/core/src/obfuscated_secrets.cpp")

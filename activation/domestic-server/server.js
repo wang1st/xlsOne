@@ -46,7 +46,9 @@ const DB_PATH = process.env.DB_PATH || path.join(DATA_DIR, 'store.json');
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const ED25519_PRIVATE_KEY = process.env.ED25519_PRIVATE_KEY || '';
 const ACTIVATION_SECRET = process.env.ACTIVATION_SECRET || '';
-const ADMIN_API_KEY = process.env.ADMIN_API_KEY || ACTIVATION_SECRET;
+// 管理接口密钥必须独立配置，不回退为 ACTIVATION_SECRET：
+// ACTIVATION_SECRET 一旦泄露不应连带交出管理后台。未配置时管理 API 整体停用。
+const ADMIN_API_KEY = process.env.ADMIN_API_KEY || '';
 const DOWNLOADS_DIR = process.env.DOWNLOADS_DIR || path.join(DATA_DIR, 'downloads');
 const ADMIN_PATH = process.env.ADMIN_PATH || '/xlsone/license-console';
 
@@ -205,6 +207,41 @@ function checkRateLimit(ip) {
   }
   if (entry.count >= 10) return false;
   entry.count++;
+  return true;
+}
+
+// 管理接口限流更宽松（管理页面一次加载多个接口），但仍限制暴力破解 Bearer。
+const adminRateMap = new Map();
+function checkAdminRateLimit(ip) {
+  const now = Math.floor(Date.now() / 1000);
+  const entry = adminRateMap.get(ip);
+  if (!entry || entry.reset < now) {
+    adminRateMap.set(ip, { count: 1, reset: now + 60 });
+    return true;
+  }
+  if (entry.count >= 30) return false;
+  entry.count++;
+  return true;
+}
+
+// 管理接口统一鉴权：限流 + 独立密钥 + 常量时间比较。
+// 通过返回 true；否则已写入响应并返回 false。
+function requireAdmin(req, res) {
+  const ip = clientIp(req);
+  if (!checkAdminRateLimit(ip)) {
+    sendJson(res, 429, { error: 'RATE_LIMITED', message: '请求过于频繁，请稍后再试' });
+    return false;
+  }
+  if (!ADMIN_API_KEY) {
+    sendJson(res, 503, { error: 'ADMIN_NOT_CONFIGURED', message: '管理接口未配置（缺少 ADMIN_API_KEY）' });
+    return false;
+  }
+  const auth = String(req.headers['authorization'] || '');
+  const expected = `Bearer ${ADMIN_API_KEY}`;
+  if (auth.length !== expected.length || !timingSafeEqual(auth, expected)) {
+    sendJson(res, 401, { error: 'UNAUTHORIZED' });
+    return false;
+  }
   return true;
 }
 
@@ -433,10 +470,16 @@ function readBody(req) {
   });
 }
 function clientIp(req) {
-  const xff = req.headers['x-forwarded-for'];
-  if (xff) return String(xff).split(',')[0].trim();
+  // 部署在 nginx 反代之后：X-Real-IP 由 nginx 用真实对端地址覆盖写入，可信；
+  // X-Forwarded-For 使用 $proxy_add_x_forwarded_for 追加模式，客户端可伪造
+  // 前面的条目，只有最右一跳（nginx 看到的对端）可信。
   const xr = req.headers['x-real-ip'];
   if (xr) return String(xr).trim();
+  const xff = req.headers['x-forwarded-for'];
+  if (xff) {
+    const parts = String(xff).split(',');
+    return parts[parts.length - 1].trim();
+  }
   return req.socket.remoteAddress || 'unknown';
 }
 
@@ -646,8 +689,7 @@ const server = http.createServer(async (req, res) => {
 
     // ---- API: admin generate windows keys ----
     if (method === 'POST' && p === '/api/admin/generate-windows-keys') {
-      const auth = req.headers['authorization'];
-      if (!auth || auth !== `Bearer ${ADMIN_API_KEY}`) return sendJson(res, 401, { error: 'UNAUTHORIZED' });
+      if (!requireAdmin(req, res)) return;
       let body;
       try { body = JSON.parse(await readBody(req)); } catch { return sendJson(res, 400, { error: 'INVALID_JSON' }); }
       const count = Math.min(parseInt(body.count, 10) || 1, 100);
@@ -691,8 +733,7 @@ const server = http.createServer(async (req, res) => {
 
     // ---- API: admin pool stats ----
     if (method === 'GET' && p === '/api/admin/pool-stats') {
-      const auth = req.headers['authorization'];
-      if (!auth || auth !== `Bearer ${ADMIN_API_KEY}`) return sendJson(res, 401, { error: 'UNAUTHORIZED' });
+      if (!requireAdmin(req, res)) return;
       const stats = { available: 0, activated: 0, exhausted: 0, revoked: 0, total: 0 };
       for (const k of Object.values(store.windows_keys)) {
         const s = k.status === 'unused' ? 'available' : k.status === 'used' ? 'activated' : k.status;
@@ -704,8 +745,7 @@ const server = http.createServer(async (req, res) => {
 
     // ---- API: admin windows keys list ----
     if (method === 'GET' && p === '/api/admin/windows-keys') {
-      const auth = req.headers['authorization'];
-      if (!auth || auth !== `Bearer ${ADMIN_API_KEY}`) return sendJson(res, 401, { error: 'UNAUTHORIZED' });
+      if (!requireAdmin(req, res)) return;
       const status = url.searchParams.get('status') || '';
       const plan = url.searchParams.get('plan') || '';
       const search = url.searchParams.get('search') || '';
@@ -736,8 +776,7 @@ const server = http.createServer(async (req, res) => {
 
     // ---- API: admin windows key detail ----
     if (method === 'GET' && p.startsWith('/api/admin/windows-keys/')) {
-      const auth = req.headers['authorization'];
-      if (!auth || auth !== `Bearer ${ADMIN_API_KEY}`) return sendJson(res, 401, { error: 'UNAUTHORIZED' });
+      if (!requireAdmin(req, res)) return;
       const keyId = path.basename(p).toUpperCase();
       const keyRow = store.windows_keys[keyId];
       if (!keyRow) return sendJson(res, 404, { error: 'KEY_NOT_FOUND' });
@@ -748,8 +787,7 @@ const server = http.createServer(async (req, res) => {
 
     // ---- API: admin revoke windows key ----
     if (method === 'POST' && p.startsWith('/api/admin/windows-keys/') && p.endsWith('/revoke')) {
-      const auth = req.headers['authorization'];
-      if (!auth || auth !== `Bearer ${ADMIN_API_KEY}`) return sendJson(res, 401, { error: 'UNAUTHORIZED' });
+      if (!requireAdmin(req, res)) return;
       const keyId = path.basename(path.dirname(p)).toUpperCase();
       const keyRow = store.windows_keys[keyId];
       if (!keyRow) return sendJson(res, 404, { error: 'KEY_NOT_FOUND' });
@@ -763,8 +801,7 @@ const server = http.createServer(async (req, res) => {
 
     // ---- API: admin restore windows key ----
     if (method === 'POST' && p.startsWith('/api/admin/windows-keys/') && p.endsWith('/restore')) {
-      const auth = req.headers['authorization'];
-      if (!auth || auth !== `Bearer ${ADMIN_API_KEY}`) return sendJson(res, 401, { error: 'UNAUTHORIZED' });
+      if (!requireAdmin(req, res)) return;
       const keyId = path.basename(path.dirname(p)).toUpperCase();
       const keyRow = store.windows_keys[keyId];
       if (!keyRow) return sendJson(res, 404, { error: 'KEY_NOT_FOUND' });
@@ -779,8 +816,7 @@ const server = http.createServer(async (req, res) => {
 
     // ---- API: admin windows devices list ----
     if (method === 'GET' && p === '/api/admin/windows-devices') {
-      const auth = req.headers['authorization'];
-      if (!auth || auth !== `Bearer ${ADMIN_API_KEY}`) return sendJson(res, 401, { error: 'UNAUTHORIZED' });
+      if (!requireAdmin(req, res)) return;
       const keyId = (url.searchParams.get('key_id') || '').toUpperCase();
       const search = url.searchParams.get('search') || '';
       const revoked = url.searchParams.get('revoked');
@@ -813,8 +849,7 @@ const server = http.createServer(async (req, res) => {
 
     // ---- API: admin revoke windows device ----
     if (method === 'POST' && p.startsWith('/api/admin/windows-devices/') && p.endsWith('/revoke')) {
-      const auth = req.headers['authorization'];
-      if (!auth || auth !== `Bearer ${ADMIN_API_KEY}`) return sendJson(res, 401, { error: 'UNAUTHORIZED' });
+      if (!requireAdmin(req, res)) return;
       const deviceId = path.basename(path.dirname(p));
       const device = store.windows_devices[deviceId];
       if (!device) return sendJson(res, 404, { error: 'DEVICE_NOT_FOUND' });
@@ -836,8 +871,7 @@ const server = http.createServer(async (req, res) => {
 
     // ---- API: admin generate (macOS) ----
     if (method === 'POST' && p === '/api/admin/generate') {
-      const auth = req.headers['authorization'];
-      if (!auth || auth !== `Bearer ${ADMIN_API_KEY}`) return sendJson(res, 401, { error: 'UNAUTHORIZED' });
+      if (!requireAdmin(req, res)) return;
       let body;
       try { body = JSON.parse(await readBody(req)); } catch { return sendJson(res, 400, { error: 'INVALID_JSON' }); }
       const count = Math.min(parseInt(body.count, 10) || 1, 100);
@@ -864,4 +898,5 @@ server.listen(PORT, () => {
   console.log(`[xlsone-activation] domestic API listening on :${PORT}`);
   if (!ED25519_PRIVATE_KEY) console.warn('[warn] ED25519_PRIVATE_KEY not set — Windows activation will fail');
   if (!ACTIVATION_SECRET) console.warn('[warn] ACTIVATION_SECRET not set — macOS activation will fail');
+  if (!ADMIN_API_KEY) console.warn('[warn] ADMIN_API_KEY not set — admin API disabled');
 });

@@ -10,6 +10,7 @@
 #include "ui_theme.hpp"
 #include "xlsone/core/exporter.hpp"
 #include "xlsone/core/license_manager.hpp"
+#include "xlsone/core/obfuscation.hpp"
 
 #include <QAction>
 #include <QActionGroup>
@@ -67,6 +68,19 @@ QString readinessName(xlsone::MergeReadiness readiness)
 QString severityName(xlsone::ValidationSeverity severity)
 {
     return severity == xlsone::ValidationSeverity::Blocking ? QStringLiteral("阻断") : QStringLiteral("警告");
+}
+
+// Base URL for update checks.  With XLSONE_OBFUSCATE the URL is decrypted at
+// runtime from the generated obfuscated secrets (the XLSONE_UPDATE_BASE_URL
+// compile definition is intentionally not passed in that configuration);
+// otherwise the plaintext compile definition is used.
+QString updateApiBaseUrl()
+{
+#if defined(XLSONE_OBFUSCATE)
+    return xlsone::obf::updateBaseUrl();
+#else
+    return QStringLiteral(XLSONE_UPDATE_BASE_URL);
+#endif
 }
 
 bool sameOverrideCell(const xlsone::SchemaCellOverride& lhs, const xlsone::SchemaCellOverride& rhs)
@@ -454,16 +468,9 @@ void MainWindow::buildUi()
             .arg(XLSONE_VERSION_MAJOR)
             .arg(XLSONE_VERSION_MINOR)
             .arg(XLSONE_VERSION_PATCH);
-        xlsone::ui::showAbout(this, tr("关于 表表归一"),
-            tr("<h3>表表归一  V%1</h3>"
-               "<p>多张同格式 Excel 报表一键汇总</p>"
-               "<p>把多张格式一致的 Excel 表合成一份汇总表。"
-               "金额、数量等能相加的数会自动合计；"
-               "名称、编号等不该相加的信息，会保留各文件里最常见的共同前缀。</p>"
-               "<p><b>作者：</b>王臻<br>"
-               "<b>技术：</b>C++ / Qt<br>"
-               "<b>联系方式：</b>831261@qq.com</p>"
-               "<p>© 2026 王臻. 保留所有权利.</p>").arg(ver));
+        const bool domesticBuild = xlsone::LicenseManager::activationBaseUrl()
+            .contains(XLSONE_OBF_STRING("z-pulse.cn"), Qt::CaseInsensitive);
+        xlsone::ui::showProductAbout(this, tr("关于 表表归一"), ver, domesticBuild);
     });
 
     auto* checkUpdateAction = new QAction(tr("检查更新"), this);
@@ -620,8 +627,7 @@ void MainWindow::checkForUpdates(bool silent)
     }
     checkingUpdates_ = true;
 
-    const QString apiUrl = QStringLiteral(
-        XLSONE_UPDATE_BASE_URL "/api/version");
+    const QString apiUrl = updateApiBaseUrl() + XLSONE_OBF_STRING("/api/version");
 
     if (silent) {
         // Silent auto-check: only show dialog when an update is available.
@@ -645,7 +651,7 @@ void MainWindow::checkForUpdates(bool silent)
                                                 this);
                 connect(dialog, &QDialog::accepted, this, [] {
                     QDesktopServices::openUrl(QUrl(
-                        QStringLiteral(XLSONE_UPDATE_BASE_URL "/products/xlsone/download.html")));
+                        updateApiBaseUrl() + XLSONE_OBF_STRING("/products/xlsone/download.html")));
                 });
                 xlsone::ui::showDialogCentered(dialog, this);
             });
