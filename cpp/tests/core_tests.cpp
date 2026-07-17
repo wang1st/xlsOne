@@ -1181,6 +1181,18 @@ void CoreTests::licenseManagerUnactivatedRestrictsImportsAndExports()
     QSettings().clear();
 
     xlsone::LicenseManager manager;
+#if defined(Q_OS_LINUX)
+    // Linux builds carry a built-in Ed25519-signed PersonalLifetime license,
+    // so a fresh install is activated out of the box.  Reaching Activated
+    // here also proves the embedded signature verified against the public
+    // key — a forged or tampered built-in license would fall through to
+    // Unactivated.
+    QCOMPARE(manager.state(), xlsone::LicenseState::Activated);
+    QVERIFY(manager.isFullyLicensed());
+    QVERIFY(manager.canUse(xlsone::LicenseFeature::NoExportWatermark));
+    QCOMPARE(manager.currentInfo().keyId, QStringLiteral("LINUX-BUILTIN"));
+    QCOMPARE(manager.currentInfo().plan, xlsone::LicensePlan::PersonalLifetime);
+#else
     QCOMPARE(manager.state(), xlsone::LicenseState::Unactivated);
     QVERIFY(!manager.isFullyLicensed());
     QVERIFY(manager.canUse(xlsone::LicenseFeature::ImportFiles));
@@ -1189,6 +1201,7 @@ void CoreTests::licenseManagerUnactivatedRestrictsImportsAndExports()
     QCOMPARE(manager.maxImportFiles(), 3);
     QVERIFY(!manager.exportWatermarkText().isEmpty());
     QVERIFY(!manager.restrictionMessage().isEmpty());
+#endif
 }
 
 void CoreTests::licenseManagerActivatedGrantsFullCapabilities()

@@ -302,14 +302,12 @@ void showProductAbout(QWidget* parent, const QString& title, const QString& vers
     ).arg(t.text.name()).arg(t.surface.name()).arg(t.border.name()));
     root->addWidget(summary);
 
-#if !defined(Q_OS_LINUX)
     auto* homeTitle = new QLabel(QObject::tr("首页地址"), &dialog);
     homeTitle->setStyleSheet(QStringLiteral("color: %1; font-size: 13px; font-weight: 700;").arg(t.text.name()));
     root->addWidget(homeTitle);
 
     const QString homepageUrl = domesticBuild ? domesticUrl : internationalUrl;
     root->addWidget(makeHomepageRow(&dialog, QObject::tr("官方网站"), homepageUrl, true));
-#endif
 
     auto* buttons = new QHBoxLayout();
     buttons->addStretch();

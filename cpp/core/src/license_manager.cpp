@@ -29,8 +29,17 @@ static constexpr int kRestrictedModeMaxFiles = 3;
 static const QString kTokenKey = QStringLiteral("license/token");
 static const QString kOfflineTokenKey = QStringLiteral("license/offline");
 static const QString kLastSeenUtcKey = QStringLiteral("license/lastSeenUtc");
-static const QString kLinuxDefaultLicenseKey = QStringLiteral("license/linuxDefaultLifetime");
 static const QString kClockErrorMessage = QStringLiteral("系统时间异常，请校准系统时间后重试");
+
+#if defined(Q_OS_LINUX)
+// Built-in Linux license, signed offline with the same Ed25519 private key as
+// server-issued licenses (rotation of 2026-07-17).  The payload is
+// reconstructed below and must match the signed bytes exactly:
+// {"key_id":"LINUX-BUILTIN","plan":"personal_lifetime","device_hash":"","device_components":[],"issued_at":1784264344,"expires_at":0}
+static constexpr qint64 kLinuxBuiltinLicenseIssuedAt = 1784264344;
+static const char kLinuxBuiltinLicenseSignature[] =
+    "I1EQuvcw4hgggw22KGRW2bAOZQVd4wUuX2QJxq-kKSOZK4FzAD2UEJpg_qRNNK9HIjJCf0GYAMFDeJrI4NmjCw";
+#endif
 
 // Process-level cache for the device fingerprint to avoid repeated WMIC/PowerShell calls.
 static QString g_deviceFingerprintCache;
@@ -44,11 +53,12 @@ static QString g_deviceFingerprintCache;
 // Ed25519 public key (32 bytes) for verifying Windows license signatures.
 // Must correspond to the private seed held ONLY in the Worker secret
 // ED25519_PRIVATE_KEY.  This array is only compiled into non-obfuscated builds.
+// Rotated 2026-07-17 after the previous seed leaked into the git history.
 static constexpr uint8_t kLicensePublicKey[32] = {
-    0xac, 0xc2, 0x09, 0xfb, 0xd4, 0xe9, 0xe1, 0x98,
-    0xc9, 0x4a, 0xef, 0x7f, 0xc3, 0xfa, 0xaf, 0x44,
-    0xf8, 0x0e, 0x27, 0x83, 0x57, 0x04, 0x59, 0x59,
-    0xe1, 0xd6, 0xa2, 0xaf, 0xb1, 0x04, 0x4c, 0xeb
+    0xb0, 0xaf, 0x99, 0x04, 0x7c, 0xf3, 0x0b, 0x4f,
+    0xe7, 0x23, 0x60, 0xd5, 0x3f, 0xf5, 0x76, 0x5c,
+    0x3c, 0xcd, 0x33, 0xd9, 0x11, 0xe2, 0xb1, 0xf1,
+    0x9b, 0x99, 0xdc, 0xd4, 0xc8, 0xff, 0x83, 0xcc
 };
 #endif // !XLSONE_OBFUSCATE
 
@@ -879,9 +889,9 @@ void LicenseManager::loadPersistedState()
         settings.remove(kOfflineTokenKey);
     }
 
-    // Linux builds default to a persisted PersonalLifetime license so that the
-    // authorization can be revoked later by clearing the stored key, forcing the
-    // normal activation/trial flow on the next launch.
+    // Linux builds fall back to a built-in Ed25519-signed license: the grant
+    // only happens when the embedded signature verifies against the public
+    // key, so it cannot be toggled via QSettings or a patched flag.
     if (loadOrCreateLinuxDefaultLicense()) {
         return;
     }
@@ -894,18 +904,34 @@ bool LicenseManager::loadOrCreateLinuxDefaultLicense()
 #if !defined(Q_OS_LINUX)
     return false;
 #else
-    QSettings settings;
-    const bool alreadyGranted = settings.value(kLinuxDefaultLicenseKey).toBool();
-    if (!alreadyGranted) {
-        settings.setValue(kLinuxDefaultLicenseKey, true);
+    // Linux builds are free, but the grant is cryptographic, not a flag: the
+    // built-in license below is only honored when its Ed25519 signature
+    // verifies against the embedded public key.  Rebuild the exact canonical
+    // payload that was signed offline (see the constants at the top of this
+    // file) and verify it like any server-issued license.
+    QJsonObject obj;
+    obj.insert(QStringLiteral("key_id"), QStringLiteral("LINUX-BUILTIN"));
+    obj.insert(QStringLiteral("plan"), QStringLiteral("personal_lifetime"));
+    obj.insert(QStringLiteral("device_hash"), QString());
+    obj.insert(QStringLiteral("device_components"), QJsonArray());
+    obj.insert(QStringLiteral("issued_at"),
+               static_cast<double>(kLinuxBuiltinLicenseIssuedAt));
+    obj.insert(QStringLiteral("expires_at"), 0.0);
+
+    const QByteArray payloadJson = canonicalPayloadJson(obj);
+    const QByteArray signature = base64UrlDecodeBytes(
+        QString::fromLatin1(kLinuxBuiltinLicenseSignature));
+    if (signature.size() != 64 || !verifyEd25519Signature(payloadJson, signature)) {
+        return false;
     }
 
     currentInfo_.keyId = QStringLiteral("LINUX-BUILTIN");
     currentInfo_.plan = LicensePlan::PersonalLifetime;
     currentInfo_.deviceHash = deviceFingerprint();
-    currentInfo_.issuedAt = QDateTime::currentDateTimeUtc();
-    currentInfo_.expiresAt = QDateTime();
-    currentInfo_.rawPayload.clear();
+    currentInfo_.issuedAt =
+        QDateTime::fromSecsSinceEpoch(kLinuxBuiltinLicenseIssuedAt).toUTC();
+    currentInfo_.expiresAt = QDateTime(); // lifetime
+    currentInfo_.rawPayload = payloadJson;
     setState(LicenseState::Activated);
     return true;
 #endif
