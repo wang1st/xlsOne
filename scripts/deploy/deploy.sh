@@ -140,9 +140,40 @@ select_platform() {
 # -----------------------------------------------------------------------------
 # 版本号输入
 # -----------------------------------------------------------------------------
+current_project_version() {
+    python3 - "${CPP_DIR}/CMakeLists.txt" "${SITE_DIR}/api/version.json" <<'PYEOF'
+import json
+import re
+import sys
+from pathlib import Path
+
+cmake_path = Path(sys.argv[1])
+version_json_path = Path(sys.argv[2])
+
+if cmake_path.exists():
+    text = cmake_path.read_text(encoding="utf-8")
+    match = re.search(r"project\([^)]*?\bVERSION\s+([0-9]+\.[0-9]+\.[0-9]+)", text, re.S)
+    if match:
+        print(match.group(1))
+        raise SystemExit(0)
+
+if version_json_path.exists():
+    data = json.loads(version_json_path.read_text(encoding="utf-8"))
+    version = data.get("latest_version", "")
+    if re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", version):
+        print(version)
+        raise SystemExit(0)
+
+raise SystemExit(1)
+PYEOF
+}
+
 input_version() {
     local current_version
-    current_version="$(grep -oP 'VERSION\s+\K[0-9]+\.[0-9]+\.[0-9]+' "${CPP_DIR}/CMakeLists.txt" | head -1)"
+    if ! current_version="$(current_project_version)"; then
+        print_error "无法自动识别当前版本号，请检查 cpp/CMakeLists.txt 或 site/api/version.json"
+        exit 1
+    fi
     local version
     while true; do
         printf "\n请输入版本号 [当前: ${CYAN}%s${RESET}]: " "$current_version" >&2
