@@ -223,6 +223,7 @@ input_password() {
 update_version_files() {
     local version="$1"
     local changelog="$2"
+    local platform="${3:-all}"
     local major minor patch
     IFS='.' read -r major minor patch <<< "$version"
 
@@ -261,13 +262,18 @@ for path in Path(site_dir).rglob("*.html"):
         path.write_text(updated, encoding="utf-8")
 PYEOF
 
+    if [[ "$platform" != "all" ]]; then
+        print_warning "分批部署模式：只更新 ${platform} 对应的下载地址和 checksum，其它平台保持原样"
+    fi
+
     print_info "更新 site/api/version.json"
-    python3 - "$version" "$changelog" "$SITE_DIR/api/version.json" <<'PYEOF'
+    python3 - "$version" "$changelog" "$platform" "$SITE_DIR/api/version.json" <<'PYEOF'
 import json
 import sys
 from pathlib import Path
+from urllib.parse import urlparse
 
-version, changelog, path = sys.argv[1:4]
+version, changelog, platform, path = sys.argv[1:5]
 api_path = Path(path)
 
 data = json.loads(api_path.read_text(encoding='utf-8')) if api_path.exists() else {
@@ -281,32 +287,49 @@ old_version = data.get("latest_version", version)
 data["latest_version"] = version
 data["changelog"] = changelog
 
-new_downloads = {}
-for key, url in data.get("downloads", {}).items():
-    new_downloads[key] = url.replace(old_version, version)
+def canonical_downloads(v):
+    return {
+        "linux_arm64": f"https://z-pulse.cn/downloads/xlsOne-{v}-linux-arm64.deb",
+        "linux_amd64": f"https://z-pulse.cn/downloads/xlsOne-{v}-linux-amd64.deb",
+        "windows_amd64": f"https://z-pulse.cn/downloads/xlsone-{v}-windows-amd64.msi",
+        "windows_amd64_zip": f"https://z-pulse.cn/downloads/xlsone-{v}-windows-amd64.zip",
+        # macOS 直发统一使用 Qt universal DMG，单个包覆盖 Intel + Apple Silicon。
+        "macos": f"https://z-pulse.cn/downloads/xlsOne-{v}-macos-universal.dmg",
+    }
 
-if "linux_arm64" not in new_downloads:
-    new_downloads["linux_arm64"] = f"https://z-pulse.cn/downloads/xlsOne-{version}-linux-arm64.deb"
-if "linux_amd64" not in new_downloads:
-    new_downloads["linux_amd64"] = f"https://z-pulse.cn/downloads/xlsOne-{version}-linux-amd64.deb"
-if "windows_amd64" not in new_downloads:
-    new_downloads["windows_amd64"] = f"https://z-pulse.cn/downloads/xlsone-{version}-windows-amd64.msi"
-if "windows_amd64_zip" not in new_downloads:
-    new_downloads["windows_amd64_zip"] = f"https://z-pulse.cn/downloads/xlsone-{version}-windows-amd64.zip"
+platform_download_keys = {
+    "linux_arm64": ["linux_arm64"],
+    "linux_amd64": ["linux_amd64"],
+    "windows": ["windows_amd64", "windows_amd64_zip"],
+    "macos": ["macos"],
+    "all": ["linux_arm64", "linux_amd64", "windows_amd64", "windows_amd64_zip", "macos"],
+}
 
-# macOS 直发统一使用 Qt universal DMG，单个包覆盖 Intel + Apple Silicon。
-new_downloads["macos"] = f"https://z-pulse.cn/downloads/xlsOne-{version}-macos-universal.dmg"
+selected_keys = platform_download_keys.get(platform)
+if selected_keys is None:
+    raise SystemExit(f"Unknown deploy platform: {platform}")
 
-data["downloads"] = new_downloads
+downloads = dict(data.get("downloads", {}))
+checksums = dict(data.get("checksums", {}))
+canonical = canonical_downloads(version)
 
-# checksums 的 key 也随版本更新
-new_checksums = {}
-for fname, checksum in data.get("checksums", {}).items():
-    new_fname = fname.replace(old_version, version)
-    new_checksums[new_fname] = checksum
+# 分批部署时只更新当前平台的 URL；其它平台下载地址保持原样。
+# 同时移除当前平台旧文件名对应的 checksum，避免新旧包哈希混在一起。
+old_selected_filenames_by_key = {}
+for key in selected_keys:
+    old_url = downloads.get(key, "")
+    old_fname = Path(urlparse(old_url).path).name
+    if old_fname:
+        old_selected_filenames_by_key[key] = old_fname
+    downloads[key] = canonical[key]
 
-# 保留已知包的旧 checksum 不会丢失，新的包需要后续计算再写入
-data["checksums"] = new_checksums
+for key, old_fname in old_selected_filenames_by_key.items():
+    new_fname = Path(urlparse(downloads[key]).path).name
+    if old_fname != new_fname:
+        checksums.pop(old_fname, None)
+
+data["downloads"] = downloads
+data["checksums"] = checksums
 
 api_path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding='utf-8')
 PYEOF
@@ -816,7 +839,7 @@ main() {
 
     # 步骤 1: 更新版本信息
     print_step 1 4 "更新版本信息"
-    update_version_files "$version" "$changelog"
+    update_version_files "$version" "$changelog" "$platform"
 
     # 步骤 2: 定位/构建安装包
     print_step 2 4 "定位或构建安装包"
@@ -870,4 +893,6 @@ main() {
     printf "${GREEN}╚════════════════════════════════════════════════════════════════╝${RESET}\n\n" >&2
 }
 
-main "$@"
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+    main "$@"
+fi
