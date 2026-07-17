@@ -76,6 +76,7 @@ private slots:
     void licenseManagerExpiredBlocksWatermarkAndLimitsFiles();
     void licenseManagerGracePeriodKeepsFullCapabilities();
     void licenseManagerActiveTrialGrantsFullCapabilities();
+    void licenseManagerInvalidPersistedLicenseDoesNotRecurse();
 
 private:
     QTemporaryDir settingsTempDir_;
@@ -1161,7 +1162,9 @@ void CoreTests::updateCheckerFindsNewVersionOnline()
         "latest_version": "0.2.0",
         "changelog": "test",
         "downloads": {
-            "linux": "https://z-pulse.cn/downloads/test.AppImage"
+            "linux": "https://z-pulse.cn/downloads/test.AppImage",
+            "macos": "https://z-pulse.cn/downloads/test.AppImage",
+            "windows": "https://z-pulse.cn/downloads/test.AppImage"
         }
     })";
     const auto info = UpdateChecker::parseUpdateInfo(json);
@@ -1272,6 +1275,28 @@ void CoreTests::licenseManagerActiveTrialGrantsFullCapabilities()
     QVERIFY(manager.isFullyLicensed());
     QCOMPARE(manager.maxImportFiles(), INT_MAX);
     QVERIFY(manager.exportWatermarkText().isEmpty());
+}
+
+void CoreTests::licenseManagerInvalidPersistedLicenseDoesNotRecurse()
+{
+    QSettings settings;
+    settings.clear();
+
+    const QString invalidSignature = QString::fromLatin1(
+        QByteArray(64, '\0').toBase64(QByteArray::Base64UrlEncoding |
+                                      QByteArray::OmitTrailingEquals));
+    const QString invalidLicense = QStringLiteral(
+        R"({"key_id":"TEST-INVALID","plan":"personal_yearly","device_hash":"","device_components":[],"issued_at":1,"expires_at":2,"signature":"%1"})")
+        .arg(invalidSignature);
+    settings.setValue(QStringLiteral("license/token"), invalidLicense);
+
+    xlsone::LicenseManager manager;
+    QVERIFY(!QSettings().contains(QStringLiteral("license/token")));
+#if defined(Q_OS_LINUX)
+    QCOMPARE(manager.state(), xlsone::LicenseState::Activated);
+#else
+    QCOMPARE(manager.state(), xlsone::LicenseState::Unactivated);
+#endif
 }
 
 #include "core_tests.moc"

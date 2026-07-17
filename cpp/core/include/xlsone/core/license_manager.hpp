@@ -139,8 +139,8 @@ private:
     void setState(LicenseState s);
     void loadPersistedState();
     bool loadOrCreateLinuxDefaultLicense();
-    bool verifyEd25519Signature(const QByteArray& message, const QByteArray& signature) const;
-    bool checkDeviceHash(const QJsonObject& licenseObj, const QString& actualFingerprint) const;
+    static bool verifyEd25519Signature(const QByteArray& message, const QByteArray& signature);
+    static bool checkDeviceHash(const QJsonObject& licenseObj, const QString& actualFingerprint);
 
     /// Parse and verify a stored license without checking expiry.
     /// Used to preserve Expired state for valid-but-expired licenses.

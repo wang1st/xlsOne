@@ -633,7 +633,7 @@ bool LicenseManager::importOfflineLicenseFile(const QString& path,
 }
 
 bool LicenseManager::verifyEd25519Signature(const QByteArray& message,
-                                            const QByteArray& signature) const
+                                            const QByteArray& signature)
 {
     if (signature.size() != 64) {
         return false;
@@ -650,7 +650,7 @@ bool LicenseManager::verifyEd25519Signature(const QByteArray& message,
 }
 
 bool LicenseManager::checkDeviceHash(const QJsonObject& licenseObj,
-                                     const QString& actualFingerprint) const
+                                     const QString& actualFingerprint)
 {
     const QString expectedHash = licenseObj.value(QStringLiteral("device_hash")).toString();
     if (expectedHash.isEmpty()) {
@@ -718,14 +718,10 @@ bool LicenseManager::parseVerifiedLicenseInfo(const QByteArray& licenseData,
         return false;
     }
 
-    // We need an instance to call the non-static verification helpers.
-    // A temporary LicenseManager with no parent is sufficient because these
-    // helpers do not access member state.
-    LicenseManager temp(nullptr);
-    if (!temp.verifyEd25519Signature(payloadJson, sig)) {
+    if (!verifyEd25519Signature(payloadJson, sig)) {
         return false;
     }
-    if (!temp.checkDeviceHash(obj, fingerprint)) {
+    if (!checkDeviceHash(obj, fingerprint)) {
         return false;
     }
 

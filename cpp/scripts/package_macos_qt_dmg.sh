@@ -343,6 +343,8 @@ if [ "$BUILD_ARCH" = "universal" ]; then
     fi
     if [ "$DOMESTIC" -eq 1 ]; then
         child_args+=(--domestic)
+    else
+        child_args+=(--international)
     fi
 
     echo "==> Building arm64 app bundle ..."
