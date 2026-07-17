@@ -452,3 +452,12 @@ else
     echo "Error: No .deb file found in $BUILD_DIR" >&2
     exit 1
 fi
+
+# ---------------------------------------------------------------------------
+# Collect the package into the repo-level .build/ dir so deploy.sh can find it
+# ---------------------------------------------------------------------------
+ARTIFACT_DIR="$PROJECT_ROOT/../.build"
+mkdir -p "$ARTIFACT_DIR"
+cp -f "$DEB_FILE" "$ARTIFACT_DIR/"
+echo ""
+echo "Collected:   $ARTIFACT_DIR/$(basename "$DEB_FILE")"

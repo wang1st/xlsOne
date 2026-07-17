@@ -251,6 +251,9 @@ $cmakeArgs = @(
     "-S", (Join-Path $RepoRoot "cpp"),
     "-B", $BuildDir,
     "-G", "Ninja",
+    # Pin the ninja validated above; otherwise a stale CMAKE_MAKE_PROGRAM in
+    # CMakeCache.txt (e.g. a removed pip ninja shim) breaks the configure.
+    "-DCMAKE_MAKE_PROGRAM=$($ninja.Source -replace '\\','/')",
     "-DCMAKE_BUILD_TYPE=$Preset",
     "-DCMAKE_PREFIX_PATH=$QtRoot",
     "-DQt${qtMajor}_DIR=$qtCmakeDir"
@@ -328,4 +331,14 @@ if (Test-Path $msi) {
 if (Test-Path $zip) {
     $zipSize = (Get-Item $zip).Length / 1MB
     Write-Host ("ZIP size: {0:F1} MB" -f $zipSize)
+}
+
+# --- Collect artifacts into .build/ so scripts/deploy/deploy.sh can find them ---
+$artifactDir = Join-Path $RepoRoot ".build"
+New-Item -ItemType Directory -Force -Path $artifactDir | Out-Null
+foreach ($pkg in @($msi, $zip)) {
+    if (Test-Path $pkg) {
+        Copy-Item -Force $pkg (Join-Path $artifactDir (Split-Path $pkg -Leaf))
+        Write-Host "[OK] collected: .build\$(Split-Path $pkg -Leaf)" -ForegroundColor Green
+    }
 }

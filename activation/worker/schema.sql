@@ -37,8 +37,8 @@ CREATE TABLE IF NOT EXISTS windows_keys (
   key_id      TEXT PRIMARY KEY,          -- XLS1-A2B3-C4D5
   plan        TEXT NOT NULL DEFAULT 'personal_lifetime',
   status      TEXT NOT NULL DEFAULT 'available',  -- available / activated / exhausted / revoked
-  max_activations INTEGER NOT NULL DEFAULT 3,     -- 最大激活次数
-  activation_count INTEGER NOT NULL DEFAULT 0,     -- 已消耗激活次数
+  max_activations INTEGER NOT NULL DEFAULT 3,     -- 最多可激活设备数
+  activation_count INTEGER NOT NULL DEFAULT 0,     -- 已激活的不同设备数
   duration_days INTEGER,                  -- 有效期天数（0=永久）
   order_id    TEXT,                      -- 爱发电订单号
   email       TEXT,                      -- 购买者邮箱

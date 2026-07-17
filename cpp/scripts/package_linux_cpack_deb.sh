@@ -38,4 +38,9 @@ if [ -n "${deb_file:-}" ]; then
         echo "No Kylin signing key available; ${deb_file} is unsigned."
         echo "kylin-installer may refuse to install it. Use: sudo dpkg -i ${deb_file}"
     fi
+
+    # Collect into the repo-level .build/ dir so deploy.sh can find it.
+    mkdir -p "${root}/../.build"
+    cp -f "$deb_file" "${root}/../.build/"
+    echo "Collected: ${root}/../.build/$(basename "$deb_file")"
 fi

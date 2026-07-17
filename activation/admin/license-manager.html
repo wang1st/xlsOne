@@ -330,7 +330,7 @@ function renderGenerate(c) {
         <input type="number" id="count" value="1" min="1" max="100">
       </div>
       <div class="form-group">
-        <label>最大激活次数</label>
+        <label>最多可激活设备数</label>
         <input type="number" id="maxActivations" value="3" min="1" max="10">
         <div style="font-size:12px;color:#94a3b8;margin-top:4px">同一授权码可在几台设备上激活使用</div>
       </div>
@@ -538,7 +538,7 @@ async function showKeyDetail(keyId) {
       <div class="detail-row"><span class="detail-label">授权码</span><span class="detail-value">${k.key_id}</span></div>
       <div class="detail-row"><span class="detail-label">套餐</span><span class="detail-value">${formatPlan(k.plan)}</span></div>
       <div class="detail-row"><span class="detail-label">状态</span><span class="detail-value"><span class="status-badge status-${k.status}">${statusText}</span></span></div>
-      <div class="detail-row"><span class="detail-label">激活次数</span><span class="detail-value">${k.activation_count || 0} / ${k.max_activations}</span></div>
+      <div class="detail-row"><span class="detail-label">已激活设备数</span><span class="detail-value">${k.activation_count || 0} / ${k.max_activations}</span></div>
       <div class="detail-row"><span class="detail-label">有效期</span><span class="detail-value">${k.duration_days ? k.duration_days + '天' : '永久'}</span></div>
       <div class="detail-row"><span class="detail-label">创建时间</span><span class="detail-value">${new Date(k.created_at).toLocaleDateString('zh-CN')}</span></div>
       ${devices.length ? '<div class="section"><div class="section-header"><span class="section-title">设备 (' + devices.length + ')</span></div>' + devices.map(d => `

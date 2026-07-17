@@ -349,19 +349,37 @@ locate_or_build_package() {
 
     case "$platform" in
         linux_amd64)
-            package_path="${CPP_DIR}/build-linux-release/xlsone-${version}-linux-amd64.deb"
-            if [[ -f "$package_path" ]]; then
+            local deb_name="xlsone-${version}-linux-amd64.deb"
+            local candidates=(
+                "${PROJECT_ROOT}/.build/${deb_name}"
+                "${CPP_DIR}/build-linux-release/${deb_name}"
+            )
+            package_path=""
+            local candidate
+            for candidate in "${candidates[@]}"; do
+                if [[ -f "$candidate" ]]; then package_path="$candidate"; break; fi
+            done
+            if [[ -n "$package_path" ]]; then
                 print_info "找到已构建的 Linux AMD64 包: $package_path"
             else
                 printf "\n"
-                print_warning "未找到 Linux AMD64 包: $package_path"
+                print_warning "未找到 Linux AMD64 包，已检查："
+                for candidate in "${candidates[@]}"; do
+                    print_info "  $candidate"
+                done
                 printf "是否立即调用统一 Linux 打包脚本构建？${YELLOW}(需要 Linux + Qt5 + CPack)${RESET} [y/N]: " >&2
                 local build
                 read -r build
                 if [[ "$build" =~ ^[yY]$ ]]; then
-                    build_linux_deb_package "amd64" "$package_path" || exit 1
-                    if [[ ! -f "$package_path" ]]; then
-                        print_error "构建后仍未找到包: $package_path"
+                    build_linux_deb_package "amd64" "${candidates[0]}" || exit 1
+                    for candidate in "${candidates[@]}"; do
+                        if [[ -f "$candidate" ]]; then package_path="$candidate"; break; fi
+                    done
+                    if [[ -z "$package_path" ]]; then
+                        print_error "构建后仍未找到包，已检查："
+                        for candidate in "${candidates[@]}"; do
+                            print_info "  $candidate"
+                        done
                         exit 1
                     fi
                 else
@@ -373,22 +391,40 @@ locate_or_build_package() {
             return
             ;;
         linux_arm64)
-            package_path="${CPP_DIR}/build-linux-release/xlsone-${version}-linux-arm64.deb"
-            if [[ -f "$package_path" ]]; then
+            local deb_name="xlsone-${version}-linux-arm64.deb"
+            local candidates=(
+                "${PROJECT_ROOT}/.build/${deb_name}"
+                "${CPP_DIR}/build-linux-release/${deb_name}"
+            )
+            package_path=""
+            local candidate
+            for candidate in "${candidates[@]}"; do
+                if [[ -f "$candidate" ]]; then package_path="$candidate"; break; fi
+            done
+            if [[ -n "$package_path" ]]; then
                 print_info "找到已构建的 Linux ARM64 包: $package_path"
             else
-                print_warning "未找到 Linux ARM64 包: $package_path"
+                print_warning "未找到 Linux ARM64 包，已检查："
+                for candidate in "${candidates[@]}"; do
+                    print_info "  $candidate"
+                done
                 printf "是否立即调用统一 Linux 打包脚本构建？${YELLOW}(需要 ARM64 Linux + Qt5 + CPack)${RESET} [y/N]: " >&2
                 local build
                 read -r build
                 if [[ "$build" =~ ^[yY]$ ]]; then
-                    build_linux_deb_package "arm64" "$package_path" || exit 1
-                    if [[ ! -f "$package_path" ]]; then
-                        print_error "构建后仍未找到包: $package_path"
+                    build_linux_deb_package "arm64" "${candidates[0]}" || exit 1
+                    for candidate in "${candidates[@]}"; do
+                        if [[ -f "$candidate" ]]; then package_path="$candidate"; break; fi
+                    done
+                    if [[ -z "$package_path" ]]; then
+                        print_error "构建后仍未找到包，已检查："
+                        for candidate in "${candidates[@]}"; do
+                            print_info "  $candidate"
+                        done
                         exit 1
                     fi
                 else
-                    print_info "请手动构建后放到: $package_path"
+                    print_info "请手动构建后放到: ${candidates[0]}"
                     printf "是否继续不上传此包？ [Y/n]: " >&2
                     local cont
                     read -r cont
@@ -402,18 +438,36 @@ locate_or_build_package() {
             return
             ;;
         windows)
-            package_path="${CPP_DIR}/build-windows-cn-release/xlsone-${version}-windows-amd64.msi"
-            local zip_path="${CPP_DIR}/build-windows-cn-release/xlsone-${version}-windows-amd64.zip"
-            if [[ -f "$package_path" && -f "$zip_path" ]]; then
+            local msi_name="xlsone-${version}-windows-amd64.msi"
+            local zip_name="xlsone-${version}-windows-amd64.zip"
+            local msi_candidates=(
+                "${PROJECT_ROOT}/.build/${msi_name}"
+                "${CPP_DIR}/build-windows-cn-release/${msi_name}"
+            )
+            local zip_candidates=(
+                "${PROJECT_ROOT}/.build/${zip_name}"
+                "${CPP_DIR}/build-windows-cn-release/${zip_name}"
+            )
+            package_path=""
+            local zip_path=""
+            local candidate
+            for candidate in "${msi_candidates[@]}"; do
+                if [[ -f "$candidate" ]]; then package_path="$candidate"; break; fi
+            done
+            for candidate in "${zip_candidates[@]}"; do
+                if [[ -f "$candidate" ]]; then zip_path="$candidate"; break; fi
+            done
+            if [[ -n "$package_path" && -n "$zip_path" ]]; then
                 print_info "找到 Windows 安装包: $package_path"
                 print_info "找到 Windows 便携包: $zip_path"
                 normalize_package_name "windows" "$package_path"
                 normalize_package_name "windows_zip" "$zip_path"
                 return
             else
-                print_warning "未找到 Windows 包，期望路径："
-                print_info "  $package_path"
-                print_info "  $zip_path"
+                print_warning "未找到 Windows 包，已检查："
+                for candidate in "${msi_candidates[@]}" "${zip_candidates[@]}"; do
+                    print_info "  $candidate"
+                done
                 printf "是否继续不上传 Windows 包？ [Y/n]: " >&2
                 local cont
                 read -r cont
