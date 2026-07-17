@@ -23,10 +23,7 @@
  *   GET  /api/admin/pool-stats            激活码池统计（available/activated/exhausted/revoked）
  *   GET  /api/admin/windows-keys           Windows 激活码列表查询（分页、筛选、搜索）
  *   GET  /api/admin/windows-keys/:id        Windows 激活码详情（含设备列表）
- *   POST /api/admin/windows-keys/:id/revoke  吊销 Windows 激活码
- *   POST /api/admin/windows-keys/:id/restore 恢复 Windows 激活码
- *   GET  /api/admin/windows-devices         Windows 设备列表查询（分页、筛选）
- *   POST /api/admin/windows-devices/:id/revoke 解绑 Windows 设备
+ *   GET  /api/admin/windows-keys/export     导出所有可用激活码文本列表（每行一个）
  *   GET  ${ADMIN_PATH}                   授权码管理系统（管理页面，由 ADMIN_PATH 配置，默认 /xlsone/license-console）
  *   GET  /offline /xlsone/offline         离线激活网页
  *   GET  /downloads / /downloads/*         安装包下载页 / 静态文件
@@ -313,8 +310,8 @@ async function issueWindowsLicense(keyId, deviceHash, deviceName, deviceComponen
   const payload = JSON.parse(payloadJson);
   const license = Object.assign({}, payload, { signature });
 
-  // 计算新的激活次数：同设备重装不计数，换设备 +1
-  const newCount = (isSameDevice || isFirstActivation) ? activationCount : activationCount + 1;
+  // 计算新的激活次数：同设备重装不计数，换设备/首次激活 +1
+  const newCount = isSameDevice ? activationCount : activationCount + 1;
 
   // Upsert device
   store.windows_devices[deviceHash] = {
@@ -450,6 +447,7 @@ function sendJson(res, status, obj) {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Cache-Control': 'no-store',
   });
   res.end(data);
 }
@@ -503,7 +501,7 @@ const server = http.createServer(async (req, res) => {
       return sendFile(res, path.join(PUBLIC_DIR, 'offline.html'), 'text/html; charset=utf-8');
     }
     if (method === 'GET' && p === ADMIN_PATH) {
-      const adminHtml = path.join(__dirname, '..', 'admin', 'license-manager.html');
+      const adminHtml = path.join(__dirname, 'public', 'license-manager.html');
       return sendFile(res, adminHtml, 'text/html; charset=utf-8');
     }
     if (method === 'GET' && p === '/downloads') {
@@ -775,7 +773,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     // ---- API: admin windows key detail ----
-    if (method === 'GET' && p.startsWith('/api/admin/windows-keys/')) {
+    if (method === 'GET' && p.startsWith('/api/admin/windows-keys/') && !p.endsWith('/export')) {
       if (!requireAdmin(req, res)) return;
       const keyId = path.basename(p).toUpperCase();
       const keyRow = store.windows_keys[keyId];
@@ -785,33 +783,20 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, { key: keyRow, devices });
     }
 
-    // ---- API: admin revoke windows key ----
-    if (method === 'POST' && p.startsWith('/api/admin/windows-keys/') && p.endsWith('/revoke')) {
+    // ---- API: admin export windows keys (plain text for copy) ----
+    if (method === 'GET' && p === '/api/admin/windows-keys/export') {
       if (!requireAdmin(req, res)) return;
-      const keyId = path.basename(path.dirname(p)).toUpperCase();
-      const keyRow = store.windows_keys[keyId];
-      if (!keyRow) return sendJson(res, 404, { error: 'KEY_NOT_FOUND' });
-      if (keyRow.status === 'revoked') return sendJson(res, 400, { error: 'ALREADY_REVOKED' });
-
-      keyRow.status = 'revoked';
-      keyRow.revoked_at = new Date().toISOString();
-      saveStoreSoon();
-      return sendJson(res, 200, { key_id: keyId, status: 'revoked' });
-    }
-
-    // ---- API: admin restore windows key ----
-    if (method === 'POST' && p.startsWith('/api/admin/windows-keys/') && p.endsWith('/restore')) {
-      if (!requireAdmin(req, res)) return;
-      const keyId = path.basename(path.dirname(p)).toUpperCase();
-      const keyRow = store.windows_keys[keyId];
-      if (!keyRow) return sendJson(res, 404, { error: 'KEY_NOT_FOUND' });
-      if (keyRow.status !== 'revoked') return sendJson(res, 400, { error: 'NOT_REVOKED' });
-
-      const newStatus = (keyRow.activation_count || 0) >= (keyRow.max_activations || DEFAULT_MAX_ACTIVATIONS) ? 'exhausted' : 'available';
-      keyRow.status = newStatus;
-      delete keyRow.revoked_at;
-      saveStoreSoon();
-      return sendJson(res, 200, { key_id: keyId, status: newStatus });
+      const status = url.searchParams.get('status') || 'available';
+      const plan = url.searchParams.get('plan') || '';
+      let keys = Object.values(store.windows_keys);
+      if (status) keys = keys.filter(k => k.status === status);
+      if (plan) keys = keys.filter(k => k.plan === plan);
+      const text = keys.map(k => k.key_id).join('\n');
+      res.writeHead(200, {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Access-Control-Allow-Origin': '*',
+      });
+      return res.end(text);
     }
 
     // ---- API: admin windows devices list ----
@@ -819,16 +804,11 @@ const server = http.createServer(async (req, res) => {
       if (!requireAdmin(req, res)) return;
       const keyId = (url.searchParams.get('key_id') || '').toUpperCase();
       const search = url.searchParams.get('search') || '';
-      const revoked = url.searchParams.get('revoked');
       const page = Math.max(parseInt(url.searchParams.get('page'), 10) || 1, 1);
       const limit = Math.min(Math.max(parseInt(url.searchParams.get('limit'), 10) || 20, 1), 100);
 
       let devices = Object.values(store.windows_devices);
       if (keyId) devices = devices.filter(d => d.key_id === keyId);
-      if (revoked !== null && revoked !== '') {
-        const r = parseInt(revoked, 10);
-        devices = devices.filter(d => d.revoked === r);
-      }
       if (search) {
         const s = search.toUpperCase();
         devices = devices.filter(d =>
@@ -845,28 +825,6 @@ const server = http.createServer(async (req, res) => {
         devices: paginated,
         pagination: { page, limit, total, pages: Math.ceil(total / limit) }
       });
-    }
-
-    // ---- API: admin revoke windows device ----
-    if (method === 'POST' && p.startsWith('/api/admin/windows-devices/') && p.endsWith('/revoke')) {
-      if (!requireAdmin(req, res)) return;
-      const deviceId = path.basename(path.dirname(p));
-      const device = store.windows_devices[deviceId];
-      if (!device) return sendJson(res, 404, { error: 'DEVICE_NOT_FOUND' });
-      if (device.revoked) return sendJson(res, 400, { error: 'ALREADY_REVOKED' });
-
-      device.revoked = 1;
-      device.revoked_at = new Date().toISOString();
-
-      const keyRow = store.windows_keys[device.key_id];
-      if (keyRow && keyRow.activation_count > 0) {
-        keyRow.activation_count--;
-        if (keyRow.status === 'exhausted') {
-          keyRow.status = 'activated';
-        }
-      }
-      saveStoreSoon();
-      return sendJson(res, 200, { device_id: deviceId, revoked: true });
     }
 
     // ---- API: admin generate (macOS) ----

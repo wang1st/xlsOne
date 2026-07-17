@@ -38,7 +38,6 @@
 #include <QShowEvent>
 #include <QSplitter>
 #include <QStatusBar>
-#include <QTimer>
 #include <QUrl>
 #include <QVBoxLayout>
 
@@ -606,17 +605,6 @@ void MainWindow::showEvent(QShowEvent* event)
     if (firstShow_) {
         firstShow_ = false;
         checkForUpdates();
-
-        // First-launch nag: show the license dialog once if the app is not
-        // already activated or in an active trial.
-        if (licenseManager_->state() == xlsone::LicenseState::Unactivated) {
-            QSettings settings;
-            const QString key = QStringLiteral("license/firstLaunchDialogShown");
-            if (!settings.value(key).toBool()) {
-                settings.setValue(key, true);
-                QTimer::singleShot(0, this, &MainWindow::showLicenseActivation);
-            }
-        }
     }
 }
 
@@ -1589,6 +1577,7 @@ void MainWindow::exportResult()
         const QString templatePath = selectedPaths_.isEmpty() ? QString() : selectedPaths_.front();
         const QString watermarkText = licenseManager_->exportWatermarkText();
         xlsone::TemplateWorkbookExporter().exportWorkbook(templatePath, results_, outputPath, watermarkText);
+        xlsone::ui::showToast(this, tr("导出成功"));
     } catch (const std::exception& error) {
         xlsone::ui::showCritical(this, tr("导出失败"), QString::fromUtf8(error.what()));
     }

@@ -217,6 +217,7 @@ async function apiCall(path, opts = {}) {
   const key = getApiKey();
   const resp = await fetch(base + path, {
     ...opts,
+    cache: 'no-store',
     headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json', ...opts.headers }
   });
   return resp;
@@ -305,6 +306,10 @@ async function renderDashboard(c) {
           <div class="quick-item" onclick="nav('keys')">
             <div class="icon">🔑</div>
             <div class="label">查看码列表</div>
+          </div>
+          <div class="quick-item" onclick="copyAllAvailable()">
+            <div class="icon">📋</div>
+            <div class="label">复制全部可用授权码</div>
           </div>
         </div>
       </div>
@@ -398,6 +403,15 @@ function copyAll() {
   const text = lastGenerated.map(i => i.code).join('\n');
   navigator.clipboard.writeText(text).then(() => toast('已复制全部', 'ok')).catch(() => toast('复制失败', 'err'));
 }
+async function copyAllAvailable() {
+  try {
+    const resp = await apiCall('/api/admin/windows-keys/export');
+    if (!resp.ok) { toast('获取失败', 'err'); return; }
+    const text = await resp.text();
+    if (!text.trim()) { toast('没有可用授权码', 'err'); return; }
+    navigator.clipboard.writeText(text).then(() => toast('已复制 ' + text.split('\n').filter(l=>l).length + ' 个授权码', 'ok')).catch(() => toast('复制失败', 'err'));
+  } catch (e) { toast('获取失败', 'err'); }
+}
 
 // ========== Keys List ==========
 async function renderKeys(c) {
@@ -408,11 +422,11 @@ async function renderKeys(c) {
       <span class="chip" onclick="setKeyFilter(this,'available')">可用</span>
       <span class="chip" onclick="setKeyFilter(this,'activated')">已激活</span>
       <span class="chip" onclick="setKeyFilter(this,'exhausted')">已用尽</span>
-      <span class="chip" onclick="setKeyFilter(this,'revoked')">已吊销</span>
     </div>
     <div id="keysList"><div class="empty"><div class="empty-icon">🔑</div><p>点击查询加载</p></div></div>
     <div class="pagination" id="keysPagination"></div>
     <button class="btn btn-primary" style="margin-top:12px" onclick="loadKeys()">查询</button>
+    <button class="btn btn-ok" style="margin-top:12px;margin-left:8px" onclick="copyAllAvailable()">📋 复制全部可用</button>
   `;
 }
 
@@ -501,21 +515,11 @@ function renderDevicesList(devices, pagination) {
         <div class="list-item-title">${d.device_name || '未命名设备'}</div>
         <div class="list-item-sub">${d.key_id}</div>
       </div>
-      ${d.revoked ? '<span class="status-badge status-revoked">已解绑</span>' : '<button class="btn btn-err btn-sm" onclick="event.stopPropagation();revokeDevice(\'' + d.device_id + '\')">解绑</button>'}
+      ${d.revoked ? '<span class="status-badge status-revoked">已解绑</span>' : '<span class="status-badge status-available">正常</span>'}
     </div>
   `).join('');
 
   renderPageBtns('devicesPagination', pagination, loadDevices);
-}
-
-async function revokeDevice(id) {
-  if (!confirm('解绑该设备？')) return;
-  try {
-    const resp = await apiCall('/api/admin/windows-devices/' + id + '/revoke', { method: 'POST' });
-    if (!resp.ok) { toast('解绑失败', 'err'); return; }
-    toast('已解绑', 'ok');
-    loadDevices(pageState.devices);
-  } catch (e) { toast('解绑失败', 'err'); }
 }
 
 // ========== Key Detail Modal ==========
@@ -547,31 +551,8 @@ async function showKeyDetail(keyId) {
           ${d.revoked ? '<span class="status-badge status-revoked">已解绑</span>' : '<span class="status-badge status-available">正常</span>'}
         </div>
       `).join('') + '</div>' : ''}
-      <div style="margin-top:16px;display:flex;gap:10px">
-        ${k.status !== 'revoked' ? `<button class="btn btn-err" onclick="revokeKey('${k.key_id}');closeModal()">吊销授权码</button>` : `<button class="btn btn-ok" onclick="restoreKey('${k.key_id}');closeModal()">恢复授权码</button>`}
-      </div>
     `;
   } catch (e) { content.innerHTML = '<div class="empty">加载失败</div>'; }
-}
-
-async function revokeKey(id) {
-  if (!confirm('吊销该授权码？')) return;
-  try {
-    const resp = await apiCall('/api/admin/windows-keys/' + id + '/revoke', { method: 'POST' });
-    if (!resp.ok) { toast('吊销失败', 'err'); return; }
-    toast('已吊销', 'ok');
-    if (currentPage === 'keys') loadKeys(pageState.keys);
-  } catch (e) { toast('吊销失败', 'err'); }
-}
-
-async function restoreKey(id) {
-  if (!confirm('恢复该授权码？')) return;
-  try {
-    const resp = await apiCall('/api/admin/windows-keys/' + id + '/restore', { method: 'POST' });
-    if (!resp.ok) { toast('恢复失败', 'err'); return; }
-    toast('已恢复', 'ok');
-    if (currentPage === 'keys') loadKeys(pageState.keys);
-  } catch (e) { toast('恢复失败', 'err'); }
 }
 
 function closeModal() { document.getElementById('modal').classList.remove('show'); }

@@ -38,6 +38,7 @@ QString getSaveFileNameCentered(
 void showInformation(QWidget* parent, const QString& title, const QString& text);
 void showWarning(QWidget* parent, const QString& title, const QString& text);
 void showCritical(QWidget* parent, const QString& title, const QString& text);
+void showToast(QWidget* parent, const QString& message);
 void showAbout(QWidget* parent, const QString& title, const QString& html);
 void showProductAbout(QWidget* parent, const QString& title, const QString& version, bool domesticBuild);
 QMessageBox::StandardButton askQuestion(QWidget* parent, const QString& title, const QString& text);

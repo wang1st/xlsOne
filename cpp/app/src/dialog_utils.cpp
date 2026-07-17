@@ -10,10 +10,12 @@
 #include <QDialog>
 #include <QFrame>
 #include <QFont>
+#include <QGraphicsOpacityEffect>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
 #include <QPixmap>
+#include <QPropertyAnimation>
 #include <QPushButton>
 #include <QScreen>
 #include <QTimer>
@@ -242,7 +244,7 @@ void showAbout(QWidget* parent, const QString& title, const QString& html)
 void showProductAbout(QWidget* parent, const QString& title, const QString& version, bool domesticBuild)
 {
     const auto& t = theme();
-    const QString domesticUrl = XLSONE_OBF_STRING("https://z-pulse.cn/xlsone/");
+    const QString domesticUrl = XLSONE_OBF_STRING("https://z-pulse.cn");
     const QString internationalUrl = XLSONE_OBF_STRING("https://xlsone.com/");
 
     QDialog dialog(parent);
@@ -330,6 +332,76 @@ QMessageBox::StandardButton askQuestion(QWidget* parent, const QString& title, c
         return QMessageBox::Yes;
     }
     return QMessageBox::No;
+}
+
+void showToast(QWidget* parent, const QString& message)
+{
+    auto* owner = ownerWindow(parent);
+    if (owner == nullptr) {
+        return;
+    }
+
+    const auto& t = theme();
+
+    auto* toast = new QFrame(owner);
+    toast->setObjectName(QStringLiteral("xlsoneToast"));
+    toast->setWindowFlags(Qt::ToolTip | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
+    toast->setAttribute(Qt::WA_TransparentForMouseEvents);
+    toast->setAttribute(Qt::WA_ShowWithoutActivating);
+    toast->setAttribute(Qt::WA_DeleteOnClose);
+    toast->setStyleSheet(QStringLiteral(
+        "#xlsoneToast { background: %1; border: 1px solid %2; border-radius: 10px; }"
+    ).arg(t.surface.name()).arg(t.border.name()));
+
+    auto* layout = new QHBoxLayout(toast);
+    layout->setContentsMargins(18, 12, 18, 12);
+    layout->setSpacing(10);
+
+    auto* iconLabel = new QLabel(toast);
+    iconLabel->setText(QStringLiteral("\u2713"));
+    iconLabel->setStyleSheet(QStringLiteral(
+        "color: %1; font-size: 16px; font-weight: bold; background: transparent;"
+    ).arg(t.success.name()));
+    iconLabel->setFixedWidth(20);
+    layout->addWidget(iconLabel);
+
+    auto* textLabel = new QLabel(message, toast);
+    textLabel->setStyleSheet(QStringLiteral(
+        "color: %1; font-size: 13px; background: transparent;"
+    ).arg(t.text.name()));
+    layout->addWidget(textLabel);
+
+    toast->adjustSize();
+
+    const int margin = 24;
+    const int x = owner->x() + (owner->width() - toast->width()) / 2;
+    const int y = owner->y() + owner->height() - toast->height() - margin;
+    toast->move(x, y);
+
+    auto* effect = new QGraphicsOpacityEffect(toast);
+    effect->setOpacity(0.0);
+    toast->setGraphicsEffect(effect);
+
+    auto* fadeIn = new QPropertyAnimation(effect, "opacity", toast);
+    fadeIn->setDuration(200);
+    fadeIn->setStartValue(0.0);
+    fadeIn->setEndValue(0.94);
+
+    toast->show();
+    toast->raise();
+    fadeIn->start(QAbstractAnimation::DeleteWhenStopped);
+
+    const int kVisibleMs = 2500;
+    QTimer::singleShot(kVisibleMs, toast, [toast]() {
+        auto* eff = qobject_cast<QGraphicsOpacityEffect*>(toast->graphicsEffect());
+        if (eff == nullptr) return;
+        auto* fadeOut = new QPropertyAnimation(eff, "opacity", toast);
+        fadeOut->setDuration(500);
+        fadeOut->setStartValue(0.94);
+        fadeOut->setEndValue(0.0);
+        fadeOut->start(QAbstractAnimation::DeleteWhenStopped);
+        QObject::connect(fadeOut, &QPropertyAnimation::finished, toast, &QWidget::close);
+    });
 }
 
 } // namespace xlsone::ui
