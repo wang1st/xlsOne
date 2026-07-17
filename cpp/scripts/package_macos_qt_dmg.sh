@@ -36,8 +36,8 @@ Usage:
 Options:
   --obfuscate            Enable compile-time secret obfuscation (requires
                          XLSONE_LICENSE_PUBLIC_KEY environment variable).
-  --domestic             Use domestic (China) service endpoints
-                         (api.z-pulse.cn instead of api.xlsone.com).
+  --international        Use international service endpoints
+                         (api.xlsone.com instead of the default api.z-pulse.cn).
   --signed               Enable code signing (requires --team-id or
                          XLSONE_DEVELOPMENT_TEAM environment variable).
   --team-id <id>         Apple Developer Team ID.
@@ -63,11 +63,11 @@ Environment:
   APP_SPECIFIC_PASSWORD       App-specific password for notarization.
 
 Examples:
-  # Unsigned DMG for local testing
+  # Unsigned DMG for local testing (domestic edition by default)
   ./cpp/scripts/package_macos_qt_dmg.sh
 
-  # Domestic (China) DMG
-  ./cpp/scripts/package_macos_qt_dmg.sh --domestic
+  # International DMG
+  ./cpp/scripts/package_macos_qt_dmg.sh --international
 
   # Signed DMG
   ./cpp/scripts/package_macos_qt_dmg.sh --signed --team-id ABCDE12345
@@ -90,7 +90,7 @@ BUILD_DIR=""
 OUTPUT_DMG=""
 VERSION=""
 OBFUSCATE=0
-DOMESTIC=0
+DOMESTIC=1       # Default: domestic (api.z-pulse.cn)
 SIGNED_BUILD=0
 TEAM_ID="${XLSONE_DEVELOPMENT_TEAM:-}"
 NOTARIZE=0
@@ -106,6 +106,10 @@ while [ $# -gt 0 ]; do
             ;;
         --domestic)
             DOMESTIC=1
+            shift
+            ;;
+        --international)
+            DOMESTIC=0
             shift
             ;;
         --signed)

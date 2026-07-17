@@ -31,7 +31,7 @@ static const QString kOfflineTokenKey = QStringLiteral("license/offline");
 static const QString kLastSeenUtcKey = QStringLiteral("license/lastSeenUtc");
 static const QString kClockErrorMessage = QStringLiteral("系统时间异常，请校准系统时间后重试");
 
-#if defined(Q_OS_LINUX)
+#if defined(Q_OS_LINUX) && defined(XLSONE_LINUX_BUILTIN_LICENSE)
 // Built-in Linux license, signed offline with the same Ed25519 private key as
 // server-issued licenses (rotation of 2026-07-17).  The payload is
 // reconstructed below and must match the signed bytes exactly:
@@ -760,27 +760,24 @@ void LicenseManager::onActivationReply(QNetworkReply* reply)
     ActivationResult result;
     result.trial = isTrialRequest;
 
-    if (reply->error() != QNetworkReply::NoError) {
-        result.success = false;
-        const QString errorString = reply->errorString();
-        if (errorString.isEmpty()) {
-            result.errorMessage = isTrialRequest
-                ? QStringLiteral("暂时无法连接试用服务器，请稍后重试")
-                : QStringLiteral("网络连接失败，请检查网络");
-        } else {
-            result.errorMessage = isTrialRequest
-                ? QStringLiteral("暂时无法连接试用服务器: %1").arg(errorString)
-                : QStringLiteral("网络错误: %1").arg(errorString);
-        }
-        emit activationFinished(result);
-        return;
-    }
-
     const int statusCode = reply->attribute(
         QNetworkRequest::HttpStatusCodeAttribute).toInt();
     const QByteArray body = reply->readAll();
     const QJsonDocument doc = QJsonDocument::fromJson(body);
 
+    // Genuine transport failure (no HTTP response at all).
+    if (statusCode == 0 && reply->error() != QNetworkReply::NoError) {
+        result.success = false;
+        result.errorMessage = isTrialRequest
+            ? QStringLiteral("暂时无法连接试用服务器，请稍后重试")
+            : QStringLiteral("网络连接失败，请检查网络");
+        emit activationFinished(result);
+        return;
+    }
+
+    // Parse server error from JSON body first — HTTP 4xx/5xx may trigger
+    // a spurious QNetworkReply error in some Qt backends (e.g. OpenSSL 1.1
+    // on Linux), but the JSON body is still correctly delivered.
     if (statusCode != 200 || !doc.isObject()) {
         result.success = false;
         if (doc.isObject()) {
@@ -901,7 +898,7 @@ void LicenseManager::loadPersistedState()
 
 bool LicenseManager::loadOrCreateLinuxDefaultLicense()
 {
-#if !defined(Q_OS_LINUX)
+#if !defined(Q_OS_LINUX) || !defined(XLSONE_LINUX_BUILTIN_LICENSE)
     return false;
 #else
     // Linux builds are free, but the grant is cryptographic, not a flag: the

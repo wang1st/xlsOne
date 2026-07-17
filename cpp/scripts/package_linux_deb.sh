@@ -8,7 +8,7 @@ set -euo pipefail
 # instead (recommended when building on the same OS as the target, e.g. UOS).
 #
 # Usage:
-#   ./cpp/scripts/package_linux_deb.sh [--system-qt] [build-dir]
+#   ./cpp/scripts/package_linux_deb.sh [--system-qt] [--bundle] [--international] [--builtin-license] [build-dir]
 
 ORIG_DIR="$(pwd)"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -17,6 +17,8 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"      # cpp/ directory
 # ---- Parse arguments ----
 BUNDLE_MODE="auto"     # auto | bundle | system
 BUILD_DIR=""
+DOMESTIC=1             # Default: domestic (api.z-pulse.cn)
+BUILTIN_LICENSE=0      # Default: no built-in license (requires online activation)
 
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -28,13 +30,25 @@ while [ $# -gt 0 ]; do
             BUNDLE_MODE="bundle"
             shift
             ;;
+        --international)
+            DOMESTIC=0
+            shift
+            ;;
+        --builtin-license)
+            BUILTIN_LICENSE=1
+            shift
+            ;;
         --help|-h)
-            echo "Usage: $0 [--system-qt|--no-bundle] [--bundle] [build-dir]"
+            echo "Usage: $0 [--system-qt|--no-bundle] [--bundle] [--international] [--builtin-license] [build-dir]"
             echo ""
             echo "  --system-qt, --no-bundle   Use system Qt5 packages (for UOS/Debian native builds)"
             echo "  --bundle, --self-contained Bundle Qt5 libraries (for KylinOS self-contained builds)"
+            echo "  --international            Use international endpoints (api.xlsone.com)"
+            echo "                             Default: domestic (api.z-pulse.cn)"
+            echo "  --builtin-license          Embed an offline-signed lifetime license (Linux only)."
+            echo "                             Default: require online activation like other platforms."
             echo ""
-            echo "  If neither flag is given, auto-detects based on build host."
+            echo "  If neither --system-qt nor --bundle is given, auto-detects based on build host."
             exit 0
             ;;
         -*)
@@ -356,6 +370,15 @@ if [ "$BUNDLE_MODE" = "system" ]; then
     CMAKE_EXTRA_ARGS="-DXLSONE_BUNDLE_QT=OFF"
 else
     CMAKE_EXTRA_ARGS="-DXLSONE_BUNDLE_QT=ON"
+fi
+if [ "$DOMESTIC" -eq 1 ]; then
+    CMAKE_EXTRA_ARGS="$CMAKE_EXTRA_ARGS -DXLSONE_ACTIVATION_BASE_URL=https://api.z-pulse.cn"
+fi
+# Always explicitly set, overriding any stale CMakeCache value.
+if [ "$BUILTIN_LICENSE" -eq 1 ]; then
+    CMAKE_EXTRA_ARGS="$CMAKE_EXTRA_ARGS -DXLSONE_LINUX_BUILTIN_LICENSE=ON"
+else
+    CMAKE_EXTRA_ARGS="$CMAKE_EXTRA_ARGS -DXLSONE_LINUX_BUILTIN_LICENSE=OFF"
 fi
 
 cmake -S "$PROJECT_ROOT" -B "$BUILD_DIR" \

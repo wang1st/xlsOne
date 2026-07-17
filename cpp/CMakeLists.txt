@@ -8,6 +8,7 @@ project(xlsOneQt
 
 # --- Obfuscation / hardening options ---
 option(XLSONE_OBFUSCATE "Enable compile-time obfuscation of secrets and strings" OFF)
+option(XLSONE_LINUX_BUILTIN_LICENSE "Enable built-in Ed25519-signed license for Linux builds (Linux only)" OFF)
 set(XLSONE_LICENSE_PUBLIC_KEY "" CACHE STRING
     "Ed25519 public key for license verification (64 hex chars). Required for a working obfuscated build.")
 

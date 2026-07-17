@@ -44,11 +44,12 @@
 .PARAMETER Clean
     Remove the build directory before configuring to ensure a fully reproducible build.
 
-.PARAMETER Domestic
-    Build the domestic (China mainland) edition. This points the activation
-    endpoint at https://api.z-pulse.cn instead of the default api.xlsone.com,
-    matching the windows-cn-release CMake preset. Output goes to
-    cpp/build-windows-cn-release.
+.PARAMETER International
+    Build the international edition. This points the activation endpoint at
+    https://api.xlsone.com instead of the default domestic https://api.z-pulse.cn.
+    Output goes to cpp/build-windows-release.
+
+    默认为国内版(api.z-pulse.cn)，无需传此开关。
 
 .PARAMETER Sign
     Code-sign the built xlsOneQt.exe and the resulting .msi with Authenticode
@@ -80,11 +81,11 @@
     .\scripts\package_windows_msi_zip.ps1
     .\scripts\package_windows_msi_zip.ps1 -QtRoot "D:\Qt\6.11.1\mingw_64" -MingwRoot "D:\Qt\Tools\mingw1310_64" -WiXRoot "D:\wix314"
     .\scripts\package_windows_msi_zip.ps1 -Clean
-    .\scripts\package_windows_msi_zip.ps1 -Domestic        # 国内版（api.z-pulse.cn）
+    .\scripts\package_windows_msi_zip.ps1 -International    # 国际版（api.xlsone.com）
     # 代码签名（PFX）:
-    .\scripts\package_windows_msi_zip.ps1 -Domestic -Sign -CertFile .\codesign.pfx -CertPassword ***
+    .\scripts\package_windows_msi_zip.ps1 -Sign -CertFile .\codesign.pfx -CertPassword ***
     # 代码签名（证书存储 thumbprint）:
-    .\scripts\package_windows_msi_zip.ps1 -Domestic -Sign -CertSha1 A1B2C3D4...
+    .\scripts\package_windows_msi_zip.ps1 -Sign -CertSha1 A1B2C3D4...
 #>
 param(
     [string]$QtRoot = "C:\Qt\6.11.1\mingw_64",
@@ -94,7 +95,7 @@ param(
     [string]$Preset = "Release",
     [string]$BuildDir = "",
     [switch]$Clean,
-    [switch]$Domestic,
+    [switch]$International,
     [switch]$Sign,
     [string]$SignTool = "",
     [string]$CertFile = "",
@@ -107,17 +108,17 @@ $ErrorActionPreference = "Stop"
 
 $RepoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 if ($BuildDir -eq "") {
-    if ($Domestic) {
-        $BuildDir = Join-Path (Join-Path $RepoRoot "cpp") "build-windows-cn-release"
+    if ($International) {
+        $BuildDir = Join-Path (Join-Path $RepoRoot "cpp") "build-windows-release"
     } else {
-        $BuildDir = Join-Path (Join-Path $RepoRoot "cpp") "build-windows-qt5-release"
+        $BuildDir = Join-Path (Join-Path $RepoRoot "cpp") "build-windows-cn-release"
     }
 }
 
-if ($Domestic) {
-    Write-Host "[Domestic] Activation endpoint baked in: https://api.z-pulse.cn" -ForegroundColor Magenta
-} else {
+if ($International) {
     Write-Host "[International] Activation endpoint baked in: https://api.xlsone.com" -ForegroundColor Cyan
+} else {
+    Write-Host "[Domestic] Activation endpoint baked in: https://api.z-pulse.cn" -ForegroundColor Magenta
 }
 
 if (-not $Sign) {
@@ -263,8 +264,8 @@ if ($qtMajor -eq "5") {
     $cmakeArgs += "-DZLIB_LIBRARY=$(Join-Path (Join-Path $ZlibRoot 'lib') 'libz.a')"
     $cmakeArgs += "-DZLIB_INCLUDE_DIR=$(Join-Path $ZlibRoot 'include')"
 }
-if ($Domestic) {
-    # Point the compiled-in activation base URL at the domestic backend.
+if (-not $International) {
+    # Point the compiled-in activation base URL at the domestic backend (default).
     # Mirrors the windows-cn-release CMake preset so the two paths stay in sync.
     $cmakeArgs += "-DXLSONE_ACTIVATION_BASE_URL=https://api.z-pulse.cn"
 }

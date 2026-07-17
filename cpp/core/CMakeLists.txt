@@ -70,3 +70,7 @@ else()
             XLSONE_ACTIVATION_BASE_URL="${XLSONE_ACTIVATION_BASE_URL}"
     )
 endif()
+
+if(XLSONE_LINUX_BUILTIN_LICENSE)
+    target_compile_definitions(xlsone_core PRIVATE XLSONE_LINUX_BUILTIN_LICENSE)
+endif()

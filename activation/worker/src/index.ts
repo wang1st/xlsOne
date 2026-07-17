@@ -379,7 +379,8 @@ async function issueWindowsLicense(
   const license = { ...payload, signature }
 
   // 计算新的激活次数
-  const newCount = (isSameDevice || isFirstActivation) ? activationCount : activationCount + 1
+  // 计算新的激活次数：同设备重装不计数，换设备/首次激活 +1
+  const newCount = isSameDevice ? activationCount : activationCount + 1
   const newStatus = newCount >= maxActivations ? 'exhausted' : 'activated'
 
   // Upsert device record
