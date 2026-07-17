@@ -212,3 +212,9 @@ if [[ "$NOTARIZE" -eq 1 ]]; then
 fi
 
 echo "Done: $OUTPUT_DMG"
+
+# Collect into the repo-level .build/ dir so the deploy script can find it.
+ARTIFACT_DIR="$REPO_ROOT/.build"
+mkdir -p "$ARTIFACT_DIR"
+cp -f "$OUTPUT_DMG" "$ARTIFACT_DIR/"
+echo "Collected: $ARTIFACT_DIR/$(basename "$OUTPUT_DMG")"

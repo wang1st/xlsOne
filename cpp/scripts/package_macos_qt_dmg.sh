@@ -500,11 +500,17 @@ if [ "$BUILD_ARCH" = "universal" ]; then
         xcrun stapler staple "$OUTPUT_DMG"
     fi
 
+    # Collect the DMG into the repo-level .build/ dir so deploy.sh can find it.
+    ARTIFACT_DIR="$REPO_ROOT/.build"
+    mkdir -p "$ARTIFACT_DIR"
+    cp -f "$OUTPUT_DMG" "$ARTIFACT_DIR/"
+
     echo ""
     echo "========================================="
     echo "  DMG generated successfully"
     echo "========================================="
     echo "Output:      $OUTPUT_DMG"
+    echo "Collected:   $ARTIFACT_DIR/$(basename "$OUTPUT_DMG")"
     echo "Version:     $VERSION"
     echo "Build mode:  Release"
     echo "Architecture: universal"
@@ -864,6 +870,13 @@ if [ "$NOTARIZE" -eq 1 ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# Collect the DMG into the repo-level .build/ dir so deploy.sh can find it
+# ---------------------------------------------------------------------------
+ARTIFACT_DIR="$REPO_ROOT/.build"
+mkdir -p "$ARTIFACT_DIR"
+cp -f "$OUTPUT_DMG" "$ARTIFACT_DIR/"
+
+# ---------------------------------------------------------------------------
 # Report
 # ---------------------------------------------------------------------------
 echo ""
@@ -871,6 +884,7 @@ echo "========================================="
 echo "  DMG generated successfully"
 echo "========================================="
 echo "Output:      $OUTPUT_DMG"
+echo "Collected:   $ARTIFACT_DIR/$(basename "$OUTPUT_DMG")"
 echo "Version:     $VERSION"
 echo "Build mode:  Release"
 if [ "$OBFUSCATE" -eq 1 ]; then

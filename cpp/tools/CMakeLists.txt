@@ -31,7 +31,6 @@ target_link_libraries(xlsone_gift_code_generator
         Qt${QT_VERSION_MAJOR}::Network
 )
 
-install(TARGETS xlsone_gift_code_generator
-    BUNDLE DESTINATION .
-    RUNTIME DESTINATION bin
-)
+# No install() rule on purpose: this is an internal admin tool and must not
+# ship in the customer MSI/ZIP. Build it explicitly when needed:
+#   cmake --build <build-dir> --target xlsone_gift_code_generator

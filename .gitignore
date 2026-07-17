@@ -28,6 +28,9 @@ test_*.swift
 opencode.json
 .workbuddy/
 
+# Local Python tool scripts
+build/
+
 # Linux packaging artifacts
 cpp/_CPack_Packages/
 cpp/deepin-qt5.15/

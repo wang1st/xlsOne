@@ -1,0 +1,13 @@
+diff --git a/cpp/core/src/license_manager.cpp b/cpp/core/src/license_manager.cpp
+index f15301f..18e645e 100755
+--- a/cpp/core/src/license_manager.cpp
++++ b/cpp/core/src/license_manager.cpp
+@@ -662,7 +662,7 @@ void LicenseManager::onActivationReply(QNetworkReply* reply)
+             else if (error == QStringLiteral("KEY_REVOKED"))
+                 result.errorMessage = QStringLiteral("激活码已被吊销");
+             else if (error == QStringLiteral("EXHAUSTED"))
+-                result.errorMessage = QStringLiteral("该激活码的激活次数已用尽（最多 3 台设备），请购买新的激活码");
++                result.errorMessage = QStringLiteral("该激活码已达到设备数上限（最多 3 台设备），请购买新的激活码");
+             else if (error == QStringLiteral("SUBSCRIPTION_EXPIRED"))
+                 result.errorMessage = QStringLiteral("该激活码已过期，请购买新的激活码");
+             else if (error == QStringLiteral("DEVICE_LIMIT"))

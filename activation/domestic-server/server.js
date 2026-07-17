@@ -219,7 +219,7 @@ async function issueWindowsLicense(keyId, deviceHash, deviceName, deviceComponen
                : keyRow.status;
 
   if (status === 'revoked') return { ok: false, status: 403, body: { error: 'KEY_REVOKED', message: '激活码已被吊销' } };
-  if (status === 'exhausted') return { ok: false, status: 403, body: { error: 'EXHAUSTED', message: '该激活码的激活次数已用尽（最多 3 台设备）' } };
+  if (status === 'exhausted') return { ok: false, status: 403, body: { error: 'EXHAUSTED', message: '该激活码已达到设备数上限（最多 3 台设备）' } };
 
   // 兼容旧数据
   const maxActivations = keyRow.max_activations ?? DEFAULT_MAX_ACTIVATIONS;
