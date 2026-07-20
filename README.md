@@ -52,7 +52,7 @@ swift test
 
 ### 多平台自动打包
 
-GitHub Actions 可自动生成 Windows MSI/ZIP、macOS Universal DMG，以及 Linux amd64/arm64 DEB。配置与使用方式见 [GitHub Actions 多平台自动打包](docs/GitHub_Actions多平台打包.md)。
+GitHub Actions 可自动生成 Windows MSI/ZIP、macOS Universal DMG，以及 Linux amd64/arm64 DEB，并在正式标签构建成功后原子部署到 `z-pulse.cn`。配置、首次服务器授权和回滚方式见 [GitHub Actions：Qt 四平台自动打包与部署](docs/GitHub_Actions多平台打包.md)。
 
 ## 验证结果
 

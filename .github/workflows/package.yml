@@ -11,6 +11,16 @@ on:
         options:
           - domestic
           - international
+      deploy_to_zpulse:
+        description: Deploy the domestic build to z-pulse.cn after packaging
+        required: true
+        default: false
+        type: boolean
+      changelog:
+        description: Release notes written to the update manifest
+        required: false
+        default: ""
+        type: string
   push:
     tags:
       - "v*"
@@ -33,9 +43,13 @@ jobs:
     timeout-minutes: 10
     outputs:
       version: ${{ steps.version.outputs.value }}
+      edition: ${{ steps.version.outputs.edition }}
+      stable: ${{ steps.version.outputs.stable }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Validate version
         id: version
@@ -43,12 +57,33 @@ jobs:
         run: |
           set -euo pipefail
           tag_args=()
+          stable=false
           if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
             tag_args+=(--tag "${GITHUB_REF_NAME}")
+            git fetch --no-tags origin main:refs/remotes/origin/main
+            git merge-base --is-ancestor "${GITHUB_SHA}" origin/main || {
+              echo "Release tags must point to a commit already merged into main." >&2
+              exit 1
+            }
+            if [[ "${GITHUB_REF_NAME}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              stable=true
+            fi
           fi
           version="$(python3 scripts/ci/release_version.py "${tag_args[@]}")"
           echo "value=${version}" >> "${GITHUB_OUTPUT}"
+          echo "edition=${EDITION}" >> "${GITHUB_OUTPUT}"
+          echo "stable=${stable}" >> "${GITHUB_OUTPUT}"
           echo "Packaging xlsOne ${version} (${EDITION})"
+
+      - name: Validate release and deployment tooling
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s scripts/ci/tests -p 'test_*.py' -v
+          node --test activation/domestic-server/test/*.test.js
+          bash -n \
+            scripts/deploy/setup-zpulse-deploy-user.sh \
+            scripts/deploy/zpulse-promote.sh
 
   windows:
     name: Windows amd64 (MSI + ZIP)
@@ -148,6 +183,7 @@ jobs:
             .build/SHA256SUMS-windows.txt
           include-hidden-files: true
           if-no-files-found: error
+          overwrite: true
           compression-level: 0
           retention-days: 14
 
@@ -213,6 +249,7 @@ jobs:
             .build/SHA256SUMS-macos.txt
           include-hidden-files: true
           if-no-files-found: error
+          overwrite: true
           compression-level: 0
           retention-days: 14
 
@@ -305,6 +342,7 @@ jobs:
             .build/SHA256SUMS-linux-${{ matrix.arch }}.txt
           include-hidden-files: true
           if-no-files-found: error
+          overwrite: true
           compression-level: 0
           retention-days: 14
 
@@ -366,3 +404,186 @@ jobs:
             dist/*.dmg
             dist/*.deb
             dist/SHA256SUMS.txt
+
+  deploy_zpulse:
+    name: Deploy domestic packages to z-pulse.cn
+    if: >-
+      needs.metadata.outputs.edition == 'domestic' &&
+      ((github.event_name == 'push' && github.ref_type == 'tag' && needs.metadata.outputs.stable == 'true') ||
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.deploy_to_zpulse))
+    needs:
+      - metadata
+      - windows
+      - macos
+      - linux
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: zpulse-production
+    concurrency:
+      group: z-pulse-production
+      cancel-in-progress: false
+    permissions:
+      actions: read
+      contents: read
+    env:
+      VERSION: ${{ needs.metadata.outputs.version }}
+      CHANGELOG: ${{ inputs.changelog || '' }}
+      ZPULSE_HOST: ${{ vars.ZPULSE_HOST || 'z-pulse.cn' }}
+      ZPULSE_PORT: ${{ vars.ZPULSE_PORT || '22' }}
+      ZPULSE_USER: ${{ vars.ZPULSE_USER || 'xlsone-deploy' }}
+    steps:
+      - name: Checkout deployment tooling
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Download all platform artifacts
+        uses: actions/download-artifact@v8
+        with:
+          pattern: xlsone-*
+          path: artifacts
+
+      - name: Assemble and verify deployment payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          changelog="${CHANGELOG}"
+          if [[ -z "${changelog// }" && "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            changelog="$(git for-each-ref --format='%(contents)' "refs/tags/${GITHUB_REF_NAME}")"
+          fi
+          if [[ -z "${changelog// }" ]]; then
+            changelog="发布 xlsOne ${VERSION}"
+          fi
+
+          rm -rf zpulse-payload
+          python3 scripts/ci/prepare_zpulse_release.py \
+            --artifacts-dir artifacts \
+            --output-dir zpulse-payload \
+            --version "${VERSION}" \
+            --changelog "${changelog}"
+          (cd zpulse-payload/downloads && sha256sum --strict --check checksums.txt)
+
+      - name: Upload deployment payload for audit
+        uses: actions/upload-artifact@v7
+        with:
+          name: zpulse-release-${{ needs.metadata.outputs.version }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: zpulse-payload
+          if-no-files-found: error
+          overwrite: true
+          compression-level: 0
+          retention-days: 14
+
+      - name: Configure pinned SSH identity
+        shell: bash
+        env:
+          DEPLOY_SSH_PRIVATE_KEY: ${{ secrets.ZPULSE_DEPLOY_SSH_PRIVATE_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.ZPULSE_DEPLOY_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          test -n "${DEPLOY_SSH_PRIVATE_KEY}"
+          test -n "${DEPLOY_KNOWN_HOSTS}"
+          install -d -m 0700 "${HOME}/.ssh"
+          printf '%s\n' "${DEPLOY_SSH_PRIVATE_KEY}" > "${HOME}/.ssh/zpulse_deploy"
+          printf '%s\n' "${DEPLOY_KNOWN_HOSTS}" > "${HOME}/.ssh/known_hosts"
+          chmod 0600 "${HOME}/.ssh/zpulse_deploy" "${HOME}/.ssh/known_hosts"
+          ssh-keygen -y -f "${HOME}/.ssh/zpulse_deploy" > /dev/null
+
+      - name: Upload to staging and promote atomically
+        shell: bash
+        run: |
+          set -euo pipefail
+          release_id="run-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          remote_dir="/srv/xlsone-upload/incoming/${release_id}"
+          ssh_common=(
+            -i "${HOME}/.ssh/zpulse_deploy"
+            -p "${ZPULSE_PORT}"
+            -o BatchMode=yes
+            -o IdentitiesOnly=yes
+            -o StrictHostKeyChecking=yes
+            -o UserKnownHostsFile="${HOME}/.ssh/known_hosts"
+          )
+          scp_common=(
+            -i "${HOME}/.ssh/zpulse_deploy"
+            -P "${ZPULSE_PORT}"
+            -o BatchMode=yes
+            -o IdentitiesOnly=yes
+            -o StrictHostKeyChecking=yes
+            -o UserKnownHostsFile="${HOME}/.ssh/known_hosts"
+          )
+
+          cleanup_remote() {
+            ssh "${ssh_common[@]}" "${ZPULSE_USER}@${ZPULSE_HOST}" \
+              "rm -rf -- '${remote_dir}'" >/dev/null 2>&1 || true
+          }
+          trap cleanup_remote EXIT
+
+          ssh "${ssh_common[@]}" "${ZPULSE_USER}@${ZPULSE_HOST}" \
+            "umask 027 && test ! -e '${remote_dir}' && mkdir -- '${remote_dir}'"
+          scp "${scp_common[@]}" -r \
+            zpulse-payload/api \
+            zpulse-payload/downloads \
+            "${ZPULSE_USER}@${ZPULSE_HOST}:${remote_dir}/"
+          ssh "${ssh_common[@]}" "${ZPULSE_USER}@${ZPULSE_HOST}" \
+            "sudo -n /usr/local/sbin/xlsone-promote '${release_id}' '${VERSION}'"
+
+      - name: Verify production deployment
+        shell: bash
+        run: |
+          set -euo pipefail
+          online_manifest="$(mktemp)"
+          online_checksums="$(mktemp)"
+          trap 'rm -f "${online_manifest}" "${online_checksums}"' EXIT
+          cache_bust="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(date +%s)"
+          curl_common=(
+            --fail
+            --silent
+            --show-error
+            --location
+            --retry 5
+            --retry-all-errors
+            --retry-delay 2
+            --header "Cache-Control: no-cache"
+            --header "Pragma: no-cache"
+          )
+
+          curl "${curl_common[@]}" \
+            "https://z-pulse.cn/api/version?deploy_verify=${cache_bust}" -o "${online_manifest}"
+          curl "${curl_common[@]}" \
+            "https://z-pulse.cn/downloads/checksums.txt?deploy_verify=${cache_bust}" -o "${online_checksums}"
+          cmp zpulse-payload/api/version.json "${online_manifest}"
+          cmp zpulse-payload/downloads/checksums.txt "${online_checksums}"
+
+          python3 - "zpulse-payload/api/version.json" "${VERSION}" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          manifest = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+          if manifest.get("latest_version") != sys.argv[2]:
+              raise SystemExit("release manifest version mismatch")
+          for url in manifest.get("downloads", {}).values():
+              print(url)
+          PY
+
+          while IFS= read -r url; do
+            curl "${curl_common[@]}" --range 0-0 \
+              --output /dev/null "${url}?deploy_verify=${cache_bust}"
+          done < <(
+            python3 -c \
+              'import json,sys; print("\n".join(json.load(open(sys.argv[1], encoding="utf-8"))["downloads"].values()))' \
+              "zpulse-payload/api/version.json"
+          )
+
+          {
+            echo "### z-pulse.cn deployment"
+            echo ""
+            echo "- Version: ${VERSION}"
+            echo "- Run: ${GITHUB_RUN_ID} (attempt ${GITHUB_RUN_ATTEMPT})"
+            echo "- Manifest: https://z-pulse.cn/api/version"
+            echo "- Checksums: https://z-pulse.cn/downloads/checksums.txt"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+      - name: Remove SSH material
+        if: always()
+        shell: bash
+        run: rm -f "${HOME}/.ssh/zpulse_deploy" "${HOME}/.ssh/known_hosts"

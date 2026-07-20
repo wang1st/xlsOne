@@ -24,6 +24,7 @@
  *   GET  /api/admin/windows-keys           Windows 激活码列表查询（分页、筛选、搜索）
  *   GET  /api/admin/windows-keys/:id        Windows 激活码详情（含设备列表）
  *   GET  /api/admin/windows-keys/export     导出所有可用激活码文本列表（每行一个）
+ *   POST /api/admin/windows-devices/:id/revoke 解绑 Windows 设备
  *   GET  ${ADMIN_PATH}                   授权码管理系统（管理页面，由 ADMIN_PATH 配置，默认 /xlsone/license-console）
  *   GET  /offline /xlsone/offline         离线激活网页
  *   GET  /downloads / /downloads/*         安装包下载页 / 静态文件
@@ -825,6 +826,37 @@ const server = http.createServer(async (req, res) => {
         devices: paginated,
         pagination: { page, limit, total, pages: Math.ceil(total / limit) }
       });
+    }
+
+    // ---- API: admin revoke Windows device ----
+    const revokeDeviceMatch = p.match(/^\/api\/admin\/windows-devices\/([^/]+)\/revoke$/);
+    if (method === 'POST' && revokeDeviceMatch) {
+      if (!requireAdmin(req, res)) return;
+
+      let deviceId;
+      try {
+        deviceId = decodeURIComponent(revokeDeviceMatch[1]);
+      } catch {
+        return sendJson(res, 400, { error: 'INVALID_DEVICE_ID' });
+      }
+
+      if (!Object.prototype.hasOwnProperty.call(store.windows_devices, deviceId)) {
+        return sendJson(res, 404, { error: 'DEVICE_NOT_FOUND' });
+      }
+      const device = store.windows_devices[deviceId];
+      if (device.revoked) return sendJson(res, 400, { error: 'ALREADY_REVOKED' });
+
+      device.revoked = 1;
+      device.revoked_at = new Date().toISOString();
+
+      const keyRow = store.windows_keys[device.key_id];
+      if (keyRow && keyRow.activation_count > 0) {
+        keyRow.activation_count -= 1;
+        if (keyRow.status === 'exhausted') keyRow.status = 'activated';
+      }
+
+      saveStoreSoon();
+      return sendJson(res, 200, { device_id: deviceId, revoked: true });
     }
 
     // ---- API: admin generate (macOS) ----

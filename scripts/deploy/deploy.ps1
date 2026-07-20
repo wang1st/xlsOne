@@ -26,6 +26,7 @@ $SiteDir = "$ProjectRoot\site"
 $CppDir = "$ProjectRoot\cpp"
 $ReleaseArtifactsDir = "$ProjectRoot\.build\release-artifacts"
 $DeployArtifactDir = $null   # 稍后在运行时设置
+$script:TarCommand = $null
 
 $Server = "z-pulse.cn"
 $ServerUser = "root"
@@ -132,19 +133,50 @@ function Invoke-PythonScript {
 # 依赖检查
 # -----------------------------------------------------------------------------
 
+function Find-TarCommand {
+    # Windows 10 normally provides System32\tar.exe, but some Windows Server
+    # images do not. Git for Windows and MSYS2 both ship a compatible tar that
+    # may not be present on PATH, so probe their standard locations as well.
+    $command = Get-Command tar.exe -ErrorAction SilentlyContinue
+    if (-not $command) {
+        $command = Get-Command tar -ErrorAction SilentlyContinue
+    }
+    if ($command) {
+        return $command.Source
+    }
+
+    $candidates = @(
+        "$env:SystemRoot\System32\tar.exe",
+        "$env:ProgramFiles\Git\usr\bin\tar.exe",
+        "${env:ProgramFiles(x86)}\Git\usr\bin\tar.exe",
+        "C:\msys64\usr\bin\tar.exe"
+    )
+    foreach ($candidate in $candidates) {
+        if ($candidate -and (Test-Path -LiteralPath $candidate -PathType Leaf)) {
+            return $candidate
+        }
+    }
+
+    return $null
+}
+
 function Test-Dependencies {
     $missing = @()
     $required = @(
         @{Name="python"; Desc="Python 3"}
         @{Name="ssh"; Desc="OpenSSH 客户端"}
         @{Name="scp"; Desc="OpenSSH SCP"}
-        @{Name="tar"; Desc="tar (Windows 10+ 已内置)"}
     )
 
     foreach ($dep in $required) {
         if (-not (Get-Command $dep.Name -ErrorAction SilentlyContinue)) {
             $missing += $dep.Desc
         }
+    }
+
+    $script:TarCommand = Find-TarCommand
+    if (-not $script:TarCommand) {
+        $missing += "tar (Windows 10+、Git for Windows 或 MSYS2)"
     }
 
     # sshpass 检查 — Windows 上通常不可用，仅做提示
@@ -158,6 +190,7 @@ function Test-Dependencies {
         Write-Info "请安装后重试。"
         Write-Info "  - Python 3: https://www.python.org/downloads/"
         Write-Info "  - OpenSSH:  Windows 10+ 可在「可选功能」中添加"
+        Write-Info "  - tar:      Windows 10+ 自带，或随 Git for Windows / MSYS2 安装"
         return $false
     }
 
@@ -629,40 +662,30 @@ Path(checksums_txt).write_text('\n'.join(lines) + ('\n' if lines else ''), encod
 $script:SshAuthMode = $null   # "key" 或 "sshpass"
 $script:SshPassword = $null
 
-function New-SshArgs {
-    param(
-        [string]$Command,
-        [string]$ExtraArgs = ""
-    )
-
-    $baseArgs = "-o StrictHostKeyChecking=no -o ConnectTimeout=10"
-
-    if ($script:SshAuthMode -eq "sshpass") {
-        return "sshpass -e ssh $baseArgs $ExtraArgs ${ServerUser}@${Server} `"$Command`""
-    }
-    else {
-        return "ssh $baseArgs $ExtraArgs ${ServerUser}@${Server} $Command"
-    }
-}
-
 function Invoke-RemoteCommand {
-    param([string]$Command, [string]$ExtraArgs = "")
+    param([string]$Command, [string[]]$ExtraArgs = @())
 
     if ($script:SshAuthMode -eq "sshpass") {
         $env:SSHPASS = $script:SshPassword
     }
 
-    $sshCmd = if ($script:SshAuthMode -eq "sshpass") {
-        "sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 $ExtraArgs ${ServerUser}@${Server} $Command"
+    $sshArgs = @("-o", "StrictHostKeyChecking=no", "-o", "ConnectTimeout=10")
+    if ($script:SshAuthMode -ne "sshpass") {
+        $sshArgs += @("-o", "BatchMode=yes")
     }
-    else {
-        "ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 $ExtraArgs ${ServerUser}@${Server} $Command"
-    }
+    $sshArgs += $ExtraArgs
+    $sshArgs += @("${ServerUser}@${Server}", "sh -se")
 
     Write-Info "执行远程命令..."
-    # 使用 Invoke-Expression 来正确处理引号
-    $result = Invoke-Expression $sshCmd 2>&1
-    if ($LASTEXITCODE -ne 0) {
+    if ($script:SshAuthMode -eq "sshpass") {
+        $sshpassArgs = @("-e", "ssh") + $sshArgs
+        $result = $Command | & sshpass @sshpassArgs 2>&1
+    }
+    else {
+        $result = $Command | & ssh @sshArgs 2>&1
+    }
+    $exitCode = $LASTEXITCODE
+    if ($exitCode -ne 0) {
         Write-ErrorMsg "远程命令失败：$result"
         throw "SSH command failed"
     }
@@ -675,17 +698,26 @@ function Invoke-ScpUpload {
         [string]$RemotePath
     )
 
+    $scpArgs = @("-o", "StrictHostKeyChecking=no", "-o", "ConnectTimeout=10")
+    if ($script:SshAuthMode -ne "sshpass") {
+        $scpArgs += @("-o", "BatchMode=yes")
+    }
+    $scpArgs += @($LocalPath, "${ServerUser}@${Server}:$RemotePath")
+
     if ($script:SshAuthMode -eq "sshpass") {
         $env:SSHPASS = $script:SshPassword
-        $cmd = "sshpass -e scp -o StrictHostKeyChecking=no -o ConnectTimeout=10 `"$LocalPath`" ${ServerUser}@${Server}:`"$RemotePath`""
-    }
-    else {
-        $cmd = "scp -o StrictHostKeyChecking=no -o ConnectTimeout=10 `"$LocalPath`" ${ServerUser}@${Server}:`"$RemotePath`""
     }
 
     Write-Info "上传: $(Split-Path $LocalPath -Leaf)"
-    $result = Invoke-Expression $cmd 2>&1
-    if ($LASTEXITCODE -ne 0) {
+    if ($script:SshAuthMode -eq "sshpass") {
+        $sshpassArgs = @("-e", "scp") + $scpArgs
+        $result = & sshpass @sshpassArgs 2>&1
+    }
+    else {
+        $result = & scp @scpArgs 2>&1
+    }
+    $exitCode = $LASTEXITCODE
+    if ($exitCode -ne 0) {
         Write-ErrorMsg "SCP 上传失败：$result"
         throw "SCP upload failed"
     }
@@ -698,15 +730,23 @@ function Test-ServerConnection {
         $env:SSHPASS = $script:SshPassword
     }
 
-    $testCmd = if ($script:SshAuthMode -eq "sshpass") {
-        sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "${ServerUser}@${Server}" 'echo OK' 2>&1
+    $sshArgs = @("-o", "StrictHostKeyChecking=no", "-o", "ConnectTimeout=10")
+    if ($script:SshAuthMode -ne "sshpass") {
+        $sshArgs += @("-o", "BatchMode=yes")
+    }
+    $sshArgs += @("${ServerUser}@${Server}", "echo OK")
+
+    if ($script:SshAuthMode -eq "sshpass") {
+        $sshpassArgs = @("-e", "ssh") + $sshArgs
+        $testResult = & sshpass @sshpassArgs 2>&1
     }
     else {
-        ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "${ServerUser}@${Server}" 'echo OK' 2>&1
+        $testResult = & ssh @sshArgs 2>&1
     }
 
-    $testResult = Invoke-Expression $testCmd
-    if ($LASTEXITCODE -ne 0 -or $testResult -notmatch "OK") {
+    $exitCode = $LASTEXITCODE
+    $testOutput = $testResult -join "`n"
+    if ($exitCode -ne 0 -or $testOutput -notmatch "(?m)^OK\s*$") {
         Write-ErrorMsg "无法连接到服务器，请检查认证和网络"
         throw "Server connection failed"
     }
@@ -748,14 +788,21 @@ function Invoke-UploadToServer {
     $existingFiles = $siteFiles | Where-Object { Test-Path "$SiteDir\$_" }
 
     Write-Info "打包 $($existingFiles.Count) 个站点文件..."
-    Push-Location $SiteDir
+    $originalPath = $env:PATH
+    $tarDirectory = Split-Path -Parent $script:TarCommand
+    if ($tarDirectory) {
+        # Git/MSYS2 tar starts gzip as a child process. Their usr\bin directory
+        # is often absent from PATH even when tar.exe itself was discovered.
+        $env:PATH = "$tarDirectory;$env:PATH"
+    }
+
+    # Create the archive from %TEMP% using a relative output name. GNU tar
+    # otherwise interprets a Windows drive prefix such as "D:" as a remote host.
+    Push-Location $env:TEMP
     try {
-        $tarCmd = "tar -czf `"$siteTar`""
-        foreach ($f in $existingFiles) {
-            # tar 需要 Unix 风格路径
-            $tarCmd += " `"$($f -replace '\\', '/')`""
-        }
-        Invoke-Expression $tarCmd
+        $tarArgs = @("-czf", (Split-Path $siteTar -Leaf), "-C", $SiteDir)
+        $tarArgs += @($existingFiles | ForEach-Object { $_ -replace '\\', '/' })
+        & $script:TarCommand @tarArgs
         if ($LASTEXITCODE -ne 0) {
             Write-ErrorMsg "站点文件打包失败"
             throw "tar failed"
@@ -763,6 +810,7 @@ function Invoke-UploadToServer {
     }
     finally {
         Pop-Location
+        $env:PATH = $originalPath
     }
 
     # 上传站点 tar 包
@@ -782,6 +830,17 @@ echo 'SITE_UPLOADED'
 
     Write-Success "站点文件上传完成"
     Remove-Item $siteTar -Force -ErrorAction SilentlyContinue
+
+    # Keep the live activation-code console in sync with its tracked source.
+    $licenseManagerPage = "$ProjectRoot\activation\admin\license-manager.html"
+    if (Test-Path -LiteralPath $licenseManagerPage) {
+        Invoke-RemoteCommand "mkdir -p '${RemoteBackendDir}/public' '${RemoteRoot}/xlsone/license-console'"
+        Invoke-ScpUpload -LocalPath $licenseManagerPage `
+            -RemotePath "${RemoteBackendDir}/public/license-manager.html"
+        Invoke-ScpUpload -LocalPath $licenseManagerPage `
+            -RemotePath "${RemoteRoot}/xlsone/license-console/index.html"
+        Write-Success "授权码管理页面上传完成"
+    }
 
     # 上传安装包
     if ($Packages.Count -gt 0) {
@@ -971,14 +1030,16 @@ function Main {
     Write-Host "╚════════════════════════════════════════════════════════════════╝" -ForegroundColor Green
     Write-Host ""
 
-    # 清理环境变量
-    if ($env:SSHPASS) {
-        Remove-Item Env:\SSHPASS -ErrorAction SilentlyContinue
-    }
 }
 
 # -----------------------------------------------------------------------------
 # 入口
 # -----------------------------------------------------------------------------
 
-Main
+try {
+    Main
+}
+finally {
+    Remove-Item Env:\SSHPASS -ErrorAction SilentlyContinue
+    $script:SshPassword = $null
+}

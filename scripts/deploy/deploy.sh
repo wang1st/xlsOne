@@ -171,7 +171,7 @@ PYEOF
 input_version() {
     local current_version
     if ! current_version="$(current_project_version)"; then
-        print_error "无法自动识别当前版本号，请检查 cpp/CMakeLists.txt 或 site/api/version.json"
+        print_error "无法自动识别当前版本号，请检查 cpp/CMakeLists.txt"
         exit 1
     fi
     local version
