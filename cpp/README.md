@@ -86,7 +86,7 @@ What it does **not** do:
 Enable it for a release build:
 
 ```bash
-export XLSONE_LICENSE_PUBLIC_KEY="b0af99047cf30b4fe72360d53ff5765c3ccd33d911e2b1f19b99dcd4c8ff83cc"
+export XLSONE_LICENSE_PUBLIC_KEY="$(python3 -c 'import json, pathlib; print(json.loads((pathlib.Path.home() / "secrets.json").read_text())["ED25519_PUBLIC_KEY"])')"
 cmake --preset windows-release
 cmake --build --preset windows-release
 ```
@@ -98,9 +98,10 @@ When `XLSONE_OBFUSCATE=ON`:
   `-fmerge-all-constants`, `-fno-ident`) and link-time stripping (`-s`).
 - Windows packaging scripts run an additional `strip` step.
 
-When obfuscation is disabled, the plaintext fallbacks compiled in are the
-`kLicensePublicKey` array in `core/src/license_manager.cpp` and the
-`XLSONE_*_BASE_URL` compile definitions — no generated secrets file is used.
+When obfuscation is disabled, a deliberately invalid all-zero public key and
+the `XLSONE_*_BASE_URL` compile definitions are used. This mode is suitable for
+ordinary compile/test CI only; distributable clients must use the secrets-backed
+obfuscated release configuration.
 
 ## Known Gaps
 

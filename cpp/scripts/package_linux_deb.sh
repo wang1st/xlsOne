@@ -8,7 +8,7 @@ set -euo pipefail
 # instead (recommended when building on the same OS as the target, e.g. UOS).
 #
 # Usage:
-#   ./cpp/scripts/package_linux_deb.sh [--system-qt] [--bundle] [--international] [--builtin-license] [build-dir]
+#   ./cpp/scripts/package_linux_deb.sh [--system-qt] [--bundle] [--international] [--obfuscate] [--builtin-license] [build-dir]
 
 ORIG_DIR="$(pwd)"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -19,6 +19,7 @@ BUNDLE_MODE="auto"     # auto | bundle | system
 BUILD_DIR=""
 DOMESTIC=1             # Default: domestic (api.z-pulse.cn)
 BUILTIN_LICENSE=0      # Default: no built-in license (requires online activation)
+OBFUSCATE=0            # Release hardening; requires XLSONE_LICENSE_PUBLIC_KEY
 
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -34,17 +35,22 @@ while [ $# -gt 0 ]; do
             DOMESTIC=0
             shift
             ;;
+        --obfuscate)
+            OBFUSCATE=1
+            shift
+            ;;
         --builtin-license)
             BUILTIN_LICENSE=1
             shift
             ;;
         --help|-h)
-            echo "Usage: $0 [--system-qt|--no-bundle] [--bundle] [--international] [--builtin-license] [build-dir]"
+            echo "Usage: $0 [--system-qt|--no-bundle] [--bundle] [--international] [--obfuscate] [--builtin-license] [build-dir]"
             echo ""
             echo "  --system-qt, --no-bundle   Use system Qt5 packages (for UOS/Debian native builds)"
             echo "  --bundle, --self-contained Bundle Qt5 libraries (for KylinOS self-contained builds)"
             echo "  --international            Use international endpoints (api.xlsone.com)"
             echo "                             Default: domestic (api.z-pulse.cn)"
+            echo "  --obfuscate                Enable release hardening with XLSONE_LICENSE_PUBLIC_KEY"
             echo "  --builtin-license          Embed an offline-signed lifetime license (Linux only)."
             echo "                             Default: require online activation like other platforms."
             echo ""
@@ -379,6 +385,16 @@ if [ "$BUILTIN_LICENSE" -eq 1 ]; then
     CMAKE_EXTRA_ARGS="$CMAKE_EXTRA_ARGS -DXLSONE_LINUX_BUILTIN_LICENSE=ON"
 else
     CMAKE_EXTRA_ARGS="$CMAKE_EXTRA_ARGS -DXLSONE_LINUX_BUILTIN_LICENSE=OFF"
+fi
+if [ "$OBFUSCATE" -eq 1 ]; then
+    if [[ ! "${XLSONE_LICENSE_PUBLIC_KEY:-}" =~ ^[0-9a-fA-F]{64}$ ]]; then
+        echo "--obfuscate requires XLSONE_LICENSE_PUBLIC_KEY to be exactly 64 hexadecimal characters." >&2
+        exit 1
+    fi
+    CMAKE_EXTRA_ARGS="$CMAKE_EXTRA_ARGS -DXLSONE_OBFUSCATE=ON -DXLSONE_LICENSE_PUBLIC_KEY=$XLSONE_LICENSE_PUBLIC_KEY"
+else
+    # Always override a stale CMakeCache value when reusing a build directory.
+    CMAKE_EXTRA_ARGS="$CMAKE_EXTRA_ARGS -DXLSONE_OBFUSCATE=OFF"
 fi
 
 cmake -S "$PROJECT_ROOT" -B "$BUILD_DIR" \

@@ -1,13 +1,13 @@
 # 客户端重编发布 Runbook（v1.0.4）
 
 > 适用：Ed25519 密钥已于 2026-07-17 再次轮换（2026-07-09 的种子曾泄露入仓，已作废），
-> 客户端内嵌新公钥 `b0af99047cf30b4fe72360d53ff5765c3ccd33d911e2b1f19b99dcd4c8ff83cc`，
+> 客户端公钥只从当前用户主目录的 `secrets.json` 中读取，仓库不保存具体公钥值，
 > 版本号已统一到 **1.0.4**（见 `site/api/version.json`、`project.yml`、`cpp/CMakeLists.txt`）。
 > 本文件把「重编 → 签名 → 上传 → 放开下载」串成一条可复制命令链。
 
 ## 0. 前置结论（本沙箱状态）
 
-- ✅ 新公钥已焊进 Windows 客户端源码 `cpp/core/src/license_manager.cpp`（`kLicensePublicKey`），无需再改。
+- ✅ 三个平台的发布构建都通过 `XLSONE_LICENSE_PUBLIC_KEY` 注入公钥并启用混淆；源码中的非混淆回退值故意设为无效的全零公钥。
 - ✅ Windows 打包脚本 `cpp/scripts/package_windows_msi_zip.ps1` 已支持 **Authenticode 代码签名**（`-Sign -CertFile/-CertSha1`），默认产出未签名包并给出 SmartScreen 警告。
 - ⚠️ **代码签名需补**：本机已配齐 Qt 6.11.1（`C:\Qt\6.11.1\mingw_64`）+ 自带 MinGW 13.1（`C:\Qt\Tools\mingw1310_64`）+ CMake 3.30.5 + ninja + WiX 3.14，可直接跑 `package_windows_msi_zip.ps1`。唯独**缺 signtool**（需 Windows SDK / 代码签名证书），因此只能出未签名包，SmartScreen 会拦截最终用户。
 - ⚠️ 代码签名需要一张 Windows 代码签名证书（沃通/TrustAsia 标准证书，或 EV 直过 SmartScreen）。无证书则只能出未签名包，SmartScreen 会拦截最终用户。

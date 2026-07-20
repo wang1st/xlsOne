@@ -20,31 +20,45 @@ jobs:
         os: [ubuntu-24.04, windows-2022]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: jurplel/install-qt-action@v4
+      - name: Install Qt (Linux)
+        if: runner.os != 'Windows'
+        uses: jurplel/install-qt-action@v4.3.1
         with:
-          version: "6.6.3"
+          version: "6.8.3"
+          cache: true
 
-      - uses: seanmiddleditch/gha-setup-ninja@v5
+      - name: Install Qt and matching MinGW (Windows)
+        if: runner.os == 'Windows'
+        uses: jurplel/install-qt-action@v4.3.1
+        with:
+          version: "6.8.3"
+          arch: win64_mingw
+          tools: tools_mingw1310,qt.tools.win64_mingw1310
+          cache: true
 
       - name: Configure
         working-directory: cpp
-        run: cmake --preset ${{ runner.os == 'Windows' && 'windows-release' || 'linux-release' }}
+        run: >-
+          cmake -S . -B build-ci -G Ninja
+          -DCMAKE_BUILD_TYPE=Release
+          -DXLSONE_OBFUSCATE=OFF
+          -DXLSONE_BUNDLE_QT=OFF
 
       - name: Build
         working-directory: cpp
-        run: cmake --build --preset ${{ runner.os == 'Windows' && 'windows-release' || 'linux-release' }}
+        run: cmake --build build-ci --parallel
 
       - name: Test
         working-directory: cpp
-        run: ctest --preset ${{ runner.os == 'Windows' && 'windows-release' || 'linux-release' }}
+        run: ctest --test-dir build-ci --output-on-failure
 
   format-check:
     name: clang-format
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Install clang-format
         run: pip install clang-format==18.*
       - name: Check formatting

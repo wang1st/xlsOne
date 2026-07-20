@@ -18,7 +18,7 @@ obfuscation.hpp.
 Typical usage from CMake:
 
     python3 scripts/generate_obfuscation.py \
-        --public-key "b0af99047cf30b4fe72360d53ff5765c3ccd33d911e2b1f19b99dcd4c8ff83cc" \
+        --public-key "<64-hex-public-key-from-secrets.json>" \
         --activation-url "https://api.xlsone.com" \
         --update-url "https://z-pulse.cn" \
         --output core/src/obfuscated_secrets.cpp
