@@ -51,6 +51,11 @@
 
     默认为国内版(api.z-pulse.cn)，无需传此开关。
 
+.PARAMETER Obfuscate
+    Enable release hardening and embed the Ed25519 license verification public
+    key from XLSONE_LICENSE_PUBLIC_KEY. The variable must contain exactly 64 hex
+    characters. No private key is needed by a client build.
+
 .PARAMETER Sign
     Code-sign the built xlsOneQt.exe and the resulting .msi with Authenticode
     (SHA256 + RFC3161 timestamp). Requires a code-signing certificate. Without
@@ -96,6 +101,7 @@ param(
     [string]$BuildDir = "",
     [switch]$Clean,
     [switch]$International,
+    [switch]$Obfuscate,
     [switch]$Sign,
     [string]$SignTool = "",
     [string]$CertFile = "",
@@ -119,13 +125,6 @@ if ($International) {
     Write-Host "[International] Activation endpoint baked in: https://api.xlsone.com" -ForegroundColor Cyan
 } else {
     Write-Host "[Domestic] Activation endpoint baked in: https://api.z-pulse.cn" -ForegroundColor Magenta
-}
-
-if (-not $Sign) {
-    Write-Host "[WARN] Code signing is OFF -- the .exe/.msi will be UNSIGNED and Windows SmartScreen will warn/block users. Pass -Sign with a cert to sign." -ForegroundColor Yellow
-} else {
-    Assert-SignConfig
-    Write-Host "[Sign] Code signing ENABLED (SHA256 + RFC3161 timestamp: $TimestampServer)" -ForegroundColor Magenta
 }
 
 function Test-Tool {
@@ -171,7 +170,8 @@ function Invoke-Sign {
         throw "Code signing requires -CertFile (PFX) or -CertSha1 (store thumbprint)."
     }
     $args += @("/v", $FilePath)
-    Write-Host "[Sign] $SignToolPath $($args -join ' ')" -ForegroundColor Magenta
+    # Never echo the argument list: it may contain the PFX password after /p.
+    Write-Host "[Sign] Signing: $FilePath" -ForegroundColor Magenta
     & $SignToolPath @args
     if ($LASTEXITCODE -ne 0) { throw "Signing failed: $FilePath" }
     Write-Host "[OK] signed: $FilePath" -ForegroundColor Green
@@ -184,6 +184,25 @@ function Assert-SignConfig {
     if ($CertFile -and -not (Test-Path $CertFile)) {
         throw "Certificate file not found: $CertFile"
     }
+}
+
+$resolvedSignTool = $null
+if (-not $Sign) {
+    Write-Host "[WARN] Code signing is OFF -- the .exe/.msi will be UNSIGNED and Windows SmartScreen will warn/block users. Pass -Sign with a cert to sign." -ForegroundColor Yellow
+} else {
+    Assert-SignConfig
+    $resolvedSignTool = Find-SignTool $SignTool
+    if (-not $resolvedSignTool) {
+        throw "signtool not found. Install the Windows SDK or pass -SignTool <path>."
+    }
+    Write-Host "[Sign] Code signing ENABLED (SHA256 + RFC3161 timestamp: $TimestampServer)" -ForegroundColor Magenta
+}
+
+if ($Obfuscate) {
+    if ($env:XLSONE_LICENSE_PUBLIC_KEY -notmatch '^[0-9a-fA-F]{64}$') {
+        throw "-Obfuscate requires XLSONE_LICENSE_PUBLIC_KEY to be exactly 64 hexadecimal characters."
+    }
+    Write-Host "[Security] Release obfuscation ENABLED with the configured Ed25519 public key." -ForegroundColor Magenta
 }
 
 Write-Host "=== xlsOne Windows Packaging ===" -ForegroundColor Cyan
@@ -269,6 +288,13 @@ if (-not $International) {
     # Mirrors the windows-cn-release CMake preset so the two paths stay in sync.
     $cmakeArgs += "-DXLSONE_ACTIVATION_BASE_URL=https://api.z-pulse.cn"
 }
+if ($Obfuscate) {
+    $cmakeArgs += "-DXLSONE_OBFUSCATE=ON"
+    $cmakeArgs += "-DXLSONE_LICENSE_PUBLIC_KEY=$env:XLSONE_LICENSE_PUBLIC_KEY"
+} else {
+    # Always override a stale CMakeCache value when reusing a build directory.
+    $cmakeArgs += "-DXLSONE_OBFUSCATE=OFF"
+}
 & cmake @cmakeArgs
 if ($LASTEXITCODE -ne 0) { throw "CMake configure failed" }
 
@@ -276,6 +302,16 @@ if ($LASTEXITCODE -ne 0) { throw "CMake configure failed" }
 Write-Host "`n--- Building xlsone_app ---" -ForegroundColor Cyan
 & cmake --build $BuildDir --target xlsone_app --config $Preset
 if ($LASTEXITCODE -ne 0) { throw "CMake build failed" }
+
+# Build and run the core regression suite before stripping or packaging.  This
+# catches startup failures such as recursive persisted-license validation while
+# the executable still has symbols that make failures diagnosable.
+Write-Host "`n--- Running core tests ---" -ForegroundColor Cyan
+& cmake --build $BuildDir --target xlsone_core_tests --config $Preset
+if ($LASTEXITCODE -ne 0) { throw "Core test build failed" }
+
+& ctest --test-dir $BuildDir -C $Preset --output-on-failure -R '^xlsone_core_tests$'
+if ($LASTEXITCODE -ne 0) { throw "Core tests failed" }
 
 # --- Strip symbols ---
 Write-Host "`n--- Stripping xlsOneQt.exe ---" -ForegroundColor Cyan
@@ -288,6 +324,12 @@ if ($strip -and (Test-Path $exePath)) {
     Write-Host "[WARN] xlsOneQt.exe not found at $exePath; skipping strip" -ForegroundColor Yellow
 } else {
     Write-Host "[WARN] strip tool not found on PATH; skipping" -ForegroundColor Yellow
+}
+
+# Sign the executable before CPack stages it so both the MSI and portable ZIP
+# contain the signed binary.
+if ($Sign) {
+    Invoke-Sign $exePath $resolvedSignTool
 }
 
 # --- Package ---
@@ -316,9 +358,7 @@ $zip = Join-Path $BuildDir "$pkgBase.zip"
 
 # Sign the MSI container (the embedded EXE was already signed before packaging).
 if ($Sign -and (Test-Path $msi)) {
-    $stPath = Find-SignTool $SignTool
-    if (-not $stPath) { throw "signtool not found. Install the Windows SDK or pass -SignTool <path>." }
-    Invoke-Sign $msi $stPath
+    Invoke-Sign $msi $resolvedSignTool
 }
 
 Write-Host "`n=== Packaging complete ===" -ForegroundColor Green

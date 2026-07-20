@@ -1,0 +1,365 @@
+name: Multi-platform packages
+
+on:
+  workflow_dispatch:
+    inputs:
+      edition:
+        description: Service endpoint edition to package
+        required: true
+        default: domestic
+        type: choice
+        options:
+          - domestic
+          - international
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: packages-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  QT_VERSION: "6.8.3"
+  EDITION: ${{ inputs.edition || vars.RELEASE_EDITION || 'domestic' }}
+
+jobs:
+  metadata:
+    name: Validate release metadata
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      version: ${{ steps.version.outputs.value }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Validate version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag_args=()
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            tag_args+=(--tag "${GITHUB_REF_NAME}")
+          fi
+          version="$(python3 scripts/ci/release_version.py "${tag_args[@]}")"
+          echo "value=${version}" >> "${GITHUB_OUTPUT}"
+          echo "Packaging xlsOne ${version} (${EDITION})"
+
+  windows:
+    name: Windows amd64 (MSI + ZIP)
+    needs: metadata
+    runs-on: windows-2022
+    timeout-minutes: 90
+    env:
+      VERSION: ${{ needs.metadata.outputs.version }}
+      XLSONE_LICENSE_PUBLIC_KEY: ${{ secrets.ED25519_PUBLIC_KEY }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install Qt and matching MinGW
+        uses: jurplel/install-qt-action@v4.3.1
+        with:
+          version: ${{ env.QT_VERSION }}
+          arch: win64_mingw
+          tools: tools_mingw1310,qt.tools.win64_mingw1310
+          cache: true
+          cache-key-prefix: qt-${{ runner.os }}-${{ env.QT_VERSION }}-mingw1310
+
+      - name: Locate toolchains
+        id: tools
+        shell: pwsh
+        run: |
+          $mingwRoot = Get-ChildItem -LiteralPath $env:IQTA_TOOLS -Directory -ErrorAction Stop |
+            Where-Object { Test-Path (Join-Path $_.FullName "bin\g++.exe") } |
+            Select-Object -First 1 -ExpandProperty FullName
+          if (-not $mingwRoot) {
+            throw "A matching MinGW toolchain was not installed under $env:IQTA_TOOLS"
+          }
+
+          $candle = (Get-Command candle.exe -ErrorAction Stop).Source
+          $wixRoot = Split-Path $candle -Parent
+          "mingw_root=$mingwRoot" >> $env:GITHUB_OUTPUT
+          "wix_root=$wixRoot" >> $env:GITHUB_OUTPUT
+          Write-Host "Qt:    $env:QT_ROOT_DIR"
+          Write-Host "MinGW: $mingwRoot"
+          Write-Host "WiX:   $wixRoot"
+
+      - name: Build, test, and package
+        shell: pwsh
+        run: |
+          $packageArgs = @{
+            QtRoot = $env:QT_ROOT_DIR
+            MingwRoot = '${{ steps.tools.outputs.mingw_root }}'
+            WiXRoot = '${{ steps.tools.outputs.wix_root }}'
+            BuildDir = "$env:GITHUB_WORKSPACE\cpp\build-windows-cn-release"
+            Clean = $true
+            Obfuscate = $true
+          }
+          if ($env:EDITION -eq 'international') {
+            $packageArgs.International = $true
+          }
+          & .\cpp\scripts\package_windows_msi_zip.ps1 @packageArgs
+
+      - name: Verify packages and write checksums
+        shell: pwsh
+        run: |
+          $msi = Get-Item ".build\xlsone-$env:VERSION-windows-amd64.msi" -ErrorAction Stop
+          $zip = Get-Item ".build\xlsone-$env:VERSION-windows-amd64.zip" -ErrorAction Stop
+
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $archive = [IO.Compression.ZipFile]::OpenRead($zip.FullName)
+          try {
+            $buffer = New-Object byte[] 1048576
+            foreach ($entry in $archive.Entries) {
+              $stream = $entry.Open()
+              try {
+                while ($stream.Read($buffer, 0, $buffer.Length) -gt 0) {}
+              } finally {
+                $stream.Dispose()
+              }
+            }
+          } finally {
+            $archive.Dispose()
+          }
+
+          $lines = @($msi, $zip) | Sort-Object Name | ForEach-Object {
+            $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+            "$hash  $($_.Name)"
+          }
+          [IO.File]::WriteAllLines(
+            (Join-Path $env:GITHUB_WORKSPACE ".build\SHA256SUMS-windows.txt"),
+            $lines,
+            [Text.Encoding]::ASCII
+          )
+
+      - name: Upload Windows packages
+        uses: actions/upload-artifact@v7
+        with:
+          name: xlsone-windows-amd64
+          path: |
+            .build/xlsone-*-windows-amd64.msi
+            .build/xlsone-*-windows-amd64.zip
+            .build/SHA256SUMS-windows.txt
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+
+  macos:
+    name: macOS universal (DMG)
+    needs: metadata
+    runs-on: macos-15
+    timeout-minutes: 120
+    env:
+      VERSION: ${{ needs.metadata.outputs.version }}
+      XLSONE_USE_CREATE_DMG: "0"
+      XLSONE_LICENSE_PUBLIC_KEY: ${{ secrets.ED25519_PUBLIC_KEY }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install universal Qt
+        uses: jurplel/install-qt-action@v4.3.1
+        with:
+          version: ${{ env.QT_VERSION }}
+          arch: clang_64
+          cache: true
+          cache-key-prefix: qt-${{ runner.os }}-${{ env.QT_VERSION }}-universal
+
+      - name: Build and package
+        shell: bash
+        run: |
+          set -euo pipefail
+          package_args=(
+            --arch universal
+            --version "${VERSION}"
+            --build-dir "${GITHUB_WORKSPACE}/cpp/build-macos-universal-release"
+            --obfuscate
+          )
+          if [[ "${EDITION}" == "international" ]]; then
+            package_args+=(--international)
+          fi
+          ./cpp/scripts/package_macos_qt_dmg.sh "${package_args[@]}"
+
+      - name: Test and verify package
+        shell: bash
+        run: |
+          set -euo pipefail
+          build_dir="cpp/build-macos-universal-release"
+          app="$build_dir/universal/xlsOneQt.app"
+          binary="$app/Contents/MacOS/xlsOneQt"
+          dmg=".build/xlsOne-${VERSION}-macos-universal.dmg"
+
+          ctest --test-dir "$build_dir/arm64" --output-on-failure
+          archs="$(lipo -archs "$binary")"
+          [[ " $archs " == *" arm64 "* && " $archs " == *" x86_64 "* ]]
+          codesign --verify --deep --strict "$app"
+          hdiutil verify "$dmg"
+          (cd .build && shasum -a 256 "$(basename "$dmg")") \
+            > .build/SHA256SUMS-macos.txt
+
+      - name: Upload macOS package
+        uses: actions/upload-artifact@v7
+        with:
+          name: xlsone-macos-universal
+          path: |
+            .build/xlsOne-*-macos-universal.dmg
+            .build/SHA256SUMS-macos.txt
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+
+  linux:
+    name: Linux ${{ matrix.arch }} (DEB)
+    needs: metadata
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-22.04
+            deb_arch: amd64
+          - arch: arm64
+            runner: ubuntu-22.04-arm
+            deb_arch: arm64
+    env:
+      VERSION: ${{ needs.metadata.outputs.version }}
+      PACKAGE_ARCH: ${{ matrix.arch }}
+      XLSONE_LICENSE_PUBLIC_KEY: ${{ secrets.ED25519_PUBLIC_KEY }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install build dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            aria2 \
+            build-essential \
+            ca-certificates \
+            cmake \
+            dpkg-dev \
+            ninja-build \
+            qt5-qmake \
+            qtbase5-dev \
+            qtbase5-dev-tools \
+            qttools5-dev-tools \
+            zlib1g-dev
+
+      - name: Cache the Linux Qt runtime bundle
+        uses: actions/cache@v5
+        with:
+          path: cpp/deepin-qt5.15
+          key: deepin-qt5.15-${{ matrix.arch }}-${{ hashFiles('cpp/scripts/package_linux_deb.sh', 'cpp/third_party/runtime-debs/*') }}
+
+      - name: Build, test, and package
+        shell: bash
+        run: |
+          set -euo pipefail
+          package_args=(--bundle --obfuscate)
+          if [[ "${EDITION}" == "international" ]]; then
+            package_args+=(--international)
+          fi
+          package_args+=("${GITHUB_WORKSPACE}/cpp/build-linux-${PACKAGE_ARCH}-release")
+          ./cpp/scripts/package_linux_deb.sh "${package_args[@]}"
+          ctest \
+            --test-dir "cpp/build-linux-${PACKAGE_ARCH}-release" \
+            --output-on-failure
+
+      - name: Verify package and write checksum
+        shell: bash
+        run: |
+          set -euo pipefail
+          deb=".build/xlsone-${VERSION}-linux-${PACKAGE_ARCH}.deb"
+          test -f "$deb"
+          test "$(dpkg-deb -f "$deb" Architecture)" = "${{ matrix.deb_arch }}"
+
+          unpacked="$(mktemp -d)"
+          trap 'rm -rf "$unpacked"' EXIT
+          dpkg-deb -x "$deb" "$unpacked"
+          test -x "$unpacked/usr/bin/xlsOneQt"
+          test -x "$unpacked/usr/bin/xlsone"
+          find "$unpacked/usr/lib/xlsone" -name 'libQt5Core.so*' -print -quit | grep -q .
+          test -f "$unpacked/usr/lib/xlsone/plugins/platforms/libqxcb.so"
+          ./cpp/scripts/validate_deb.sh "$deb"
+          (cd .build && sha256sum "$(basename "$deb")") \
+            > ".build/SHA256SUMS-linux-${PACKAGE_ARCH}.txt"
+
+      - name: Upload Linux package
+        uses: actions/upload-artifact@v7
+        with:
+          name: xlsone-linux-${{ matrix.arch }}
+          path: |
+            .build/xlsone-*-linux-${{ matrix.arch }}.deb
+            .build/SHA256SUMS-linux-${{ matrix.arch }}.txt
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+
+  release:
+    name: Create draft GitHub Release
+    if: github.ref_type == 'tag' && startsWith(github.ref_name, 'v')
+    needs:
+      - metadata
+      - windows
+      - macos
+      - linux
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      actions: read
+      contents: write
+    steps:
+      - name: Download all packages
+        uses: actions/download-artifact@v8
+        with:
+          pattern: xlsone-*
+          path: dist
+          merge-multiple: true
+
+      - name: Verify release payload and consolidate checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(find dist -maxdepth 1 -type f -name '*.msi' | wc -l)" -eq 1
+          test "$(find dist -maxdepth 1 -type f -name '*.zip' | wc -l)" -eq 1
+          test "$(find dist -maxdepth 1 -type f -name '*.dmg' | wc -l)" -eq 1
+          test "$(find dist -maxdepth 1 -type f -name '*.deb' | wc -l)" -eq 2
+
+          find dist -maxdepth 1 -type f -name 'SHA256SUMS-*' -delete
+          (
+            cd dist
+            find . -maxdepth 1 -type f ! -name 'SHA256SUMS.txt' -print0 |
+              sort -z |
+              xargs -0 sha256sum |
+              sed 's#  \./#  #'
+          ) > dist/SHA256SUMS.txt
+          cat dist/SHA256SUMS.txt
+
+      - name: Create or update draft release
+        uses: softprops/action-gh-release@v3.0.0
+        with:
+          name: xlsOne ${{ github.ref_name }}
+          draft: true
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          body: |
+            Automated ${{ env.EDITION }} multi-platform build.
+
+            These packages are currently unsigned. Verify `SHA256SUMS.txt` before testing.
+          files: |
+            dist/*.msi
+            dist/*.zip
+            dist/*.dmg
+            dist/*.deb
+            dist/SHA256SUMS.txt
