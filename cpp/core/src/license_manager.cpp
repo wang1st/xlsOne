@@ -632,13 +632,23 @@ bool LicenseManager::verifyEd25519Signature(const QByteArray& message,
     if (signature.size() != 64) {
         return false;
     }
+#ifdef XLSONE_OBFUSCATE
+    const auto publicKey = xlsone::obf::licensePublicKey();
+    const uint8_t* publicKeyData = publicKey.data();
+#else
+    const uint8_t* publicKeyData = kLicensePublicKey;
+#endif
+    // Non-obfuscated compile/test builds intentionally use an all-zero
+    // placeholder. Reject it before entering the crypto implementation: an
+    // invalid/small-order Ed25519 key must never authorize a degenerate
+    // signature.
+    if (std::all_of(publicKeyData, publicKeyData + 32,
+                    [](uint8_t byte) { return byte == 0; })) {
+        return false;
+    }
     return crypto_ed25519_check(
         reinterpret_cast<const uint8_t*>(signature.constData()),
-#ifdef XLSONE_OBFUSCATE
-        xlsone::obf::licensePublicKey().data(),
-#else
-        kLicensePublicKey,
-#endif
+        publicKeyData,
         reinterpret_cast<const uint8_t*>(message.constData()),
         static_cast<size_t>(message.size())) == 0;
 }

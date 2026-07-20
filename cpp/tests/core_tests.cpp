@@ -7,6 +7,7 @@
 #include "xlsone/core/validator.hpp"
 #include "xlsone/core/update_checker.hpp"
 
+#include <QCoreApplication>
 #include <QFile>
 #include <QFileInfo>
 #include <QSettings>
@@ -385,7 +386,15 @@ QByteArray minimalBiff8Workbook()
 void CoreTests::initTestCase()
 {
     QVERIFY(settingsTempDir_.isValid());
-    QSettings::setPath(QSettings::NativeFormat, QSettings::UserScope, settingsTempDir_.path());
+    QCoreApplication::setOrganizationName(QStringLiteral("xlsOneTests"));
+    QCoreApplication::setApplicationName(QStringLiteral("xlsone_core_tests"));
+    QSettings::setDefaultFormat(QSettings::IniFormat);
+    QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settingsTempDir_.path());
+
+    QSettings settings;
+    settings.clear();
+    settings.sync();
+    QCOMPARE(settings.status(), QSettings::NoError);
 }
 
 void CoreTests::parsesNumbers()
@@ -1082,7 +1091,7 @@ void CoreTests::parsesLocalXianjuXlsWhenPresent()
     QCOMPARE(xlsFile.sheets.front().cellAt(15, 2)->value, xlsxFile.sheets.front().cellAt(15, 2)->value);
 }
 
-QTEST_APPLESS_MAIN(CoreTests)
+QTEST_GUILESS_MAIN(CoreTests)
 
 void CoreTests::updateCheckerCurrentVersionIsValid()
 {
@@ -1184,7 +1193,7 @@ void CoreTests::licenseManagerUnactivatedRestrictsImportsAndExports()
     QSettings().clear();
 
     xlsone::LicenseManager manager;
-#if defined(Q_OS_LINUX)
+#if defined(Q_OS_LINUX) && defined(XLSONE_LINUX_BUILTIN_LICENSE)
     // Linux builds carry a built-in Ed25519-signed PersonalLifetime license,
     // so a fresh install is activated out of the box.  Reaching Activated
     // here also proves the embedded signature verified against the public
@@ -1279,20 +1288,32 @@ void CoreTests::licenseManagerActiveTrialGrantsFullCapabilities()
 
 void CoreTests::licenseManagerInvalidPersistedLicenseDoesNotRecurse()
 {
-    QSettings settings;
-    settings.clear();
-
     const QString invalidSignature = QString::fromLatin1(
         QByteArray(64, '\0').toBase64(QByteArray::Base64UrlEncoding |
                                       QByteArray::OmitTrailingEquals));
     const QString invalidLicense = QStringLiteral(
         R"({"key_id":"TEST-INVALID","plan":"personal_yearly","device_hash":"","device_components":[],"issued_at":1,"expires_at":2,"signature":"%1"})")
         .arg(invalidSignature);
-    settings.setValue(QStringLiteral("license/token"), invalidLicense);
+
+    // Destroy the writer before LicenseManager opens its own QSettings
+    // instance. Keeping a writer with stale cached data alive can overwrite a
+    // removal performed by a second instance on file-backed platforms.
+    {
+        QSettings settings;
+        settings.clear();
+        settings.setValue(QStringLiteral("license/token"), invalidLicense);
+        settings.sync();
+        QCOMPARE(settings.status(), QSettings::NoError);
+        QVERIFY(settings.contains(QStringLiteral("license/token")));
+    }
 
     xlsone::LicenseManager manager;
-    QVERIFY(!QSettings().contains(QStringLiteral("license/token")));
-#if defined(Q_OS_LINUX)
+    QSettings persistedSettings;
+    persistedSettings.sync();
+    QCOMPARE(persistedSettings.status(), QSettings::NoError);
+    QVERIFY(!persistedSettings.contains(QStringLiteral("license/token")));
+    QVERIFY(!persistedSettings.contains(QStringLiteral("license/offline")));
+#if defined(Q_OS_LINUX) && defined(XLSONE_LINUX_BUILTIN_LICENSE)
     QCOMPARE(manager.state(), xlsone::LicenseState::Activated);
 #else
     QCOMPARE(manager.state(), xlsone::LicenseState::Unactivated);
