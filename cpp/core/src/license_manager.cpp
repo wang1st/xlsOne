@@ -50,16 +50,10 @@ static QString g_deviceFingerprintCache;
 // plaintext key and service endpoints out of the release binary's .rodata.
 
 #ifndef XLSONE_OBFUSCATE
-// Ed25519 public key (32 bytes) for verifying Windows license signatures.
-// Must correspond to the private seed held ONLY in the Worker secret
-// ED25519_PRIVATE_KEY.  This array is only compiled into non-obfuscated builds.
-// Rotated 2026-07-17 after the previous seed leaked into the git history.
-static constexpr uint8_t kLicensePublicKey[32] = {
-    0xb0, 0xaf, 0x99, 0x04, 0x7c, 0xf3, 0x0b, 0x4f,
-    0xe7, 0x23, 0x60, 0xd5, 0x3f, 0xf5, 0x76, 0x5c,
-    0x3c, 0xcd, 0x33, 0xd9, 0x11, 0xe2, 0xb1, 0xf1,
-    0x9b, 0x99, 0xdc, 0xd4, 0xc8, 0xff, 0x83, 0xcc
-};
+// Non-obfuscated builds are for compile/test CI only and deliberately use an
+// invalid key. Distributable builds must set XLSONE_OBFUSCATE=ON and inject the
+// real public key from the external secrets store at build time.
+static constexpr uint8_t kLicensePublicKey[32] = {};
 #endif // !XLSONE_OBFUSCATE
 
 namespace {

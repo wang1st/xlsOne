@@ -50,6 +50,10 @@ swift build -c release
 swift test
 ```
 
+### 多平台自动打包
+
+GitHub Actions 可自动生成 Windows MSI/ZIP、macOS Universal DMG，以及 Linux amd64/arm64 DEB。配置与使用方式见 [GitHub Actions 多平台自动打包](docs/GitHub_Actions多平台打包.md)。
+
 ## 验证结果
 
 使用仙居县13个乡镇的财务报表进行验证：
