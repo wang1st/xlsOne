@@ -3,6 +3,17 @@ set -euo pipefail
 
 DEB="${1:?Usage: $0 <path-to.deb>}"
 
+run_privileged() {
+    if [ "$(id -u)" -eq 0 ]; then
+        "$@"
+    elif command -v sudo >/dev/null 2>&1; then
+        sudo "$@"
+    else
+        echo "SKIP: root privileges unavailable for: $*" >&2
+        return 0
+    fi
+}
+
 echo "========================================="
 echo "  xlsOne DEB Package Validation"
 echo "========================================="
@@ -21,11 +32,11 @@ dpkg-deb -c "$DEB" | head -50 || true
 echo ""
 
 echo "== dpkg simulate install =="
-sudo dpkg --dry-run -i "$DEB" 2>&1 || true
+run_privileged dpkg --dry-run -i "$DEB" 2>&1 || true
 echo ""
 
 echo "== apt simulate install =="
-sudo apt install --simulate --no-install-recommends "$(realpath "$DEB")" 2>&1 || true
+run_privileged apt install --simulate --no-install-recommends "$(realpath "$DEB")" 2>&1 || true
 echo ""
 
 echo "== check maintainer format =="
