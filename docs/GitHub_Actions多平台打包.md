@@ -2,12 +2,12 @@
 
 仓库通过 `.github/workflows/package.yml` 构建并部署 Qt/C++ 客户端，不使用 Swift 客户端。
 
-| 平台 | GitHub Runner | 发布文件 |
+| 平台 | Runner / 构建基线 | 发布文件 |
 |---|---|---|
 | Windows amd64 | `windows-2022` | MSI、便携 ZIP |
 | macOS Universal | `macos-15` | 同时包含 arm64 与 x86_64 的 DMG |
-| Linux amd64 | `ubuntu-22.04` | 自包含 DEB |
-| Linux arm64 | `ubuntu-22.04-arm` | 自包含 DEB |
+| Linux amd64 | `ubuntu-22.04` + 固定 Debian 10 容器 | 自包含 DEB |
+| Linux arm64 | `ubuntu-22.04-arm` + 固定 Debian 10 容器 | 自包含 DEB |
 
 完整流程如下：
 
@@ -39,6 +39,10 @@ flowchart LR
 3. 点击 **Run workflow**。
 
 完成后在该次运行的 **Artifacts** 下载四个平台安装包。Artifacts 保留 14 天。
+
+Windows 优先使用 MSI。使用便携 ZIP 时，必须先把 ZIP 中的顶层目录完整解压到本地磁盘，再运行其中的 `bin\xlsOneQt.exe`；不要只复制 EXE，也不要在压缩软件预览窗口内直接启动。`Qt6*.dll`、`platforms\qwindows.dll` 和 MinGW 运行库必须保持在 ZIP 原有的相对目录中。Actions 会在上传前分别解包 MSI/ZIP，检查 DLL 依赖并执行启动冒烟测试。
+
+Linux 两个架构都在固定摘要的 Debian 10（glibc 2.28、GCC 8）容器中编译，以兼容银河麒麟 V10 与统信 UOS V20。上传前会扫描 DEB 内每个 ELF，强制 `GLIBC <= 2.28`、`GLIBCXX <= 3.4.25`、`CXXABI <= 1.3.11`；任何 runner 或工具链升级造成的 ABI 上浮都会直接终止发布。
 
 也可用命令行：
 

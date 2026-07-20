@@ -87,7 +87,7 @@ echo ""
 # ---------------------------------------------------------------------------
 echo "==> Checking build dependencies ..."
 MISSING_PKGS=""
-for cmd in cmake ninja cpack dpkg-deb g++ ldd; do
+for cmd in cmake ninja cpack dpkg-deb g++ ldd python3 readelf; do
     if ! command -v "$cmd" >/dev/null 2>&1; then
         echo "   ✗ $cmd not found"
         case "$cmd" in
@@ -96,6 +96,8 @@ for cmd in cmake ninja cpack dpkg-deb g++ ldd; do
             cpack)   MISSING_PKGS="$MISSING_PKGS cmake-cpack-helper" ;;
             dpkg-deb) MISSING_PKGS="$MISSING_PKGS dpkg-dev" ;;
             g++)     MISSING_PKGS="$MISSING_PKGS g++" ;;
+            python3) MISSING_PKGS="$MISSING_PKGS python3" ;;
+            readelf) MISSING_PKGS="$MISSING_PKGS binutils" ;;
         esac
     fi
 done
@@ -348,9 +350,9 @@ if [ "$BUNDLE_MODE" = "bundle" ] && [ -n "$BUILD_GLIBC_VER" ]; then
     if [ "$build_major" -gt "$min_major" ] || \
        ([ "$build_major" -eq "$min_major" ] && [ "$build_minor" -gt "$min_minor" ]); then
         echo "⚠  WARNING: Build glibc ($BUILD_GLIBC_VER) > common target minimum ($MIN_TARGET_GLIBC)"
-        echo "   Bundled libraries may not work on older targets (UOS 20, Debian 10)."
-        echo "   → Using deepin-shared-libs Qt5.15 (built for UOS V20) should improve compatibility."
-        echo "   → Or build with --system-qt to avoid bundling entirely."
+        echo "   The application binary can inherit symbols that are unavailable on Kylin/UOS."
+        echo "   → The final package ABI check will reject symbols newer than glibc $MIN_TARGET_GLIBC."
+        echo "   → Build release packages in the Debian 10 compatibility container."
         echo ""
     fi
 fi
@@ -465,6 +467,15 @@ cpack -G DEB
 # Report
 # ---------------------------------------------------------------------------
 DEB_FILE="$(ls -t "$BUILD_DIR"/*.deb 2>/dev/null | head -1)"
+
+# A self-contained Qt bundle does not make an executable compiled on a newer
+# distro compatible with an older libc/libstdc++.  Validate every ELF in the
+# completed package so release builds cannot silently inherit the host ABI.
+if [ -n "$DEB_FILE" ] && [ "$BUNDLE_MODE" = "bundle" ]; then
+    echo "==> Verifying Kylin/UOS ELF ABI compatibility ..."
+    python3 "$PROJECT_ROOT/../scripts/ci/check_linux_abi.py" "$DEB_FILE"
+fi
+
 echo ""
 echo "========================================="
 echo "  DEB generated successfully"
