@@ -30,6 +30,8 @@ opencode.json
 
 # Local Python tool scripts
 build/
+__pycache__/
+*.py[cod]
 
 # Linux packaging artifacts
 cpp/_CPack_Packages/
@@ -45,6 +47,10 @@ cpp/xlsOne-*-macos*.dmg
 ssh-passwd.txt
 sudo-passwd.txt
 z-pulse.cn.txt
+
+# Deployment-generated release metadata
+/site/api/version.json
+/site/downloads/checksums.txt
 
 # JavaScript dependencies
 node_modules/
