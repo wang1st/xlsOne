@@ -18,7 +18,7 @@ set -euo pipefail
 #   --notarize               Submit the DMG for Apple notarization (signed only).
 #                            Requires APPLE_ID and APP_SPECIFIC_PASSWORD.
 #   --version <version>      Version string used in filenames and bundle plist.
-#                            Default: value from site/api/version.json or CMake project version.
+#                            Default: CMake project version.
 #   --output <path>          Output DMG path.
 #                            Default: ./xlsOne-<version>-macos-<arch>.dmg
 #   --arch <arch>            Target architecture: host, arm64, x86_64, or universal.
@@ -44,7 +44,7 @@ Options:
   --notarize             Submit the DMG for notarization (signed builds only).
                          Requires APPLE_ID and APP_SPECIFIC_PASSWORD.
   --version <version>    Version string used in the DMG name and bundle plist.
-                         Default: site/api/version.json latest_version or "0.0.0".
+                         Default: CMake project version or "0.0.0".
   --output <path>        Output DMG path.
                          Default: ./xlsOne-<version>-macos-<arch>.dmg
   --arch <arch>          Target architecture: host, arm64, x86_64, or universal.
@@ -201,9 +201,7 @@ BUILD_DIR="$(cd "$BUILD_DIR" 2>/dev/null && pwd || echo "$BUILD_DIR")"
 
 # Resolve version
 if [ -z "$VERSION" ]; then
-    if [ -f "$REPO_ROOT/site/api/version.json" ]; then
-        VERSION="$(python3 -c "import json,sys; print(json.load(open('$REPO_ROOT/site/api/version.json')).get('latest_version',''))" 2>/dev/null || echo "")"
-    fi
+    VERSION="$(python3 "$REPO_ROOT/scripts/ci/release_version.py" 2>/dev/null || echo "")"
     if [ -z "$VERSION" ]; then
         VERSION="0.0.0"
     fi
