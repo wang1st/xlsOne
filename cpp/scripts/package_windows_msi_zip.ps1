@@ -361,6 +361,14 @@ if ($Sign -and (Test-Path $msi)) {
     Invoke-Sign $msi $resolvedSignTool
 }
 
+# Treat package contents as part of the build contract. This administratively
+# extracts the MSI, expands the ZIP, checks the Qt/MinGW runtime and plugin
+# layout, audits transitive DLL dependencies, and briefly launches both copies.
+$packageVerifier = Join-Path $PSScriptRoot "verify_windows_packages.ps1"
+$objdump = Join-Path (Join-Path $MingwRoot "bin") "objdump.exe"
+& $packageVerifier -MsiPath $msi -ZipPath $zip -ObjdumpPath $objdump -QtMajor ([int]$qtMajor)
+if ($LASTEXITCODE -ne 0) { throw "Windows package verification failed" }
+
 Write-Host "`n=== Packaging complete ===" -ForegroundColor Green
 Write-Host "MSI: $msi"
 Write-Host "ZIP: $zip"
