@@ -146,6 +146,7 @@ jobs:
             .build/xlsone-*-windows-amd64.msi
             .build/xlsone-*-windows-amd64.zip
             .build/SHA256SUMS-windows.txt
+          include-hidden-files: true
           if-no-files-found: error
           compression-level: 0
           retention-days: 14
@@ -210,6 +211,7 @@ jobs:
           path: |
             .build/xlsOne-*-macos-universal.dmg
             .build/SHA256SUMS-macos.txt
+          include-hidden-files: true
           if-no-files-found: error
           compression-level: 0
           retention-days: 14
@@ -287,7 +289,7 @@ jobs:
           trap 'rm -rf "$unpacked"' EXIT
           dpkg-deb -x "$deb" "$unpacked"
           test -x "$unpacked/usr/bin/xlsOneQt"
-          test -x "$unpacked/usr/bin/xlsone"
+          test -x "$unpacked/usr/bin/xlsone.sh"
           find "$unpacked/usr/lib/xlsone" -name 'libQt5Core.so*' -print -quit | grep -q .
           test -f "$unpacked/usr/lib/xlsone/plugins/platforms/libqxcb.so"
           ./cpp/scripts/validate_deb.sh "$deb"
@@ -301,6 +303,7 @@ jobs:
           path: |
             .build/xlsone-*-linux-${{ matrix.arch }}.deb
             .build/SHA256SUMS-linux-${{ matrix.arch }}.txt
+          include-hidden-files: true
           if-no-files-found: error
           compression-level: 0
           retention-days: 14
