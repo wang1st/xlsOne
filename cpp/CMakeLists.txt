@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.22)
 
 project(xlsOneQt
-    VERSION 1.0.7
+    VERSION 1.0.8
     DESCRIPTION "Cross-platform C++/Qt port of xlsOne"
     LANGUAGES C CXX
 )
@@ -488,19 +488,22 @@ if(WIN32)
         DOC "Path to windeployqt"
     )
 
-    # 1) windeployqt: best-effort deployment of Qt5*.dll + plugin discovery.
-    #    Kept for completeness; the explicit copies below are the real guarantee.
-    if(WINDEPLOYQT_EXECUTABLE)
+    # 1) windeployqt: deploy the Qt runtime and discover the plugins required by
+    #    the staged executable. A failure must stop packaging; publishing a
+    #    partially deployed Windows application is never safe.
+    if(NOT WINDEPLOYQT_EXECUTABLE)
+        message(FATAL_ERROR "windeployqt not found under ${_qt_bin_dir}")
+    else()
         install(CODE "
-            set(_exe \"$<TARGET_FILE:xlsone_app>\")
             set(_bindir \"\${CMAKE_INSTALL_PREFIX}/bin\")
+            set(_exe \"\${_bindir}/xlsOneQt.exe\")
             message(STATUS \"Running windeployqt: ${WINDEPLOYQT_EXECUTABLE} --release --no-opengl-sw --no-system-d3d-compiler --dir \${_bindir} \${_exe}\")
             execute_process(
                 COMMAND \"${WINDEPLOYQT_EXECUTABLE}\" --release --no-opengl-sw --no-system-d3d-compiler --dir \${_bindir} \${_exe}
                 RESULT_VARIABLE _deploy_result
             )
             if(NOT _deploy_result EQUAL 0)
-                message(WARNING \"windeployqt returned non-zero exit code: \${_deploy_result}\")
+                message(FATAL_ERROR \"windeployqt returned non-zero exit code: \${_deploy_result}\")
             endif()
         ")
     endif()
