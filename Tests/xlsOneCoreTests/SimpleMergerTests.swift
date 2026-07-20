@@ -203,7 +203,11 @@ final class SimpleMergerTests: XCTestCase {
 
         XCTAssertEqual(merged.type, .sum(0))
         XCTAssertEqual(merged.displayValue, "0.0")
-        XCTAssertTrue(merged.decision.decisionReasons.contains("所有非空来源均为 0，按可累加单元格求和处理"))
+        XCTAssertTrue(
+            merged.decision.decisionReasons.contains(
+                LocaleManager.loc("所有非空来源均为 0，按可累加单元格求和处理")
+            )
+        )
     }
 
     func testAllZeroDecimalValuesRespectCodeSemanticVeto() {
@@ -241,7 +245,11 @@ final class SimpleMergerTests: XCTestCase {
 
         XCTAssertEqual(merged.type, .label)
         XCTAssertEqual(merged.displayValue, "2024")
-        XCTAssertTrue(merged.decision.decisionReasons.contains("所有来源为相同非零整数，且无明确可累加语义，按标签处理"))
+        XCTAssertTrue(
+            merged.decision.decisionReasons.contains(
+                LocaleManager.loc("所有来源为相同非零整数，且无明确可累加语义，按标签处理")
+            )
+        )
     }
 
     func testIdenticalNonZeroIntegerValuesInFirstColumnPreferLabel() {
@@ -261,7 +269,11 @@ final class SimpleMergerTests: XCTestCase {
 
         XCTAssertEqual(merged.type, .label)
         XCTAssertEqual(merged.displayValue, "2024")
-        XCTAssertTrue(merged.decision.decisionReasons.contains("首列所有来源为相同非零整数，按标签处理"))
+        XCTAssertTrue(
+            merged.decision.decisionReasons.contains(
+                LocaleManager.loc("首列所有来源为相同非零整数，按标签处理")
+            )
+        )
     }
 
     func testIdenticalNonZeroIntegerValuesWithAmountSemanticCanSum() {
@@ -472,7 +484,9 @@ final class SimpleMergerTests: XCTestCase {
         XCTAssertEqual(merged.type, .sum(246912))
         XCTAssertEqual(merged.displayValue, "246912")
         XCTAssertTrue(
-            merged.decision.decisionReasons.contains("部分来源为空或缺失，非空来源均为数值，空值按 0 参与可累加判断")
+            merged.decision.decisionReasons.contains(
+                LocaleManager.loc("部分来源为空或缺失，非空来源均为数值，空值按 0 参与可累加判断")
+            )
         )
     }
 

@@ -2,8 +2,17 @@ import XCTest
 @testable import xlsOneCore
 
 final class TemplateWorkbookExporterTests: XCTestCase {
+    private var samplePath: String {
+        URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent("仙居县")
+            .appendingPathComponent("仙居县人民政府安洲街道办事处2025乡镇报表主体信息表.xlsx")
+            .path
+    }
+
     func testTemplateExporterProducesReadableWorkbook() async throws {
-        let samplePath = "/Users/ethan/xlsOne/仙居县/仙居县人民政府安洲街道办事处2025乡镇报表主体信息表.xlsx"
         let parser = ExcelParser()
         let sourceFile = try await parser.parseFile(at: samplePath)
 
@@ -73,7 +82,6 @@ final class TemplateWorkbookExporterTests: XCTestCase {
     }
 
     func testTemplateExporterWritesNumericSumsAsNumbers() async throws {
-        let samplePath = "/Users/ethan/xlsOne/仙居县/仙居县人民政府安洲街道办事处2025乡镇报表主体信息表.xlsx"
         let parser = ExcelParser()
         let sourceFile = try await parser.parseFile(at: samplePath)
 
