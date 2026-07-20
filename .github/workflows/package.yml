@@ -280,6 +280,7 @@ jobs:
     env:
       VERSION: ${{ needs.metadata.outputs.version }}
       PACKAGE_ARCH: ${{ matrix.arch }}
+      QT_SELECT: qt5
       XLSONE_LICENSE_PUBLIC_KEY: ${{ secrets.ED25519_PUBLIC_KEY }}
     steps:
       - name: Install Debian 10 compatibility toolchain
