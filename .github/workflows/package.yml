@@ -141,6 +141,24 @@ jobs:
           }
           & .\cpp\scripts\package_windows_msi_zip.ps1 @packageArgs
 
+      - name: Verify a real MSI upgrade and installed startup
+        shell: pwsh
+        run: |
+          & .\cpp\scripts\verify_windows_msi_upgrade.ps1 `
+            -PreviousMsiPath ".\site\downloads\xlsone-1.0.5-windows-amd64.msi" `
+            -CandidateMsiPath ".build\xlsone-$env:VERSION-windows-amd64.msi" `
+            -ExpectedVersion $env:VERSION `
+            -QtMajor 6
+
+      - name: Upload MSI upgrade logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: xlsone-windows-msi-upgrade-logs
+          path: .build/xlsone-msi-upgrade-*
+          if-no-files-found: ignore
+          retention-days: 7
+
       - name: Verify package artifacts and write checksums
         shell: pwsh
         run: |
