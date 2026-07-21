@@ -273,6 +273,8 @@ msiexec /i xlsone-1.0.4-windows-amd64.msi /qn
 msiexec /x xlsone-1.0.4-windows-amd64.msi /qn
 ```
 
+发布流水线还会执行 `cpp/scripts/verify_windows_msi_upgrade.ps1`：先真实安装带 Qt 6.11.1 的旧 MSI，再升级到候选 MSI，确认 `bin` 中 Qt DLL、`platforms\qwindows.dll`、开始菜单快捷方式和实际启动均正常。这个脚本会修改 Windows Installer 的机器级状态，因此默认只允许在 GitHub Actions 的一次性 runner 上运行；本机调试必须显式传入 `-AllowLocalMachineMutation`，并且检测到已有 xlsOne 时会拒绝继续。
+
 ---
 
 ## 故障排查

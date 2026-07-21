@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.22)
 
 project(xlsOneQt
-    VERSION 1.0.8
+    VERSION 1.0.9
     DESCRIPTION "Cross-platform C++/Qt port of xlsOne"
     LANGUAGES C CXX
 )
@@ -351,6 +351,12 @@ if(WIN32)
     # Fixed upgrade GUID for xlsOne Windows installer. Do not change between releases.
     set(CPACK_WIX_UPGRADE_GUID "A1B2C3D4-E5F6-7890-1234-567890ABCDEF")
     set(CPACK_WIX_PROPERTY_ARPURLINFOABOUT "https://xlsone.com")
+    # CPack keeps component GUIDs stable across major upgrades. If a previous
+    # package contains a newer Qt file version, Windows Installer otherwise
+    # costs the older candidate file as unnecessary, then removes the old file
+    # with the superseded product. Force the app-private payload to match this
+    # MSI exactly, including intentional Qt version downgrades.
+    set(CPACK_WIX_PROPERTY_REINSTALLMODE "amus")
     # Skip ICE validation — fails on systems where Windows Installer service is unavailable
     # (common in CI/sandbox environments). ICE checks are install-time validations, not build-time.
     set(CPACK_WIX_LIGHT_EXTRA_OPTIONS "-sice:ICE")

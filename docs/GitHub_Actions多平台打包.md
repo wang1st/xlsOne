@@ -40,7 +40,9 @@ flowchart LR
 
 完成后在该次运行的 **Artifacts** 下载四个平台安装包。Artifacts 保留 14 天。
 
-Windows 优先使用 MSI。使用便携 ZIP 时，必须先把 ZIP 中的顶层目录完整解压到本地磁盘，再运行其中的 `bin\xlsOneQt.exe`；不要只复制 EXE，也不要在压缩软件预览窗口内直接启动。`Qt6*.dll`、`platforms\qwindows.dll` 和 MinGW 运行库必须保持在 ZIP 原有的相对目录中。Actions 会在上传前分别解包 MSI/ZIP，检查 DLL 依赖并执行启动冒烟测试。
+Windows 优先使用 MSI。使用便携 ZIP 时，必须先把 ZIP 中的顶层目录完整解压到本地磁盘，再运行其中的 `bin\xlsOneQt.exe`；不要只复制 EXE，也不要在压缩软件预览窗口内直接启动。`Qt6*.dll`、`platforms\qwindows.dll` 和 MinGW 运行库必须保持在 ZIP 原有的相对目录中。
+
+Actions 在上传 Windows 包之前会做两层验证：先分别解包 MSI/ZIP，检查 DLL 依赖并执行启动冒烟测试；再在干净 runner 上真实安装旧 MSI、升级到候选 MSI，核对安装后的 Qt DLL 版本、开始菜单快捷方式并启动实际安装目录中的程序。第二层专门防止 Windows Installer 在 Qt 降版时按“高版本优先”跳过候选 DLL——仅做 `/a` 管理解包无法发现这种问题。候选 MSI 使用 `REINSTALLMODE=amus`，确保应用私有的 Qt 运行库最终与安装包内容一致。
 
 Linux 两个架构都在固定摘要的 Debian 10（glibc 2.28、GCC 8）容器中编译，以兼容银河麒麟 V10 与统信 UOS V20。上传前会扫描 DEB 内每个 ELF，强制 `GLIBC <= 2.28`、`GLIBCXX <= 3.4.25`、`CXXABI <= 1.3.11`；任何 runner 或工具链升级造成的 ABI 上浮都会直接终止发布。
 
