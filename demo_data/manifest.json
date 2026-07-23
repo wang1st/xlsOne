@@ -1,0 +1,1109 @@
+{
+  "scenario": "集团总部每月收集120家分公司同构经营月报",
+  "period": "2026年6月",
+  "verification": {
+    "file_count": 120,
+    "sheet_names": [
+      "经营数据汇总",
+      "费用明细",
+      "人员情况",
+      "项目交付",
+      "回款情况",
+      "异常与说明",
+      "填报信息"
+    ],
+    "structure": [
+      [
+        "经营数据汇总",
+        16,
+        6
+      ],
+      [
+        "费用明细",
+        14,
+        6
+      ],
+      [
+        "人员情况",
+        10,
+        6
+      ],
+      [
+        "项目交付",
+        9,
+        6
+      ],
+      [
+        "回款情况",
+        8,
+        6
+      ],
+      [
+        "异常与说明",
+        9,
+        6
+      ],
+      [
+        "填报信息",
+        8,
+        6
+      ]
+    ]
+  },
+  "units": [
+    {
+      "index": 1,
+      "code": "BR001",
+      "region": "华东",
+      "unit": "南京分公司",
+      "file": "南京分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 2,
+      "code": "BR002",
+      "region": "华东",
+      "unit": "苏州分公司",
+      "file": "苏州分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 3,
+      "code": "BR003",
+      "region": "华东",
+      "unit": "无锡分公司",
+      "file": "无锡分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 4,
+      "code": "BR004",
+      "region": "华东",
+      "unit": "常州分公司",
+      "file": "常州分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 5,
+      "code": "BR005",
+      "region": "华东",
+      "unit": "南通分公司",
+      "file": "南通分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 6,
+      "code": "BR006",
+      "region": "华东",
+      "unit": "扬州分公司",
+      "file": "扬州分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 7,
+      "code": "BR007",
+      "region": "华东",
+      "unit": "镇江分公司",
+      "file": "镇江分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 8,
+      "code": "BR008",
+      "region": "华东",
+      "unit": "泰州分公司",
+      "file": "泰州分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 9,
+      "code": "BR009",
+      "region": "华东",
+      "unit": "徐州分公司",
+      "file": "徐州分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 10,
+      "code": "BR010",
+      "region": "华东",
+      "unit": "连云港分公司",
+      "file": "连云港分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 11,
+      "code": "BR011",
+      "region": "华东",
+      "unit": "杭州分公司",
+      "file": "杭州分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 12,
+      "code": "BR012",
+      "region": "华东",
+      "unit": "宁波分公司",
+      "file": "宁波分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 13,
+      "code": "BR013",
+      "region": "华东",
+      "unit": "温州分公司",
+      "file": "温州分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 14,
+      "code": "BR014",
+      "region": "华东",
+      "unit": "嘉兴分公司",
+      "file": "嘉兴分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 15,
+      "code": "BR015",
+      "region": "华东",
+      "unit": "绍兴分公司",
+      "file": "绍兴分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 16,
+      "code": "BR016",
+      "region": "华东",
+      "unit": "金华分公司",
+      "file": "金华分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 17,
+      "code": "BR017",
+      "region": "华东",
+      "unit": "台州分公司",
+      "file": "台州分公司.xlsx",
+      "anomaly": [
+        "销售费用异常",
+        "市场活动集中投放，销售费用明显高于常态",
+        "市场部"
+      ]
+    },
+    {
+      "index": 18,
+      "code": "BR018",
+      "region": "华东",
+      "unit": "湖州分公司",
+      "file": "湖州分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 19,
+      "code": "BR019",
+      "region": "华东",
+      "unit": "合肥分公司",
+      "file": "合肥分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 20,
+      "code": "BR020",
+      "region": "华东",
+      "unit": "芜湖分公司",
+      "file": "芜湖分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 21,
+      "code": "BR021",
+      "region": "华南",
+      "unit": "广州分公司",
+      "file": "广州分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 22,
+      "code": "BR022",
+      "region": "华南",
+      "unit": "深圳分公司",
+      "file": "深圳分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 23,
+      "code": "BR023",
+      "region": "华南",
+      "unit": "佛山分公司",
+      "file": "佛山分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 24,
+      "code": "BR024",
+      "region": "华南",
+      "unit": "东莞分公司",
+      "file": "东莞分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 25,
+      "code": "BR025",
+      "region": "华南",
+      "unit": "珠海分公司",
+      "file": "珠海分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 26,
+      "code": "BR026",
+      "region": "华南",
+      "unit": "惠州分公司",
+      "file": "惠州分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 27,
+      "code": "BR027",
+      "region": "华南",
+      "unit": "中山分公司",
+      "file": "中山分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 28,
+      "code": "BR028",
+      "region": "华南",
+      "unit": "江门分公司",
+      "file": "江门分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 29,
+      "code": "BR029",
+      "region": "华南",
+      "unit": "肇庆分公司",
+      "file": "肇庆分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 30,
+      "code": "BR030",
+      "region": "华南",
+      "unit": "汕头分公司",
+      "file": "汕头分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 31,
+      "code": "BR031",
+      "region": "华南",
+      "unit": "湛江分公司",
+      "file": "湛江分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 32,
+      "code": "BR032",
+      "region": "华南",
+      "unit": "茂名分公司",
+      "file": "茂名分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 33,
+      "code": "BR033",
+      "region": "华南",
+      "unit": "清远分公司",
+      "file": "清远分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 34,
+      "code": "BR034",
+      "region": "华南",
+      "unit": "南宁分公司",
+      "file": "南宁分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 35,
+      "code": "BR035",
+      "region": "华南",
+      "unit": "柳州分公司",
+      "file": "柳州分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 36,
+      "code": "BR036",
+      "region": "华南",
+      "unit": "桂林分公司",
+      "file": "桂林分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 37,
+      "code": "BR037",
+      "region": "华南",
+      "unit": "海口分公司",
+      "file": "海口分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 38,
+      "code": "BR038",
+      "region": "华南",
+      "unit": "三亚分公司",
+      "file": "三亚分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 39,
+      "code": "BR039",
+      "region": "华南",
+      "unit": "福州分公司",
+      "file": "福州分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 40,
+      "code": "BR040",
+      "region": "华南",
+      "unit": "厦门分公司",
+      "file": "厦门分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 41,
+      "code": "BR041",
+      "region": "华北",
+      "unit": "石家庄分公司",
+      "file": "石家庄分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 42,
+      "code": "BR042",
+      "region": "华北",
+      "unit": "唐山分公司",
+      "file": "唐山分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 43,
+      "code": "BR043",
+      "region": "华北",
+      "unit": "保定分公司",
+      "file": "保定分公司.xlsx",
+      "anomaly": [
+        "逾期回款",
+        "重点客户验收推迟，90天以上应收款增加",
+        "财务部"
+      ]
+    },
+    {
+      "index": 44,
+      "code": "BR044",
+      "region": "华北",
+      "unit": "廊坊分公司",
+      "file": "廊坊分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 45,
+      "code": "BR045",
+      "region": "华北",
+      "unit": "沧州分公司",
+      "file": "沧州分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 46,
+      "code": "BR046",
+      "region": "华北",
+      "unit": "邯郸分公司",
+      "file": "邯郸分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 47,
+      "code": "BR047",
+      "region": "华北",
+      "unit": "邢台分公司",
+      "file": "邢台分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 48,
+      "code": "BR048",
+      "region": "华北",
+      "unit": "秦皇岛分公司",
+      "file": "秦皇岛分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 49,
+      "code": "BR049",
+      "region": "华北",
+      "unit": "衡水分公司",
+      "file": "衡水分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 50,
+      "code": "BR050",
+      "region": "华北",
+      "unit": "张家口分公司",
+      "file": "张家口分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 51,
+      "code": "BR051",
+      "region": "华北",
+      "unit": "太原分公司",
+      "file": "太原分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 52,
+      "code": "BR052",
+      "region": "华北",
+      "unit": "大同分公司",
+      "file": "大同分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 53,
+      "code": "BR053",
+      "region": "华北",
+      "unit": "长治分公司",
+      "file": "长治分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 54,
+      "code": "BR054",
+      "region": "华北",
+      "unit": "晋城分公司",
+      "file": "晋城分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 55,
+      "code": "BR055",
+      "region": "华北",
+      "unit": "临汾分公司",
+      "file": "临汾分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 56,
+      "code": "BR056",
+      "region": "华北",
+      "unit": "呼和浩特分公司",
+      "file": "呼和浩特分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 57,
+      "code": "BR057",
+      "region": "华北",
+      "unit": "包头分公司",
+      "file": "包头分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 58,
+      "code": "BR058",
+      "region": "华北",
+      "unit": "鄂尔多斯分公司",
+      "file": "鄂尔多斯分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 59,
+      "code": "BR059",
+      "region": "华北",
+      "unit": "烟台分公司",
+      "file": "烟台分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 60,
+      "code": "BR060",
+      "region": "华北",
+      "unit": "潍坊分公司",
+      "file": "潍坊分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 61,
+      "code": "BR061",
+      "region": "华中",
+      "unit": "武汉分公司",
+      "file": "武汉分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 62,
+      "code": "BR062",
+      "region": "华中",
+      "unit": "宜昌分公司",
+      "file": "宜昌分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 63,
+      "code": "BR063",
+      "region": "华中",
+      "unit": "襄阳分公司",
+      "file": "襄阳分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 64,
+      "code": "BR064",
+      "region": "华中",
+      "unit": "荆州分公司",
+      "file": "荆州分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 65,
+      "code": "BR065",
+      "region": "华中",
+      "unit": "黄石分公司",
+      "file": "黄石分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 66,
+      "code": "BR066",
+      "region": "华中",
+      "unit": "孝感分公司",
+      "file": "孝感分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 67,
+      "code": "BR067",
+      "region": "华中",
+      "unit": "长沙分公司",
+      "file": "长沙分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 68,
+      "code": "BR068",
+      "region": "华中",
+      "unit": "株洲分公司",
+      "file": "株洲分公司.xlsx",
+      "anomaly": [
+        "项目延期",
+        "两个交付项目因客户接口调整延期",
+        "交付部"
+      ]
+    },
+    {
+      "index": 69,
+      "code": "BR069",
+      "region": "华中",
+      "unit": "湘潭分公司",
+      "file": "湘潭分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 70,
+      "code": "BR070",
+      "region": "华中",
+      "unit": "衡阳分公司",
+      "file": "衡阳分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 71,
+      "code": "BR071",
+      "region": "华中",
+      "unit": "岳阳分公司",
+      "file": "岳阳分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 72,
+      "code": "BR072",
+      "region": "华中",
+      "unit": "常德分公司",
+      "file": "常德分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 73,
+      "code": "BR073",
+      "region": "华中",
+      "unit": "郑州分公司",
+      "file": "郑州分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 74,
+      "code": "BR074",
+      "region": "华中",
+      "unit": "洛阳分公司",
+      "file": "洛阳分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 75,
+      "code": "BR075",
+      "region": "华中",
+      "unit": "开封分公司",
+      "file": "开封分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 76,
+      "code": "BR076",
+      "region": "华中",
+      "unit": "新乡分公司",
+      "file": "新乡分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 77,
+      "code": "BR077",
+      "region": "华中",
+      "unit": "南昌分公司",
+      "file": "南昌分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 78,
+      "code": "BR078",
+      "region": "华中",
+      "unit": "赣州分公司",
+      "file": "赣州分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 79,
+      "code": "BR079",
+      "region": "华中",
+      "unit": "九江分公司",
+      "file": "九江分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 80,
+      "code": "BR080",
+      "region": "华中",
+      "unit": "上饶分公司",
+      "file": "上饶分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 81,
+      "code": "BR081",
+      "region": "西南",
+      "unit": "成都分公司",
+      "file": "成都分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 82,
+      "code": "BR082",
+      "region": "西南",
+      "unit": "绵阳分公司",
+      "file": "绵阳分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 83,
+      "code": "BR083",
+      "region": "西南",
+      "unit": "德阳分公司",
+      "file": "德阳分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 84,
+      "code": "BR084",
+      "region": "西南",
+      "unit": "乐山分公司",
+      "file": "乐山分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 85,
+      "code": "BR085",
+      "region": "西南",
+      "unit": "宜宾分公司",
+      "file": "宜宾分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 86,
+      "code": "BR086",
+      "region": "西南",
+      "unit": "南充分公司",
+      "file": "南充分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 87,
+      "code": "BR087",
+      "region": "西南",
+      "unit": "泸州分公司",
+      "file": "泸州分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 88,
+      "code": "BR088",
+      "region": "西南",
+      "unit": "眉山分公司",
+      "file": "眉山分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 89,
+      "code": "BR089",
+      "region": "西南",
+      "unit": "资阳分公司",
+      "file": "资阳分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 90,
+      "code": "BR090",
+      "region": "西南",
+      "unit": "遂宁分公司",
+      "file": "遂宁分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 91,
+      "code": "BR091",
+      "region": "西南",
+      "unit": "昆明分公司",
+      "file": "昆明分公司.xlsx",
+      "anomaly": [
+        "服务压力",
+        "版本升级导致服务工单阶段性增加",
+        "客户成功部"
+      ]
+    },
+    {
+      "index": 92,
+      "code": "BR092",
+      "region": "西南",
+      "unit": "曲靖分公司",
+      "file": "曲靖分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 93,
+      "code": "BR093",
+      "region": "西南",
+      "unit": "玉溪分公司",
+      "file": "玉溪分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 94,
+      "code": "BR094",
+      "region": "西南",
+      "unit": "昭通分公司",
+      "file": "昭通分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 95,
+      "code": "BR095",
+      "region": "西南",
+      "unit": "贵阳分公司",
+      "file": "贵阳分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 96,
+      "code": "BR096",
+      "region": "西南",
+      "unit": "遵义分公司",
+      "file": "遵义分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 97,
+      "code": "BR097",
+      "region": "西南",
+      "unit": "六盘水分公司",
+      "file": "六盘水分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 98,
+      "code": "BR098",
+      "region": "西南",
+      "unit": "毕节分公司",
+      "file": "毕节分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 99,
+      "code": "BR099",
+      "region": "西南",
+      "unit": "拉萨分公司",
+      "file": "拉萨分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 100,
+      "code": "BR100",
+      "region": "西南",
+      "unit": "昌都分公司",
+      "file": "昌都分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 101,
+      "code": "BR101",
+      "region": "西北及东北",
+      "unit": "西安分公司",
+      "file": "西安分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 102,
+      "code": "BR102",
+      "region": "西北及东北",
+      "unit": "宝鸡分公司",
+      "file": "宝鸡分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 103,
+      "code": "BR103",
+      "region": "西北及东北",
+      "unit": "咸阳分公司",
+      "file": "咸阳分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 104,
+      "code": "BR104",
+      "region": "西北及东北",
+      "unit": "渭南分公司",
+      "file": "渭南分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 105,
+      "code": "BR105",
+      "region": "西北及东北",
+      "unit": "延安分公司",
+      "file": "延安分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 106,
+      "code": "BR106",
+      "region": "西北及东北",
+      "unit": "汉中分公司",
+      "file": "汉中分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 107,
+      "code": "BR107",
+      "region": "西北及东北",
+      "unit": "兰州分公司",
+      "file": "兰州分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 108,
+      "code": "BR108",
+      "region": "西北及东北",
+      "unit": "天水分公司",
+      "file": "天水分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 109,
+      "code": "BR109",
+      "region": "西北及东北",
+      "unit": "武威分公司",
+      "file": "武威分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 110,
+      "code": "BR110",
+      "region": "西北及东北",
+      "unit": "张掖分公司",
+      "file": "张掖分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 111,
+      "code": "BR111",
+      "region": "西北及东北",
+      "unit": "银川分公司",
+      "file": "银川分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 112,
+      "code": "BR112",
+      "region": "西北及东北",
+      "unit": "吴忠分公司",
+      "file": "吴忠分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 113,
+      "code": "BR113",
+      "region": "西北及东北",
+      "unit": "乌鲁木齐分公司",
+      "file": "乌鲁木齐分公司.xlsx",
+      "anomaly": [
+        "经营目标未达成",
+        "重点项目签约推迟，本月收入低于预算",
+        "经营管理部"
+      ]
+    },
+    {
+      "index": 114,
+      "code": "BR114",
+      "region": "西北及东北",
+      "unit": "克拉玛依分公司",
+      "file": "克拉玛依分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 115,
+      "code": "BR115",
+      "region": "西北及东北",
+      "unit": "西宁分公司",
+      "file": "西宁分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 116,
+      "code": "BR116",
+      "region": "西北及东北",
+      "unit": "沈阳分公司",
+      "file": "沈阳分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 117,
+      "code": "BR117",
+      "region": "西北及东北",
+      "unit": "大连分公司",
+      "file": "大连分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 118,
+      "code": "BR118",
+      "region": "西北及东北",
+      "unit": "长春分公司",
+      "file": "长春分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 119,
+      "code": "BR119",
+      "region": "西北及东北",
+      "unit": "哈尔滨分公司",
+      "file": "哈尔滨分公司.xlsx",
+      "anomaly": null
+    },
+    {
+      "index": 120,
+      "code": "BR120",
+      "region": "西北及东北",
+      "unit": "齐齐哈尔分公司",
+      "file": "齐齐哈尔分公司.xlsx",
+      "anomaly": null
+    }
+  ],
+  "expected_group_totals": {
+    "营业收入": {
+      "budget": 89157.86,
+      "actual": 89751.1,
+      "last": 87554.88,
+      "year": 82474.91
+    },
+    "回款金额": {
+      "budget": 78458.91,
+      "actual": 81333.1,
+      "last": 80946.05,
+      "year": 74930.21
+    },
+    "新签合同额": {
+      "budget": 96290.43,
+      "actual": 102156.55,
+      "last": 101973.44,
+      "year": 94212.65
+    },
+    "营业成本": {
+      "budget": 54386.27,
+      "actual": 53703.91,
+      "last": 52621.22,
+      "year": 49411.03
+    },
+    "销售费用": {
+      "budget": 6686.86,
+      "actual": 6861.26,
+      "last": 6815.84,
+      "year": 6396.01
+    },
+    "管理费用": {
+      "budget": 5349.51,
+      "actual": 5347.38,
+      "last": 5308.32,
+      "year": 4896.22
+    },
+    "研发投入": {
+      "budget": 4457.87,
+      "actual": 4608.3,
+      "last": 4578.92,
+      "year": 4217.61
+    },
+    "经营利润": {
+      "budget": 13819.47,
+      "actual": 19230.32,
+      "last": 19022.17,
+      "year": 17623.36
+    },
+    "在岗人数": {
+      "budget": 8249.0,
+      "actual": 8249.0,
+      "last": 8118.0,
+      "year": 7556.0
+    },
+    "新增客户": {
+      "budget": 2525.0,
+      "actual": 2525.0,
+      "last": 2489.0,
+      "year": 2341.0
+    },
+    "服务工单": {
+      "budget": 77732.0,
+      "actual": 77732.0,
+      "last": 77865.0,
+      "year": 71558.0
+    },
+    "完成交付": {
+      "budget": 1912.0,
+      "actual": 1912.0,
+      "last": 1883.0,
+      "year": 1752.0
+    }
+  }
+}
