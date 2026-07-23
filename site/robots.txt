@@ -1,3 +1,11 @@
 User-agent: *
 Allow: /
+Disallow: /analytics/
+Disallow: /api/
+Disallow: /activation/
+Disallow: /downloads/
+Disallow: /offline
+Disallow: /xlsone/offline
+Disallow: /xlsone/license-console/
+
 Sitemap: https://z-pulse.cn/sitemap.xml

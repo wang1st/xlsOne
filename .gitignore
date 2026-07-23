@@ -63,3 +63,6 @@ package-lock.json
 activation/worker/.secrets/
 .wrangler/
 activation/worker/.wrangler/
+
+# Generated media assets
+promo_video/
