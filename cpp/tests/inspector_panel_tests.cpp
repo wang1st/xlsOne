@@ -92,7 +92,8 @@ void InspectorPanelTests::presentsSourceValuesAndInteractions()
             && button->isEnabled();
     });
     QVERIFY(copyValueButton != toggles.end());
-    QTest::mouseClick(*copyValueButton, Qt::LeftButton);
+    (*copyValueButton)->click();
+    QApplication::processEvents();
     QCOMPARE(QApplication::clipboard()->text(), QStringLiteral("100"));
 }
 
