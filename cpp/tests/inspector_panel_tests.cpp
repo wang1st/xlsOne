@@ -86,14 +86,30 @@ void InspectorPanelTests::presentsSourceValuesAndInteractions()
     QCOMPARE(emptyStateCount, static_cast<qsizetype>(1));
     QCOMPARE(missingStateCount, static_cast<qsizetype>(1));
 
-    const auto copyValueButton = std::find_if(toggles.begin(), toggles.end(), [](const auto* button) {
+    const auto copyButtons = std::count_if(toggles.begin(), toggles.end(), [](const auto* button) {
         return button->property("sourceAction").toBool()
-            && button->text() == QStringLiteral("复制值")
-            && button->isEnabled();
+            && (button->text() == QStringLiteral("复制值")
+                || button->text() == QStringLiteral("复制名"));
     });
-    QVERIFY(copyValueButton != toggles.end());
-    (*copyValueButton)->click();
-    QApplication::processEvents();
+    QCOMPARE(copyButtons, static_cast<qsizetype>(0));
+
+    const auto sourceFilename = std::find_if(labels.begin(), labels.end(), [](const auto* label) {
+        return label->property("sourceFilename").toBool()
+            && label->text() == QStringLiteral("a.xlsx");
+    });
+    const auto sourceValue = std::find_if(labels.begin(), labels.end(), [](const auto* label) {
+        return label->property("sourceValue").toBool()
+            && label->text() == QStringLiteral("100");
+    });
+    QVERIFY(sourceFilename != labels.end());
+    QVERIFY(sourceValue != labels.end());
+
+    QApplication::clipboard()->clear();
+    QTest::mouseClick(*sourceFilename, Qt::LeftButton);
+    QCOMPARE(QApplication::clipboard()->text(), QStringLiteral("a.xlsx"));
+
+    QApplication::clipboard()->clear();
+    QTest::mouseClick(*sourceValue, Qt::LeftButton);
     QCOMPARE(QApplication::clipboard()->text(), QStringLiteral("100"));
 }
 

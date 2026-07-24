@@ -425,14 +425,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          notes_file="docs/releases/${GITHUB_REF_NAME}.md"
+          notes_file="docs/releases/${GITHUB_REF_NAME}.txt"
           if [[ -f "${notes_file}" ]]; then
-            cp "${notes_file}" release-notes.md
+            cp "${notes_file}" release-notes.txt
           else
             git for-each-ref --format='%(contents)' \
-              "refs/tags/${GITHUB_REF_NAME}" > release-notes.md
+              "refs/tags/${GITHUB_REF_NAME}" > release-notes.txt
           fi
-          test -s release-notes.md
+          test -s release-notes.txt
 
       - name: Download all packages
         uses: actions/download-artifact@v8
@@ -466,9 +466,8 @@ jobs:
           name: xlsOne ${{ github.ref_name }}
           draft: true
           prerelease: ${{ contains(github.ref_name, '-') }}
-          generate_release_notes: true
           fail_on_unmatched_files: true
-          body_path: release-notes.md
+          body_path: release-notes.txt
           files: |
             dist/*.msi
             dist/*.zip
