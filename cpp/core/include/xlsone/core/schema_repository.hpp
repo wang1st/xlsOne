@@ -84,7 +84,8 @@ public:
 
 class SchemaRepository {
 public:
-    explicit SchemaRepository(QDir baseDirectory = {});
+    SchemaRepository();
+    explicit SchemaRepository(QDir baseDirectory);
 
     std::vector<MergeSchema> loadAll() const;
     void save(const MergeSchema& schema) const;

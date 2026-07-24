@@ -4,6 +4,7 @@
 #include <QRegularExpression>
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <map>
 #include <set>
 
@@ -231,7 +232,7 @@ std::vector<CellSourceEntry> buildSources(const std::vector<CellMergeInput>& inp
     sources.reserve(inputs.size());
     for (const auto& input : inputs) {
         if (!input.cell.has_value()) {
-            sources.push_back({input.filename, input.filepath, {}, std::nullopt, CellSourceState::Missing});
+            sources.push_back({input.filename, input.filepath, {}, std::nullopt, CellSourceState::Missing, std::nullopt});
             continue;
         }
         const auto value = input.cell->value;
@@ -240,10 +241,20 @@ std::vector<CellSourceEntry> buildSources(const std::vector<CellMergeInput>& inp
             input.filepath,
             value,
             input.cell->rawValue,
-            value.isEmpty() ? CellSourceState::Empty : CellSourceState::Value
+            value.isEmpty() ? CellSourceState::Empty : CellSourceState::Value,
+            input.cell->numericValue
         });
     }
     return sources;
+}
+
+double medianOfSorted(const std::vector<double>& values)
+{
+    const std::size_t middle = values.size() / 2;
+    if (values.size() % 2 == 0) {
+        return (values[middle - 1] + values[middle]) / 2.0;
+    }
+    return values[middle];
 }
 
 bool leftCellHasCodeSemantic(const std::vector<CellMergeInput>& leftCells)
@@ -809,6 +820,73 @@ std::optional<double> CellData::parseNumber(const QString& text)
         return std::nullopt;
     }
     return isNegative ? -value : value;
+}
+
+CellSourceOverview analyzeCellSources(const std::vector<CellSourceEntry>& sources)
+{
+    CellSourceOverview overview;
+    std::vector<std::pair<std::size_t, double>> numericValues;
+    numericValues.reserve(sources.size());
+
+    for (std::size_t index = 0; index < sources.size(); ++index) {
+        const auto& source = sources[index];
+        switch (source.state) {
+        case CellSourceState::Value:
+            ++overview.valueCount;
+            if (source.numericValue.has_value() && std::isfinite(*source.numericValue)) {
+                numericValues.emplace_back(index, *source.numericValue);
+            }
+            break;
+        case CellSourceState::Empty:
+            ++overview.emptyCount;
+            break;
+        case CellSourceState::Missing:
+            ++overview.missingCount;
+            break;
+        }
+    }
+
+    overview.numericCount = static_cast<int>(numericValues.size());
+    if (numericValues.empty()) {
+        return overview;
+    }
+
+    std::vector<double> sortedValues;
+    sortedValues.reserve(numericValues.size());
+    for (const auto& numericValue : numericValues) {
+        sortedValues.push_back(numericValue.second);
+    }
+    std::sort(sortedValues.begin(), sortedValues.end());
+    const double median = medianOfSorted(sortedValues);
+    overview.numericMedian = median;
+
+    // Outlier hints are intentionally conservative: small samples do not provide
+    // enough context, and an ordinary business difference should not look like an error.
+    if (numericValues.size() < 5) {
+        return overview;
+    }
+
+    std::vector<double> deviations;
+    deviations.reserve(numericValues.size());
+    for (const auto& numericValue : numericValues) {
+        deviations.push_back(std::abs(numericValue.second - median));
+    }
+    std::sort(deviations.begin(), deviations.end());
+    const double medianAbsoluteDeviation = medianOfSorted(deviations);
+    const double scale = std::max(1.0, std::abs(median));
+    if (medianAbsoluteDeviation <= std::numeric_limits<double>::epsilon() * scale) {
+        return overview;
+    }
+
+    const double minimumPracticalDifference = std::max(1.0, std::abs(median) * 0.5);
+    for (const auto& [index, value] : numericValues) {
+        const double difference = std::abs(value - median);
+        const double robustScore = 0.6745 * difference / medianAbsoluteDeviation;
+        if (robustScore >= 3.5 && difference >= minimumPracticalDifference) {
+            overview.outlierIndexes.push_back(index);
+        }
+    }
+    return overview;
 }
 
 MergedCell MergedCell::from(

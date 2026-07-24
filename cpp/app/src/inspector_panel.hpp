@@ -23,14 +23,14 @@ signals:
     void restoreAutomaticRequested();
 
 private:
+    void clearContent();
     QWidget* makeCard();
     QLabel* makeMutedLabel(const QString& text);
     QString typeText(xlsone::CellKind kind) const;
-    QString stateText(xlsone::CellSourceState state) const;
 
     QWidget* content_ = nullptr;
     QVBoxLayout* layout_ = nullptr;
     QWidget* sourceBody_ = nullptr;
     QToolButton* sourceToggle_ = nullptr;
-    bool sourceExpanded_ = false;
+    bool sourceExpanded_ = true;
 };

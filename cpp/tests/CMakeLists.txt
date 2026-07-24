@@ -25,3 +25,27 @@ if(XLSONE_LINUX_BUILTIN_LICENSE)
 endif()
 
 add_test(NAME xlsone_core_tests COMMAND xlsone_core_tests)
+
+add_executable(xlsone_inspector_tests
+    inspector_panel_tests.cpp
+    ../app/src/dialog_utils.cpp
+    ../app/src/inspector_panel.cpp
+    ../app/src/ui_theme.cpp
+)
+
+target_include_directories(xlsone_inspector_tests
+    PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/../app/src"
+)
+
+target_link_libraries(xlsone_inspector_tests
+    PRIVATE
+        xlsone_core
+        Qt${QT_VERSION_MAJOR}::Test
+        Qt${QT_VERSION_MAJOR}::Widgets
+)
+
+add_test(NAME xlsone_inspector_tests COMMAND xlsone_inspector_tests)
+set_tests_properties(xlsone_inspector_tests PROPERTIES
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
+)

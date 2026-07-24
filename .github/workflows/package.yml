@@ -416,6 +416,24 @@ jobs:
       actions: read
       contents: write
     steps:
+      - name: Checkout release notes
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Prepare release notes
+        shell: bash
+        run: |
+          set -euo pipefail
+          notes_file="docs/releases/${GITHUB_REF_NAME}.md"
+          if [[ -f "${notes_file}" ]]; then
+            cp "${notes_file}" release-notes.md
+          else
+            git for-each-ref --format='%(contents)' \
+              "refs/tags/${GITHUB_REF_NAME}" > release-notes.md
+          fi
+          test -s release-notes.md
+
       - name: Download all packages
         uses: actions/download-artifact@v8
         with:
@@ -450,10 +468,7 @@ jobs:
           prerelease: ${{ contains(github.ref_name, '-') }}
           generate_release_notes: true
           fail_on_unmatched_files: true
-          body: |
-            Automated ${{ env.EDITION }} multi-platform build.
-
-            These packages are currently unsigned. Verify `SHA256SUMS.txt` before testing.
+          body_path: release-notes.md
           files: |
             dist/*.msi
             dist/*.zip

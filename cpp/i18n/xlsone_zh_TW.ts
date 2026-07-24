@@ -284,66 +284,158 @@
 <context>
     <name>InspectorPanel</name>
     <message>
-        <location filename="../app/src/inspector_panel.cpp" line="45"/>
+        <location filename="../app/src/inspector_panel.cpp" line="30"/>
+        <source>未知文件</source>
+        <translation>未知檔案</translation>
+    </message>
+    <message>
+        <location filename="../app/src/inspector_panel.cpp" line="31"/>
+        <source>复制值</source>
+        <translation>複製值</translation>
+    </message>
+    <message>
+        <location filename="../app/src/inspector_panel.cpp" line="32"/>
+        <source>复制这个来源的值</source>
+        <translation>複製這個來源的值</translation>
+    </message>
+    <message>
+        <location filename="../app/src/inspector_panel.cpp" line="33"/>
+        <source>复制名</source>
+        <translation>複製名稱</translation>
+    </message>
+    <message>
+        <location filename="../app/src/inspector_panel.cpp" line="34"/>
+        <source>复制文件名</source>
+        <translation>複製檔名</translation>
+    </message>
+    <message>
+        <location filename="../app/src/inspector_panel.cpp" line="35"/>
+        <source>定位</source>
+        <translation>定位</translation>
+    </message>
+    <message>
+        <location filename="../app/src/inspector_panel.cpp" line="36"/>
+        <source>在文件管理器中显示</source>
+        <translation>在檔案管理器中顯示</translation>
+    </message>
+    <message>
+        <location filename="../app/src/inspector_panel.cpp" line="37"/>
+        <source>已复制来源值</source>
+        <translation>已複製來源值</translation>
+    </message>
+    <message>
+        <location filename="../app/src/inspector_panel.cpp" line="38"/>
+        <source>已复制文件名</source>
+        <translation>已複製檔名</translation>
+    </message>
+    <message>
+        <location filename="../app/src/inspector_panel.cpp" line="39"/>
+        <source>与其他来源差异明显</source>
+        <translation>與其他來源差異明顯</translation>
+    </message>
+    <message>
+        <location filename="../app/src/inspector_panel.cpp" line="40"/>
+        <source>同一单元格其他有效数字的中位数为 %1；此提示仅用于辅助检查，不会改变汇总结果。</source>
+        <translation>同一儲存格其他有效數字的中位數為 %1；此提示僅用於輔助檢查，不會改變彙總結果。</translation>
+    </message>
+    <message>
+        <location filename="../app/src/inspector_panel.cpp" line="41"/>
+        <source>找不到来源文件</source>
+        <translation>找不到來源檔案</translation>
+    </message>
+    <message>
+        <location filename="../app/src/inspector_panel.cpp" line="42"/>
+        <source>无法打开来源文件</source>
+        <translation>無法開啟來源檔案</translation>
+    </message>
+    <message>
+        <location filename="../app/src/inspector_panel.cpp" line="43"/>
+        <source>复制来源值</source>
+        <translation>複製來源值</translation>
+    </message>
+    <message>
+        <location filename="../app/src/inspector_panel.cpp" line="44"/>
+        <source>打开来源文件</source>
+        <translation>開啟來源檔案</translation>
+    </message>
+    <message>
+        <location filename="../app/src/inspector_panel.cpp" line="354"/>
         <source>选择单元格后查看结果与来源。</source>
         <translation>選擇單元格後檢視結果與來源。</translation>
     </message>
     <message>
-        <location filename="../app/src/inspector_panel.cpp" line="84"/>
-        <location filename="../app/src/inspector_panel.cpp" line="198"/>
+        <location filename="../app/src/inspector_panel.cpp" line="391"/>
         <source>空值</source>
         <translation>空值</translation>
     </message>
     <message>
-        <location filename="../app/src/inspector_panel.cpp" line="94"/>
+        <location filename="../app/src/inspector_panel.cpp" line="405"/>
         <source>当前按%1显示</source>
         <translation>當前按%1顯示</translation>
     </message>
     <message>
-        <location filename="../app/src/inspector_panel.cpp" line="95"/>
+        <location filename="../app/src/inspector_panel.cpp" line="407"/>
         <source>自动判断为%1</source>
         <translation>自動判斷為%1</translation>
     </message>
     <message>
-        <location filename="../app/src/inspector_panel.cpp" line="101"/>
-        <location filename="../app/src/inspector_panel.cpp" line="189"/>
-        <location filename="../app/src/inspector_panel.cpp" line="191"/>
+        <location filename="../app/src/inspector_panel.cpp" line="418"/>
+        <location filename="../app/src/inspector_panel.cpp" line="546"/>
+        <location filename="../app/src/inspector_panel.cpp" line="548"/>
         <source>标签</source>
         <translation>標籤</translation>
     </message>
     <message>
-        <location filename="../app/src/inspector_panel.cpp" line="104"/>
-        <location filename="../app/src/inspector_panel.cpp" line="186"/>
+        <location filename="../app/src/inspector_panel.cpp" line="426"/>
+        <location filename="../app/src/inspector_panel.cpp" line="543"/>
         <source>求和</source>
         <translation>求和</translation>
     </message>
     <message>
-        <location filename="../app/src/inspector_panel.cpp" line="115"/>
+        <location filename="../app/src/inspector_panel.cpp" line="443"/>
         <source>恢复自动判断</source>
         <translation>恢復自動判斷</translation>
     </message>
     <message>
-        <location filename="../app/src/inspector_panel.cpp" line="132"/>
+        <location filename="../app/src/inspector_panel.cpp" line="462"/>
+        <source>来源明细</source>
+        <translation>來源明細</translation>
+    </message>
+    <message>
+        <location filename="../app/src/inspector_panel.cpp" line="474"/>
+        <source>%1 个有效</source>
+        <translation>%1 個有效</translation>
+    </message>
+    <message>
+        <location filename="../app/src/inspector_panel.cpp" line="476"/>
+        <source>%1 个空值</source>
+        <translation>%1 個空值</translation>
+    </message>
+    <message>
+        <location filename="../app/src/inspector_panel.cpp" line="479"/>
+        <source>%1 个缺失</source>
+        <translation>%1 個缺失</translation>
+    </message>
+    <message>
         <source>来源明细 %1 个</source>
-        <translation>來源明細 %1 個</translation>
+        <translation type="vanished">來源明細 %1 個</translation>
     </message>
     <message>
-        <location filename="../app/src/inspector_panel.cpp" line="148"/>
         <source>%1 / %2</source>
-        <translation>%1 / %2</translation>
+        <translation type="vanished">%1 / %2</translation>
     </message>
     <message>
-        <location filename="../app/src/inspector_panel.cpp" line="187"/>
+        <location filename="../app/src/inspector_panel.cpp" line="544"/>
         <source>混合</source>
         <translation>混合</translation>
     </message>
     <message>
-        <location filename="../app/src/inspector_panel.cpp" line="188"/>
+        <location filename="../app/src/inspector_panel.cpp" line="545"/>
         <source>单值</source>
         <translation>單值</translation>
     </message>
     <message>
-        <location filename="../app/src/inspector_panel.cpp" line="199"/>
+        <location filename="../app/src/inspector_panel.cpp" line="45"/>
         <source>缺失</source>
         <translation>缺失</translation>
     </message>
@@ -634,34 +726,6 @@
     <message>
         <location filename="../app/src/license_activation_dialog.cpp" line="818"/>
         <source>激活成功！永久授权</source>
-        <translation type="unfinished"></translation>
-    </message>
-</context>
-<context>
-    <name>LicenseManager</name>
-    <message>
-        <location filename="../core/src/license_manager.cpp" line="365"/>
-        <source>授权已过期 — xlsOne</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../core/src/license_manager.cpp" line="367"/>
-        <source>未激活试用版 — xlsOne</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../core/src/license_manager.cpp" line="376"/>
-        <source>授权已过期，宽限期内仍可全功能使用 %1 天。</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../core/src/license_manager.cpp" line="379"/>
-        <source>授权已过期，每次最多处理 %1 个文件，导出将带水印。请激活以解除限制。</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../core/src/license_manager.cpp" line="382"/>
-        <source>未激活，每次最多处理 %1 个文件，导出将带水印。可申请 14 天免费试用或输入激活码。</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -1466,6 +1530,34 @@
     <message>
         <source>多张同格式 Excel 报表一键汇总</source>
         <translation type="vanished">多張同格式 Excel 報表一鍵彙總</translation>
+    </message>
+</context>
+<context>
+    <name>xlsone::LicenseManager</name>
+    <message>
+        <location filename="../core/src/license_manager.cpp" line="359"/>
+        <source>授权已过期 — xlsOne</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../core/src/license_manager.cpp" line="361"/>
+        <source>未激活试用版 — xlsOne</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../core/src/license_manager.cpp" line="370"/>
+        <source>授权已过期，宽限期内仍可全功能使用 %1 天。</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../core/src/license_manager.cpp" line="373"/>
+        <source>授权已过期，每次最多处理 %1 个文件，导出将带水印。请激活以解除限制。</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../core/src/license_manager.cpp" line="376"/>
+        <source>未激活，每次最多处理 %1 个文件，导出将带水印。可申请 14 天免费试用或输入激活码。</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 </TS>
