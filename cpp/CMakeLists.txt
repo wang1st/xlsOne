@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.22)
 
 project(xlsOneQt
-    VERSION 1.0.10
+    VERSION 1.1.0
     DESCRIPTION "Cross-platform C++/Qt port of xlsOne"
     LANGUAGES C CXX
 )

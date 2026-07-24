@@ -18,6 +18,7 @@
 #include <QLabel>
 #include <QLocale>
 #include <QMenu>
+#include <QMouseEvent>
 #include <QProcess>
 #include <QPushButton>
 #include <QSizePolicy>
@@ -26,14 +27,14 @@
 #include <QVariant>
 
 #include <algorithm>
+#include <functional>
+#include <utility>
 
 namespace {
 
 [[maybe_unused]] constexpr const char* inspectorTranslations[] = {
     QT_TRANSLATE_NOOP("InspectorPanel", "未知文件"),
-    QT_TRANSLATE_NOOP("InspectorPanel", "复制值"),
     QT_TRANSLATE_NOOP("InspectorPanel", "复制这个来源的值"),
-    QT_TRANSLATE_NOOP("InspectorPanel", "复制名"),
     QT_TRANSLATE_NOOP("InspectorPanel", "复制文件名"),
     QT_TRANSLATE_NOOP("InspectorPanel", "定位"),
     QT_TRANSLATE_NOOP("InspectorPanel", "在文件管理器中显示"),
@@ -43,7 +44,6 @@ namespace {
     QT_TRANSLATE_NOOP("InspectorPanel", "同一单元格其他有效数字的中位数为 %1；此提示仅用于辅助检查，不会改变汇总结果。"),
     QT_TRANSLATE_NOOP("InspectorPanel", "找不到来源文件"),
     QT_TRANSLATE_NOOP("InspectorPanel", "无法打开来源文件"),
-    QT_TRANSLATE_NOOP("InspectorPanel", "复制来源值"),
     QT_TRANSLATE_NOOP("InspectorPanel", "打开来源文件"),
     QT_TRANSLATE_NOOP("InspectorPanel", "缺失"),
 };
@@ -71,6 +71,31 @@ bool revealSourceFile(const QString& filepath)
 #endif
 }
 
+class CopyLabel final : public QLabel {
+public:
+    CopyLabel(const QString& text, std::function<void()> copy, QWidget* parent) :
+        QLabel(text, parent),
+        copy_(std::move(copy))
+    {
+        setCursor(copy_ ? Qt::PointingHandCursor : Qt::ArrowCursor);
+        setProperty("sourceCopyTarget", static_cast<bool>(copy_));
+    }
+
+protected:
+    void mouseReleaseEvent(QMouseEvent* event) override
+    {
+        if (copy_ && event->button() == Qt::LeftButton && rect().contains(event->pos())) {
+            copy_();
+            event->accept();
+            return;
+        }
+        QLabel::mouseReleaseEvent(event);
+    }
+
+private:
+    std::function<void()> copy_;
+};
+
 class SourceRow final : public QFrame {
 public:
     SourceRow(
@@ -83,7 +108,7 @@ public:
         source_(source)
     {
         setProperty("sourceRow", true);
-        setCursor(source_.filepath.isEmpty() ? Qt::ArrowCursor : Qt::PointingHandCursor);
+        setCursor(Qt::ArrowCursor);
         setFocusPolicy(Qt::StrongFocus);
         setToolTip(source_.filepath);
         setContextMenuPolicy(Qt::CustomContextMenu);
@@ -95,40 +120,26 @@ public:
         auto* heading = new QHBoxLayout;
         heading->setSpacing(6);
 
-        auto* filename = new QLabel(
-            source_.filename.isEmpty() ? inspectorText("未知文件") : source_.filename,
+        const bool hasFilename = !source_.filename.isEmpty();
+        auto* filename = new CopyLabel(
+            hasFilename ? source_.filename : inspectorText("未知文件"),
+            hasFilename
+                ? std::function<void()>([this] {
+                    QApplication::clipboard()->setText(source_.filename);
+                    xlsone::ui::showToast(window(), inspectorText("已复制文件名"));
+                })
+                : std::function<void()>(),
             this
         );
         filename->setProperty("sourceFilename", true);
         filename->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
-        filename->setTextInteractionFlags(Qt::TextSelectableByMouse);
-        filename->setToolTip(source_.filepath.isEmpty() ? source_.filename : source_.filepath);
+        filename->setToolTip(hasFilename ? inspectorText("复制文件名") : QString());
         heading->addWidget(filename, 1);
 
         actions_ = new QWidget(this);
         auto* actionsLayout = new QHBoxLayout(actions_);
         actionsLayout->setContentsMargins(0, 0, 0, 0);
         actionsLayout->setSpacing(2);
-        addActionButton(
-            actionsLayout,
-            inspectorText("复制值"),
-            inspectorText("复制这个来源的值"),
-            [this] {
-                QApplication::clipboard()->setText(source_.value);
-                xlsone::ui::showToast(window(), inspectorText("已复制来源值"));
-            },
-            source_.state == xlsone::CellSourceState::Value
-        );
-        addActionButton(
-            actionsLayout,
-            inspectorText("复制名"),
-            inspectorText("复制文件名"),
-            [this] {
-                QApplication::clipboard()->setText(source_.filename);
-                xlsone::ui::showToast(window(), inspectorText("已复制文件名"));
-            },
-            !source_.filename.isEmpty()
-        );
         addActionButton(
             actionsLayout,
             inspectorText("定位"),
@@ -172,11 +183,21 @@ public:
         const QString displayValue = source_.state == xlsone::CellSourceState::Value
             ? source_.value
             : QStringLiteral("—");
-        auto* value = new QLabel(displayValue, this);
+        const bool hasValue = source_.state == xlsone::CellSourceState::Value;
+        auto* value = new CopyLabel(
+            displayValue,
+            hasValue
+                ? std::function<void()>([this] {
+                    QApplication::clipboard()->setText(source_.value);
+                    xlsone::ui::showToast(window(), inspectorText("已复制来源值"));
+                })
+                : std::function<void()>(),
+            this
+        );
         value->setProperty("sourceValue", true);
         value->setProperty("sourceValueOutlier", isOutlier);
         value->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
-        value->setTextInteractionFlags(Qt::TextSelectableByMouse);
+        value->setToolTip(hasValue ? inspectorText("复制这个来源的值") : QString());
         value->setWordWrap(true);
         if (source_.numericValue.has_value()) {
             QFont valueFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
@@ -233,12 +254,6 @@ private:
         connect(button, &QToolButton::clicked, this, callback);
     }
 
-    void copyFilename()
-    {
-        QApplication::clipboard()->setText(source_.filename);
-        xlsone::ui::showToast(window(), inspectorText("已复制文件名"));
-    }
-
     void reveal()
     {
         if (!revealSourceFile(source_.filepath)) {
@@ -257,18 +272,6 @@ private:
     void showContextMenu(const QPoint& position)
     {
         QMenu menu(this);
-        auto* copyValue = menu.addAction(inspectorText("复制来源值"));
-        copyValue->setEnabled(source_.state == xlsone::CellSourceState::Value);
-        connect(copyValue, &QAction::triggered, this, [this] {
-            QApplication::clipboard()->setText(source_.value);
-            xlsone::ui::showToast(window(), inspectorText("已复制来源值"));
-        });
-
-        auto* copyName = menu.addAction(inspectorText("复制文件名"));
-        copyName->setEnabled(!source_.filename.isEmpty());
-        connect(copyName, &QAction::triggered, this, [this] { copyFilename(); });
-
-        menu.addSeparator();
         auto* revealAction = menu.addAction(inspectorText("在文件管理器中显示"));
         revealAction->setEnabled(!source_.filepath.isEmpty());
         connect(revealAction, &QAction::triggered, this, [this] { reveal(); });
@@ -321,6 +324,8 @@ InspectorPanel::InspectorPanel(QWidget* parent) : QScrollArea(parent)
         " padding: 2px 7px; font-weight: 600; }"
         "QFrame[sourceRow=\"true\"] { background: transparent; border-top: 1px solid %19; }"
         "QFrame[sourceRow=\"true\"]:hover { background: %11; border-radius: 8px; }"
+        "QLabel[sourceCopyTarget=\"true\"] { padding: 2px 4px; border-radius: 5px; }"
+        "QLabel[sourceCopyTarget=\"true\"]:hover { color: %18; background: %6; }"
         "QLabel[sourceFilename=\"true\"] { color: %5; font-size: 12px; }"
         "QLabel[sourceValue=\"true\"] { color: %9; font-size: 16px; font-weight: 600; }"
         "QLabel[sourceValueOutlier=\"true\"] { color: %20; }"
