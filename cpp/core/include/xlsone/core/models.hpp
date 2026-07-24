@@ -4,6 +4,7 @@
 #include <QJsonObject>
 #include <QString>
 #include <QStringList>
+#include <cstddef>
 #include <optional>
 #include <variant>
 #include <vector>
@@ -52,7 +53,19 @@ struct CellSourceEntry {
     QString value;
     std::optional<QString> rawValue;
     CellSourceState state = CellSourceState::Missing;
+    std::optional<double> numericValue;
 };
+
+struct CellSourceOverview {
+    int valueCount = 0;
+    int emptyCount = 0;
+    int missingCount = 0;
+    int numericCount = 0;
+    std::optional<double> numericMedian;
+    std::vector<std::size_t> outlierIndexes;
+};
+
+CellSourceOverview analyzeCellSources(const std::vector<CellSourceEntry>& sources);
 
 struct CellMergeInput {
     QString filename;

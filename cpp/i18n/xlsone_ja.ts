@@ -284,56 +284,148 @@ Skipped sheets: %3</translation>
 <context>
     <name>InspectorPanel</name>
     <message>
-        <location filename="../app/src/inspector_panel.cpp" line="+45"/>
+        <location filename="../app/src/inspector_panel.cpp" line="+30"/>
+        <source>未知文件</source>
+        <translation>不明なファイル</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>复制值</source>
+        <translation>値をコピー</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>复制这个来源的值</source>
+        <translation>このソースの値をコピー</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>复制名</source>
+        <translation>名前をコピー</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>复制文件名</source>
+        <translation>ファイル名をコピー</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>定位</source>
+        <translation>表示</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>在文件管理器中显示</source>
+        <translation>ファイルマネージャーで表示</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>已复制来源值</source>
+        <translation>ソース値をコピーしました</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>已复制文件名</source>
+        <translation>ファイル名をコピーしました</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>与其他来源差异明显</source>
+        <translation>他のソースと大きく異なります</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>同一单元格其他有效数字的中位数为 %1；此提示仅用于辅助检查，不会改变汇总结果。</source>
+        <translation>同じセルの他の有効な数値の中央値は %1 です。このヒントは確認用で、集計結果は変更しません。</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>找不到来源文件</source>
+        <translation>ソースファイルが見つかりません</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>无法打开来源文件</source>
+        <translation>ソースファイルを開けません</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>复制来源值</source>
+        <translation>ソース値をコピー</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>打开来源文件</source>
+        <translation>ソースファイルを開く</translation>
+    </message>
+    <message>
+        <location line="+310"/>
         <source>选择单元格后查看结果与来源。</source>
         <translation>Select a cell to view details and sources.</translation>
     </message>
     <message>
-        <location line="+39"/>
-        <location line="+114"/>
+        <location line="+37"/>
         <source>空值</source>
         <translation>Empty</translation>
     </message>
     <message>
-        <location line="-104"/>
+        <location line="+14"/>
         <source>当前按%1显示</source>
         <translation>Displayed as %1</translation>
     </message>
     <message>
-        <location line="+1"/>
+        <location line="+2"/>
         <source>自动判断为%1</source>
         <translation>Auto detected as %1</translation>
     </message>
     <message>
-        <location line="+6"/>
-        <location line="+88"/>
+        <location line="+11"/>
+        <location line="+128"/>
         <location line="+2"/>
         <source>标签</source>
         <translation>ラベル</translation>
     </message>
     <message>
-        <location line="-87"/>
-        <location line="+82"/>
+        <location line="-122"/>
+        <location line="+117"/>
         <source>求和</source>
         <translation>合計</translation>
     </message>
     <message>
-        <location line="-71"/>
+        <location line="-100"/>
         <source>恢复自动判断</source>
         <translation>Restore Auto</translation>
     </message>
     <message>
-        <location line="+17"/>
+        <location line="+19"/>
+        <source>来源明细</source>
+        <translation>ソース詳細</translation>
+    </message>
+    <message>
+        <location line="+12"/>
+        <source>%1 个有效</source>
+        <translation>有効 %1 件</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>%1 个空值</source>
+        <translation>空値 %1 件</translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>%1 个缺失</source>
+        <translation>欠落 %1 件</translation>
+    </message>
+    <message>
         <source>来源明细 %1 个</source>
-        <translation>%1 source(s)</translation>
+        <translation type="vanished">%1 source(s)</translation>
     </message>
     <message>
-        <location line="+16"/>
         <source>%1 / %2</source>
-        <translation>%1 / %2</translation>
+        <translation type="vanished">%1 / %2</translation>
     </message>
     <message>
-        <location line="+39"/>
+        <location line="+65"/>
         <source>混合</source>
         <translation>混合</translation>
     </message>
@@ -343,7 +435,7 @@ Skipped sheets: %3</translation>
         <translation>単一値</translation>
     </message>
     <message>
-        <location line="+11"/>
+        <location line="-500"/>
         <source>缺失</source>
         <translation>Missing</translation>
     </message>
@@ -635,34 +727,6 @@ Skipped sheets: %3</translation>
         <location line="+153"/>
         <source>验证中...</source>
         <translation>検証中...</translation>
-    </message>
-</context>
-<context>
-    <name>LicenseManager</name>
-    <message>
-        <location filename="../core/src/license_manager.cpp" line="+365"/>
-        <source>授权已过期 — xlsOne</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+2"/>
-        <source>未激活试用版 — xlsOne</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+9"/>
-        <source>授权已过期，宽限期内仍可全功能使用 %1 天。</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+3"/>
-        <source>授权已过期，每次最多处理 %1 个文件，导出将带水印。请激活以解除限制。</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+3"/>
-        <source>未激活，每次最多处理 %1 个文件，导出将带水印。可申请 14 天免费试用或输入激活码。</source>
-        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -1466,6 +1530,34 @@ Skipped sheets: %3</translation>
     <message>
         <source>多张同格式 Excel 报表一键汇总</source>
         <translation type="vanished">同じ形式の複数 Excel 報告書をワンクリックで集計</translation>
+    </message>
+</context>
+<context>
+    <name>xlsone::LicenseManager</name>
+    <message>
+        <location filename="../core/src/license_manager.cpp" line="+359"/>
+        <source>授权已过期 — xlsOne</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>未激活试用版 — xlsOne</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+9"/>
+        <source>授权已过期，宽限期内仍可全功能使用 %1 天。</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>授权已过期，每次最多处理 %1 个文件，导出将带水印。请激活以解除限制。</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>未激活，每次最多处理 %1 个文件，导出将带水印。可申请 14 天免费试用或输入激活码。</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 </TS>

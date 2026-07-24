@@ -321,8 +321,13 @@ SheetRuleFingerprint sheetFingerprintFromJson(const QJsonObject& object)
 
 } // namespace
 
+SchemaRepository::SchemaRepository() :
+    baseDirectory_(defaultSchemaDir())
+{
+}
+
 SchemaRepository::SchemaRepository(QDir baseDirectory) :
-    baseDirectory_(baseDirectory.path().isEmpty() ? defaultSchemaDir() : std::move(baseDirectory))
+    baseDirectory_(std::move(baseDirectory))
 {
 }
 

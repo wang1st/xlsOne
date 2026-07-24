@@ -11,6 +11,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QSettings>
+#include <QStandardPaths>
 #include <QTemporaryDir>
 #include <QTest>
 #include <QtEndian>
@@ -51,8 +52,10 @@ private slots:
     void keepsCodeColumnsProtectedAgainstMetricColumnContext();
     void usesColumnMetricAnchorForTownFinanceCountRows();
     void sumsAmountColumnIndependentOfFileOrder();
+    void analyzesCellSourcesConservatively();
     void validatesCompatibleSheets();
     void choosesRepresentativeTemplate();
+    void usesWritableDefaultSchemaDirectory();
     void storesSchemas();
     void matchesWorkbookSchemas();
     void matchesAdjustmentMemoryImportForSameArchitecture();
@@ -674,6 +677,40 @@ void CoreTests::sumsAmountColumnIndependentOfFileOrder()
     }
 }
 
+void CoreTests::analyzesCellSourcesConservatively()
+{
+    const std::vector<CellSourceEntry> sources = {
+        {QStringLiteral("a.xlsx"), QStringLiteral("/a.xlsx"), QStringLiteral("100"), std::nullopt, CellSourceState::Value, 100.0},
+        {QStringLiteral("b.xlsx"), QStringLiteral("/b.xlsx"), QStringLiteral("101"), std::nullopt, CellSourceState::Value, 101.0},
+        {QStringLiteral("c.xlsx"), QStringLiteral("/c.xlsx"), QStringLiteral("102"), std::nullopt, CellSourceState::Value, 102.0},
+        {QStringLiteral("d.xlsx"), QStringLiteral("/d.xlsx"), QStringLiteral("103"), std::nullopt, CellSourceState::Value, 103.0},
+        {QStringLiteral("e.xlsx"), QStringLiteral("/e.xlsx"), QStringLiteral("1,000"), std::nullopt, CellSourceState::Value, 1000.0},
+        {QStringLiteral("empty.xlsx"), QStringLiteral("/empty.xlsx"), {}, std::nullopt, CellSourceState::Empty, std::nullopt},
+        {QStringLiteral("missing.xlsx"), QStringLiteral("/missing.xlsx"), {}, std::nullopt, CellSourceState::Missing, std::nullopt},
+    };
+
+    const auto overview = analyzeCellSources(sources);
+    QCOMPARE(overview.valueCount, 5);
+    QCOMPARE(overview.emptyCount, 1);
+    QCOMPARE(overview.missingCount, 1);
+    QCOMPARE(overview.numericCount, 5);
+    QVERIFY(overview.numericMedian.has_value());
+    QCOMPARE(*overview.numericMedian, 102.0);
+    QCOMPARE(overview.outlierIndexes, std::vector<std::size_t>{4});
+
+    const std::vector<CellSourceEntry> smallSample(sources.begin(), sources.begin() + 4);
+    QVERIFY(analyzeCellSources(smallSample).outlierIndexes.empty());
+
+    const std::vector<CellSourceEntry> ordinaryVariation = {
+        {QStringLiteral("a"), {}, QStringLiteral("80"), std::nullopt, CellSourceState::Value, 80.0},
+        {QStringLiteral("b"), {}, QStringLiteral("90"), std::nullopt, CellSourceState::Value, 90.0},
+        {QStringLiteral("c"), {}, QStringLiteral("100"), std::nullopt, CellSourceState::Value, 100.0},
+        {QStringLiteral("d"), {}, QStringLiteral("110"), std::nullopt, CellSourceState::Value, 110.0},
+        {QStringLiteral("e"), {}, QStringLiteral("120"), std::nullopt, CellSourceState::Value, 120.0},
+    };
+    QVERIFY(analyzeCellSources(ordinaryVariation).outlierIndexes.empty());
+}
+
 void CoreTests::validatesCompatibleSheets()
 {
     SheetData sheetA{QStringLiteral("Sheet1"), {{CellData(QStringLiteral("金额"))}, {CellData(QStringLiteral("1000"))}}};
@@ -718,6 +755,18 @@ void CoreTests::choosesRepresentativeTemplate()
     });
     QVERIFY(templateReport != outcome.report.files.end());
     QCOMPARE(templateReport->filename, QStringLiteral("b.xlsx"));
+}
+
+void CoreTests::usesWritableDefaultSchemaDirectory()
+{
+    const SchemaRepository repository;
+    const QDir expected(
+        QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)
+        + QStringLiteral("/schemas")
+    );
+
+    QCOMPARE(repository.baseDirectory().absolutePath(), expected.absolutePath());
+    QVERIFY(repository.baseDirectory().absolutePath() != QDir::current().absolutePath());
 }
 
 void CoreTests::storesSchemas()
