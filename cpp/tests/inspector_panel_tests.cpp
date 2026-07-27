@@ -1,8 +1,10 @@
+#include "dialog_utils.hpp"
 #include "inspector_panel.hpp"
 #include "xlsone/core/models.hpp"
 
 #include <QApplication>
 #include <QClipboard>
+#include <QFileDialog>
 #include <QLabel>
 #include <QPushButton>
 #include <QSignalSpy>
@@ -17,8 +19,20 @@ class InspectorPanelTests final : public QObject {
     Q_OBJECT
 
 private slots:
+    void configuresFileDialogForCurrentPlatform();
     void presentsSourceValuesAndInteractions();
 };
+
+void InspectorPanelTests::configuresFileDialogForCurrentPlatform()
+{
+    QFileDialog dialog;
+    xlsone::ui::configureFileDialogForPlatform(dialog);
+#ifdef Q_OS_MACOS
+    QVERIFY(!dialog.testOption(QFileDialog::DontUseNativeDialog));
+#else
+    QVERIFY(dialog.testOption(QFileDialog::DontUseNativeDialog));
+#endif
+}
 
 void InspectorPanelTests::presentsSourceValuesAndInteractions()
 {

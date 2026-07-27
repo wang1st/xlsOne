@@ -17,6 +17,7 @@
 #include <QApplication>
 #include <QDateTime>
 #include <QDesktopServices>
+#include <QDir>
 #include <QDragEnterEvent>
 #include <QDragLeaveEvent>
 #include <QFileDialog>
@@ -38,6 +39,7 @@
 #include <QShowEvent>
 #include <QSplitter>
 #include <QStatusBar>
+#include <QStandardPaths>
 #include <QUrl>
 #include <QVBoxLayout>
 
@@ -1559,10 +1561,17 @@ void MainWindow::exportResult()
         return;
     }
 
+    QString exportDirectory = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
+    if (exportDirectory.isEmpty()) {
+        exportDirectory = QStandardPaths::writableLocation(QStandardPaths::HomeLocation);
+    }
+    const QString suggestedExportPath = QDir(exportDirectory).filePath(
+        suggestedWorkbookFileName(validation_.report, selectedPaths_)
+    );
     const auto path = xlsone::ui::getSaveFileNameCentered(
         this,
         tr("导出汇总"),
-        suggestedWorkbookFileName(validation_.report, selectedPaths_),
+        suggestedExportPath,
         tr("Excel Workbook (*.xlsx);;All Files (*)")
     );
     if (path.isEmpty()) {

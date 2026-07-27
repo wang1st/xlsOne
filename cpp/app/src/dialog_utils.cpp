@@ -167,12 +167,24 @@ void showDialogCentered(QDialog* dialog, QWidget* parent)
     dialog->show();
 }
 
+void configureFileDialogForPlatform(QFileDialog& dialog)
+{
+#ifdef Q_OS_MACOS
+    // Qt's non-native QFileDialog can abort while macOS accessibility tears
+    // down its child widgets. The native panel avoids that Qt accessibility
+    // cache path and provides the expected macOS multi-selection behavior.
+    dialog.setOption(QFileDialog::DontUseNativeDialog, false);
+#else
+    dialog.setOption(QFileDialog::DontUseNativeDialog, true);
+#endif
+}
+
 QString getOpenFileNameCentered(QWidget* parent, const QString& title, const QString& dir, const QString& filter)
 {
     QFileDialog dialog(parent, title, dir, filter);
     dialog.setAcceptMode(QFileDialog::AcceptOpen);
     dialog.setFileMode(QFileDialog::ExistingFile);
-    dialog.setOption(QFileDialog::DontUseNativeDialog, true);
+    configureFileDialogForPlatform(dialog);
     if (execDialogCentered(dialog, parent) != QDialog::Accepted) {
         return {};
     }
@@ -185,7 +197,7 @@ QStringList getOpenFileNamesCentered(QWidget* parent, const QString& title, cons
     QFileDialog dialog(parent, title, dir, filter);
     dialog.setAcceptMode(QFileDialog::AcceptOpen);
     dialog.setFileMode(QFileDialog::ExistingFiles);
-    dialog.setOption(QFileDialog::DontUseNativeDialog, true);
+    configureFileDialogForPlatform(dialog);
     if (execDialogCentered(dialog, parent) != QDialog::Accepted) {
         return {};
     }
@@ -197,7 +209,7 @@ QString getSaveFileNameCentered(QWidget* parent, const QString& title, const QSt
     QFileDialog dialog(parent, title, QString(), filter);
     dialog.setAcceptMode(QFileDialog::AcceptSave);
     dialog.setFileMode(QFileDialog::AnyFile);
-    dialog.setOption(QFileDialog::DontUseNativeDialog, true);
+    configureFileDialogForPlatform(dialog);
     if (!suggestedName.isEmpty()) {
         dialog.selectFile(suggestedName);
     }

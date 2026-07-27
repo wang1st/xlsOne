@@ -17,7 +17,7 @@
 付费软件。
 
 - 14 天全功能试用
-- 订阅 99 元/年å
+- 订阅 99 元/年
 - 每个授权码可激活 3 台设备
 
 试用结束后仍可受限使用；如需解除每次最多处理 3 个文件和导出水印的限制，需要购买订阅并激活。
@@ -52,11 +52,23 @@ Excel 的解析、汇总和导出都在本机完成，不会上传用户的表�
 
 ## 截图预览
 
-（上传 `screenshot-01-import-four-reports.png`：一次导入 4 份同模板月报）
+### 经营指标汇总
 
-（上传 `screenshot-02-two-sheet-summary.png`：分别汇总两个工作表）
+![表表归一汇总四份同模板月报的经营指标](https://z-pulse.cn/images/xlsone-appinn-overview.png)
 
-（上传 `screenshot-03-source-trace.png`：点击结果查看 4 个源文件的原始值）
+4 份同模板月报导入后，软件按相同单元格位置自动汇总数值。
+
+### 查看每个源文件的原始值
+
+![表表归一来源追溯面板显示四份源文件的原始值](https://z-pulse.cn/images/xlsone-appinn-source-trace.png)
+
+点击汇总结果中的单元格，可以查看 4 个源文件在该位置的原始值。
+
+### 多工作表分别汇总
+
+![表表归一分别汇总经营指标和项目进度两个工作表](https://z-pulse.cn/images/xlsone-appinn-two-sheets.png)
+
+同一个工作簿中的“经营指标”和“项目进度”会分别生成汇总结果。
 
 ## 视频演示
 

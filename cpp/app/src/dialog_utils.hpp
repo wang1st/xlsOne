@@ -13,6 +13,7 @@ namespace xlsone::ui {
 void centerDialogOnParent(QWidget* dialog, QWidget* parent = nullptr);
 int execDialogCentered(QDialog& dialog, QWidget* parent = nullptr);
 void showDialogCentered(QDialog* dialog, QWidget* parent = nullptr);
+void configureFileDialogForPlatform(QFileDialog& dialog);
 
 QString getOpenFileNameCentered(
     QWidget* parent,
