@@ -1,0 +1,6 @@
+记录ID,来源名称,来源域名,来源URL,渠道类型,市场,联系人,联系方式,负责人,相关性评分,风险等级,建议目标页,实际目标页,锚文本,链接属性,机会状态,首次联系日期,跟进日期,首次发现日期,最后检查日期,链接状态,来源页可索引,推荐访问,下载点击,授权点击,备注
+BL-001,当前 Gitee 项目,gitee.com,https://gitee.com/wang1st/xlsone,自有项目资料,国内中文,,,,,低,https://z-pulse.cn/,,,,待审核品牌与链接,,,,,待核验,待核验,0,0,0,不计入独立引用域 KPI
+BL-002,旧 GitHub xlsOne 项目,github.com,https://github.com/wang1st/xlsOne,自有或历史项目资料,待确认,,,,,中,https://z-pulse.cn/,,,,待确认归属与产品关系,,,,,待核验,是,0,0,0,确认归属和版本一致后再更新
+BL-003,小众软件,appinn.com,https://meta.appinn.net/c/faxian/10,编辑投稿,国内中文,,,,,低,https://z-pulse.cn/excel-summary/,,,,待人工审核并提交,,,,,未联系,是,0,0,0,投稿资料包已完成；不购买链接且不干预编辑评价
+BL-004,Product Hunt,producthunt.com,https://help.producthunt.com/en/articles/479557-how-to-post-a-product,产品发布,国际英文,,,,,低,https://xlsone.com/,,,,等待英文产品资料成熟,,,,,未联系,是,0,0,0,只用于国际站
+BL-005,AlternativeTo,alternativeto.net,https://alternativeto.net/faq/,软件目录,国际英文,,,,,低,https://xlsone.com/,,,,等待英文支持和国际版本成熟,,,,,未联系,是,0,0,0,官方要求应用支持英语并经审核

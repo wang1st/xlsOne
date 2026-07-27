@@ -12,19 +12,21 @@
     <meta property="og:url" content="https://z-pulse.cn/">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="表表归一">
-    <meta property="og:image" content="https://z-pulse.cn/images/xlsone-logo.svg">
+    <meta property="og:image" content="https://z-pulse.cn/images/xlsone-logo.png?v=1.1.0">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="多张同格式 Excel 一键汇总 | XlsOne 表表归一">
     <meta name="twitter:description" content="把多张同格式 Excel 报表一键汇总。数值自动合计，穿透追溯，离线处理。">
-    <meta name="twitter:image" content="https://z-pulse.cn/images/xlsone-logo.svg">
-    <link rel="stylesheet" href="/css/style.css?v=1.0.6-1">
-    <link rel="icon" href="/images/xlsone-logo.svg" type="image/svg+xml">
+    <meta name="twitter:image" content="https://z-pulse.cn/images/xlsone-logo.png?v=1.1.0">
+    <link rel="stylesheet" href="/css/style.css?v=1.1.0">
+    <link rel="icon" href="/images/xlsone-logo.png?v=1.1.0" type="image/png">
+    <link rel="preload" as="image" href="/images/xlsone-demo-poster.jpg" fetchpriority="high">
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@graph": [
         {"@type":"WebSite","name":"表表归一","url":"https://z-pulse.cn/","description":"多张同格式 Excel 报表一键汇总，数值自动合计，穿透追溯，离线处理。"},
-        {"@type":"SoftwareApplication","name":"表表归一","alternateName":"xlsOne","applicationCategory":"BusinessApplication","operatingSystem":"Linux, Windows, macOS","softwareVersion":"1.0.6","description":"多张同格式 Excel 报表一键汇总，数值自动合计，穿透追溯，离线处理。","url":"https://z-pulse.cn/","image":"https://z-pulse.cn/images/xlsone-logo.svg","offers":{"@type":"Offer","price":"99","priceCurrency":"CNY","url":"https://z-pulse.cn/support/","description":"14 天免费试用，年度授权 99 元"}}
+        {"@type":"SoftwareApplication","name":"表表归一","alternateName":"xlsOne","applicationCategory":"BusinessApplication","operatingSystem":"Linux, Windows, macOS","softwareVersion":"1.0.6","description":"多张同格式 Excel 报表一键汇总，数值自动合计，穿透追溯，离线处理。","url":"https://z-pulse.cn/","image":"https://z-pulse.cn/images/xlsone-logo.png?v=1.1.0","offers":{"@type":"Offer","price":"99","priceCurrency":"CNY","url":"https://z-pulse.cn/support/","description":"14 天免费试用，年度授权 99 元"}},
+        {"@type":"VideoObject","name":"Excel 批量汇总：导入、聚合与导出演示","description":"22 秒演示表表归一导入多张同格式 Excel、自动汇总、穿透追溯并导出工作簿。","thumbnailUrl":["https://z-pulse.cn/images/xlsone-demo-poster.jpg"],"uploadDate":"2026-07-24","duration":"PT22S","contentUrl":"https://z-pulse.cn/videos/xlsone-excel-summary-demo.mp4","embedUrl":"https://z-pulse.cn/videos/excel-batch-summary-demo/"}
       ]
     }
     </script>
@@ -37,9 +39,10 @@
 
 <nav class="nav">
     <div class="container">
-        <a href="/" class="nav-brand"><img src="/images/zenith-pulse-logo.svg" alt="" width="28" height="28">ZP</a>
+        <a href="/" class="nav-brand"><img src="/images/xlsone-logo.png?v=1.1.0" alt="" width="28" height="28">xlsOne</a>
         <div class="nav-links">
             <a href="/">表表归一</a>
+            <a href="/guides/merge-multiple-excel-files/" data-goatcounter-click="nav_guide">教程</a>
             <a href="/xlsone/download.html" data-goatcounter-click="nav_download">下载</a>
             <a href="/support/" data-goatcounter-click="nav_license">获取授权</a>
         </div>
@@ -64,6 +67,13 @@
                 <div style="margin-top:32px;display:flex;gap:14px;justify-content:center;flex-wrap:wrap">
                     <a href="/xlsone/download.html" class="btn btn-primary btn-lg" data-goatcounter-click="hero_download">免费下载</a>
                     <a href="#how" class="btn btn-outline btn-lg" data-goatcounter-click="hero_details">了解详情</a>
+                </div>
+                <div class="hero-video">
+                    <video controls preload="metadata" poster="/images/xlsone-demo-poster.jpg" playsinline data-goatcounter-click="hero_video_play">
+                        <source src="/videos/xlsone-excel-summary-demo.mp4" type="video/mp4">
+                        您的浏览器不支持 HTML5 视频。<a href="/videos/xlsone-excel-summary-demo.mp4">直接下载演示视频</a>
+                    </video>
+                    <p class="hero-video-caption">22 秒真实界面演示 · 含步骤字幕</p>
                 </div>
             </div>
         </div>
@@ -212,6 +222,40 @@
                 <div class="spec-item"><div class="spec-key">数据隐私</div><div class="spec-val">完全离线，零上传</div></div>
                 <div class="spec-item"><div class="spec-key">运行平台</div><div class="spec-val">Linux / Windows / macOS</div></div>
                 <div class="spec-item"><div class="spec-key">授权方式</div><div class="spec-val">年度订阅 / 永久买断</div></div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section section-alt">
+        <div class="container">
+            <h2 class="section-title animate-in">Excel 汇总指南</h2>
+            <p class="section-lead animate-in">先判断任务属于逐行合并还是分类汇总，再选择合适的方法。</p>
+            <div class="resource-grid">
+                <a class="resource-card animate-in" href="/excel-summary/" data-goatcounter-click="home_resource_landing">
+                    <span>工具说明</span>
+                    <h3>多张同格式 Excel 一键汇总</h3>
+                    <p>了解适用条件、处理流程和数据边界。</p>
+                </a>
+                <a class="resource-card animate-in" href="/guides/merge-multiple-excel-files/" data-goatcounter-click="home_resource_guide">
+                    <span>完整教程</span>
+                    <h3>多个 Excel 文件合并到一个表</h3>
+                    <p>比较复制粘贴、合并计算、Power Query 和桌面工具。</p>
+                </a>
+                <a class="resource-card animate-in" href="/compare/excel-consolidate-vs-power-query/" data-goatcounter-click="home_resource_compare">
+                    <span>方法对比</span>
+                    <h3>合并计算与 Power Query 怎么选</h3>
+                    <p>按数据结构、学习成本和复用需求做选择。</p>
+                </a>
+                <a class="resource-card animate-in" href="/videos/excel-batch-summary-demo/" data-goatcounter-click="home_resource_video">
+                    <span>视频演示</span>
+                    <h3>22 秒看完批量汇总流程</h3>
+                    <p>从导入多份文件到生成汇总结果的真实界面演示，已添加步骤字幕。</p>
+                </a>
+                <a class="resource-card animate-in" href="/resources/monthly-report-sample/" data-goatcounter-click="home_resource_sample">
+                    <span>免费样例</span>
+                    <h3>双工作表 Excel 月报测试数据</h3>
+                    <p>下载 4 份虚构源月报，用两张预期汇总表核对 36 个数值。</p>
+                </a>
             </div>
         </div>
     </section>

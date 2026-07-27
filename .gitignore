@@ -19,6 +19,7 @@ xcuserdata/
 # Output files
 output_*.html
 *.csv
+!docs/seo-backlink-tracker.csv
 
 # Test files
 test_*.swift
@@ -66,3 +67,4 @@ activation/worker/.wrangler/
 
 # Generated media assets
 promo_video/
+outputs/

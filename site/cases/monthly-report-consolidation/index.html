@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>分公司月报 Excel 汇总案例：统一模板到总表复核</title>
+    <meta name="description" content="分公司、部门或下属单位使用统一 Excel 模板上报时，如何完成收表、版本检查、批量汇总、来源追溯和结果复核。">
+    <link rel="canonical" href="https://z-pulse.cn/cases/monthly-report-consolidation/">
+    <meta property="og:title" content="分公司月报 Excel 汇总案例：统一模板到总表复核">
+    <meta property="og:description" content="一个不虚构客户和收益数据的标准化月报汇总场景。">
+    <meta property="og:url" content="https://z-pulse.cn/cases/monthly-report-consolidation/">
+    <meta property="og:type" content="article">
+    <meta property="og:image" content="https://z-pulse.cn/images/Screenshot_3.png">
+    <link rel="stylesheet" href="/css/style.css?v=1.1.0">
+    <link rel="icon" href="/images/xlsone-logo.png?v=1.1.0" type="image/png">
+    <script type="application/ld+json">
+    {"@context":"https://schema.org","@graph":[
+      {"@type":"Article","headline":"分公司月报 Excel 汇总案例：统一模板到总表复核","datePublished":"2026-07-23","dateModified":"2026-07-23","author":{"@type":"Organization","name":"ZENITH PULSE"},"publisher":{"@type":"Organization","name":"ZENITH PULSE"},"mainEntityOfPage":"https://z-pulse.cn/cases/monthly-report-consolidation/","image":"https://z-pulse.cn/images/Screenshot_3.png"},
+      {"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"首页","item":"https://z-pulse.cn/"},{"@type":"ListItem","position":2,"name":"场景案例","item":"https://z-pulse.cn/cases/monthly-report-consolidation/"}]}
+    ]}</script>
+    <script data-goatcounter="https://z-pulse.cn/analytics/count" async src="/analytics/count.js"></script>
+</head>
+<body>
+<nav class="nav"><div class="container"><a href="/" class="nav-brand"><img src="/images/xlsone-logo.png?v=1.1.0" alt="" width="28" height="28">xlsOne</a><div class="nav-links"><a href="/excel-summary/">Excel 汇总</a><a href="/guides/merge-multiple-excel-files/">教程</a><a href="/xlsone/download.html" data-goatcounter-click="case_nav_download">下载</a></div></div></nav>
+<main class="article-page">
+    <div class="container article-shell">
+        <nav class="breadcrumbs" aria-label="面包屑"><a href="/">首页</a><span>场景案例</span><span>月报汇总</span></nav>
+        <header class="article-hero">
+            <p class="eyebrow">标准场景 · 非客户背书</p>
+            <h1>分公司月报 Excel 汇总：从统一模板到可追溯总表</h1>
+            <p class="summary">下面是一套适用于分公司、部门、乡镇或项目组的标准工作流。它不使用虚构客户、虚构节省时间或虚构效果，只展示如何把常见上报任务做得更可核对。</p>
+            <div class="article-meta"><span>场景：周期性报表</span><span>输入：同一模板的多个文件</span><span>输出：汇总表 + 来源核对</span></div>
+        </header>
+        <article class="article-body">
+            <h2>场景设定</h2>
+            <p>总部向多个下属单位发放同一份月报模板。每个文件包含单位名称、项目编号、月度金额、累计金额和说明。截止日后，汇总人员需要得到一张保持原布局的总表。</p>
+            <p>传统做法通常是在一份总表中逐个复制数字或编写跨工作簿公式。主要风险不是计算函数本身，而是文件版本、粘贴位置、遗漏单位和异常值难以追查。</p>
+
+            <h2>步骤一：先把模板规则固定下来</h2>
+            <ul class="check-list">
+                <li>文件名包含单位和月份，例如“华东区-2026-07.xlsx”。</li>
+                <li>所有单位从同一份锁定模板开始填写。</li>
+                <li>不要随意插入、删除或移动汇总区域的行列。</li>
+                <li>明确哪些单元格求和、哪些保留文本、哪些只用于说明。</li>
+                <li>收表后保留原件，用副本进行汇总。</li>
+            </ul>
+
+            <h2>步骤二：做批次检查</h2>
+            <p>在汇总前先确认文件数量是否等于应报单位数量，并抽查模板版本。若某个单位使用旧模板，应先让其换回新模板或单独处理，避免把结构差异藏在最终结果中。</p>
+            <div class="callout"><strong>建议保留一张批次清单</strong>记录应报单位、收到时间、文件名、模板版本和是否纳入本次汇总。汇总工具不能替代流程上的完整性检查。</div>
+
+            <h2>步骤三：批量导入并确认聚合类型</h2>
+            <p>把同批次文件一次导入表表归一。金额、数量等数值通常按合计处理；单位名称、编号和说明按文本规则处理。遇到特殊单元格时，在导出前手动调整。</p>
+            <figure class="article-figure"><img src="/images/Screenshot_1.png" alt="一次导入多个分公司月报 Excel 文件" width="911" height="694" loading="lazy" decoding="async"><figcaption>批量导入前，先完成文件数量和模板版本检查。</figcaption></figure>
+
+            <h2>步骤四：从异常结果穿透到源文件</h2>
+            <p>如果某个累计金额明显偏高，不必重新打开所有文件逐张搜索。点击结果单元格，查看每个源文件在相同位置的值，再定位异常单位和原始数字。</p>
+            <figure class="article-figure"><img src="/images/Screenshot_2.png" alt="在汇总结果中查看各源文件原始数值" width="911" height="694" loading="lazy" decoding="async"><figcaption>穿透查看用于解释结果，不等于自动判断业务数据是否正确。</figcaption></figure>
+
+            <h2>步骤五：导出后做三类复核</h2>
+            <ol>
+                <li><strong>完整性：</strong>所有应报单位是否都纳入批次。</li>
+                <li><strong>总量：</strong>关键总计是否与抽样手工计算一致。</li>
+                <li><strong>异常：</strong>极大值、负数、空值和说明文本是否合理。</li>
+            </ol>
+            <p>确认后导出 .xlsx，并将汇总表、批次清单和源文件归档在同一周期目录中。</p>
+
+            <h2>同一流程还能用于哪些任务</h2>
+            <div class="resource-grid">
+                <div class="resource-card"><strong>部门预算</strong><span>各部门使用同一预算模板，上报科目金额与说明。</span></div>
+                <div class="resource-card"><strong>乡镇台账</strong><span>各村、社区使用统一表格，上报人数、面积或事项数量。</span></div>
+                <div class="resource-card"><strong>项目进度</strong><span>多个子项目按相同结构上报进度、投入和资金。</span></div>
+                <div class="resource-card"><strong>库存盘点</strong><span>多个仓库按统一品类和位置上报盘点结果。</span></div>
+            </div>
+
+            <section class="inline-cta">
+                <h2>用一小批真实副本验证流程</h2>
+                <p>先选择 3–5 个同模板文件，验证聚合规则与导出结果，再用于完整批次。</p>
+                <a class="btn btn-primary" href="/xlsone/download.html" data-goatcounter-click="case_bottom_download">免费下载试用</a>
+            </section>
+            <section class="related-section"><h2>相关内容</h2><div class="resource-grid"><a class="resource-card" href="/excel-summary/"><strong>多张同格式 Excel 汇总工具</strong><span>了解适用前提、功能和常见问题。</span></a><a class="resource-card" href="/videos/excel-batch-summary-demo/"><strong>观看实际界面演示</strong><span>22 秒浏览导入、汇总和导出过程。</span></a><a class="resource-card" href="/resources/monthly-report-sample/"><strong>下载虚构月报测试数据</strong><span>使用两张预期汇总表复核 36 个数值单元格。</span></a></div></section>
+        </article>
+    </div>
+</main>
+<footer class="footer"><div class="container"><a href="/support/">获取授权</a><a href="/privacy/">隐私政策</a><p class="icp"><a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener">浙ICP备20024036号-3</a></p><p class="copyright">&copy; 2026 ZENITH PULSE</p></div></footer>
+</body>
+</html>

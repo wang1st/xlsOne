@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>多个 Excel 表格怎么合并汇总？4 种方法与步骤</title>
+    <meta name="description" content="多个 Excel 工作簿或工作表合并汇总教程：先区分追加明细与按位置合计，再选择复制粘贴、合并计算、Power Query 或表表归一。">
+    <link rel="canonical" href="https://z-pulse.cn/guides/merge-multiple-excel-files/">
+    <meta property="og:title" content="多个 Excel 表格怎么合并汇总？4 种方法与步骤">
+    <meta property="og:description" content="根据数据结构和任务频率选择正确的多表合并方法。">
+    <meta property="og:url" content="https://z-pulse.cn/guides/merge-multiple-excel-files/">
+    <meta property="og:type" content="article">
+    <meta property="og:image" content="https://z-pulse.cn/images/Screenshot_1.png">
+    <link rel="stylesheet" href="/css/style.css?v=1.1.0">
+    <link rel="icon" href="/images/xlsone-logo.png?v=1.1.0" type="image/png">
+    <script type="application/ld+json">
+    {
+      "@context":"https://schema.org",
+      "@graph":[
+        {"@type":"Article","headline":"多个 Excel 表格怎么合并汇总？4 种方法与步骤","datePublished":"2026-07-23","dateModified":"2026-07-23","author":{"@type":"Organization","name":"ZENITH PULSE"},"publisher":{"@type":"Organization","name":"ZENITH PULSE"},"mainEntityOfPage":"https://z-pulse.cn/guides/merge-multiple-excel-files/","image":"https://z-pulse.cn/images/Screenshot_1.png"},
+        {"@type":"BreadcrumbList","itemListElement":[
+          {"@type":"ListItem","position":1,"name":"首页","item":"https://z-pulse.cn/"},
+          {"@type":"ListItem","position":2,"name":"教程","item":"https://z-pulse.cn/guides/merge-multiple-excel-files/"}
+        ]}
+      ]
+    }
+    </script>
+    <script data-goatcounter="https://z-pulse.cn/analytics/count" async src="/analytics/count.js"></script>
+</head>
+<body>
+<nav class="nav">
+    <div class="container">
+        <a href="/" class="nav-brand"><img src="/images/xlsone-logo.png?v=1.1.0" alt="" width="28" height="28">xlsOne</a>
+        <div class="nav-links"><a href="/excel-summary/">Excel 汇总</a><a href="/compare/excel-consolidate-vs-power-query/">方法对比</a><a href="/xlsone/download.html" data-goatcounter-click="guide_nav_download">下载</a></div>
+    </div>
+</nav>
+<main class="article-page">
+    <div class="container article-shell">
+        <nav class="breadcrumbs" aria-label="面包屑"><a href="/">首页</a><span>教程</span><span>多个 Excel 合并汇总</span></nav>
+        <header class="article-hero">
+            <p class="eyebrow">Excel 教程</p>
+            <h1>多个 Excel 表格怎么合并汇总？先判断任务，再选方法</h1>
+            <p class="summary">“合并”可能指把明细行上下追加，也可能指把相同位置的金额、数量逐项合计。两种任务的数据结构、工具和结果完全不同。</p>
+            <div class="article-meta"><span>更新：2026-07-23</span><span>阅读约 7 分钟</span><span>适用：Excel / WPS 同类任务</span></div>
+        </header>
+
+        <article class="article-body">
+            <h2>第一步：确认你要的是“追加”还是“汇总”</h2>
+            <h3>追加明细行</h3>
+            <p>每张表都有相同字段，例如日期、客户、金额，需要把所有记录纵向堆到一张明细表。适合复制粘贴、VSTACK 或 Power Query 的“追加查询”。</p>
+            <h3>按相同位置汇总</h3>
+            <p>每个文件来自同一模板，例如各分公司的月报、各部门的预算表。需要保持原有布局，把相同单元格的数值相加，并保留名称和编号。适合 Excel“合并计算”或表表归一。</p>
+            <div class="callout"><strong>不要混用</strong>把固定版式报表当作明细行追加，通常会得到重复表头和无法阅读的长表；把明细清单按单元格位置求和，也会产生错误结果。</div>
+
+            <h2>方法一：复制粘贴</h2>
+            <p><strong>适合：</strong>文件少、只做一次、目标是追加明细。</p>
+            <ol>
+                <li>新建一个汇总工作表，保留一份表头。</li>
+                <li>从每张源表复制表头以下的数据。</li>
+                <li>依次粘贴到上一批数据的末尾。</li>
+                <li>检查空行、重复表头、日期和数字格式。</li>
+            </ol>
+            <p>优点是任何版本都能用；缺点是重复任务容易漏行、贴错位置，也不便于追溯来源。</p>
+
+            <h2>方法二：Excel“合并计算”</h2>
+            <p><strong>适合：</strong>布局相同、需要总和/平均/计数、文件数量不多。</p>
+            <ol>
+                <li>在目标工作簿中选择结果区域左上角。</li>
+                <li>打开“数据 → 合并计算”。</li>
+                <li>选择“求和”等函数，把每个源区域加入引用列表。</li>
+                <li>按需要勾选“首行”或“最左列”标签，生成结果。</li>
+            </ol>
+            <p>这是 Excel 自带能力，适合一次性按位置汇总。源文件很多或需要逐项核对来源时，手动添加引用会变得繁琐。</p>
+
+            <h2>方法三：Power Query</h2>
+            <p><strong>适合：</strong>经常重复、需要清洗字段、目标是追加明细或连接不同表。</p>
+            <ol>
+                <li>把源文件放进固定文件夹，并保持列名尽量一致。</li>
+                <li>在 Excel 中选择“数据 → 获取数据 → 从文件夹”。</li>
+                <li>使用“合并并转换”检查列类型、表头和异常文件。</li>
+                <li>加载到工作表；下次替换文件后刷新查询。</li>
+            </ol>
+            <p>Power Query 的优势是可重复刷新和数据清洗；学习成本较高，而且固定版式报表中的合并单元格、说明文字和复杂布局通常需要额外处理。</p>
+
+            <h2>方法四：表表归一</h2>
+            <p><strong>适合：</strong>多份同格式模板，需要按位置合计、保留原布局并追溯来源。</p>
+            <ol>
+                <li>一次拖入所有 .xlsx 或 .xls 文件。</li>
+                <li>确认软件识别的数值和文本类型，必要时批量修正。</li>
+                <li>点击任意结果单元格核对各源文件值。</li>
+                <li>导出标准 .xlsx 汇总表。</li>
+            </ol>
+            <figure class="article-figure">
+                <img src="/images/Screenshot_3.png" alt="表表归一将多个 Excel 文件汇总后导出 xlsx" width="911" height="694" loading="lazy" decoding="async">
+                <figcaption>固定模板报表可以保留布局汇总，并逐格查看来源。</figcaption>
+            </figure>
+
+            <h2>一张表快速选择</h2>
+            <div class="comparison-wrap">
+                <table class="comparison-table">
+                    <thead><tr><th>任务</th><th>优先方法</th><th>原因</th></tr></thead>
+                    <tbody>
+                        <tr><td>2–3 张明细表，一次性追加</td><td>复制粘贴</td><td>最快，不必搭建查询。</td></tr>
+                        <tr><td>少量同布局表求和</td><td>合并计算</td><td>Excel 内置，按位置或标签汇总。</td></tr>
+                        <tr><td>每月刷新、清洗并追加明细</td><td>Power Query</td><td>流程可保存并重复刷新。</td></tr>
+                        <tr><td>多份固定模板报表，需追溯</td><td>表表归一</td><td>保留布局、自动聚合、来源可查。</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h2>汇总前的检查清单</h2>
+            <ul class="check-list">
+                <li>保留源文件副本，不在唯一原件上实验。</li>
+                <li>确认所有文件确实使用同一模板版本。</li>
+                <li>抽查日期、文本数字、空值和公式结果。</li>
+                <li>先用 3–5 份文件验证，再扩大到完整批次。</li>
+                <li>导出后核对总计，并保留来源文件清单。</li>
+            </ul>
+
+            <section class="inline-cta">
+                <h2>你的任务是固定模板报表汇总？</h2>
+                <p>表表归一支持离线批量处理，并能从汇总结果穿透查看源文件。</p>
+                <a class="btn btn-primary" href="/xlsone/download.html" data-goatcounter-click="guide_bottom_download">免费下载试用</a>
+            </section>
+
+            <section class="related-section">
+                <h2>相关内容</h2>
+                <div class="resource-grid">
+                    <a class="resource-card" href="/compare/excel-consolidate-vs-power-query/"><strong>合并计算、Power Query、VBA 怎么选</strong><span>比较学习成本、可重复性、追溯能力和适用结构。</span></a>
+                    <a class="resource-card" href="/videos/excel-batch-summary-demo/"><strong>观看批量汇总演示</strong><span>22 秒看完导入、聚合和导出界面。</span></a>
+                    <a class="resource-card" href="/resources/monthly-report-sample/"><strong>下载双工作表月报样例</strong><span>用 4 份源文件和 36 个预期数值动手测试。</span></a>
+                </div>
+            </section>
+        </article>
+    </div>
+</main>
+<footer class="footer"><div class="container"><a href="/support/">获取授权</a><a href="/privacy/">隐私政策</a><p class="icp"><a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener">浙ICP备20024036号-3</a></p><p class="copyright">&copy; 2026 ZENITH PULSE</p></div></footer>
+</body>
+</html>
