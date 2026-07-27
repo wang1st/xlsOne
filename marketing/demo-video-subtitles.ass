@@ -1,0 +1,17 @@
+[Script Info]
+Title: xlsOne Demo Subtitles
+ScriptType: v4.00+
+PlayResX: 1280
+PlayResY: 720
+YCbCr Matrix: TV.709
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Default,PingFang SC,48,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,3,2,0,2,40,40,60,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:02.20,0:00:04.20,Default,,0,0,0,,导入 4 份同模板月报
+Dialogue: 0,0:00:04.30,0:00:06.30,Default,,0,0,0,,自动汇总 2 个工作表
+Dialogue: 0,0:00:06.40,0:00:09.20,Default,,0,0,0,,点击结果，追溯来源
+Dialogue: 0,0:00:14.00,0:00:18.00,Default,,0,0,0,,导出 Excel · 全程离线处理
