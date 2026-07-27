@@ -7,8 +7,9 @@ final class TemplateWorkbookExporterTests: XCTestCase {
             .deletingLastPathComponent()
             .deletingLastPathComponent()
             .deletingLastPathComponent()
-            .appendingPathComponent("仙居县")
-            .appendingPathComponent("仙居县人民政府安洲街道办事处2025乡镇报表主体信息表.xlsx")
+            .appendingPathComponent("samples")
+            .appendingPathComponent("monthly-report-sample-v1.1")
+            .appendingPathComponent("01-operations-team-1-june-2026.xlsx")
             .path
     }
 
@@ -76,41 +77,18 @@ final class TemplateWorkbookExporterTests: XCTestCase {
             formatMatrix(from: sourcePreview)
         )
 
-        XCTAssertEqual(exported.sheets.first?.rows[1][1].value, "乡镇报表主体信息表")
-        XCTAssertEqual(exported.sheets.first?.rows[13][2].value, "2025-06-16")
-        XCTAssertEqual(exported.sheets.first?.rows[13][2].formatCode, "yyyy-MM-dd")
+        XCTAssertEqual(exported.sheets.count, 2)
+        XCTAssertEqual(exported.sheets.first?.rows[1][1].value, "2026 年 6 月")
+        XCTAssertEqual(exported.sheets.first?.rows[5][2].numericValue, 180_000)
     }
 
-    func testTemplateExporterWritesNumericSumsAsNumbers() async throws {
+    func testTemplateExporterPreservesNumericCells() async throws {
         let parser = ExcelParser()
         let sourceFile = try await parser.parseFile(at: samplePath)
 
         let results = sourceFile.sheets.map { sheet in
-            let rows = sheet.rows.enumerated().map { rowIndex, row in
-                row.enumerated().map { columnIndex, cell in
-                    if sheet.name == "乡镇财政基本情况表", rowIndex == 4, columnIndex == 2 {
-                        return MergedCell(
-                            type: .sum(1234),
-                            displayValue: MergedCell.formatNumber(1234, formatCode: cell.formatCode),
-                            sources: [
-                                CellSourceEntry(
-                                    filename: sourceFile.filename,
-                                    filepath: sourceFile.filepath,
-                                    value: "1234",
-                                    rawValue: "1234",
-                                    state: .value
-                                )
-                            ],
-                            formatCode: cell.formatCode,
-                            decision: MergedCellDecision(
-                                autoDetectedType: .sum(1234),
-                                confidence: 1.0,
-                                decisionReasons: ["test sum export"],
-                                isSuspicious: false
-                            )
-                        )
-                    }
-
+            let rows = sheet.rows.map { row in
+                row.map { cell in
                     let type: MergedCell.CellType = .single(cell.value)
                     return MergedCell(
                         type: type,
@@ -156,10 +134,10 @@ final class TemplateWorkbookExporterTests: XCTestCase {
 
         let exported = try await parser.parseFile(at: outputURL.path)
         let targetCell = try XCTUnwrap(
-            exported.sheets.first(where: { $0.name == "乡镇财政基本情况表" })?.rows[4][2]
+            exported.sheets.first?.rows[5][2]
         )
-        XCTAssertEqual(targetCell.value, "1234")
-        XCTAssertEqual(targetCell.numericValue, 1234)
+        XCTAssertEqual(targetCell.value, "180000")
+        XCTAssertEqual(targetCell.numericValue, 180_000)
     }
 }
 

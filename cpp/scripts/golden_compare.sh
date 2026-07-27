@@ -9,11 +9,12 @@ inputs=("$@")
 if [ "${#inputs[@]}" -eq 0 ]; then
   while IFS= read -r file; do
     inputs+=("${file}")
-  done < <(find "${root}/仙居县" -maxdepth 1 -type f \( -name "*.xlsx" -o -name "*.xls" \) | sort)
+  done < <(find "${root}/samples/monthly-report-sample-v1.1" -maxdepth 1 \
+    -type f -name "0[1-4]-*.xlsx" | sort)
 fi
 
 if [ "${#inputs[@]}" -eq 0 ]; then
-  echo "No workbook inputs found. Pass paths explicitly or add samples under ${root}/仙居县." >&2
+  echo "No workbook inputs found. Pass paths explicitly or restore samples/monthly-report-sample-v1.1." >&2
   exit 2
 fi
 
