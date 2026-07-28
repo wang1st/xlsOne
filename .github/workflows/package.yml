@@ -99,9 +99,6 @@ jobs:
           if (-not (Test-Path $vcpkg) -or -not (Test-Path $toolchain)) {
             throw "vcpkg was not found on the Windows runner"
           }
-          if (-not (Get-Command ninja.exe -ErrorAction SilentlyContinue)) {
-            choco install ninja --no-progress -y
-          }
           if (-not (Get-Command candle.exe -ErrorAction SilentlyContinue)) {
             throw "WiX Toolset v3 was not found on the Windows runner"
           }
@@ -122,13 +119,12 @@ jobs:
       - name: Build and test
         shell: pwsh
         run: |
-          cmake -S . -B build-windows -G Ninja `
-            -DCMAKE_BUILD_TYPE=Release `
+          cmake -S . -B build-windows -G "Visual Studio 17 2022" -A x64 `
             -DCMAKE_TOOLCHAIN_FILE="${{ steps.tools.outputs.toolchain }}" `
             -DVCPKG_TARGET_TRIPLET=x64-windows-static `
             -DXLSONE_C_WARNINGS_AS_ERRORS=ON
           if ($LASTEXITCODE -ne 0) { throw "CMake configure failed" }
-          cmake --build build-windows
+          cmake --build build-windows --config Release
           if ($LASTEXITCODE -ne 0) { throw "CMake build failed" }
           ctest --test-dir build-windows -C Release --output-on-failure
           if ($LASTEXITCODE -ne 0) { throw "Tests failed" }
@@ -137,9 +133,11 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force .build | Out-Null
-          cpack --config build-windows\CPackConfig.cmake -B .build -G ZIP
+          cpack --config build-windows\CPackConfig.cmake `
+            -C Release -B .build -G ZIP
           if ($LASTEXITCODE -ne 0) { throw "CPack ZIP failed" }
-          cpack --config build-windows\CPackConfig.cmake -B .build -G WIX
+          cpack --config build-windows\CPackConfig.cmake `
+            -C Release -B .build -G WIX
           if ($LASTEXITCODE -ne 0) { throw "CPack WIX failed" }
 
       - name: Verify Windows packages
