@@ -16,6 +16,16 @@ static int failures = 0;
         } \
     } while (0)
 
+static char *test_duplicate_string(const char *value)
+{
+    size_t length = strlen(value);
+    char *copy = (char *)malloc(length + 1);
+    if (copy != NULL) {
+        memcpy(copy, value, length + 1);
+    }
+    return copy;
+}
+
 static void check_close(double actual, double expected)
 {
     CHECK(fabs(actual - expected) < 0.0000001);
@@ -53,8 +63,8 @@ static int make_workbook(
 {
     xls_error error;
     memset(workbook, 0, sizeof(*workbook));
-    workbook->filename = strdup(filename);
-    workbook->filepath = strdup(filename);
+    workbook->filename = test_duplicate_string(filename);
+    workbook->filepath = test_duplicate_string(filename);
     workbook->sheet_count = 1;
     workbook->sheets = (xls_sheet *)calloc(1, sizeof(*workbook->sheets));
     if (workbook->filename == NULL || workbook->filepath == NULL
