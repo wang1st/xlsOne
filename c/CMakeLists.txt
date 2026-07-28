@@ -13,6 +13,10 @@ set(CMAKE_C_EXTENSIONS OFF)
 include(GNUInstallDirs)
 
 if(MSVC)
+    set(
+        CMAKE_MSVC_RUNTIME_LIBRARY
+        "MultiThreaded$<$<CONFIG:Debug>:Debug>"
+    )
     add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
 endif()
 

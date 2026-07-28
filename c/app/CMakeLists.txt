@@ -51,7 +51,15 @@ if(TARGET SDL2::SDL2
     )
     target_link_libraries(xlsone_app PRIVATE xlsone_core)
     if(MSVC)
-        target_compile_options(xlsone_app PRIVATE /W4)
+        target_compile_options(
+            xlsone_app
+            PRIVATE
+                /W4
+                # Nuklear 4.13.3 triggers MSVC's path-sensitive C4701
+                # diagnostics in implementation code despite initializing
+                # the values on every reachable path.
+                /wd4701
+        )
         if(XLSONE_C_WARNINGS_AS_ERRORS)
             target_compile_options(xlsone_app PRIVATE /WX)
         endif()
