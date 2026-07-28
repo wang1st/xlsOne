@@ -16,15 +16,7 @@
 #define NK_IMPLEMENTATION
 #define NK_SDL_RENDERER_IMPLEMENTATION
 #include "nuklear.h"
-#if !SDL_VERSION_ATLEAST(2, 0, 18)
-#define preciseX x
-#define preciseY y
-#endif
 #include "nuklear_sdl_renderer.h"
-#if !SDL_VERSION_ATLEAST(2, 0, 18)
-#undef preciseX
-#undef preciseY
-#endif
 
 typedef struct app_state {
     xls_workbook *workbooks;

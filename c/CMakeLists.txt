@@ -12,6 +12,10 @@ set(CMAKE_C_EXTENSIONS OFF)
 
 include(GNUInstallDirs)
 
+if(MSVC)
+    add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
+endif()
+
 option(XLSONE_C_BUILD_APP "Build the SDL desktop application" ON)
 option(XLSONE_C_BUILD_TESTS "Build the pure C tests" ON)
 option(XLSONE_C_WARNINGS_AS_ERRORS "Treat compiler warnings as errors" OFF)
@@ -41,12 +45,12 @@ if(XLSONE_C_BUILD_APP)
         FetchContent_MakeAvailable(sdl2)
         set(XLSONE_SDL_LICENSE "${sdl2_SOURCE_DIR}/LICENSE.txt")
     else()
-        find_package(SDL2 QUIET CONFIG)
+        find_package(SDL2 2.0.18 QUIET CONFIG)
         if(NOT TARGET SDL2::SDL2
             AND NOT TARGET SDL2::SDL2-static)
             find_package(PkgConfig QUIET)
             if(PkgConfig_FOUND)
-                pkg_check_modules(SDL2 IMPORTED_TARGET sdl2)
+                pkg_check_modules(SDL2 IMPORTED_TARGET "sdl2>=2.0.18")
             endif()
         endif()
         if(SDL2_DIR)
@@ -73,7 +77,7 @@ if(XLSONE_C_BUILD_APP)
         AND NOT TARGET SDL2::SDL2-static
         AND NOT TARGET PkgConfig::SDL2)
         message(FATAL_ERROR
-            "SDL2 was not found. Install SDL2, use "
+            "SDL2 2.0.18 or newer was not found. Install a compatible SDL2, use "
             "-DXLSONE_C_FETCH_SDL2=ON, or configure with "
             "-DXLSONE_C_BUILD_APP=OFF.")
     endif()

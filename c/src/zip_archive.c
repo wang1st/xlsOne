@@ -57,7 +57,7 @@ static int file_read_all(
         xls_set_error(error, XLS_ERROR_IO, "无法定位文件: %s", path);
         return 0;
     }
-    if ((unsigned long)file_size > (unsigned long)SIZE_MAX) {
+    if ((uintmax_t)file_size > (uintmax_t)SIZE_MAX) {
         fclose(file);
         xls_set_error(error, XLS_ERROR_FORMAT, "文件过大: %s", path);
         return 0;

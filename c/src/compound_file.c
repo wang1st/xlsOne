@@ -100,7 +100,7 @@ static int read_file(
         xls_set_error(error, XLS_ERROR_IO, "无法读取 .xls 文件大小");
         return 0;
     }
-    if ((unsigned long)length > (unsigned long)SIZE_MAX) {
+    if ((uintmax_t)length > (uintmax_t)SIZE_MAX) {
         fclose(file);
         xls_set_error(error, XLS_ERROR_FORMAT, ".xls 文件过大");
         return 0;

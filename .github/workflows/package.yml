@@ -353,6 +353,7 @@ jobs:
           cmake -S . -B "build-linux-${PACKAGE_ARCH}" -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DXLSONE_PACKAGE_ARCH="${PACKAGE_ARCH}" \
+            -DXLSONE_C_FETCH_SDL2=ON \
             -DXLSONE_C_WARNINGS_AS_ERRORS=ON
           cmake --build "build-linux-${PACKAGE_ARCH}"
           ctest --test-dir "build-linux-${PACKAGE_ARCH}" --output-on-failure

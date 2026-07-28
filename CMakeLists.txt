@@ -54,8 +54,14 @@ else()
     set(CPACK_DEBIAN_FILE_NAME "${CPACK_PACKAGE_FILE_NAME}.deb")
     set(CPACK_DEBIAN_PACKAGE_SECTION "office")
     set(CPACK_DEBIAN_PACKAGE_PRIORITY "optional")
-    set(CPACK_DEBIAN_PACKAGE_DEPENDS
-        "libsdl2-2.0-0, libexpat1, zlib1g, zenity"
-    )
+    if(XLSONE_C_FETCH_SDL2)
+        set(CPACK_DEBIAN_PACKAGE_DEPENDS
+            "libexpat1, zlib1g, zenity"
+        )
+    else()
+        set(CPACK_DEBIAN_PACKAGE_DEPENDS
+            "libsdl2-2.0-0, libexpat1, zlib1g, zenity"
+        )
+    endif()
 endif()
 include(CPack)
