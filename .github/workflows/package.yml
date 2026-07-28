@@ -1,18 +1,10 @@
-name: Multi-platform packages
+name: Multi-platform pure C packages
 
 on:
   workflow_dispatch:
     inputs:
-      edition:
-        description: Service endpoint edition to package
-        required: true
-        default: domestic
-        type: choice
-        options:
-          - domestic
-          - international
       deploy_to_zpulse:
-        description: Deploy the domestic build to z-pulse.cn after packaging
+        description: Deploy packages to z-pulse.cn after all builds pass
         required: true
         default: false
         type: boolean
@@ -29,12 +21,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: packages-${{ github.ref }}
+  group: pure-c-packages-${{ github.ref }}
   cancel-in-progress: false
-
-env:
-  QT_VERSION: "6.8.3"
-  EDITION: ${{ inputs.edition || vars.RELEASE_EDITION || 'domestic' }}
 
 jobs:
   metadata:
@@ -43,7 +31,6 @@ jobs:
     timeout-minutes: 10
     outputs:
       version: ${{ steps.version.outputs.value }}
-      edition: ${{ steps.version.outputs.edition }}
       stable: ${{ steps.version.outputs.stable }}
     steps:
       - name: Checkout
@@ -71,19 +58,18 @@ jobs:
           fi
           version="$(python3 scripts/ci/release_version.py "${tag_args[@]}")"
           echo "value=${version}" >> "${GITHUB_OUTPUT}"
-          echo "edition=${EDITION}" >> "${GITHUB_OUTPUT}"
           echo "stable=${stable}" >> "${GITHUB_OUTPUT}"
-          echo "Packaging xlsOne ${version} (${EDITION})"
+          echo "Packaging pure C xlsOne ${version}"
 
       - name: Validate release and deployment tooling
         shell: bash
         run: |
           set -euo pipefail
           python3 -m unittest discover -s scripts/ci/tests -p 'test_*.py' -v
-          node --test activation/domestic-server/test/*.test.js
           bash -n \
             scripts/deploy/setup-zpulse-deploy-user.sh \
-            scripts/deploy/zpulse-promote.sh
+            scripts/deploy/zpulse-promote.sh \
+            c/scripts/verify_no_qt.sh
 
   windows:
     name: Windows amd64 (MSI + ZIP)
@@ -92,97 +78,118 @@ jobs:
     timeout-minutes: 90
     env:
       VERSION: ${{ needs.metadata.outputs.version }}
-      XLSONE_LICENSE_PUBLIC_KEY: ${{ secrets.ED25519_PUBLIC_KEY }}
+      VCPKG_DEFAULT_TRIPLET: x64-windows-static
     steps:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Install Qt and matching MinGW
-        uses: jurplel/install-qt-action@v4.3.1
-        with:
-          version: ${{ env.QT_VERSION }}
-          arch: win64_mingw
-          tools: tools_mingw1310,qt.tools.win64_mingw1310
-          cache: true
-          cache-key-prefix: qt-${{ runner.os }}-${{ env.QT_VERSION }}-mingw1310
-
-      - name: Locate toolchains
+      - name: Locate build tools
         id: tools
         shell: pwsh
         run: |
-          $mingwRoot = Get-ChildItem -LiteralPath $env:IQTA_TOOLS -Directory -ErrorAction Stop |
-            Where-Object { Test-Path (Join-Path $_.FullName "bin\g++.exe") } |
-            Select-Object -First 1 -ExpandProperty FullName
-          if (-not $mingwRoot) {
-            throw "A matching MinGW toolchain was not installed under $env:IQTA_TOOLS"
+          $vcpkgRoot = if ($env:VCPKG_INSTALLATION_ROOT) {
+            $env:VCPKG_INSTALLATION_ROOT
+          } elseif ($env:VCPKG_ROOT) {
+            $env:VCPKG_ROOT
+          } else {
+            "C:\vcpkg"
           }
+          $vcpkg = Join-Path $vcpkgRoot "vcpkg.exe"
+          $toolchain = Join-Path $vcpkgRoot "scripts\buildsystems\vcpkg.cmake"
+          if (-not (Test-Path $vcpkg) -or -not (Test-Path $toolchain)) {
+            throw "vcpkg was not found on the Windows runner"
+          }
+          if (-not (Get-Command ninja.exe -ErrorAction SilentlyContinue)) {
+            choco install ninja --no-progress -y
+          }
+          if (-not (Get-Command candle.exe -ErrorAction SilentlyContinue)) {
+            throw "WiX Toolset v3 was not found on the Windows runner"
+          }
+          "root=$vcpkgRoot" >> $env:GITHUB_OUTPUT
+          "toolchain=$toolchain" >> $env:GITHUB_OUTPUT
 
-          $candle = (Get-Command candle.exe -ErrorAction Stop).Source
-          $wixRoot = Split-Path $candle -Parent
-          "mingw_root=$mingwRoot" >> $env:GITHUB_OUTPUT
-          "wix_root=$wixRoot" >> $env:GITHUB_OUTPUT
-          Write-Host "Qt:    $env:QT_ROOT_DIR"
-          Write-Host "MinGW: $mingwRoot"
-          Write-Host "WiX:   $wixRoot"
-
-      - name: Build, test, and package
+      - name: Install pure C dependencies
         shell: pwsh
         run: |
-          $packageArgs = @{
-            QtRoot = $env:QT_ROOT_DIR
-            MingwRoot = '${{ steps.tools.outputs.mingw_root }}'
-            WiXRoot = '${{ steps.tools.outputs.wix_root }}'
-            BuildDir = "$env:GITHUB_WORKSPACE\cpp\build-windows-cn-release"
-            Clean = $true
-            Obfuscate = $true
+          & "${{ steps.tools.outputs.root }}\vcpkg.exe" install `
+            sdl2:x64-windows-static `
+            expat:x64-windows-static `
+            zlib:x64-windows-static
+          if ($LASTEXITCODE -ne 0) {
+            throw "vcpkg dependency installation failed"
           }
-          if ($env:EDITION -eq 'international') {
-            $packageArgs.International = $true
-          }
-          & .\cpp\scripts\package_windows_msi_zip.ps1 @packageArgs
 
-      - name: Verify a real MSI upgrade and installed startup
+      - name: Build and test
         shell: pwsh
         run: |
-          & .\cpp\scripts\verify_windows_msi_upgrade.ps1 `
-            -PreviousMsiPath ".\site\downloads\xlsone-1.0.5-windows-amd64.msi" `
-            -CandidateMsiPath ".build\xlsone-$env:VERSION-windows-amd64.msi" `
-            -ExpectedVersion $env:VERSION `
-            -QtMajor 6
+          cmake -S . -B build-windows -G Ninja `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DCMAKE_TOOLCHAIN_FILE="${{ steps.tools.outputs.toolchain }}" `
+            -DVCPKG_TARGET_TRIPLET=x64-windows-static `
+            -DXLSONE_C_WARNINGS_AS_ERRORS=ON
+          if ($LASTEXITCODE -ne 0) { throw "CMake configure failed" }
+          cmake --build build-windows
+          if ($LASTEXITCODE -ne 0) { throw "CMake build failed" }
+          ctest --test-dir build-windows -C Release --output-on-failure
+          if ($LASTEXITCODE -ne 0) { throw "Tests failed" }
 
-      - name: Upload MSI upgrade logs on failure
-        if: failure()
-        uses: actions/upload-artifact@v7
-        with:
-          name: xlsone-windows-msi-upgrade-logs
-          path: .build/xlsone-msi-upgrade-*
-          if-no-files-found: ignore
-          retention-days: 7
+      - name: Package MSI and portable ZIP
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force .build | Out-Null
+          cpack --config build-windows\CPackConfig.cmake -B .build -G ZIP
+          if ($LASTEXITCODE -ne 0) { throw "CPack ZIP failed" }
+          cpack --config build-windows\CPackConfig.cmake -B .build -G WIX
+          if ($LASTEXITCODE -ne 0) { throw "CPack WIX failed" }
 
-      - name: Verify package artifacts and write checksums
+      - name: Verify Windows packages
         shell: pwsh
         run: |
           $msi = Get-Item ".build\xlsone-$env:VERSION-windows-amd64.msi" -ErrorAction Stop
           $zip = Get-Item ".build\xlsone-$env:VERSION-windows-amd64.zip" -ErrorAction Stop
-
           if ($msi.Length -le 0 -or $zip.Length -le 0) {
             throw "Windows packaging produced an empty artifact"
           }
 
-          Add-Type -AssemblyName System.IO.Compression.FileSystem
-          $archive = [IO.Compression.ZipFile]::OpenRead($zip.FullName)
-          try {
-            $buffer = New-Object byte[] 1048576
-            foreach ($entry in $archive.Entries) {
-              $stream = $entry.Open()
-              try {
-                while ($stream.Read($buffer, 0, $buffer.Length) -gt 0) {}
-              } finally {
-                $stream.Dispose()
-              }
-            }
-          } finally {
-            $archive.Dispose()
+          $portable = Join-Path $env:GITHUB_WORKSPACE ".build\portable"
+          Expand-Archive -LiteralPath $zip.FullName -DestinationPath $portable -Force
+          $exe = Get-ChildItem $portable -Recurse -Filter xlsOne.exe |
+            Select-Object -First 1
+          if (-not $exe) { throw "Portable ZIP does not contain xlsOne.exe" }
+          if (Get-ChildItem $portable -Recurse -File |
+              Where-Object { $_.Name -match '^Qt[0-9A-Za-z_-]*\.(dll|exe)$' }) {
+            throw "Portable ZIP unexpectedly contains Qt"
+          }
+
+          $sampleArgs = Get-ChildItem `
+            "samples\monthly-report-sample-v1.1\0[1-4]-*.xlsx" |
+            Sort-Object Name |
+            ForEach-Object { $_.FullName }
+          $env:XLSONE_SCREENSHOT_PATH = Join-Path $env:GITHUB_WORKSPACE `
+            ".build\windows-smoke.bmp"
+          $process = Start-Process -FilePath $exe.FullName `
+            -ArgumentList $sampleArgs -Wait -PassThru
+          if ($process.ExitCode -ne 0) {
+            throw "Portable xlsOne smoke test failed: $($process.ExitCode)"
+          }
+          if (-not (Test-Path $env:XLSONE_SCREENSHOT_PATH)) {
+            throw "Portable xlsOne did not render a smoke-test frame"
+          }
+
+          $admin = Join-Path $env:GITHUB_WORKSPACE ".build\msi-admin"
+          New-Item -ItemType Directory -Force $admin | Out-Null
+          $arguments = @(
+            "/a", "`"$($msi.FullName)`"",
+            "/qn", "TARGETDIR=`"$admin`""
+          )
+          $install = Start-Process msiexec.exe -ArgumentList $arguments `
+            -Wait -PassThru
+          if ($install.ExitCode -ne 0) {
+            throw "MSI administrative extraction failed: $($install.ExitCode)"
+          }
+          if (-not (Get-ChildItem $admin -Recurse -Filter xlsOne.exe |
+              Select-Object -First 1)) {
+            throw "MSI does not contain xlsOne.exe"
           }
 
           $lines = @($msi, $zip) | Sort-Object Name | ForEach-Object {
@@ -213,52 +220,61 @@ jobs:
     name: macOS universal (DMG)
     needs: metadata
     runs-on: macos-15
-    timeout-minutes: 120
+    timeout-minutes: 90
     env:
       VERSION: ${{ needs.metadata.outputs.version }}
-      XLSONE_USE_CREATE_DMG: "0"
-      XLSONE_LICENSE_PUBLIC_KEY: ${{ secrets.ED25519_PUBLIC_KEY }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Install universal Qt
-        uses: jurplel/install-qt-action@v4.3.1
-        with:
-          version: ${{ env.QT_VERSION }}
-          arch: clang_64
-          cache: true
-          cache-key-prefix: qt-${{ runner.os }}-${{ env.QT_VERSION }}-universal
-
-      - name: Build and package
+      - name: Build universal pure C application
         shell: bash
         run: |
           set -euo pipefail
-          package_args=(
-            --arch universal
-            --version "${VERSION}"
-            --build-dir "${GITHUB_WORKSPACE}/cpp/build-macos-universal-release"
-            --obfuscate
-          )
-          if [[ "${EDITION}" == "international" ]]; then
-            package_args+=(--international)
-          fi
-          ./cpp/scripts/package_macos_qt_dmg.sh "${package_args[@]}"
+          cmake -S . -B build-macos -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0 \
+            -DXLSONE_C_FETCH_SDL2=ON \
+            -DXLSONE_C_WARNINGS_AS_ERRORS=ON
+          cmake --build build-macos
+          ctest --test-dir build-macos --output-on-failure
 
-      - name: Test and verify package
+      - name: Package and verify universal DMG
         shell: bash
         run: |
           set -euo pipefail
-          build_dir="cpp/build-macos-universal-release"
-          app="$build_dir/universal/xlsOneQt.app"
-          binary="$app/Contents/MacOS/xlsOneQt"
+          mkdir -p .build
+          cpack --config build-macos/CPackConfig.cmake \
+            -B .build -G DragNDrop
           dmg=".build/xlsOne-${VERSION}-macos-universal.dmg"
+          test -s "$dmg"
+          hdiutil verify "$dmg"
 
-          ctest --test-dir "$build_dir/arm64" --output-on-failure
+          mount_dir="$(mktemp -d)"
+          cleanup() {
+            hdiutil detach "$mount_dir" >/dev/null 2>&1 || true
+            rmdir "$mount_dir" >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+          hdiutil attach "$dmg" -readonly -nobrowse \
+            -mountpoint "$mount_dir" >/dev/null
+          app="$mount_dir/xlsOne.app"
+          binary="$app/Contents/MacOS/xlsOne"
+          test -x "$binary"
           archs="$(lipo -archs "$binary")"
           [[ " $archs " == *" arm64 "* && " $archs " == *" x86_64 "* ]]
           codesign --verify --deep --strict "$app"
-          hdiutil verify "$dmg"
+          ! otool -L "$binary" | grep -Eiq '(^|[/[:space:]])Qt[0-9A-Za-z]'
+          test -f "$app/Contents/Resources/licenses/THIRD_PARTY_NOTICES.md"
+
+          XLSONE_SCREENSHOT_PATH="${GITHUB_WORKSPACE}/.build/macos-smoke.bmp" \
+            "$binary" \
+            samples/monthly-report-sample-v1.1/01-operations-team-1-june-2026.xlsx \
+            samples/monthly-report-sample-v1.1/02-operations-team-2-june-2026.xlsx \
+            samples/monthly-report-sample-v1.1/03-operations-team-3-june-2026.xlsx \
+            samples/monthly-report-sample-v1.1/04-operations-team-4-june-2026.xlsx
+          test -s .build/macos-smoke.bmp
           (cd .build && shasum -a 256 "$(basename "$dmg")") \
             > .build/SHA256SUMS-macos.txt
 
@@ -279,9 +295,6 @@ jobs:
     name: Linux ${{ matrix.arch }} (DEB)
     needs: metadata
     runs-on: ${{ matrix.runner }}
-    # Compile inside the oldest supported userspace instead of inheriting the
-    # Ubuntu 22.04 runner ABI.  The native runner architecture selects the
-    # matching amd64/arm64 image from Debian's multi-arch manifest.
     container:
       image: debian:10-slim@sha256:bb3dc79fddbca7e8903248ab916bb775c96ec61014b3d02b4f06043b604726dc
     timeout-minutes: 90
@@ -298,17 +311,11 @@ jobs:
     env:
       VERSION: ${{ needs.metadata.outputs.version }}
       PACKAGE_ARCH: ${{ matrix.arch }}
-      QT_SELECT: qt5
-      XLSONE_LICENSE_PUBLIC_KEY: ${{ secrets.ED25519_PUBLIC_KEY }}
     steps:
       - name: Install Debian 10 compatibility toolchain
         shell: bash
         run: |
           set -euo pipefail
-
-          # Debian 10 is EOL and intentionally used only as a build sysroot.
-          # Its archived packages provide glibc 2.28 and GCC 8/libstdc++
-          # (GLIBCXX <= 3.4.25), matching the Kylin/UOS compatibility floor.
           rm -f /etc/apt/sources.list.d/*.list /etc/apt/sources.list.d/*.sources
           cat > /etc/apt/sources.list <<'EOF'
           deb http://archive.debian.org/debian buster main
@@ -318,74 +325,68 @@ jobs:
             > /etc/apt/apt.conf.d/99xlsone-archive
           apt-get update
           DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-            aria2 \
             binutils \
             build-essential \
             ca-certificates \
-            curl \
             dpkg-dev \
+            fakeroot \
+            file \
+            fonts-noto-cjk \
             git \
+            libexpat1-dev \
+            libsdl2-dev \
             ninja-build \
             python3 \
             python3-pip \
-            qt5-qmake \
-            qtbase5-dev \
-            qtbase5-dev-tools \
-            qttools5-dev-tools \
-            xz-utils \
-            zstd \
+            xauth \
+            xvfb \
             zlib1g-dev
-
-          # Debian 10's distro CMake is 3.13, while this project requires
-          # 3.22+.  This release has native manylinux wheels for both runner
-          # architectures and still runs on Python 3.7 / glibc 2.28.
           python3 -m pip install --no-cache-dir --upgrade 'pip<24.1'
           python3 -m pip install --no-cache-dir 'cmake==3.27.9'
-
           test "$(getconf GNU_LIBC_VERSION)" = "glibc 2.28"
-          cmake --version
-          g++ --version
 
       - name: Checkout
         uses: actions/checkout@v6
-
-      - name: Cache the Linux Qt runtime bundle
-        uses: actions/cache@v5
-        with:
-          path: cpp/deepin-qt5.15
-          key: deepin-qt5.15-${{ matrix.arch }}-${{ hashFiles('cpp/scripts/package_linux_deb.sh', 'cpp/third_party/runtime-debs/*') }}
 
       - name: Build, test, and package
         shell: bash
         run: |
           set -euo pipefail
-          package_args=(--bundle --obfuscate)
-          if [[ "${EDITION}" == "international" ]]; then
-            package_args+=(--international)
-          fi
-          package_args+=("${GITHUB_WORKSPACE}/cpp/build-linux-${PACKAGE_ARCH}-release")
-          ./cpp/scripts/package_linux_deb.sh "${package_args[@]}"
-          ctest \
-            --test-dir "cpp/build-linux-${PACKAGE_ARCH}-release" \
-            --output-on-failure
+          cmake -S . -B "build-linux-${PACKAGE_ARCH}" -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DXLSONE_PACKAGE_ARCH="${PACKAGE_ARCH}" \
+            -DXLSONE_C_WARNINGS_AS_ERRORS=ON
+          cmake --build "build-linux-${PACKAGE_ARCH}"
+          ctest --test-dir "build-linux-${PACKAGE_ARCH}" --output-on-failure
+          mkdir -p .build
+          cpack \
+            --config "build-linux-${PACKAGE_ARCH}/CPackConfig.cmake" \
+            -B .build -G DEB
 
-      - name: Verify package and write checksum
+      - name: Verify DEB and ABI
         shell: bash
         run: |
           set -euo pipefail
-          deb=".build/xlsone-${VERSION}-linux-${PACKAGE_ARCH}.deb"
-          test -f "$deb"
+          deb=".build/xlsOne-${VERSION}-linux-${PACKAGE_ARCH}.deb"
+          test -s "$deb"
           test "$(dpkg-deb -f "$deb" Architecture)" = "${{ matrix.deb_arch }}"
 
           unpacked="$(mktemp -d)"
           trap 'rm -rf "$unpacked"' EXIT
           dpkg-deb -x "$deb" "$unpacked"
-          test -x "$unpacked/usr/bin/xlsOneQt"
-          test -x "$unpacked/usr/bin/xlsone.sh"
-          find "$unpacked/usr/lib/xlsone" -name 'libQt5Core.so*' -print -quit | grep -q .
-          test -f "$unpacked/usr/lib/xlsone/plugins/platforms/libqxcb.so"
-          ./cpp/scripts/validate_deb.sh "$deb"
+          binary="$unpacked/usr/bin/xlsOne"
+          test -x "$binary"
+          ! find "$unpacked" -type f -iname '*qt*' -print -quit | grep -q .
+          ! ldd "$binary" | grep -Eiq '(^|[/[:space:]])Qt[0-9A-Za-z]'
           python3 scripts/ci/check_linux_abi.py "$deb"
+
+          XLSONE_SCREENSHOT_PATH="${GITHUB_WORKSPACE}/.build/linux-${PACKAGE_ARCH}-smoke.bmp" \
+            xvfb-run -a "$binary" \
+            samples/monthly-report-sample-v1.1/01-operations-team-1-june-2026.xlsx \
+            samples/monthly-report-sample-v1.1/02-operations-team-2-june-2026.xlsx \
+            samples/monthly-report-sample-v1.1/03-operations-team-3-june-2026.xlsx \
+            samples/monthly-report-sample-v1.1/04-operations-team-4-june-2026.xlsx
+          test -s ".build/linux-${PACKAGE_ARCH}-smoke.bmp"
           (cd .build && sha256sum "$(basename "$deb")") \
             > ".build/SHA256SUMS-linux-${PACKAGE_ARCH}.txt"
 
@@ -394,7 +395,7 @@ jobs:
         with:
           name: xlsone-linux-${{ matrix.arch }}
           path: |
-            .build/xlsone-*-linux-${{ matrix.arch }}.deb
+            .build/xlsOne-*-linux-${{ matrix.arch }}.deb
             .build/SHA256SUMS-linux-${{ matrix.arch }}.txt
           include-hidden-files: true
           if-no-files-found: error
@@ -425,14 +426,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          notes_file="docs/releases/${GITHUB_REF_NAME}.txt"
+          notes_file="docs/releases/${GITHUB_REF_NAME}.md"
           if [[ -f "${notes_file}" ]]; then
-            cp "${notes_file}" release-notes.txt
+            cp "${notes_file}" release-notes.md
           else
             git for-each-ref --format='%(contents)' \
-              "refs/tags/${GITHUB_REF_NAME}" > release-notes.txt
+              "refs/tags/${GITHUB_REF_NAME}" > release-notes.md
           fi
-          test -s release-notes.txt
+          test -s release-notes.md
 
       - name: Download all packages
         uses: actions/download-artifact@v8
@@ -449,7 +450,6 @@ jobs:
           test "$(find dist -maxdepth 1 -type f -name '*.zip' | wc -l)" -eq 1
           test "$(find dist -maxdepth 1 -type f -name '*.dmg' | wc -l)" -eq 1
           test "$(find dist -maxdepth 1 -type f -name '*.deb' | wc -l)" -eq 2
-
           find dist -maxdepth 1 -type f -name 'SHA256SUMS-*' -delete
           (
             cd dist
@@ -458,7 +458,6 @@ jobs:
               xargs -0 sha256sum |
               sed 's#  \./#  #'
           ) > dist/SHA256SUMS.txt
-          cat dist/SHA256SUMS.txt
 
       - name: Create or update draft release
         uses: softprops/action-gh-release@v3.0.0
@@ -467,7 +466,7 @@ jobs:
           draft: true
           prerelease: ${{ contains(github.ref_name, '-') }}
           fail_on_unmatched_files: true
-          body_path: release-notes.txt
+          body_path: release-notes.md
           files: |
             dist/*.msi
             dist/*.zip
@@ -476,11 +475,10 @@ jobs:
             dist/SHA256SUMS.txt
 
   deploy_zpulse:
-    name: Deploy domestic packages to z-pulse.cn
+    name: Deploy packages to z-pulse.cn
     if: >-
-      needs.metadata.outputs.edition == 'domestic' &&
-      ((github.event_name == 'push' && github.ref_type == 'tag' && needs.metadata.outputs.stable == 'true') ||
-      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.deploy_to_zpulse))
+      (github.event_name == 'push' && github.ref_type == 'tag' && needs.metadata.outputs.stable == 'true') ||
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.deploy_to_zpulse)
     needs:
       - metadata
       - windows
@@ -518,13 +516,9 @@ jobs:
         run: |
           set -euo pipefail
           changelog="${CHANGELOG}"
-          if [[ -z "${changelog// }" && "${GITHUB_REF_TYPE}" == "tag" ]]; then
-            changelog="$(git for-each-ref --format='%(contents)' "refs/tags/${GITHUB_REF_NAME}")"
-          fi
           if [[ -z "${changelog// }" ]]; then
-            changelog="发布 xlsOne ${VERSION}"
+            changelog="xlsOne ${VERSION}：纯 C 客户端，多平台安装包不再链接 Qt。"
           fi
-
           rm -rf zpulse-payload
           python3 scripts/ci/prepare_zpulse_release.py \
             --artifacts-dir artifacts \
@@ -622,18 +616,6 @@ jobs:
             "https://z-pulse.cn/downloads/checksums.txt?deploy_verify=${cache_bust}" -o "${online_checksums}"
           cmp zpulse-payload/api/version.json "${online_manifest}"
           cmp zpulse-payload/downloads/checksums.txt "${online_checksums}"
-
-          python3 - "zpulse-payload/api/version.json" "${VERSION}" <<'PY'
-          import json
-          import sys
-          from pathlib import Path
-
-          manifest = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
-          if manifest.get("latest_version") != sys.argv[2]:
-              raise SystemExit("release manifest version mismatch")
-          for url in manifest.get("downloads", {}).values():
-              print(url)
-          PY
 
           while IFS= read -r url; do
             curl "${curl_common[@]}" --range 0-0 \

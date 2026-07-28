@@ -23,10 +23,10 @@ def main() -> int:
     args = parser.parse_args()
 
     repo_root = Path(__file__).resolve().parents[2]
-    cmake_file = repo_root / "cpp" / "CMakeLists.txt"
+    cmake_file = repo_root / "CMakeLists.txt"
     cmake_text = cmake_file.read_text(encoding="utf-8")
     match = re.search(
-        r"project\s*\(\s*xlsOneQt\s+VERSION\s+(\d+\.\d+\.\d+)",
+        r"project\s*\(\s*xlsOne\s+VERSION\s+(\d+\.\d+\.\d+)",
         cmake_text,
         re.IGNORECASE | re.MULTILINE,
     )

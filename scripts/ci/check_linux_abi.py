@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Reject Linux release packages that require a newer target ABI.
 
-The Qt runtime can be bundled, but libc and libstdc++ are supplied by the
-target distribution.  Checking every ELF in the completed DEB prevents a
-newer CI runner from silently raising those system-library requirements.
+The pure C application still relies on the target distribution's libc.
+Checking every ELF in the completed DEB also guards against future bundled
+components or toolchain changes silently raising system-library requirements.
 """
 
 from __future__ import annotations

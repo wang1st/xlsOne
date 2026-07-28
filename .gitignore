@@ -1,5 +1,6 @@
 # Swift build
 .build/
+/.build-local/
 .swiftpm/
 cpp/build*/
 tmp/
@@ -31,6 +32,7 @@ opencode.json
 
 # Local Python tool scripts
 build/
+/build-*/
 __pycache__/
 *.py[cod]
 
