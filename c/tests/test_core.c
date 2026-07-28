@@ -51,6 +51,9 @@ static void test_parse_numbers(void)
     formatted = xls_format_number(1234.5, "#,##0.00");
     CHECK(formatted != NULL && strcmp(formatted, "1,234.5") == 0);
     free(formatted);
+    formatted = xls_format_number(14.0, "#,##0");
+    CHECK(formatted != NULL && strcmp(formatted, "14") == 0);
+    free(formatted);
 }
 
 static int make_workbook(

@@ -174,7 +174,9 @@ static char *format_grouped(double value)
         grouped[output++] = '-';
     }
     for (index = 0; index < integer_length; ++index) {
-        if (index > 0 && (index - leading) % 3u == 0u) {
+        if (index > 0
+            && index >= leading
+            && (index - leading) % 3u == 0u) {
             grouped[output++] = ',';
         }
         grouped[output++] = digits[index];
