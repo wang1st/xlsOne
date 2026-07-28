@@ -553,10 +553,10 @@ static int range_parse(const char *reference, merge_range *range)
     const char *separator;
     char *first;
     int ok;
-    size_t row1;
-    size_t column1;
-    size_t row2;
-    size_t column2;
+    size_t row1 = 0;
+    size_t column1 = 0;
+    size_t row2 = 0;
+    size_t column2 = 0;
     if (reference == NULL || range == NULL) {
         return 0;
     }
