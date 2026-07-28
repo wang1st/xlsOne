@@ -1758,7 +1758,9 @@ static void app_select_reference(app_state *app, const char *reference)
                 ? *cursor - ('a' - 'A')
                 : *cursor
         );
-        column = column * 26u + (size_t)(uppercase - (unsigned char)'A' + 1u);
+        column = column * 26u
+            + (size_t)(uppercase - (unsigned char)'A')
+            + (size_t)1u;
         ++cursor;
     }
     if (column == 0 || *cursor < '1' || *cursor > '9') {
