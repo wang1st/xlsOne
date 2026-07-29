@@ -138,6 +138,7 @@ OVERRIDES: dict[str, dict[str, str]] = {
         "当前版本 1.1.1 已是最新版本。": "Version 1.1.1 is up to date.",
         "保存规则...": "Save Rules...",
         "未授权时最多处理 3 个文件；请激活或开始免费试用。": "Without a license, up to 3 files can be processed. Activate or start a free trial.",
+        "仅支持 .xlsx 和 .xls 工作簿。": "Only .xlsx and .xls workbooks are supported.",
     },
     "zh_hant": {
         "%zu 个有效": "%zu 個有效",
@@ -261,6 +262,7 @@ OVERRIDES: dict[str, dict[str, str]] = {
         "当前版本 1.1.1 已是最新版本。": "目前的 1.1.1 已是最新版本。",
         "保存规则...": "儲存規則...",
         "未授权时最多处理 3 个文件；请激活或开始免费试用。": "未授權時最多處理 3 個檔案；請啟用或開始免費試用。",
+        "仅支持 .xlsx 和 .xls 工作簿。": "僅支援 .xlsx 與 .xls 活頁簿。",
     },
     "ja": {
         "%zu 个有效": "有効 %zu 件",
@@ -385,6 +387,7 @@ OVERRIDES: dict[str, dict[str, str]] = {
         "当前版本 1.1.1 已是最新版本。": "現在の 1.1.1 は最新バージョンです。",
         "保存规则...": "ルールを保存...",
         "未授权时最多处理 3 个文件；请激活或开始免费试用。": "未認証の場合、処理できるファイルは 3 件までです。有効化するか無料トライアルを開始してください。",
+        "仅支持 .xlsx 和 .xls 工作簿。": ".xlsx と .xls のブックのみ対応しています。",
     },
 }
 

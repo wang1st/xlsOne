@@ -1,4 +1,5 @@
 #include "xlsone/xlsone.h"
+#include "drop_paths.h"
 #include "i18n.h"
 #include "license_manager.h"
 #include "platform_dialog.h"
@@ -54,6 +55,7 @@ typedef struct app_state {
     size_t first_visible_column;
     int sources_expanded;
     int drop_targeted;
+    Uint64 drop_clear_after;
     int running;
     app_menu active_menu;
     app_dialog dialog;
@@ -86,6 +88,42 @@ typedef struct ui_fonts {
 #define UI_SHEET_BOTTOM (UI_TOOLBAR_BOTTOM + 78.0f)
 
 static int ui_input_blocked = 0;
+
+static float app_body_font_size(void)
+{
+#if defined(_WIN32) || defined(__linux__)
+    return 14.0f;
+#else
+    return 12.0f;
+#endif
+}
+
+static float app_title_font_size(void)
+{
+#if defined(_WIN32) || defined(__linux__)
+    return 22.0f;
+#else
+    return 20.0f;
+#endif
+}
+
+static float app_numeric_font_size(void)
+{
+#if defined(_WIN32) || defined(__linux__)
+    return 22.0f;
+#else
+    return 20.0f;
+#endif
+}
+
+static float app_source_font_size(void)
+{
+#if defined(_WIN32) || defined(__linux__)
+    return 15.0f;
+#else
+    return 14.0f;
+#endif
+}
 
 static const char *app_tr(const char *source)
 {
@@ -539,6 +577,48 @@ static int app_add_path(app_state *app, const char *path)
     app->workbooks = replacement;
     app->workbooks[app->workbook_count++] = parsed;
     return 1;
+}
+
+typedef struct app_drop_import {
+    app_state *app;
+    int changed;
+    int license_blocked;
+} app_drop_import;
+
+static void app_show_license(app_state *app);
+
+static int app_import_dropped_path(
+    const char *path,
+    void *user_data
+)
+{
+    app_drop_import *import = (app_drop_import *)user_data;
+    const size_t before = import->app->workbook_count;
+    if (before >= (size_t)xls_license_max_import_files(
+        &import->app->license
+    )) {
+        import->license_blocked = 1;
+        return 0;
+    }
+    if (app_add_path(import->app, path)
+        && import->app->workbook_count > before) {
+        import->changed = 1;
+    }
+    return 1;
+}
+
+static void app_finish_drop(app_drop_import *import)
+{
+    if (import->changed) {
+        (void)app_recompute(import->app);
+    }
+    if (import->license_blocked) {
+        app_set_status(
+            import->app,
+            "未授权时最多处理 3 个文件；请激活或开始免费试用。"
+        );
+        app_show_license(import->app);
+    }
 }
 
 static void app_show_license(app_state *app)
@@ -1410,14 +1490,6 @@ static void app_change_language(
         stored
             ? "界面语言已切换，并会在下次启动时继续使用。"
             : "界面语言已切换，但无法保存语言设置。"
-    );
-    app_show_notice(
-        app,
-        "语言已更改",
-        stored
-            ? "界面语言已切换，并会在下次启动时继续使用。"
-            : "界面语言已切换，但无法保存语言设置。",
-        !stored
     );
 }
 
@@ -4135,6 +4207,8 @@ int main(int argc, char **argv)
     const char *screenshot_selection;
     const char *screenshot_menu;
     const char *screenshot_dialog;
+    const char *screenshot_drop_path;
+    const char *screenshot_drop_target;
     app_state app;
     int screenshot_saved = 0;
     int index;
@@ -4144,6 +4218,14 @@ int main(int argc, char **argv)
     app.sources_expanded = 1;
     xls_license_manager_init(&app.license);
 
+#if defined(SDL_HINT_WINDOWS_DPI_AWARENESS)
+    (void)SDL_SetHint(
+        SDL_HINT_WINDOWS_DPI_AWARENESS, "permonitorv2"
+    );
+#endif
+#if defined(SDL_HINT_WINDOWS_DPI_SCALING)
+    (void)SDL_SetHint(SDL_HINT_WINDOWS_DPI_SCALING, "1");
+#endif
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS) != 0) {
         fprintf(stderr, "SDL initialization failed: %s\n", SDL_GetError());
         return 1;
@@ -4168,6 +4250,7 @@ int main(int argc, char **argv)
     SDL_SetWindowMinimumSize(window, 980, 600);
     SDL_EventState(SDL_DROPFILE, SDL_ENABLE);
 #if SDL_VERSION_ATLEAST(2, 0, 5)
+    SDL_EventState(SDL_DROPTEXT, SDL_ENABLE);
     SDL_EventState(SDL_DROPBEGIN, SDL_ENABLE);
     SDL_EventState(SDL_DROPCOMPLETE, SDL_ENABLE);
 #endif
@@ -4189,14 +4272,30 @@ int main(int argc, char **argv)
         SDL_Quit();
         return 1;
     }
+    {
+        int logical_width;
+        int logical_height;
+        SDL_GetWindowSize(window, &logical_width, &logical_height);
+        if (SDL_RenderSetLogicalSize(
+            renderer, logical_width, logical_height
+        ) != 0) {
+            fprintf(
+                stderr,
+                "could not configure UI scaling: %s\n",
+                SDL_GetError()
+            );
+        }
+    }
     context = nk_sdl_init(window, renderer);
     nk_sdl_font_stash_begin(&atlas);
     font_path = find_font_path();
     bold_font_path = find_bold_font_path();
     monospace_font_path = find_monospace_font_path();
     if (font_path != NULL) {
-        struct nk_font_config body_config = nk_font_config(12.0f);
-        struct nk_font_config title_config = nk_font_config(20.0f);
+        const float body_size = app_body_font_size();
+        const float title_size = app_title_font_size();
+        struct nk_font_config body_config = nk_font_config(body_size);
+        struct nk_font_config title_config = nk_font_config(title_size);
         body_config.range = ui_glyph_ranges();
         body_config.oversample_h = 1;
         body_config.oversample_v = 1;
@@ -4206,30 +4305,34 @@ int main(int argc, char **argv)
         title_config.oversample_v = 1;
         title_config.pixel_snap = 1;
         body_font = nk_font_atlas_add_from_file(
-            atlas, font_path, 12.0f, &body_config
+            atlas, font_path, body_size, &body_config
         );
         title_font = nk_font_atlas_add_from_file(
-            atlas, font_path, 20.0f, &title_config
+            atlas, font_path, title_size, &title_config
         );
     }
     if (monospace_font_path != NULL) {
-        struct nk_font_config numeric_config = nk_font_config(20.0f);
+        const float numeric_size = app_numeric_font_size();
+        struct nk_font_config numeric_config =
+            nk_font_config(numeric_size);
         numeric_config.range = nk_font_default_glyph_ranges();
         numeric_config.oversample_h = 2;
         numeric_config.oversample_v = 2;
         numeric_config.pixel_snap = 1;
         numeric_font = nk_font_atlas_add_from_file(
-            atlas, monospace_font_path, 20.0f, &numeric_config
+            atlas, monospace_font_path, numeric_size, &numeric_config
         );
     }
     if (bold_font_path != NULL) {
-        struct nk_font_config source_value_config = nk_font_config(14.0f);
+        const float source_size = app_source_font_size();
+        struct nk_font_config source_value_config =
+            nk_font_config(source_size);
         source_value_config.range = nk_font_default_glyph_ranges();
         source_value_config.oversample_h = 2;
         source_value_config.oversample_v = 2;
         source_value_config.pixel_snap = 1;
         source_value_font = nk_font_atlas_add_from_file(
-            atlas, bold_font_path, 14.0f, &source_value_config
+            atlas, bold_font_path, source_size, &source_value_config
         );
     }
     nk_sdl_font_stash_end();
@@ -4256,6 +4359,8 @@ int main(int argc, char **argv)
     screenshot_selection = getenv("XLSONE_SCREENSHOT_SELECT");
     screenshot_menu = getenv("XLSONE_SCREENSHOT_MENU");
     screenshot_dialog = getenv("XLSONE_SCREENSHOT_DIALOG");
+    screenshot_drop_path = getenv("XLSONE_SCREENSHOT_DROP_PATH");
+    screenshot_drop_target = getenv("XLSONE_SCREENSHOT_DROP_TARGET");
 
     for (index = 1; index < argc; ++index) {
         (void)app_add_path(&app, argv[index]);
@@ -4269,33 +4374,77 @@ int main(int argc, char **argv)
         && strcmp(screenshot_dialog, "license") == 0) {
         app_show_license(&app);
     }
+    if (screenshot_drop_target != NULL
+        && screenshot_drop_target[0] != '\0') {
+        app.drop_targeted = 1;
+    }
+    if (screenshot_drop_path != NULL
+        && screenshot_drop_path[0] != '\0') {
+        SDL_Event event;
+        memset(&event, 0, sizeof(event));
+        event.type = SDL_DROPFILE;
+        event.drop.file = SDL_strdup(screenshot_drop_path);
+        if (event.drop.file == NULL || SDL_PushEvent(&event) <= 0) {
+            SDL_free(event.drop.file);
+            fprintf(stderr, "could not queue drop smoke event\n");
+        }
+    }
 
     while (app.running) {
         SDL_Event event;
+        app_drop_import drop_import;
         int width;
         int height;
+        memset(&drop_import, 0, sizeof(drop_import));
+        drop_import.app = &app;
         nk_input_begin(context);
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) {
                 app.running = 0;
             } else if (event.type == SDL_DROPFILE) {
-                if (app.workbook_count + 1u
-                    > (size_t)xls_license_max_import_files(&app.license)) {
+                app.drop_targeted = 1;
+                app.drop_clear_after = SDL_GetTicks64() + 300u;
+                if (xls_drop_path_is_workbook(event.drop.file)) {
+                    (void)app_import_dropped_path(
+                        event.drop.file, &drop_import
+                    );
+                } else {
                     app_set_status(
                         &app,
-                        "未授权时最多处理 3 个文件；请激活或开始免费试用。"
+                        "仅支持 .xlsx 和 .xls 工作簿。"
                     );
-                    app_show_license(&app);
-                } else if (app_add_path(&app, event.drop.file)) {
-                    (void)app_recompute(&app);
                 }
                 SDL_free(event.drop.file);
 #if SDL_VERSION_ATLEAST(2, 0, 5)
+            } else if (event.type == SDL_DROPTEXT) {
+                app.drop_targeted = 1;
+                app.drop_clear_after = SDL_GetTicks64() + 300u;
+                if (xls_drop_paths_from_text(
+                    event.drop.file,
+                    app_import_dropped_path,
+                    &drop_import
+                ) == 0u) {
+                    app_set_status(
+                        &app,
+                        "仅支持 .xlsx 和 .xls 工作簿。"
+                    );
+                }
+                SDL_free(event.drop.file);
             } else if (event.type == SDL_DROPBEGIN) {
                 app.drop_targeted = 1;
+                app.drop_clear_after = 0u;
             } else if (event.type == SDL_DROPCOMPLETE) {
-                app.drop_targeted = 0;
+                app.drop_clear_after = SDL_GetTicks64() + 180u;
 #endif
+            } else if (event.type == SDL_WINDOWEVENT
+                && (event.window.event == SDL_WINDOWEVENT_RESIZED
+                    || event.window.event
+                        == SDL_WINDOWEVENT_SIZE_CHANGED)) {
+                (void)SDL_RenderSetLogicalSize(
+                    renderer,
+                    event.window.data1,
+                    event.window.data2
+                );
             } else if (event.type == SDL_MOUSEWHEEL
                 && app.dialog == APP_DIALOG_NONE
                 && app.active_menu == APP_MENU_NONE
@@ -4382,9 +4531,15 @@ int main(int argc, char **argv)
             }
             (void)nk_sdl_handle_event(&event);
         }
+        app_finish_drop(&drop_import);
         nk_sdl_handle_grab();
         nk_input_end(context);
         SDL_GetWindowSize(window, &width, &height);
+        if (app.drop_clear_after != 0u
+            && SDL_GetTicks64() >= app.drop_clear_after) {
+            app.drop_targeted = 0;
+            app.drop_clear_after = 0u;
+        }
         render_workspace(context, &app, &fonts, width, height);
         SDL_SetRenderDrawColor(renderer, 246, 247, 250, 255);
         SDL_RenderClear(renderer);

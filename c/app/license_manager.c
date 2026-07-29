@@ -904,30 +904,6 @@ static int perform_activation_request(
     return result;
 }
 
-static int apply_linux_builtin(xls_license_manager *manager)
-{
-#if defined(__linux__)
-    static const char signature[] =
-        "I1EQuvcw4hgggw22KGRW2bAOZQVd4wUuX2QJxq-kKSOZK4FzAD2UEJpg_qRNNK9HIjJCf0GYAMFDeJrI4NmjCw";
-    char license[512];
-    char message[128];
-    (void)snprintf(
-        license,
-        sizeof(license),
-        "{\"key_id\":\"LINUX-BUILTIN\",\"plan\":\"personal_lifetime\","
-        "\"device_hash\":\"\",\"device_components\":[],"
-        "\"issued_at\":1784264344,\"expires_at\":0,\"signature\":\"%s\"}",
-        signature
-    );
-    return apply_license_json(
-        manager, license, 0, message, sizeof(message)
-    );
-#else
-    (void)manager;
-    return 0;
-#endif
-}
-
 void xls_license_manager_init(xls_license_manager *manager)
 {
     char *persisted = NULL;
@@ -949,9 +925,6 @@ void xls_license_manager_init(xls_license_manager *manager)
             return;
         }
         free(persisted);
-    }
-    if (apply_linux_builtin(manager)) {
-        return;
     }
     manager->state = XLS_LICENSE_UNACTIVATED;
     memset(&manager->info, 0, sizeof(manager->info));

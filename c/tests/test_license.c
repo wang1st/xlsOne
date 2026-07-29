@@ -9,12 +9,12 @@ static int failures = 0;
 static char *saved_license = NULL;
 
 static const char valid_license[] =
-    "{\"key_id\":\"LINUX-BUILTIN\",\"plan\":\"personal_lifetime\","
+    "{\"key_id\":\"TEST-LIFETIME\",\"plan\":\"personal_lifetime\","
     "\"device_hash\":\"\",\"device_components\":[],"
     "\"issued_at\":1784264344,\"expires_at\":0,"
     "\"signature\":\""
-    "I1EQuvcw4hgggw22KGRW2bAOZQVd4wUuX2QJxq-kKSOZK4FzAD2UEJpg_"
-    "qRNNK9HIjJCf0GYAMFDeJrI4NmjCw\"}";
+    "bQTXs2-IuGFKt5NnTmbI64gm8sCdSZ1K0fUTkAtYwArc6bBenNjFLIcm16T"
+    "qGXDZB4t-wRPswVobUAOPLFdHAw\"}";
 
 static char *copy_text(const char *text)
 {
@@ -93,7 +93,7 @@ int xls_platform_read_text_file(const char *path, char **contents)
     } else {
         (void)snprintf(tampered, sizeof(tampered), "%s", valid_license);
         {
-            char *key_id = strstr(tampered, "LINUX-BUILTIN");
+            char *key_id = strstr(tampered, "TEST-LIFETIME");
             if (key_id != NULL) {
                 key_id[0] = 'M';
             }
@@ -152,6 +152,15 @@ static void test_signed_license(void)
     char message[160];
     xls_license_manager_init(&manager);
     expect_true(
+        manager.state == XLS_LICENSE_UNACTIVATED
+            && !xls_license_is_full(&manager),
+        "没有本地授权时，各平台都必须以未激活状态启动"
+    );
+    expect_true(
+        xls_license_max_import_files(&manager) == 3,
+        "未激活状态必须保留三文件限制"
+    );
+    expect_true(
         strlen(manager.device_fingerprint) == 64u,
         "设备指纹应为 64 位 SHA-256"
     );
@@ -171,7 +180,7 @@ static void test_signed_license(void)
         "有效终身授权应解锁完整功能"
     );
     expect_true(
-        saved_license != NULL && strstr(saved_license, "LINUX-BUILTIN") != NULL,
+        saved_license != NULL && strstr(saved_license, "TEST-LIFETIME") != NULL,
         "验证后的授权应持久化"
     );
 }

@@ -22,11 +22,13 @@ set(CPACK_PACKAGE_CONTACT "support@z-pulse.cn")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY
     "Pure C Excel workbook consolidation desktop application"
 )
+set(CPACK_RESOURCE_FILE_LICENSE
+    "${CMAKE_CURRENT_SOURCE_DIR}/cpp/packaging/windows/licenses/EULA_zh_CN.txt"
+)
 set(CPACK_WIX_UPGRADE_GUID
     "3D6CF1D8-4A9C-4E7B-B1D2-85162F0C7A11"
 )
 set(CPACK_PACKAGE_INSTALL_DIRECTORY "xlsOne")
-set(CPACK_CREATE_DESKTOP_LINKS "xlsOne")
 set(CPACK_PACKAGE_EXECUTABLES "xlsOne" "xlsOne")
 if(APPLE)
     set(CPACK_GENERATOR "DragNDrop")
@@ -37,6 +39,34 @@ elseif(WIN32)
     set(CPACK_GENERATOR "ZIP")
     set(CPACK_PACKAGE_FILE_NAME
         "xlsone-${PROJECT_VERSION}-windows-amd64"
+    )
+    set(CPACK_WIX_INSTALL_SCOPE "perMachine")
+    set(CPACK_WIX_CULTURES "zh-CN")
+    set(CPACK_WIX_LICENSE_RTF
+        "${CMAKE_CURRENT_SOURCE_DIR}/cpp/packaging/windows/licenses/EULA_zh_CN.rtf"
+    )
+    set(CPACK_WIX_PRODUCT_ICON
+        "${CMAKE_CURRENT_SOURCE_DIR}/cpp/app/resources/xlsOne.ico"
+    )
+    set(XLSONE_WIX_LAUNCH_CHECKBOX_TEXT "启动 xlsOne")
+    file(MAKE_DIRECTORY
+        "${CMAKE_CURRENT_BINARY_DIR}/packaging/windows"
+    )
+    configure_file(
+        "${CMAKE_CURRENT_SOURCE_DIR}/c/packaging/windows/shortcuts.wxs.in"
+        "${CMAKE_CURRENT_BINARY_DIR}/packaging/windows/shortcuts.wxs"
+        @ONLY
+    )
+    configure_file(
+        "${CMAKE_CURRENT_SOURCE_DIR}/c/packaging/windows/shortcuts.wxs.patch.in"
+        "${CMAKE_CURRENT_BINARY_DIR}/packaging/windows/shortcuts.wxs.patch"
+        @ONLY
+    )
+    set(CPACK_WIX_EXTRA_SOURCES
+        "${CMAKE_CURRENT_BINARY_DIR}/packaging/windows/shortcuts.wxs"
+    )
+    set(CPACK_WIX_PATCH_FILE
+        "${CMAKE_CURRENT_BINARY_DIR}/packaging/windows/shortcuts.wxs.patch"
     )
 else()
     set(CPACK_GENERATOR "DEB")

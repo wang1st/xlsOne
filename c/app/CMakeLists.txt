@@ -73,6 +73,7 @@ if(TARGET SDL2::SDL2
     endif()
 
     add_executable(xlsone_app
+        drop_paths.c
         license_manager.c
         main.c
         platform_dialog.c
@@ -145,6 +146,11 @@ if(TARGET SDL2::SDL2
     endif()
     set_target_properties(xlsone_app PROPERTIES OUTPUT_NAME xlsOne)
     if(WIN32)
+        target_sources(
+            xlsone_app
+            PRIVATE
+                ../../cpp/app/resources/xlsone.rc
+        )
         target_link_libraries(
             xlsone_app
             PRIVATE
@@ -182,6 +188,11 @@ if(TARGET SDL2::SDL2
         )
     endif()
     if(NOT APPLE)
+        install(
+            FILES
+                "${CMAKE_CURRENT_SOURCE_DIR}/../../cpp/packaging/windows/licenses/EULA_zh_CN.txt"
+            DESTINATION licenses
+        )
         install(FILES "${XLSONE_NUKLEAR_DIR}/LICENSE"
             DESTINATION licenses
             RENAME Nuklear-LICENSE.txt)
@@ -203,6 +214,11 @@ if(TARGET SDL2::SDL2
         endif()
     endif()
     if(APPLE)
+        install(
+            FILES
+                "${CMAKE_CURRENT_SOURCE_DIR}/../../cpp/packaging/windows/licenses/EULA_zh_CN.txt"
+            DESTINATION "xlsOne.app/Contents/Resources/licenses"
+        )
         install(FILES "${XLSONE_NUKLEAR_DIR}/LICENSE"
             DESTINATION "xlsOne.app/Contents/Resources/licenses"
             RENAME Nuklear-LICENSE.txt)

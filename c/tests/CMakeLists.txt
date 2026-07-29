@@ -51,6 +51,35 @@ else()
 endif()
 add_test(NAME xlsone_i18n_tests COMMAND xlsone_i18n_tests)
 
+add_executable(
+    xlsone_drop_paths_tests
+    test_drop_paths.c
+    ../app/drop_paths.c
+)
+target_include_directories(
+    xlsone_drop_paths_tests
+    PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/../app"
+)
+if(MSVC)
+    target_compile_options(xlsone_drop_paths_tests PRIVATE /W4)
+    if(XLSONE_C_WARNINGS_AS_ERRORS)
+        target_compile_options(xlsone_drop_paths_tests PRIVATE /WX)
+    endif()
+else()
+    target_compile_options(xlsone_drop_paths_tests PRIVATE
+        -Wall
+        -Wextra
+        -Wpedantic
+        -Wconversion
+        -Wshadow
+    )
+    if(XLSONE_C_WARNINGS_AS_ERRORS)
+        target_compile_options(xlsone_drop_paths_tests PRIVATE -Werror)
+    endif()
+endif()
+add_test(NAME xlsone_drop_paths_tests COMMAND xlsone_drop_paths_tests)
+
 if(TARGET xlsone_cjson
     AND TARGET xlsone_monocypher
     AND XLSONE_LICENSE_PUBLIC_KEY)

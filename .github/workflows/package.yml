@@ -100,7 +100,8 @@ jobs:
           if (-not (Test-Path $vcpkg) -or -not (Test-Path $toolchain)) {
             throw "vcpkg was not found on the Windows runner"
           }
-          if (-not (Get-Command candle.exe -ErrorAction SilentlyContinue)) {
+          if (-not (Get-Command candle.exe -ErrorAction SilentlyContinue) -or
+              -not (Get-Command dark.exe -ErrorAction SilentlyContinue)) {
             throw "WiX Toolset v3 was not found on the Windows runner"
           }
           "root=$vcpkgRoot" >> $env:GITHUB_OUTPUT
@@ -162,6 +163,13 @@ jobs:
               Where-Object { $_.Name -match '^Qt[0-9A-Za-z_-]*\.(dll|exe)$' }) {
             throw "Portable ZIP unexpectedly contains Qt"
           }
+          $portableEula = Get-ChildItem $portable -Recurse `
+            -Filter EULA_zh_CN.txt | Select-Object -First 1
+          if (-not $portableEula -or
+              (Get-Content $portableEula.FullName -Raw) -notmatch
+                '最终用户许可协议') {
+            throw "Portable ZIP does not contain the original EULA"
+          }
 
           $sampleArgs = Get-ChildItem `
             "samples\monthly-report-sample-v1.1\0[1-4]-*.xlsx" |
@@ -192,6 +200,16 @@ jobs:
           Remove-Item Env:XLSONE_SCREENSHOT_MENU
 
           $env:XLSONE_SCREENSHOT_PATH = Join-Path $env:GITHUB_WORKSPACE `
+            ".build\windows-drop-smoke.bmp"
+          $env:XLSONE_SCREENSHOT_DROP_PATH = $sampleArgs[0]
+          $process = Start-Process -FilePath $exe.FullName -Wait -PassThru
+          if ($process.ExitCode -ne 0 -or
+              -not (Test-Path $env:XLSONE_SCREENSHOT_PATH)) {
+            throw "Portable xlsOne empty-state drop smoke test failed"
+          }
+          Remove-Item Env:XLSONE_SCREENSHOT_DROP_PATH
+
+          $env:XLSONE_SCREENSHOT_PATH = Join-Path $env:GITHUB_WORKSPACE `
             ".build\windows-license-smoke.bmp"
           $env:XLSONE_SCREENSHOT_DIALOG = "license"
           $env:XLSONE_UI_LANGUAGE = "ja"
@@ -217,6 +235,33 @@ jobs:
           if (-not (Get-ChildItem $admin -Recurse -Filter xlsOne.exe |
               Select-Object -First 1)) {
             throw "MSI does not contain xlsOne.exe"
+          }
+          $installedEula = Get-ChildItem $admin -Recurse `
+            -Filter EULA_zh_CN.txt | Select-Object -First 1
+          if (-not $installedEula -or
+              (Get-Content $installedEula.FullName -Raw) -notmatch
+                '最终用户许可协议') {
+            throw "MSI does not contain the original EULA"
+          }
+
+          $darkOutput = Join-Path $env:GITHUB_WORKSPACE ".build\msi-wix"
+          New-Item -ItemType Directory -Force $darkOutput | Out-Null
+          dark.exe -nologo `
+            -x (Join-Path $darkOutput "files") `
+            -o (Join-Path $darkOutput "product.wxs") `
+            $msi.FullName
+          if ($LASTEXITCODE -ne 0) {
+            throw "Could not inspect MSI tables"
+          }
+          $wixText = Get-Content (Join-Path $darkOutput "product.wxs") -Raw
+          foreach ($marker in @(
+            "XlsOneDesktopShortcutLink",
+            "WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT",
+            "LaunchXlsOne"
+          )) {
+            if ($wixText -notmatch [regex]::Escape($marker)) {
+              throw "MSI is missing installer behavior: $marker"
+            }
           }
 
           $lines = @($msi, $zip) | Sort-Object Name | ForEach-Object {
@@ -299,6 +344,8 @@ jobs:
           codesign --verify --deep --strict "$app"
           ! otool -L "$binary" | grep -Eiq '(^|[/[:space:]])Qt[0-9A-Za-z]'
           test -f "$app/Contents/Resources/licenses/THIRD_PARTY_NOTICES.md"
+          grep -q '最终用户许可协议' \
+            "$app/Contents/Resources/licenses/EULA_zh_CN.txt"
 
           XLSONE_SCREENSHOT_PATH="${GITHUB_WORKSPACE}/.build/macos-smoke.bmp" \
             XLSONE_SCREENSHOT_SELECT=B6 \
@@ -315,6 +362,10 @@ jobs:
             samples/monthly-report-sample-v1.1/02-operations-team-2-june-2026.xlsx \
             samples/monthly-report-sample-v1.1/03-operations-team-3-june-2026.xlsx
           test -s .build/macos-menu-smoke.bmp
+          XLSONE_SCREENSHOT_PATH="${GITHUB_WORKSPACE}/.build/macos-drop-smoke.bmp" \
+            XLSONE_SCREENSHOT_DROP_PATH="${GITHUB_WORKSPACE}/samples/monthly-report-sample-v1.1/01-operations-team-1-june-2026.xlsx" \
+            "$binary"
+          test -s .build/macos-drop-smoke.bmp
           XLSONE_SCREENSHOT_PATH="${GITHUB_WORKSPACE}/.build/macos-license-smoke.bmp" \
             XLSONE_SCREENSHOT_DIALOG=license \
             XLSONE_UI_LANGUAGE=ja \
@@ -428,6 +479,9 @@ jobs:
           dpkg-deb -x "$deb" "$unpacked"
           binary="$unpacked/usr/bin/xlsOne"
           test -x "$binary"
+          test -f "$unpacked/usr/share/applications/xlsone.desktop"
+          grep -q '最终用户许可协议' \
+            "$unpacked/usr/licenses/EULA_zh_CN.txt"
           ! find "$unpacked" -type f -iname '*qt*' -print -quit | grep -q .
           ! ldd "$binary" | grep -Eiq '(^|[/[:space:]])Qt[0-9A-Za-z]'
           python3 scripts/ci/check_linux_abi.py "$deb"
@@ -447,6 +501,10 @@ jobs:
             samples/monthly-report-sample-v1.1/02-operations-team-2-june-2026.xlsx \
             samples/monthly-report-sample-v1.1/03-operations-team-3-june-2026.xlsx
           test -s ".build/linux-${PACKAGE_ARCH}-menu-smoke.bmp"
+          XLSONE_SCREENSHOT_PATH="${GITHUB_WORKSPACE}/.build/linux-${PACKAGE_ARCH}-drop-smoke.bmp" \
+            XLSONE_SCREENSHOT_DROP_PATH="${GITHUB_WORKSPACE}/samples/monthly-report-sample-v1.1/01-operations-team-1-june-2026.xlsx" \
+            xvfb-run -a "$binary"
+          test -s ".build/linux-${PACKAGE_ARCH}-drop-smoke.bmp"
           XLSONE_SCREENSHOT_PATH="${GITHUB_WORKSPACE}/.build/linux-${PACKAGE_ARCH}-license-smoke.bmp" \
             XLSONE_SCREENSHOT_DIALOG=license \
             XLSONE_UI_LANGUAGE=ja \
