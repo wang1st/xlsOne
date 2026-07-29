@@ -12,7 +12,7 @@
                               WorkingDirectory="INSTALL_ROOT"
                               Icon="ProductIcon.ico"
                               Advertise="no"/>
-                    <RegistryValue Root="HKLM"
+                    <RegistryValue Root="HKCU"
                                    Key="Software\Z-Pulse\xlsOne"
                                    Name="desktop"
                                    Type="integer"
