@@ -259,7 +259,7 @@ static HRESULT STDMETHODCALLTYPE windows_drop_files(
     return S_OK;
 }
 
-static const IDropTargetVtbl windows_drop_vtable = {
+static IDropTargetVtbl windows_drop_vtable = {
     windows_drop_query_interface,
     windows_drop_add_ref,
     windows_drop_release,
