@@ -22,12 +22,17 @@ die() {
     exit 1
 }
 
-if [[ $# -ne 2 ]]; then
-    die "usage: xlsone-promote <release-id> <version>"
+if [[ $# -lt 2 || $# -gt 3 ]]; then
+    die "usage: xlsone-promote <release-id> <version> [--replace-same-version]"
 fi
 
 release_id="$1"
 version="$2"
+replace_same_version=0
+if [[ $# -eq 3 ]]; then
+    [[ "$3" == "--replace-same-version" ]] || die "invalid promotion option"
+    replace_same_version=1
+fi
 
 [[ "$release_id" =~ ^run-[0-9]+-[0-9]+$ ]] || die "invalid release id"
 [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || die "invalid version"
@@ -54,8 +59,19 @@ cleanup_on_exit() {
         fi
     fi
     if (( rollback_ok == 1 && (release_committed == 0 || rollback_performed == 1) )); then
-        for published_path in "${published_paths[@]}"; do
-            rm -f -- "$published_path"
+        for published_path in "${published_paths[@]+"${published_paths[@]}"}"; do
+            package_backup="$backup/packages/$(basename -- "$published_path")"
+            if [[ -f "$package_backup" && ! -L "$package_backup" ]]; then
+                restore_tmp="${published_path}.${release_id}.rollback.tmp"
+                if install -m 0644 "$package_backup" "$restore_tmp"; then
+                    mv -- "$restore_tmp" "$published_path" || rollback_ok=0
+                else
+                    rollback_ok=0
+                fi
+                rm -f -- "$restore_tmp"
+            else
+                rm -f -- "$published_path"
+            fi
         done
     fi
     if (( rollback_ok == 1 && release_committed == 0 )) && [[ -n "$backup" ]]; then
@@ -67,7 +83,7 @@ cleanup_on_exit() {
     if [[ -n "$incoming_release" ]]; then
         rm -rf -- "$incoming_release"
     fi
-    for staged_path in "${staged_paths[@]}"; do
+    for staged_path in "${staged_paths[@]+"${staged_paths[@]}"}"; do
         rm -f -- "$staged_path"
     done
     exit "$status"
@@ -264,6 +280,12 @@ else:
 PY
 )"
 [[ "$deployment_mode" == "first" || "$deployment_mode" == "same" || "$deployment_mode" == "upgrade" ]] || die "could not determine deployment mode"
+if (( replace_same_version == 1 )) && [[ "$deployment_mode" != "same" ]]; then
+    die "--replace-same-version requires the requested version to match production"
+fi
+if (( replace_same_version == 1 )); then
+    install -d -o root -g root -m 0700 "$backup/packages"
+fi
 
 for package in "${required_packages[@]}"; do
     source_path="$payload_downloads/$package"
@@ -281,7 +303,10 @@ for package in "${required_packages[@]}"; do
             [[ "$(stat -c %a "$target_path")" == "644" ]] || die "published package mode must be 0644: $package"
             continue
         fi
-        [[ "$deployment_mode" != "same" ]] || die "published version package has a different hash: $package"
+        if [[ "$deployment_mode" == "same" ]]; then
+            (( replace_same_version == 1 )) || die "published version package has a different hash: $package"
+            install -m 0644 "$target_path" "$backup/packages/$package"
+        fi
     fi
 
     staged_path="$LIVE_STAGING_ROOT/${package}.${release_id}.tmp"
@@ -289,8 +314,8 @@ for package in "${required_packages[@]}"; do
     [[ ! -e "$staged_path" && ! -L "$staged_path" ]] || die "staging file already exists: $staged_path"
     install -m 0644 "$source_path" "$staged_path"
     [[ "$(sha256sum "$staged_path" | awk '{print $1}')" == "$expected_hash" ]] || die "staged checksum mismatch: $package"
-    mv -- "$staged_path" "$target_path"
     published_paths+=("$target_path")
+    mv -- "$staged_path" "$target_path"
 done
 
 # Recheck every live package immediately before switching metadata. Files are

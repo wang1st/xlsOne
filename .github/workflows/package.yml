@@ -8,6 +8,11 @@ on:
         required: true
         default: false
         type: boolean
+      replace_same_version:
+        description: Replace an existing release with the same version number
+        required: true
+        default: false
+        type: boolean
       changelog:
         description: Release notes written to the update manifest
         required: false
@@ -726,6 +731,7 @@ jobs:
       ZPULSE_HOST: ${{ vars.ZPULSE_HOST || 'z-pulse.cn' }}
       ZPULSE_PORT: ${{ vars.ZPULSE_PORT || '22' }}
       ZPULSE_USER: ${{ vars.ZPULSE_USER || 'xlsone-deploy' }}
+      REPLACE_SAME_VERSION: ${{ inputs.replace_same_version || false }}
     steps:
       - name: Checkout deployment tooling
         uses: actions/checkout@v6
@@ -814,8 +820,12 @@ jobs:
             zpulse-payload/api \
             zpulse-payload/downloads \
             "${ZPULSE_USER}@${ZPULSE_HOST}:${remote_dir}/"
+          replace_flag=""
+          if [[ "${REPLACE_SAME_VERSION}" == "true" ]]; then
+            replace_flag=" --replace-same-version"
+          fi
           ssh "${ssh_common[@]}" "${ZPULSE_USER}@${ZPULSE_HOST}" \
-            "sudo -n /usr/local/sbin/xlsone-promote '${release_id}' '${VERSION}'"
+            "sudo -n /usr/local/sbin/xlsone-promote '${release_id}' '${VERSION}'${replace_flag}"
 
       - name: Verify production deployment
         shell: bash
