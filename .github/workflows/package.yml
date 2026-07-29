@@ -194,12 +194,14 @@ jobs:
           $env:XLSONE_SCREENSHOT_PATH = Join-Path $env:GITHUB_WORKSPACE `
             ".build\windows-license-smoke.bmp"
           $env:XLSONE_SCREENSHOT_DIALOG = "license"
+          $env:XLSONE_UI_LANGUAGE = "ja"
           $process = Start-Process -FilePath $exe.FullName -Wait -PassThru
           if ($process.ExitCode -ne 0 -or
               -not (Test-Path $env:XLSONE_SCREENSHOT_PATH)) {
             throw "Portable xlsOne license smoke test failed"
           }
           Remove-Item Env:XLSONE_SCREENSHOT_DIALOG
+          Remove-Item Env:XLSONE_UI_LANGUAGE
 
           $admin = Join-Path $env:GITHUB_WORKSPACE ".build\msi-admin"
           New-Item -ItemType Directory -Force $admin | Out-Null
@@ -315,6 +317,7 @@ jobs:
           test -s .build/macos-menu-smoke.bmp
           XLSONE_SCREENSHOT_PATH="${GITHUB_WORKSPACE}/.build/macos-license-smoke.bmp" \
             XLSONE_SCREENSHOT_DIALOG=license \
+            XLSONE_UI_LANGUAGE=ja \
             "$binary"
           test -s .build/macos-license-smoke.bmp
           (cd .build && shasum -a 256 "$(basename "$dmg")") \
@@ -446,6 +449,7 @@ jobs:
           test -s ".build/linux-${PACKAGE_ARCH}-menu-smoke.bmp"
           XLSONE_SCREENSHOT_PATH="${GITHUB_WORKSPACE}/.build/linux-${PACKAGE_ARCH}-license-smoke.bmp" \
             XLSONE_SCREENSHOT_DIALOG=license \
+            XLSONE_UI_LANGUAGE=ja \
             xvfb-run -a "$binary"
           test -s ".build/linux-${PACKAGE_ARCH}-license-smoke.bmp"
           (cd .build && sha256sum "$(basename "$deb")") \

@@ -118,6 +118,15 @@ add_library(xlsone_core STATIC
     src/exporter.c
 )
 
+add_library(xlsone_i18n STATIC
+    app/i18n.c
+)
+
+target_include_directories(xlsone_i18n
+    PUBLIC
+        "${CMAKE_CURRENT_SOURCE_DIR}/app"
+)
+
 target_include_directories(xlsone_core
     PUBLIC
         "${CMAKE_CURRENT_SOURCE_DIR}/include"
@@ -126,11 +135,20 @@ target_include_directories(xlsone_core
 )
 
 if(MSVC)
+    target_compile_options(xlsone_i18n PRIVATE /W4)
     target_compile_options(xlsone_core PRIVATE /W4)
     if(XLSONE_C_WARNINGS_AS_ERRORS)
+        target_compile_options(xlsone_i18n PRIVATE /WX)
         target_compile_options(xlsone_core PRIVATE /WX)
     endif()
 else()
+    target_compile_options(xlsone_i18n PRIVATE
+        -Wall
+        -Wextra
+        -Wpedantic
+        -Wconversion
+        -Wshadow
+    )
     target_compile_options(xlsone_core PRIVATE
         -Wall
         -Wextra
@@ -139,6 +157,7 @@ else()
         -Wshadow
     )
     if(XLSONE_C_WARNINGS_AS_ERRORS)
+        target_compile_options(xlsone_i18n PRIVATE -Werror)
         target_compile_options(xlsone_core PRIVATE -Werror)
     endif()
 endif()

@@ -29,20 +29,77 @@ typedef struct neighbor_context {
 } neighbor_context;
 
 static const char *const amount_patterns[] = {
-    "金额", "收入", "支出", "预算", "决算", "合计", "余额",
-    "本期", "本年", "上期", "上年", "万元", "元", "amount",
-    "total", "revenue", "expense", "balance"
+    "合计", "总计", "小计", "金额", "总额", "数额", "额度",
+    "数量", "单价", "总价", "价格", "数值", "预算", "收入",
+    "支出", "成本", "费用", "利润", "净额", "余额", "税额",
+    "税金", "补贴", "补助", "拨款", "执行", "决算", "人数",
+    "人口", "户数", "家数", "人员", "编制", "职工", "本期",
+    "本年", "上期", "上年", "万元", "元",
+    "合計", "總計", "小計", "金額", "總額", "數額", "額度",
+    "數量", "單價", "總價", "價格", "數值", "預算", "費用",
+    "利潤", "淨額", "餘額", "稅額", "稅金", "補貼", "補助",
+    "撥款", "執行", "人數", "戶數", "家數", "人員", "編制",
+    "職工",
+    "総計", "総額", "金額", "数量", "個数", "単価", "価格", "値",
+    "予算", "収入", "支出", "費用", "コスト", "原価", "利益",
+    "税金", "消費税", "決算", "執行額", "人数", "人口", "世帯数",
+    "件数", "人員", "職員数", "残高", "売上", "売上高", "仕入高",
+    "発注点", "円",
+    "sum", "total", "subtotal", "grand total", "total amount",
+    "amount", "quantity", "qty", "price", "unit price",
+    "total price", "value", "net", "gross", "balance", "budget",
+    "revenue", "income", "expense", "cost", "fee", "profit",
+    "tax", "fund", "population", "headcount", "staff", "execution",
+    "progress", "allowance", "appropriation", "subsidy"
 };
 static const char *const weak_amount_patterns[] = {
-    "数", "数量", "人数", "个数", "count", "qty", "quantity"
+    "数", "额", "值", "量", "价", "个数", "个",
+    "數", "額", "價", "個數", "個",
+    "数", "額", "値", "量", "率", "個",
+    "count", "val", "qty", "amt", "rate", "num",
+    "staff count", "active staff", "vacancies", "surplus", "retired"
 };
 static const char *const code_patterns[] = {
-    "代码", "编码", "编号", "序号", "证号", "账号", "科目号",
-    "code", "id", "number"
+    "代码", "编码", "编号", "序号", "号码", "证号", "区划",
+    "行政区划", "邮编", "邮政编码", "身份证", "电话", "传真",
+    "统一代码", "社会信用代码", "学号", "工号", "账号", "户号",
+    "卡号", "单号", "订单号", "票号", "发票号", "批号", "书号",
+    "卷号", "册号", "期号", "版号", "件号", "条码", "流水号",
+    "档案编号", "档案号", "准考证号", "资格证号", "许可证号",
+    "机号", "箱号", "包号", "袋号", "法人代码", "单位代码",
+    "科目号",
+    "代碼", "編碼", "編號", "序號", "號碼", "證號", "區劃",
+    "行政區劃", "郵編", "郵遞區號", "身份證", "電話", "傳真",
+    "統一編號", "學號", "工號", "帳號", "戶號", "卡號", "單號",
+    "訂單號", "票號", "發票號", "批號", "書號", "卷號", "冊號",
+    "期號", "版號", "件號", "條碼", "流水號", "檔案編號",
+    "檔案號", "准考證號", "資格證號", "許可證號", "機號", "箱號", "包號",
+    "袋號", "法人代碼", "單位代碼",
+    "コード", "番号", "整理番号", "管理番号", "ID", "郵便番号",
+    "電話番号", "TEL", "FAX", "口座番号", "請求書番号", "注文番号", "伝票番号",
+    "学籍番号", "社員番号", "顧客番号", "期間", "日付", "年月日",
+    "時間", "バーコード", "シリアル番号", "参照番号",
+    "code", "id", "identifier", "number", "no.", "no ", "no",
+    "index", "serial", "ref", "ref.", "reference", "zip",
+    "postal code", "postcode", "zipcode", "phone", "tel", "fax",
+    "telephone", "account", "account no", "invoice no", "order no", "period",
+    "date", "time", "year", "month"
 };
 static const char *const label_patterns[] = {
-    "名称", "姓名", "单位", "说明", "备注", "部门", "类别", "事项",
-    "name", "label", "description", "note"
+    "名称", "名字", "姓名", "描述", "说明", "备注", "标题", "内容",
+    "详情", "类型", "性质", "状态", "单位", "来源", "部门", "类别",
+    "事项", "经费",
+    "名稱", "名字", "描述", "說明", "備註", "標題", "内容", "詳情",
+    "類型", "性質", "狀態", "單位", "來源", "部門", "類別", "事項",
+    "經費", "執行單位",
+    "名称", "名前", "タイトル", "説明", "摘要", "内容", "詳細",
+    "備考", "注記", "コメント", "種類", "区分", "分類", "カテゴリ",
+    "状態", "ステータス", "部署", "所属", "担当", "取引先", "商品名",
+    "費目", "支払先", "承認状況", "仕入先", "状況", "税区分",
+    "name", "label", "desc", "description", "title", "remark",
+    "note", "notes", "type", "kind", "category", "classification",
+    "status", "content", "detail", "details", "comment", "department",
+    "unit", "source", "funding type", "unit type", "implementing unit"
 };
 
 static int contains_any(
@@ -621,6 +678,14 @@ static int merge_one_cell(
                 break;
             }
         }
+        if (only == NULL) {
+            xls_set_error(
+                error,
+                XLS_ERROR_INTERNAL,
+                "valid merge source disappeared during classification"
+            );
+            return 0;
+        }
         is_code_like = fingerprint(only) == FINGERPRINT_INTEGER_CODE
             || (only->format_code != NULL && strcmp(only->format_code, "@") == 0);
         zero_with_blank_bias = cell_has_number(only)
@@ -682,8 +747,7 @@ static int merge_one_cell(
             0, error
         );
     }
-    if (code_semantic && code_like_sequence(inputs, input_count)
-        && !amount_semantic) {
+    if (code_semantic && code_like_sequence(inputs, input_count)) {
         return merged_cell_finish(
             result, XLS_CELL_LABEL,
             label_display(inputs, input_count, distinct_count),
@@ -914,8 +978,10 @@ static void merged_cell_free(xls_merged_cell *cell)
     if (cell == NULL) {
         return;
     }
-    for (index = 0; index < cell->source_count; ++index) {
-        source_free(&cell->sources[index]);
+    if (cell->sources != NULL) {
+        for (index = 0; index < cell->source_count; ++index) {
+            source_free(&cell->sources[index]);
+        }
     }
     free(cell->sources);
     free(cell->display_value);
@@ -931,11 +997,15 @@ void xls_merged_sheet_free(xls_merged_sheet *sheet)
     if (sheet == NULL) {
         return;
     }
-    for (index = 0; index < sheet->row_count * sheet->column_count; ++index) {
-        merged_cell_free(&sheet->cells[index]);
+    if (sheet->cells != NULL) {
+        for (index = 0; index < sheet->row_count * sheet->column_count; ++index) {
+            merged_cell_free(&sheet->cells[index]);
+        }
     }
-    for (index = 0; index < sheet->source_file_count; ++index) {
-        free(sheet->source_files[index]);
+    if (sheet->source_files != NULL) {
+        for (index = 0; index < sheet->source_file_count; ++index) {
+            free(sheet->source_files[index]);
+        }
     }
     free(sheet->source_files);
     free(sheet->cells);

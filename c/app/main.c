@@ -1,4 +1,5 @@
 #include "xlsone/xlsone.h"
+#include "i18n.h"
 #include "license_manager.h"
 #include "platform_dialog.h"
 
@@ -62,6 +63,7 @@ typedef struct app_state {
     char dialog_message[1024];
     int dialog_error;
     int language_index;
+    SDL_Window *window;
     int has_last_override;
     size_t last_override_sheet;
     size_t last_override_row;
@@ -85,14 +87,163 @@ typedef struct ui_fonts {
 
 static int ui_input_blocked = 0;
 
+static const char *app_tr(const char *source)
+{
+    return xls_i18n_translate(source);
+}
+
 static void app_set_status(app_state *app, const char *message)
 {
     (void)snprintf(
         app->status,
         sizeof(app->status),
         "%s",
-        message == NULL ? "" : message
+        app_tr(message == NULL ? "" : message)
     );
+}
+
+static const char *app_license_watermark(
+    const xls_license_manager *manager
+)
+{
+    if (xls_license_is_full(manager)) {
+        return "";
+    }
+    return app_tr(
+        manager->state == XLS_LICENSE_EXPIRED
+            ? "授权已过期 — xlsOne"
+            : "未激活试用版 — xlsOne"
+    );
+}
+
+static const char *app_license_state_text(
+    const xls_license_manager *manager,
+    char *buffer,
+    size_t capacity
+)
+{
+    const int remaining = xls_license_remaining_days(manager);
+    const int grace = xls_license_grace_days(manager);
+    if (manager->state == XLS_LICENSE_ACTIVATED) {
+        if (grace > 0) {
+            (void)snprintf(
+                buffer,
+                capacity,
+                app_tr("宽限期 · 剩余 %d 天"),
+                grace
+            );
+        } else if (remaining > 0
+            && manager->info.plan == XLS_LICENSE_PLAN_PERSONAL_YEARLY) {
+            (void)snprintf(
+                buffer,
+                capacity,
+                app_tr("已激活 · 剩余 %d 天"),
+                remaining
+            );
+        } else {
+            (void)snprintf(buffer, capacity, "%s", app_tr("已激活"));
+        }
+    } else if (manager->state == XLS_LICENSE_TRIAL) {
+        if (remaining > 0) {
+            (void)snprintf(
+                buffer,
+                capacity,
+                app_tr("试用期 · 剩余 %d 天"),
+                remaining
+            );
+        } else if (grace > 0) {
+            (void)snprintf(
+                buffer,
+                capacity,
+                app_tr("试用宽限 · 剩余 %d 天"),
+                grace
+            );
+        } else {
+            (void)snprintf(buffer, capacity, "%s", app_tr("试用期"));
+        }
+    } else if (manager->state == XLS_LICENSE_EXPIRED) {
+        (void)snprintf(buffer, capacity, "%s", app_tr("已过期"));
+    } else {
+        (void)snprintf(
+            buffer,
+            capacity,
+            "%s",
+            app_tr("未授权 · 功能受限")
+        );
+    }
+    return buffer;
+}
+
+static int app_language_preference_path(
+    char *path,
+    size_t capacity
+)
+{
+    char *directory = SDL_GetPrefPath("Z-Pulse", "xlsOne");
+    int result;
+    if (directory == NULL) {
+        return 0;
+    }
+    result = snprintf(
+        path, capacity, "%slanguage.preference", directory
+    );
+    SDL_free(directory);
+    return result > 0 && (size_t)result < capacity;
+}
+
+static xls_ui_language app_effective_language(
+    xls_ui_language preference
+)
+{
+    SDL_Locale *locales;
+    char locale[96] = "";
+    xls_ui_language effective;
+    if (preference != XLS_UI_LANGUAGE_SYSTEM) {
+        return preference;
+    }
+    locales = SDL_GetPreferredLocales();
+    if (locales != NULL && locales[0].language != NULL) {
+        if (locales[0].country != NULL && locales[0].country[0] != '\0') {
+            (void)snprintf(
+                locale,
+                sizeof(locale),
+                "%s-%s",
+                locales[0].language,
+                locales[0].country
+            );
+        } else {
+            (void)snprintf(
+                locale, sizeof(locale), "%s", locales[0].language
+            );
+        }
+    }
+    effective = xls_i18n_resolve_language(preference, locale);
+    SDL_free(locales);
+    return effective;
+}
+
+static void app_load_language(app_state *app)
+{
+    char path[2048];
+    const char *override = getenv("XLSONE_UI_LANGUAGE");
+    xls_ui_language preference = XLS_UI_LANGUAGE_SYSTEM;
+    xls_ui_language parsed;
+    if (app_language_preference_path(path, sizeof(path))) {
+        (void)xls_i18n_read_preference(path, &preference);
+    }
+    if (override != NULL
+        && xls_i18n_parse_language(override, &parsed)) {
+        preference = parsed;
+    }
+    app->language_index = (int)preference;
+    xls_i18n_set_language(app_effective_language(preference));
+}
+
+static int app_store_language(xls_ui_language preference)
+{
+    char path[2048];
+    return app_language_preference_path(path, sizeof(path))
+        && xls_i18n_write_preference(path, preference);
 }
 
 static void app_free_results(app_state *app)
@@ -169,7 +320,9 @@ static cJSON *app_find_rule_schema(
         cJSON *stored = cJSON_IsObject(schema)
             ? cJSON_GetObjectItemCaseSensitive(schema, "signature")
             : NULL;
-        if (cJSON_IsString(stored)
+        if (stored != NULL
+            && cJSON_IsString(stored)
+            && stored->valuestring != NULL
             && strcmp(stored->valuestring, signature) == 0) {
             return schema;
         }
@@ -332,7 +485,7 @@ static int app_recompute(app_state *app)
         (void)snprintf(
             app->status,
             sizeof(app->status),
-            "已导入 %zu 个工作簿，识别 %zu 个可汇总工作表，并应用 %zu 条修正规则。",
+            app_tr("已导入 %zu 个工作簿，识别 %zu 个可汇总工作表，并应用 %zu 条修正规则。"),
             app->workbook_count,
             app->merged_sheet_count,
             applied_rules
@@ -341,7 +494,7 @@ static int app_recompute(app_state *app)
         (void)snprintf(
             app->status,
             sizeof(app->status),
-            "已导入 %zu 个工作簿，识别 %zu 个可汇总工作表。",
+            app_tr("已导入 %zu 个工作簿，识别 %zu 个可汇总工作表。"),
             app->workbook_count,
             app->merged_sheet_count
         );
@@ -463,7 +616,7 @@ static void app_export(app_state *app)
         ok = xls_export_csv(
             &app->merged_sheets[app->selected_sheet],
             path,
-            xls_license_watermark(&app->license),
+            app_license_watermark(&app->license),
             &error
         );
     } else {
@@ -472,7 +625,7 @@ static void app_export(app_state *app)
             app->merged_sheets,
             app->merged_sheet_count,
             path,
-            xls_license_watermark(&app->license),
+            app_license_watermark(&app->license),
             &error
         );
     }
@@ -480,7 +633,7 @@ static void app_export(app_state *app)
         (void)snprintf(
             app->status,
             sizeof(app->status),
-            "导出完成：%s",
+            app_tr("导出完成：%s"),
             path
         );
     } else {
@@ -643,13 +796,13 @@ static void app_show_notice(
         app->dialog_title,
         sizeof(app->dialog_title),
         "%s",
-        title == NULL ? "" : title
+        app_tr(title == NULL ? "" : title)
     );
     (void)snprintf(
         app->dialog_message,
         sizeof(app->dialog_message),
         "%s",
-        message == NULL ? "" : message
+        app_tr(message == NULL ? "" : message)
     );
 }
 
@@ -663,8 +816,8 @@ static void app_show_rules(app_state *app)
         app->dialog_message,
         sizeof(app->dialog_message),
         count == 0u
-            ? "当前工作区尚未产生手动修正。"
-            : "当前工作区共有 %zu 条修正规则；保存后会自动用于同结构工作簿。",
+            ? app_tr("当前工作区尚未产生手动修正。")
+            : app_tr("当前工作区共有 %zu 条修正规则；保存后会自动用于同结构工作簿。"),
         count
     );
 }
@@ -820,7 +973,10 @@ static void app_check_updates(app_state *app)
     version = cJSON_IsObject(root)
         ? cJSON_GetObjectItemCaseSensitive(root, "latest_version")
         : NULL;
-    if (status != 200 || !cJSON_IsString(version)) {
+    if (status != 200
+        || version == NULL
+        || !cJSON_IsString(version)
+        || version->valuestring == NULL) {
         cJSON_Delete(root);
         free(response);
         app_show_notice(app, "检查更新", "更新服务器响应异常。", 1);
@@ -836,7 +992,7 @@ static void app_check_updates(app_state *app)
         (void)snprintf(
             message,
             sizeof(message),
-            "发现新版本 %s，可前往 Z-PULSE.CN 下载。",
+            app_tr("发现新版本 %s，可前往 Z-PULSE.CN 下载。"),
             version->valuestring
         );
     }
@@ -1238,6 +1394,33 @@ static int app_action_enabled(const app_state *app, app_action action)
     }
 }
 
+static void app_change_language(
+    app_state *app,
+    xls_ui_language preference
+)
+{
+    const int stored = app_store_language(preference);
+    app->language_index = (int)preference;
+    xls_i18n_set_language(app_effective_language(preference));
+    if (app->window != NULL) {
+        SDL_SetWindowTitle(app->window, app_tr("表表归一"));
+    }
+    app_set_status(
+        app,
+        stored
+            ? "界面语言已切换，并会在下次启动时继续使用。"
+            : "界面语言已切换，但无法保存语言设置。"
+    );
+    app_show_notice(
+        app,
+        "语言已更改",
+        stored
+            ? "界面语言已切换，并会在下次启动时继续使用。"
+            : "界面语言已切换，但无法保存语言设置。",
+        !stored
+    );
+}
+
 static void app_execute_action(app_state *app, app_action action)
 {
     app->active_menu = APP_MENU_NONE;
@@ -1279,49 +1462,19 @@ static void app_execute_action(app_state *app, app_action action)
         app_show_license(app);
         break;
     case APP_ACTION_LANGUAGE_SYSTEM:
-        app->language_index = 0;
-        app_show_notice(
-            app,
-            "语言已更改",
-            "已选择跟随系统；界面语言将在重启后生效。",
-            0
-        );
+        app_change_language(app, XLS_UI_LANGUAGE_SYSTEM);
         break;
     case APP_ACTION_LANGUAGE_ENGLISH:
-        app->language_index = 1;
-        app_show_notice(
-            app,
-            "语言已更改",
-            "已选择 English；界面语言将在重启后生效。",
-            0
-        );
+        app_change_language(app, XLS_UI_LANGUAGE_ENGLISH);
         break;
     case APP_ACTION_LANGUAGE_ZH_HANS:
-        app->language_index = 2;
-        app_show_notice(
-            app,
-            "语言已更改",
-            "已选择简体中文；界面语言将在重启后生效。",
-            0
-        );
+        app_change_language(app, XLS_UI_LANGUAGE_ZH_HANS);
         break;
     case APP_ACTION_LANGUAGE_ZH_HANT:
-        app->language_index = 3;
-        app_show_notice(
-            app,
-            "语言已更改",
-            "已选择繁體中文；界面语言将在重启后生效。",
-            0
-        );
+        app_change_language(app, XLS_UI_LANGUAGE_ZH_HANT);
         break;
     case APP_ACTION_LANGUAGE_JAPANESE:
-        app->language_index = 4;
-        app_show_notice(
-            app,
-            "语言已更改",
-            "已选择日本語；界面语言将在重启后生效。",
-            0
-        );
+        app_change_language(app, XLS_UI_LANGUAGE_JAPANESE);
         break;
     case APP_ACTION_CHECK_UPDATE:
         app_check_updates(app);
@@ -1347,35 +1500,43 @@ static void app_execute_action(app_state *app, app_action action)
     }
 }
 
-static float app_menu_x(app_menu menu)
+static const char *app_menu_label(app_menu menu);
+
+static float app_menu_width(
+    app_menu menu,
+    const struct nk_user_font *font
+)
 {
-    switch (menu) {
-    case APP_MENU_FILE: return 8.0f;
-    case APP_MENU_EDIT: return 50.0f;
-    case APP_MENU_RULES: return 92.0f;
-    case APP_MENU_LICENSE: return 158.0f;
-    case APP_MENU_LANGUAGE: return 200.0f;
-    case APP_MENU_HELP: return 242.0f;
-    case APP_MENU_NONE:
-    default:
-        return 0.0f;
+    float width = ui_text_width(font, app_menu_label(menu)) + 20.0f;
+    if (width < 42.0f) {
+        width = 42.0f;
     }
+    return width;
 }
 
-static float app_menu_width(app_menu menu)
+static float app_menu_x(
+    app_menu target,
+    const struct nk_user_font *font
+)
 {
-    return menu == APP_MENU_RULES ? 66.0f : 42.0f;
+    app_menu menu;
+    float x = 8.0f;
+    for (menu = APP_MENU_FILE; menu < target;
+         menu = (app_menu)((int)menu + 1)) {
+        x += app_menu_width(menu, font);
+    }
+    return x;
 }
 
 static const char *app_menu_label(app_menu menu)
 {
     switch (menu) {
-    case APP_MENU_FILE: return "文件";
-    case APP_MENU_EDIT: return "编辑";
-    case APP_MENU_RULES: return "修正规则";
-    case APP_MENU_LICENSE: return "许可";
-    case APP_MENU_LANGUAGE: return "语言";
-    case APP_MENU_HELP: return "帮助";
+    case APP_MENU_FILE: return app_tr("文件");
+    case APP_MENU_EDIT: return app_tr("编辑");
+    case APP_MENU_RULES: return app_tr("修正规则");
+    case APP_MENU_LICENSE: return app_tr("许可");
+    case APP_MENU_LANGUAGE: return app_tr("语言");
+    case APP_MENU_HELP: return app_tr("帮助");
     case APP_MENU_NONE:
     default:
         return "";
@@ -1483,9 +1644,9 @@ static void render_menu_bar(
     for (menu = APP_MENU_FILE; menu <= APP_MENU_HELP;
          menu = (app_menu)((int)menu + 1)) {
         const struct nk_rect item = nk_rect(
-            app_menu_x(menu),
+            app_menu_x(menu, fonts->body),
             2.0f,
-            app_menu_width(menu),
+            app_menu_width(menu, fonts->body),
             UI_MENU_HEIGHT - 4.0f
         );
         if (app->active_menu == menu || ui_hovered(context, item)) {
@@ -1519,6 +1680,7 @@ static void render_active_menu(
     size_t count;
     size_t index;
     float height = 10.0f;
+    float popup_width = 244.0f;
     float y;
     struct nk_rect popup;
     int handled_click = 0;
@@ -1527,12 +1689,19 @@ static void render_active_menu(
     }
     items = app_menu_items(active, &count);
     for (index = 0u; index < count; ++index) {
+        const float required_width =
+            ui_text_width(fonts->body, app_tr(items[index].label))
+            + ui_text_width(fonts->body, items[index].shortcut)
+            + 76.0f;
         height += 27.0f + (items[index].separator_before ? 8.0f : 0.0f);
+        if (required_width > popup_width) {
+            popup_width = required_width;
+        }
     }
     popup = nk_rect(
-        app_menu_x(active),
+        app_menu_x(active, fonts->body),
         UI_MENU_HEIGHT - 1.0f,
-        244.0f,
+        popup_width,
         height
     );
     nk_fill_rect(
@@ -1587,7 +1756,7 @@ static void render_active_menu(
         ui_draw_text(
             canvas,
             nk_rect(row.x + 22.0f, row.y, row.w - 92.0f, row.h),
-            item->label,
+            app_tr(item->label),
             fonts->body,
             enabled ? UI_TEXT : UI_DISABLED,
             NK_TEXT_LEFT
@@ -1645,14 +1814,14 @@ static const char *ui_kind_text(xls_cell_kind kind)
 {
     switch (kind) {
     case XLS_CELL_SUM:
-        return "求和";
+        return app_tr("求和");
     case XLS_CELL_MIXED:
-        return "混合";
+        return app_tr("混合");
     case XLS_CELL_SINGLE:
-        return "单值";
+        return app_tr("单值");
     case XLS_CELL_LABEL:
     default:
-        return "标签";
+        return app_tr("标签");
     }
 }
 
@@ -1711,21 +1880,21 @@ static void render_toolbar(
         if (ui_draw_utility_button(
             context, canvas,
             nk_rect(16.0f, UI_TOOLBAR_TOP + 10.0f, 51.0f, 26.0f),
-            "追加", fonts->body, UI_ICON_PLUS
+            app_tr("追加"), fonts->body, UI_ICON_PLUS
         )) {
             app_open_files(app, 1);
         }
         if (ui_draw_utility_button(
             context, canvas,
             nk_rect(68.0f, UI_TOOLBAR_TOP + 10.0f, 54.0f, 26.0f),
-            "刷新", fonts->body, UI_ICON_REFRESH
+            app_tr("刷新"), fonts->body, UI_ICON_REFRESH
         )) {
             (void)app_recompute(app);
         }
         if (ui_draw_utility_button(
             context, canvas,
             nk_rect(123.0f, UI_TOOLBAR_TOP + 10.0f, 52.0f, 26.0f),
-            "清空", fonts->body, UI_ICON_CLOSE
+            app_tr("清空"), fonts->body, UI_ICON_CLOSE
         )) {
             app_clear(app);
         }
@@ -1733,7 +1902,7 @@ static void render_toolbar(
 
     {
         char license_text[96];
-        const char *state_text = xls_license_state_text(
+        const char *state_text = app_license_state_text(
             &app->license, license_text, sizeof(license_text)
         );
         float license_width = ui_text_width(fonts->body, state_text) + 22.0f;
@@ -1790,7 +1959,7 @@ static void render_toolbar(
                 91.0f,
                 32.0f
             ),
-            "导出 XLSX",
+            app_tr("导出 XLSX"),
             fonts->body,
             UI_ICON_EXPORT,
             1
@@ -1970,7 +2139,7 @@ static void render_empty_state(
     ui_draw_text(
         canvas,
         nk_rect(card.x, card.y + 47.0f, card.w, 22.0f),
-        "表表归一",
+        app_tr("表表归一"),
         fonts->body,
         UI_TEXT,
         NK_TEXT_CENTERED
@@ -1982,7 +2151,7 @@ static void render_empty_state(
     ui_draw_text(
         canvas,
         nk_rect(card.x + 32.0f, card.y + 185.0f, card.w - 64.0f, 34.0f),
-        app->drop_targeted ? "松手即可导入" : "拖入 Excel 文件",
+        app_tr(app->drop_targeted ? "松手即可导入" : "拖入 Excel 文件"),
         fonts->title,
         UI_TEXT,
         NK_TEXT_CENTERED
@@ -1991,8 +2160,8 @@ static void render_empty_state(
         canvas,
         nk_rect(card.x + 38.0f, card.y + 217.0f, card.w - 76.0f, 28.0f),
         app->drop_targeted
-            ? "支持多个 .xlsx / .xls"
-            : "支持多个 .xlsx / .xls，自动识别表头与可汇总列",
+            ? app_tr("支持多个 .xlsx / .xls")
+            : app_tr("支持多个 .xlsx / .xls，自动识别表头与可汇总列"),
         fonts->body,
         UI_MUTED,
         NK_TEXT_CENTERED
@@ -2002,7 +2171,7 @@ static void render_empty_state(
         context,
         canvas,
         open_button,
-        "选择文件",
+        app_tr("选择文件"),
         fonts->body,
         UI_ICON_FOLDER,
         1
@@ -2012,7 +2181,7 @@ static void render_empty_state(
     ui_draw_text(
         canvas,
         nk_rect(card.x, card.y + card.h - 31.0f, card.w, 16.0f),
-        "也可以按 Ctrl+O 选择文件",
+        app_tr("也可以按 Ctrl+O 选择文件"),
         fonts->body,
         UI_DISABLED,
         NK_TEXT_CENTERED
@@ -2234,7 +2403,7 @@ static void render_inspector(
         ui_draw_text(
             canvas,
             nk_rect(placeholder.x + 10.0f, placeholder.y, placeholder.w - 20.0f, placeholder.h),
-            "选择一个单元格查看来源。",
+            app_tr("选择一个单元格查看来源。"),
             fonts->body,
             UI_MUTED,
             NK_TEXT_LEFT
@@ -2313,7 +2482,7 @@ static void render_inspector(
             canvas,
             nk_rect(detail.x + 12.0f, detail.y + 35.0f, detail.w - 24.0f, 31.0f),
             cell->display_value == NULL || cell->display_value[0] == '\0'
-                ? "空值"
+                ? app_tr("空值")
                 : cell->display_value,
             ui_text_has_non_ascii(cell->display_value)
                 ? fonts->body
@@ -2325,8 +2494,8 @@ static void render_inspector(
             canvas,
             nk_rect(detail.x + 12.0f, detail.y + 70.0f, detail.w - 24.0f, 20.0f),
             cell->is_overridden != 0u
-                ? "当前使用手动修正后的单元格类型"
-                : cell->decision.reason,
+                ? app_tr("当前使用手动修正后的单元格类型")
+                : app_tr(cell->decision.reason),
             fonts->body,
             UI_MUTED,
             NK_TEXT_CENTERED
@@ -2349,7 +2518,7 @@ static void render_inspector(
         ui_draw_text(
             canvas,
             label_button,
-            "标签",
+            app_tr("标签"),
             fonts->body,
             cell->kind == XLS_CELL_LABEL ? UI_LABEL_FG : UI_TEXT,
             NK_TEXT_CENTERED
@@ -2370,7 +2539,7 @@ static void render_inspector(
         ui_draw_text(
             canvas,
             sum_button,
-            "求和",
+            app_tr("求和"),
             fonts->body,
             cell->kind == XLS_CELL_SUM ? UI_SUM_FG : UI_TEXT,
             NK_TEXT_CENTERED
@@ -2388,7 +2557,14 @@ static void render_inspector(
                 detail.w - 144.0f,
                 18.0f
             );
-            ui_draw_text(canvas, restore, "恢复自动判断", fonts->body, UI_MUTED, NK_TEXT_CENTERED);
+            ui_draw_text(
+                canvas,
+                restore,
+                app_tr("恢复自动判断"),
+                fonts->body,
+                UI_MUTED,
+                NK_TEXT_CENTERED
+            );
             if (ui_clicked(context, restore)) {
                 app_restore_selected_kind(app);
             }
@@ -2444,7 +2620,7 @@ static void render_inspector(
             ui_draw_text(
                 canvas,
                 nk_rect(toggle.x + 14.0f, toggle.y, 78.0f, toggle.h),
-                "来源明细",
+                app_tr("来源明细"),
                 fonts->body,
                 UI_TEXT,
                 NK_TEXT_LEFT
@@ -2474,9 +2650,19 @@ static void render_inspector(
         {
             char summary[96];
             if (overview_ok) {
-                (void)snprintf(summary, sizeof(summary), "%zu 个有效", overview.value_count);
+                (void)snprintf(
+                    summary,
+                    sizeof(summary),
+                    app_tr("%zu 个有效"),
+                    overview.value_count
+                );
             } else {
-                (void)snprintf(summary, sizeof(summary), "%zu 个来源", cell->source_count);
+                (void)snprintf(
+                    summary,
+                    sizeof(summary),
+                    app_tr("%zu 个来源"),
+                    cell->source_count
+                );
             }
             ui_draw_text(
                 canvas,
@@ -2496,9 +2682,9 @@ static void render_inspector(
                 const xls_source_entry *source = &cell->sources[source_index];
                 const float row_y = source_card.y + 58.0f + (float)source_index * 56.0f;
                 const char *value = source->state == XLS_SOURCE_MISSING
-                    ? "缺失"
+                    ? app_tr("缺失")
                     : source->state == XLS_SOURCE_EMPTY
-                        ? "空值"
+                        ? app_tr("空值")
                         : source->value;
                 const int outlier = overview_ok
                     && ui_source_is_outlier(&overview, source_index);
@@ -2559,7 +2745,7 @@ static void render_status_bar(
         (void)snprintf(
             viewing,
             sizeof(viewing),
-            "正在查看“%s”，共 %zu 行。",
+            app_tr("正在查看“%s”，共 %zu 行。"),
             sheet->sheet_name,
             sheet->row_count
         );
@@ -2592,7 +2778,7 @@ static void render_correction_bar(
     ui_draw_text(
         canvas,
         nk_rect(14.0f, y, width - 140.0f, 38.0f),
-        "当前工作区包含手动修正。",
+        app_tr("当前工作区包含手动修正。"),
         fonts->body,
         UI_MUTED,
         NK_TEXT_LEFT
@@ -2601,7 +2787,7 @@ static void render_correction_bar(
         context,
         canvas,
         clear_button,
-        "清除所有修正",
+        app_tr("清除所有修正"),
         fonts->body,
         UI_ICON_NONE,
         0
@@ -2693,7 +2879,7 @@ static void render_notice_dialog(
             context,
             canvas,
             nk_rect(card.x + card.w - 104.0f, card.y + card.h - 52.0f, 80.0f, 32.0f),
-            "确定",
+            app_tr("确定"),
             fonts->body,
             UI_ICON_NONE,
             1
@@ -2726,7 +2912,7 @@ static void render_rules_dialog(
     ui_draw_text(
         canvas,
         nk_rect(card.x + 24.0f, card.y + 18.0f, card.w - 72.0f, 28.0f),
-        "当前修正规则",
+        app_tr("当前修正规则"),
         fonts->body,
         UI_TEXT,
         NK_TEXT_LEFT
@@ -2791,7 +2977,7 @@ static void render_rules_dialog(
             context,
             canvas,
             nk_rect(card.x + card.w - 104.0f, card.y + card.h - 52.0f, 80.0f, 32.0f),
-            "关闭",
+            app_tr("关闭"),
             fonts->body,
             UI_ICON_NONE,
             0
@@ -2803,7 +2989,7 @@ static void render_rules_dialog(
             context,
             canvas,
             nk_rect(card.x + card.w - 246.0f, card.y + card.h - 52.0f, 132.0f, 32.0f),
-            "保存规则...",
+            app_tr("保存规则..."),
             fonts->body,
             UI_ICON_NONE,
             1
@@ -2824,7 +3010,7 @@ static void license_set_result(
         app->dialog_message,
         sizeof(app->dialog_message),
         "%s",
-        message == NULL ? "" : message
+        app_tr(message == NULL ? "" : message)
     );
 }
 
@@ -2844,34 +3030,37 @@ static void render_license_online_page(
             (void)snprintf(
                 subtitle,
                 sizeof(subtitle),
-                "您的软件已激活，许可证剩余 %d 天。",
+                app_tr("您的软件已激活，许可证剩余 %d 天。"),
                 remaining
             );
         } else {
             (void)snprintf(
                 subtitle,
                 sizeof(subtitle),
-                "您的软件已激活，可正常使用全部功能。"
+                "%s",
+                app_tr("您的软件已激活，可正常使用全部功能。")
             );
         }
     } else if (app->license.state == XLS_LICENSE_TRIAL) {
         (void)snprintf(
             subtitle,
             sizeof(subtitle),
-            "试用期剩余 %d 天，期间所有功能开放。",
+            app_tr("试用期剩余 %d 天，期间所有功能开放。"),
             xls_license_remaining_days(&app->license)
         );
     } else if (app->license.state == XLS_LICENSE_EXPIRED) {
         (void)snprintf(
             subtitle,
             sizeof(subtitle),
-            "许可证或试用期已过期，请输入激活码继续使用完整功能。"
+            "%s",
+            app_tr("许可证或试用期已过期，请输入激活码继续使用完整功能。")
         );
     } else {
         (void)snprintf(
             subtitle,
             sizeof(subtitle),
-            "输入激活码，或先开始 14 天免费试用。"
+            "%s",
+            app_tr("输入激活码，或先开始 14 天免费试用。")
         );
     }
     ui_draw_text_elided(
@@ -2901,7 +3090,7 @@ static void render_license_online_page(
         ui_draw_text(
             canvas,
             nk_rect(panel.x + 44.0f, y + 16.0f, 92.0f, 24.0f),
-            "套餐类型",
+            app_tr("套餐类型"),
             fonts->body,
             UI_MUTED,
             NK_TEXT_LEFT
@@ -2909,7 +3098,7 @@ static void render_license_online_page(
         ui_draw_text(
             canvas,
             nk_rect(panel.x + 140.0f, y + 16.0f, panel.w - 186.0f, 24.0f),
-            xls_license_plan_text(app->license.info.plan),
+            app_tr(xls_license_plan_text(app->license.info.plan)),
             fonts->body,
             UI_LABEL_FG,
             NK_TEXT_RIGHT
@@ -2917,7 +3106,7 @@ static void render_license_online_page(
         ui_draw_text(
             canvas,
             nk_rect(panel.x + 44.0f, y + 57.0f, 80.0f, 24.0f),
-            "激活码",
+            app_tr("激活码"),
             fonts->body,
             UI_MUTED,
             NK_TEXT_LEFT
@@ -2934,7 +3123,7 @@ static void render_license_online_page(
             context,
             canvas,
             nk_rect(panel.x + panel.w - 96.0f, y + 54.0f, 52.0f, 30.0f),
-            "复制",
+            app_tr("复制"),
             fonts->body,
             UI_ICON_NONE,
             0
@@ -2966,12 +3155,17 @@ static void render_license_online_page(
                 calendar.tm_mday
             );
         } else {
-            (void)snprintf(valid_until, sizeof(valid_until), "永久授权");
+            (void)snprintf(
+                valid_until,
+                sizeof(valid_until),
+                "%s",
+                app_tr("永久授权")
+            );
         }
         ui_draw_text(
             canvas,
             nk_rect(panel.x + 44.0f, y + 98.0f, 80.0f, 24.0f),
-            "有效期",
+            app_tr("有效期"),
             fonts->body,
             UI_MUTED,
             NK_TEXT_LEFT
@@ -2989,7 +3183,7 @@ static void render_license_online_page(
     ui_draw_text(
         canvas,
         nk_rect(panel.x + 30.0f, y, panel.w - 60.0f, 22.0f),
-        "激活码",
+        app_tr("激活码"),
         fonts->body,
         UI_TEXT,
         NK_TEXT_LEFT
@@ -3070,7 +3264,7 @@ static void render_license_online_page(
                 context,
                 canvas,
                 activate,
-                "激活",
+                app_tr("激活"),
                 fonts->body,
                 UI_ICON_NONE,
                 1
@@ -3080,7 +3274,7 @@ static void render_license_online_page(
             ui_draw_text(
                 canvas,
                 activate,
-                "激活",
+                app_tr("激活"),
                 fonts->body,
                 nk_rgb(255, 255, 255),
                 NK_TEXT_CENTERED
@@ -3113,7 +3307,7 @@ static void render_license_online_page(
         ui_draw_text(
             canvas,
             nk_rect(panel.x + 36.0f, y, 142.0f, 32.0f),
-            "开始免费试用 14 天",
+            app_tr("开始免费试用 14 天"),
             fonts->body,
             UI_ACCENT,
             NK_TEXT_LEFT
@@ -3123,7 +3317,7 @@ static void render_license_online_page(
         context,
         canvas,
         nk_rect(panel.x + 193.0f, y, 108.0f, 34.0f),
-        "获取激活码",
+        app_tr("获取激活码"),
         fonts->body,
         UI_ICON_NONE,
         0
@@ -3164,7 +3358,7 @@ static void render_license_offline_page(
         ui_draw_text(
             canvas,
             nk_rect(panel.x + 45.0f, y + 14.0f + (float)index * 34.0f, panel.w - 90.0f, 26.0f),
-            steps[index],
+            app_tr(steps[index]),
             fonts->body,
             UI_TEXT,
             NK_TEXT_LEFT
@@ -3173,7 +3367,7 @@ static void render_license_offline_page(
     ui_draw_text(
         canvas,
         nk_rect(panel.x + 45.0f, y + 121.0f, 100.0f, 22.0f),
-        "本机设备码",
+        app_tr("本机设备码"),
         fonts->body,
         UI_MUTED,
         NK_TEXT_LEFT
@@ -3190,7 +3384,7 @@ static void render_license_offline_page(
         context,
         canvas,
         nk_rect(panel.x + panel.w - 116.0f, y + 143.0f, 71.0f, 30.0f),
-        "复制",
+        app_tr("复制"),
         fonts->body,
         UI_ICON_NONE,
         0
@@ -3202,7 +3396,7 @@ static void render_license_offline_page(
         context,
         canvas,
         nk_rect(panel.x + 45.0f, y + 190.0f, 168.0f, 36.0f),
-        "打开离线激活页面",
+        app_tr("打开离线激活页面"),
         fonts->body,
         UI_ICON_NONE,
         1
@@ -3213,7 +3407,7 @@ static void render_license_offline_page(
         context,
         canvas,
         nk_rect(panel.x + panel.w - 213.0f, y + 190.0f, 168.0f, 36.0f),
-        "导入授权文件...",
+        app_tr("导入授权文件..."),
         fonts->body,
         UI_ICON_NONE,
         0
@@ -3307,7 +3501,7 @@ static void render_license_dialog(
     ui_draw_text(
         canvas,
         nk_rect(card.x + 24.0f, card.y + 187.0f, brand_width - 48.0f, 30.0f),
-        "表表归一",
+        app_tr("表表归一"),
         fonts->title,
         UI_TEXT,
         NK_TEXT_CENTERED
@@ -3315,7 +3509,7 @@ static void render_license_dialog(
     ui_draw_text(
         canvas,
         nk_rect(card.x + 24.0f, card.y + 223.0f, brand_width - 48.0f, 48.0f),
-        "多张同格式 Excel 报表一键汇总",
+        app_tr("多张同格式 Excel 报表一键汇总"),
         fonts->body,
         UI_MUTED,
         NK_TEXT_CENTERED
@@ -3334,7 +3528,7 @@ static void render_license_dialog(
             ui_draw_text(
                 canvas,
                 pill,
-                pills[pill_index],
+                app_tr(pills[pill_index]),
                 fonts->body,
                 UI_MUTED,
                 NK_TEXT_CENTERED
@@ -3344,22 +3538,37 @@ static void render_license_dialog(
     ui_draw_text(
         canvas,
         nk_rect(panel.x + 36.0f, panel.y + 24.0f, panel.w - 82.0f, 28.0f),
-        "许可证",
+        app_tr("许可证"),
         fonts->title,
         UI_TEXT,
         NK_TEXT_LEFT
     );
     if (app->license.state != XLS_LICENSE_ACTIVATED) {
+        const char *online_text = app_tr("在线激活");
+        const char *offline_text = app_tr("离线激活");
+        float online_width =
+            ui_text_width(fonts->body, online_text) + 18.0f;
+        float offline_width =
+            ui_text_width(fonts->body, offline_text) + 18.0f;
+        if (online_width < 82.0f) {
+            online_width = 82.0f;
+        }
+        if (offline_width < 82.0f) {
+            offline_width = 82.0f;
+        }
         const struct nk_rect online = nk_rect(
-            panel.x + 30.0f, panel.y + 63.0f, 82.0f, 30.0f
+            panel.x + 30.0f, panel.y + 63.0f, online_width, 30.0f
         );
         const struct nk_rect offline = nk_rect(
-            panel.x + 114.0f, panel.y + 63.0f, 82.0f, 30.0f
+            online.x + online.w + 2.0f,
+            panel.y + 63.0f,
+            offline_width,
+            30.0f
         );
         ui_draw_text(
             canvas,
             online,
-            "在线激活",
+            online_text,
             fonts->body,
             app->license_page == 0 ? UI_TEXT : UI_MUTED,
             NK_TEXT_CENTERED
@@ -3367,7 +3576,7 @@ static void render_license_dialog(
         ui_draw_text(
             canvas,
             offline,
-            "离线激活",
+            offline_text,
             fonts->body,
             app->license_page == 1 ? UI_TEXT : UI_MUTED,
             NK_TEXT_CENTERED
@@ -3377,7 +3586,7 @@ static void render_license_dialog(
             nk_rect(
                 app->license_page == 0 ? online.x : offline.x,
                 panel.y + 91.0f,
-                82.0f,
+                app->license_page == 0 ? online.w : offline.w,
                 2.0f
             ),
             0.0f,
@@ -3535,7 +3744,7 @@ static void render_workspace(
                     (float)width - 72.0f,
                     32.0f
                 ),
-                "模板结构不一致，当前没有可汇总工作表。",
+                app_tr("模板结构不一致，当前没有可汇总工作表。"),
                 fonts->title,
                 UI_TEXT,
                 NK_TEXT_CENTERED
@@ -3550,7 +3759,7 @@ static void render_workspace(
                         (float)width - 160.0f,
                         22.0f
                     ),
-                    app->validation.issues[index].message,
+                    app_tr(app->validation.issues[index].message),
                     fonts->body,
                     UI_MUTED,
                     NK_TEXT_CENTERED
@@ -3590,10 +3799,29 @@ static void render_workspace(
 
 static const char *find_font_path(void)
 {
+#if defined(_WIN32) || defined(__APPLE__)
+    static const char *const japanese_candidates[] = {
+#if defined(_WIN32)
+        "C:/Windows/Fonts/YuGothR.ttc",
+        "C:/Windows/Fonts/meiryo.ttc",
+        "C:/Windows/Fonts/msgothic.ttc",
+        "C:/Windows/Fonts/msyh.ttc",
+        "C:/Windows/Fonts/simhei.ttf",
+#else
+        "/System/Library/Fonts/ヒラギノ角ゴシック W3.ttc",
+        "/System/Library/Fonts/ヒラギノ角ゴシック W4.ttc",
+        "/System/Library/Fonts/Hiragino Sans GB.ttc",
+        "/System/Library/Fonts/PingFang.ttc",
+#endif
+        NULL
+    };
+#endif
     static const char *const candidates[] = {
 #if defined(_WIN32)
         "C:/Windows/Fonts/msyh.ttc",
         "C:/Windows/Fonts/simhei.ttf",
+        "C:/Windows/Fonts/YuGothR.ttc",
+        "C:/Windows/Fonts/meiryo.ttc",
 #elif defined(__APPLE__)
         "/System/Library/Fonts/PingFang.ttc",
         "/System/Library/Fonts/STHeiti Medium.ttc",
@@ -3603,22 +3831,41 @@ static const char *find_font_path(void)
 #endif
         NULL
     };
+    const char *const *selected_candidates = candidates;
     size_t index;
-    for (index = 0; candidates[index] != NULL; ++index) {
-        FILE *file = fopen(candidates[index], "rb");
+#if defined(_WIN32) || defined(__APPLE__)
+    if (xls_i18n_language() == XLS_UI_LANGUAGE_JAPANESE) {
+        selected_candidates = japanese_candidates;
+    }
+#endif
+    for (index = 0; selected_candidates[index] != NULL; ++index) {
+        FILE *file = fopen(selected_candidates[index], "rb");
         if (file != NULL) {
             fclose(file);
-            return candidates[index];
+            return selected_candidates[index];
         }
     }
     return NULL;
+}
+
+static const nk_rune *ui_glyph_ranges(void)
+{
+    static const nk_rune ranges[] = {
+        0x0020, 0x00ff,
+        0x3000, 0x30ff,
+        0x31f0, 0x31ff,
+        0x4e00, 0x9faf,
+        0xff00, 0xffef,
+        0
+    };
+    return ranges;
 }
 
 static const nk_rune *title_glyph_ranges(void)
 {
     static const nk_rune ranges[] = {
         0x0020, 0x007e,
-        0x3002, 0x3002,
+        0x3000, 0x30ff,
         0x4e00, 0x4e00,
         0x4e0d, 0x4e0d,
         0x4ef6, 0x4ef6,
@@ -3630,6 +3877,7 @@ static const nk_rune *title_glyph_ranges(void)
         0x53ef, 0x53ef,
         0x5bfc, 0x5bfc,
         0x5de5, 0x5de5,
+        0x5e30, 0x5e30,
         0x5f52, 0x5f52,
         0x5f53, 0x5f53,
         0x603b, 0x603b,
@@ -3639,13 +3887,18 @@ static const nk_rune *title_glyph_ranges(void)
         0x6709, 0x6709,
         0x677e, 0x677f,
         0x6784, 0x6784,
+        0x69cb, 0x69cb,
         0x6a21, 0x6a21,
         0x6ca1, 0x6ca1,
         0x6c47, 0x6c47,
         0x7ed3, 0x7ed3,
+        0x80fd, 0x80fd,
         0x81f4, 0x81f4,
         0x8868, 0x8868,
+        0x8a08, 0x8a08,
         0x8bb8, 0x8bc1,
+        0x9020, 0x9020,
+        0x96c6, 0x96c6,
         0xff0c, 0xff0c,
         0
     };
@@ -3890,15 +4143,16 @@ int main(int argc, char **argv)
     app.running = 1;
     app.sources_expanded = 1;
     xls_license_manager_init(&app.license);
-    app_set_status(&app, "可拖入或打开多个 Excel 工作簿。");
 
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS) != 0) {
         fprintf(stderr, "SDL initialization failed: %s\n", SDL_GetError());
         return 1;
     }
+    app_load_language(&app);
+    app_set_status(&app, "可拖入或打开多个 Excel 工作簿。");
     (void)SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
     window = SDL_CreateWindow(
-        "表表归一",
+        app_tr("表表归一"),
         SDL_WINDOWPOS_CENTERED,
         SDL_WINDOWPOS_CENTERED,
         1280,
@@ -3910,6 +4164,7 @@ int main(int argc, char **argv)
         SDL_Quit();
         return 1;
     }
+    app.window = window;
     SDL_SetWindowMinimumSize(window, 980, 600);
     SDL_EventState(SDL_DROPFILE, SDL_ENABLE);
 #if SDL_VERSION_ATLEAST(2, 0, 5)
@@ -3942,7 +4197,7 @@ int main(int argc, char **argv)
     if (font_path != NULL) {
         struct nk_font_config body_config = nk_font_config(12.0f);
         struct nk_font_config title_config = nk_font_config(20.0f);
-        body_config.range = nk_font_chinese_glyph_ranges();
+        body_config.range = ui_glyph_ranges();
         body_config.oversample_h = 1;
         body_config.oversample_v = 1;
         body_config.pixel_snap = 1;

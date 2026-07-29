@@ -28,6 +28,29 @@ endif()
 
 add_test(NAME xlsone_core_tests COMMAND xlsone_core_tests)
 
+add_executable(xlsone_i18n_tests
+    test_i18n.c
+)
+target_link_libraries(xlsone_i18n_tests PRIVATE xlsone_i18n)
+if(MSVC)
+    target_compile_options(xlsone_i18n_tests PRIVATE /W4)
+    if(XLSONE_C_WARNINGS_AS_ERRORS)
+        target_compile_options(xlsone_i18n_tests PRIVATE /WX)
+    endif()
+else()
+    target_compile_options(xlsone_i18n_tests PRIVATE
+        -Wall
+        -Wextra
+        -Wpedantic
+        -Wconversion
+        -Wshadow
+    )
+    if(XLSONE_C_WARNINGS_AS_ERRORS)
+        target_compile_options(xlsone_i18n_tests PRIVATE -Werror)
+    endif()
+endif()
+add_test(NAME xlsone_i18n_tests COMMAND xlsone_i18n_tests)
+
 if(TARGET xlsone_cjson
     AND TARGET xlsone_monocypher
     AND XLSONE_LICENSE_PUBLIC_KEY)

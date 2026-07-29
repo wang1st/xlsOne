@@ -88,6 +88,7 @@ if(TARGET SDL2::SDL2
         xlsone_app
         PRIVATE
             xlsone_core
+            xlsone_i18n
             xlsone_cjson
             xlsone_monocypher
     )

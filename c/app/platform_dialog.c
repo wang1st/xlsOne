@@ -3,6 +3,7 @@
 #endif
 
 #include "platform_dialog.h"
+#include "i18n.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,6 +12,28 @@
 #if defined(_WIN32)
 #include <windows.h>
 #include <commdlg.h>
+
+static wchar_t *wide_from_utf8(const char *utf8)
+{
+    int size = MultiByteToWideChar(
+        CP_UTF8, MB_ERR_INVALID_CHARS, utf8, -1, NULL, 0
+    );
+    wchar_t *result;
+    if (size <= 0) {
+        return NULL;
+    }
+    result = (wchar_t *)malloc((size_t)size * sizeof(*result));
+    if (result == NULL) {
+        return NULL;
+    }
+    if (MultiByteToWideChar(
+        CP_UTF8, MB_ERR_INVALID_CHARS, utf8, -1, result, size
+    ) <= 0) {
+        free(result);
+        return NULL;
+    }
+    return result;
+}
 
 static char *utf8_from_wide(const wchar_t *wide)
 {
@@ -54,6 +77,9 @@ int xls_platform_open_files(char ***paths, size_t *path_count)
     OPENFILENAMEW dialog;
     wchar_t *cursor;
     wchar_t *directory;
+    wchar_t *title = wide_from_utf8(
+        xls_i18n_translate("选择 Excel 工作簿")
+    );
     *paths = NULL;
     *path_count = 0;
     memset(buffer, 0, sizeof(buffer));
@@ -61,13 +87,16 @@ int xls_platform_open_files(char ***paths, size_t *path_count)
     dialog.lStructSize = sizeof(dialog);
     dialog.lpstrFile = buffer;
     dialog.nMaxFile = (DWORD)(sizeof(buffer) / sizeof(buffer[0]));
+    dialog.lpstrTitle = title;
     dialog.lpstrFilter = L"Excel 工作簿 (*.xlsx;*.xls)\0*.xlsx;*.xls\0"
         L"所有文件 (*.*)\0*.*\0";
     dialog.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST
         | OFN_ALLOWMULTISELECT | OFN_HIDEREADONLY;
     if (!GetOpenFileNameW(&dialog)) {
+        free(title);
         return 0;
     }
+    free(title);
     directory = buffer;
     cursor = directory + wcslen(directory) + 1;
     if (*cursor == L'\0') {
@@ -109,20 +138,40 @@ int xls_platform_open_files(char ***paths, size_t *path_count)
 
 int xls_platform_save_file(char **path)
 {
-    wchar_t buffer[32768] = L"xlsOne-汇总.xlsx";
+    wchar_t buffer[32768];
     OPENFILENAMEW dialog;
+    wchar_t *title = wide_from_utf8(
+        xls_i18n_translate("导出汇总工作簿")
+    );
+    wchar_t *default_name = wide_from_utf8(
+        xls_i18n_translate("xlsOne-汇总.xlsx")
+    );
     *path = NULL;
+    memset(buffer, 0, sizeof(buffer));
+    if (default_name != NULL) {
+        (void)wcsncpy_s(
+            buffer,
+            sizeof(buffer) / sizeof(buffer[0]),
+            default_name,
+            _TRUNCATE
+        );
+    }
     memset(&dialog, 0, sizeof(dialog));
     dialog.lStructSize = sizeof(dialog);
     dialog.lpstrFile = buffer;
     dialog.nMaxFile = (DWORD)(sizeof(buffer) / sizeof(buffer[0]));
+    dialog.lpstrTitle = title;
     dialog.lpstrFilter = L"Excel 工作簿 (*.xlsx)\0*.xlsx\0"
         L"CSV 文件 (*.csv)\0*.csv\0";
     dialog.lpstrDefExt = L"xlsx";
     dialog.Flags = OFN_EXPLORER | OFN_OVERWRITEPROMPT;
     if (!GetSaveFileNameW(&dialog)) {
+        free(title);
+        free(default_name);
         return 0;
     }
+    free(title);
+    free(default_name);
     *path = utf8_from_wide(buffer);
     return *path != NULL;
 }
@@ -209,25 +258,37 @@ static int split_paths(char *output, char ***paths, size_t *path_count)
 int xls_platform_open_files(char ***paths, size_t *path_count)
 {
     char *output;
+    char command[2048];
 #if defined(__APPLE__)
-    output = read_command_output(
+    if (snprintf(
+        command,
+        sizeof(command),
         "osascript "
-        "-e 'set picked to choose file with prompt \"选择 Excel 工作簿\" "
+        "-e 'set picked to choose file with prompt \"%s\" "
         "of type {\"org.openxmlformats.spreadsheetml.sheet\", "
         "\"com.microsoft.excel.xls\"} with multiple selections allowed' "
         "-e 'set output to \"\"' "
         "-e 'repeat with itemPath in picked' "
         "-e 'set output to output & POSIX path of itemPath & linefeed' "
         "-e 'end repeat' "
-        "-e 'return output'"
-    );
+        "-e 'return output'",
+        xls_i18n_translate("选择 Excel 工作簿")
+    ) < 0) {
+        return 0;
+    }
 #else
-    output = read_command_output(
+    if (snprintf(
+        command,
+        sizeof(command),
         "zenity --file-selection --multiple --separator='\\n' "
-        "--title='选择 Excel 工作簿' "
-        "--file-filter='Excel 工作簿 | *.xlsx *.xls' 2>/dev/null"
-    );
+        "--title='%s' "
+        "--file-filter='Excel | *.xlsx *.xls' 2>/dev/null",
+        xls_i18n_translate("选择 Excel 工作簿")
+    ) < 0) {
+        return 0;
+    }
 #endif
+    output = read_command_output(command);
     if (output == NULL) {
         *paths = NULL;
         *path_count = 0;
@@ -242,20 +303,34 @@ int xls_platform_open_files(char ***paths, size_t *path_count)
 
 int xls_platform_save_file(char **path)
 {
+    char command[2048];
 #if defined(__APPLE__)
-    *path = read_command_output(
+    if (snprintf(
+        command,
+        sizeof(command),
         "osascript "
-        "-e 'set targetFile to choose file name with prompt \"导出汇总工作簿\" "
-        "default name \"xlsOne-汇总.xlsx\"' "
-        "-e 'return POSIX path of targetFile'"
-    );
+        "-e 'set targetFile to choose file name with prompt \"%s\" "
+        "default name \"%s\"' "
+        "-e 'return POSIX path of targetFile'",
+        xls_i18n_translate("导出汇总工作簿"),
+        xls_i18n_translate("xlsOne-汇总.xlsx")
+    ) < 0) {
+        return 0;
+    }
 #else
-    *path = read_command_output(
+    if (snprintf(
+        command,
+        sizeof(command),
         "zenity --file-selection --save --confirm-overwrite "
-        "--filename='xlsOne-汇总.xlsx' "
-        "--title='导出汇总工作簿' 2>/dev/null"
-    );
+        "--filename='%s' "
+        "--title='%s' 2>/dev/null",
+        xls_i18n_translate("xlsOne-汇总.xlsx"),
+        xls_i18n_translate("导出汇总工作簿")
+    ) < 0) {
+        return 0;
+    }
 #endif
+    *path = read_command_output(command);
     return *path != NULL && (*path)[0] != '\0';
 }
 

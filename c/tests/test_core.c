@@ -214,6 +214,115 @@ static void test_zero_and_blank_sources(void)
     }
 }
 
+static void test_multilingual_neighbor_semantics(void)
+{
+    static const struct {
+        const char *sheet_name;
+        const char *metric_label;
+        const char *code_label;
+    } cases[] = {
+        {"日本語", "売上高", "売上番号"},
+        {"繁體中文", "營業總額", "客戶編號"},
+        {"English", "Total amount", "Customer ID"}
+    };
+    size_t case_index;
+    for (case_index = 0u;
+         case_index < sizeof(cases) / sizeof(cases[0]);
+         ++case_index) {
+        xls_workbook workbooks[3];
+        xls_merged_sheet result;
+        xls_error error;
+        const double amount = 1200.0;
+        const double codes[] = {100001.0, 100002.0, 100003.0};
+        size_t workbook_index;
+        memset(workbooks, 0, sizeof(workbooks));
+        memset(&result, 0, sizeof(result));
+        for (workbook_index = 0u; workbook_index < 3u; ++workbook_index) {
+            CHECK(make_workbook(
+                &workbooks[workbook_index],
+                workbook_index == 0u
+                    ? "a.xlsx"
+                    : workbook_index == 1u ? "b.xlsx" : "c.xlsx",
+                cases[case_index].sheet_name,
+                3u,
+                2u
+            ));
+            set_cell(
+                &workbooks[workbook_index],
+                0u,
+                0u,
+                "Field",
+                NULL,
+                NULL
+            );
+            set_cell(
+                &workbooks[workbook_index],
+                0u,
+                1u,
+                "Value",
+                NULL,
+                NULL
+            );
+            set_cell(
+                &workbooks[workbook_index],
+                1u,
+                0u,
+                cases[case_index].metric_label,
+                NULL,
+                NULL
+            );
+            set_cell(
+                &workbooks[workbook_index],
+                1u,
+                1u,
+                "1200",
+                &amount,
+                "#,##0"
+            );
+            set_cell(
+                &workbooks[workbook_index],
+                2u,
+                0u,
+                cases[case_index].code_label,
+                NULL,
+                NULL
+            );
+            set_cell(
+                &workbooks[workbook_index],
+                2u,
+                1u,
+                workbook_index == 0u
+                    ? "100001"
+                    : workbook_index == 1u ? "100002" : "100003",
+                &codes[workbook_index],
+                "0"
+            );
+        }
+        CHECK(xls_merge_sheet(
+            workbooks,
+            3u,
+            cases[case_index].sheet_name,
+            &result,
+            &error
+        ));
+        if (result.cells != NULL) {
+            const xls_merged_cell *metric =
+                xls_merged_sheet_cell(&result, 1u, 1u);
+            const xls_merged_cell *code =
+                xls_merged_sheet_cell(&result, 2u, 1u);
+            CHECK(metric != NULL && metric->kind == XLS_CELL_SUM);
+            if (metric != NULL) {
+                check_close(metric->sum, 3600.0);
+            }
+            CHECK(code != NULL && code->kind == XLS_CELL_LABEL);
+        }
+        xls_merged_sheet_free(&result);
+        for (workbook_index = 0u; workbook_index < 3u; ++workbook_index) {
+            xls_workbook_free(&workbooks[workbook_index]);
+        }
+    }
+}
+
 static void test_source_analysis(void)
 {
     xls_source_entry sources[7];
@@ -521,6 +630,7 @@ int main(void)
     test_parse_numbers();
     test_merge_amounts_and_codes();
     test_zero_and_blank_sources();
+    test_multilingual_neighbor_semantics();
     test_source_analysis();
     test_parse_real_xlsx();
     test_parse_generated_xls_when_present();

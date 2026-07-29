@@ -3,6 +3,7 @@
 #endif
 
 #include "platform_dialog.h"
+#include "i18n.h"
 
 #include <errno.h>
 #include <stdio.h>
@@ -531,25 +532,44 @@ static int capture_curl(
 int xls_platform_open_license_file(char **path)
 {
 #if defined(_WIN32)
-    return windows_choose_file(
+    wchar_t *title = wide_from_utf8(
+        xls_i18n_translate("导入授权文件")
+    );
+    int result = windows_choose_file(
         path,
-        L"导入授权文件",
+        title,
         L"授权文件 (*.license;*.txt)\0*.license;*.txt\0"
         L"所有文件 (*.*)\0*.*\0"
     );
+    free(title);
+    return result;
 #elif defined(__APPLE__)
-    *path = read_command_output_service(
+    char command[2048];
+    if (snprintf(
+        command,
+        sizeof(command),
         "osascript "
-        "-e 'set picked to choose file with prompt \"导入授权文件\" "
+        "-e 'set picked to choose file with prompt \"%s\" "
         "of type {\"public.data\", \"public.plain-text\"}' "
-        "-e 'return POSIX path of picked'"
-    );
+        "-e 'return POSIX path of picked'",
+        xls_i18n_translate("导入授权文件")
+    ) < 0) {
+        return 0;
+    }
+    *path = read_command_output_service(command);
     return *path != NULL && (*path)[0] != '\0';
 #else
-    *path = read_command_output_service(
-        "zenity --file-selection --title='导入授权文件' "
-        "--file-filter='授权文件 | *.license *.txt' 2>/dev/null"
-    );
+    char command[2048];
+    if (snprintf(
+        command,
+        sizeof(command),
+        "zenity --file-selection --title='%s' "
+        "--file-filter='License | *.license *.txt' 2>/dev/null",
+        xls_i18n_translate("导入授权文件")
+    ) < 0) {
+        return 0;
+    }
+    *path = read_command_output_service(command);
     return *path != NULL && (*path)[0] != '\0';
 #endif
 }
@@ -557,27 +577,52 @@ int xls_platform_open_license_file(char **path)
 int xls_platform_save_rules_file(char **path)
 {
 #if defined(_WIN32)
-    return windows_save_file(
+    wchar_t *title = wide_from_utf8(
+        xls_i18n_translate("保存当前修正规则")
+    );
+    wchar_t *default_name = wide_from_utf8(
+        xls_i18n_translate("xlsOne-修正规则.json")
+    );
+    int result = windows_save_file(
         path,
-        L"保存当前修正规则",
-        L"xlsOne-修正规则.json",
+        title,
+        default_name == NULL ? L"xlsOne-rules.json" : default_name,
         L"JSON 文件 (*.json)\0*.json\0所有文件 (*.*)\0*.*\0",
         L"json"
     );
+    free(title);
+    free(default_name);
+    return result;
 #elif defined(__APPLE__)
-    *path = read_command_output_service(
+    char command[2048];
+    if (snprintf(
+        command,
+        sizeof(command),
         "osascript "
-        "-e 'set targetFile to choose file name with prompt \"保存当前修正规则\" "
-        "default name \"xlsOne-修正规则.json\"' "
-        "-e 'return POSIX path of targetFile'"
-    );
+        "-e 'set targetFile to choose file name with prompt \"%s\" "
+        "default name \"%s\"' "
+        "-e 'return POSIX path of targetFile'",
+        xls_i18n_translate("保存当前修正规则"),
+        xls_i18n_translate("xlsOne-修正规则.json")
+    ) < 0) {
+        return 0;
+    }
+    *path = read_command_output_service(command);
     return *path != NULL && (*path)[0] != '\0';
 #else
-    *path = read_command_output_service(
+    char command[2048];
+    if (snprintf(
+        command,
+        sizeof(command),
         "zenity --file-selection --save --confirm-overwrite "
-        "--filename='xlsOne-修正规则.json' "
-        "--title='保存当前修正规则' 2>/dev/null"
-    );
+        "--filename='%s' "
+        "--title='%s' 2>/dev/null",
+        xls_i18n_translate("xlsOne-修正规则.json"),
+        xls_i18n_translate("保存当前修正规则")
+    ) < 0) {
+        return 0;
+    }
+    *path = read_command_output_service(command);
     return *path != NULL && (*path)[0] != '\0';
 #endif
 }
