@@ -64,6 +64,12 @@ if(XLSONE_C_BUILD_APP)
             GIT_REPOSITORY https://github.com/libsdl-org/SDL.git
             GIT_TAG 5d249570393f7a37e037abf22cd6012a4cc56a71
             GIT_SHALLOW FALSE
+            PATCH_COMMAND
+                "${CMAKE_COMMAND}"
+                "-DPATCH_WORKING_DIRECTORY=<SOURCE_DIR>"
+                "-DPATCH_FILE=${CMAKE_CURRENT_SOURCE_DIR}/patches/sdl2-drop-hover.patch"
+                -P
+                "${CMAKE_CURRENT_SOURCE_DIR}/cmake/apply_git_patch.cmake"
         )
         FetchContent_MakeAvailable(sdl2)
         set(XLSONE_SDL_LICENSE "${sdl2_SOURCE_DIR}/LICENSE.txt")

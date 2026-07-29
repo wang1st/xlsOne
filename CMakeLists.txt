@@ -29,6 +29,8 @@ set(CPACK_PACKAGE_INSTALL_DIRECTORY "xlsOne")
 set(CPACK_PACKAGE_EXECUTABLES "xlsOne" "xlsOne")
 if(APPLE)
     set(CPACK_GENERATOR "DragNDrop")
+    set(CPACK_DMG_DISABLE_APPLICATIONS_SYMLINK OFF)
+    set(CPACK_DMG_VOLUME_NAME "xlsOne ${PROJECT_VERSION}")
     set(CPACK_PACKAGE_FILE_NAME
         "xlsOne-${PROJECT_VERSION}-macos-universal"
     )
@@ -84,6 +86,12 @@ else()
     set(CPACK_DEBIAN_FILE_NAME "${CPACK_PACKAGE_FILE_NAME}.deb")
     set(CPACK_DEBIAN_PACKAGE_SECTION "office")
     set(CPACK_DEBIAN_PACKAGE_PRIORITY "optional")
+    set(
+        CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA
+        "${CMAKE_CURRENT_SOURCE_DIR}/c/packaging/linux/postinst"
+        "${CMAKE_CURRENT_SOURCE_DIR}/c/packaging/linux/prerm"
+    )
+    set(CPACK_DEBIAN_PACKAGE_CONTROL_STRICT_PERMISSION TRUE)
     if(XLSONE_C_FETCH_SDL2)
         set(CPACK_DEBIAN_PACKAGE_DEPENDS
             "curl, libexpat1, zlib1g, zenity"

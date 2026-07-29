@@ -1,0 +1,54 @@
+#!/bin/sh
+set -eu
+
+desktop_entry="/usr/share/applications/xlsone.desktop"
+
+remove_package_shortcut() {
+    shortcut="$1"
+    if [ -L "${shortcut}" ] \
+        && [ "$(readlink "${shortcut}")" = "${desktop_entry}" ]; then
+        rm -f -- "${shortcut}"
+    fi
+}
+
+if [ "${1:-remove}" = "remove" ] \
+    || [ "${1:-remove}" = "purge" ]; then
+    while IFS=: read -r _ _ account_uid _ _ account_home _; do
+        case "${account_uid}" in
+            ''|*[!0-9]*) continue ;;
+        esac
+        if [ "${account_uid}" -lt 1000 ] \
+            || [ "${account_uid}" -ge 65534 ]; then
+            continue
+        fi
+        remove_package_shortcut \
+            "${account_home}/Desktop/xlsOne.desktop"
+        if [ -f "${account_home}/.config/user-dirs.dirs" ]; then
+            configured="$(
+                sed -n 's/^XDG_DESKTOP_DIR="\(.*\)"$/\1/p' \
+                    "${account_home}/.config/user-dirs.dirs" \
+                    | head -n 1
+            )"
+            case "/${configured}/" in
+                */../*) configured="" ;;
+            esac
+            case "${configured}" in
+                '$HOME')
+                    remove_package_shortcut \
+                        "${account_home}/xlsOne.desktop"
+                    ;;
+                '$HOME/'*)
+                    remove_package_shortcut \
+                        "${account_home}/${configured#\$HOME/}/xlsOne.desktop"
+                    ;;
+                "${account_home}"/*)
+                    remove_package_shortcut \
+                        "${configured}/xlsOne.desktop"
+                    ;;
+            esac
+        fi
+    done < /etc/passwd
+    remove_package_shortcut /etc/skel/Desktop/xlsOne.desktop
+fi
+
+exit 0

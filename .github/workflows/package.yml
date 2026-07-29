@@ -221,6 +221,20 @@ jobs:
           Remove-Item Env:XLSONE_SCREENSHOT_DIALOG
           Remove-Item Env:XLSONE_UI_LANGUAGE
 
+          $env:XLSONE_SCREENSHOT_PATH = Join-Path $env:GITHUB_WORKSPACE `
+            ".build\windows-language-roundtrip.bmp"
+          $env:XLSONE_UI_LANGUAGE = "ja"
+          $env:XLSONE_SCREENSHOT_LANGUAGE_SEQUENCE = "en,zh-Hans"
+          $env:XLSONE_SCREENSHOT_MENU = "language"
+          $process = Start-Process -FilePath $exe.FullName -Wait -PassThru
+          if ($process.ExitCode -ne 0 -or
+              -not (Test-Path $env:XLSONE_SCREENSHOT_PATH)) {
+            throw "Portable xlsOne language round-trip smoke test failed"
+          }
+          Remove-Item Env:XLSONE_SCREENSHOT_LANGUAGE_SEQUENCE
+          Remove-Item Env:XLSONE_SCREENSHOT_MENU
+          Remove-Item Env:XLSONE_UI_LANGUAGE
+
           $admin = Join-Path $env:GITHUB_WORKSPACE ".build\msi-admin"
           New-Item -ItemType Directory -Force $admin | Out-Null
           $arguments = @(
@@ -255,6 +269,7 @@ jobs:
           }
           $wixText = Get-Content (Join-Path $darkOutput "product.wxs") -Raw
           foreach ($marker in @(
+            "CommonDesktopFolder",
             "XlsOneDesktopShortcutLink",
             "WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT",
             "LaunchXlsOne"
@@ -262,6 +277,30 @@ jobs:
             if ($wixText -notmatch [regex]::Escape($marker)) {
               throw "MSI is missing installer behavior: $marker"
             }
+          }
+
+          $installRoot = Join-Path $env:GITHUB_WORKSPACE ".build\msi-installed"
+          $commonDesktop = [Environment]::GetFolderPath("CommonDesktopDirectory")
+          $desktopShortcut = Join-Path $commonDesktop "xlsOne.lnk"
+          $installArguments = @(
+            "/i", "`"$($msi.FullName)`"",
+            "/qn", "/norestart", "INSTALL_ROOT=`"$installRoot`""
+          )
+          try {
+            $installResult = Start-Process msiexec.exe `
+              -ArgumentList $installArguments -Wait -PassThru
+            if ($installResult.ExitCode -ne 0) {
+              throw "MSI installation failed: $($installResult.ExitCode)"
+            }
+            if (-not (Test-Path $desktopShortcut)) {
+              throw "MSI did not create the common desktop shortcut"
+            }
+          } finally {
+            $uninstallArguments = @(
+              "/x", "`"$($msi.FullName)`"", "/qn", "/norestart"
+            )
+            Start-Process msiexec.exe -ArgumentList $uninstallArguments `
+              -Wait | Out-Null
           }
 
           $lines = @($msi, $zip) | Sort-Object Name | ForEach-Object {
@@ -338,10 +377,23 @@ jobs:
             -mountpoint "$mount_dir" >/dev/null
           app="$mount_dir/xlsOne.app"
           binary="$app/Contents/MacOS/xlsOne"
+          test -L "$mount_dir/Applications"
+          test "$(readlink "$mount_dir/Applications")" = "/Applications"
           test -x "$binary"
           archs="$(lipo -archs "$binary")"
           [[ " $archs " == *" arm64 "* && " $archs " == *" x86_64 "* ]]
           codesign --verify --deep --strict "$app"
+          test "$(plutil -extract CFBundleIdentifier raw \
+            "$app/Contents/Info.plist")" = "cn.z-pulse.xlsone"
+          test "$(plutil -extract CFBundleDisplayName raw \
+            "$app/Contents/Info.plist")" = "xlsOne"
+          test "$(plutil -extract CFBundlePackageType raw \
+            "$app/Contents/Info.plist")" = "APPL"
+          test "$(plutil -extract LSUIElement raw \
+            "$app/Contents/Info.plist")" = "false"
+          test "$(plutil -extract LSBackgroundOnly raw \
+            "$app/Contents/Info.plist")" = "false"
+          test -s "$app/Contents/Resources/xlsOne.icns"
           ! otool -L "$binary" | grep -Eiq '(^|[/[:space:]])Qt[0-9A-Za-z]'
           test -f "$app/Contents/Resources/licenses/THIRD_PARTY_NOTICES.md"
           grep -q '最终用户许可协议' \
@@ -371,6 +423,25 @@ jobs:
             XLSONE_UI_LANGUAGE=ja \
             "$binary"
           test -s .build/macos-license-smoke.bmp
+          XLSONE_SCREENSHOT_PATH="${GITHUB_WORKSPACE}/.build/macos-language-roundtrip.bmp" \
+            XLSONE_UI_LANGUAGE=ja \
+            XLSONE_SCREENSHOT_LANGUAGE_SEQUENCE=en,zh-Hans \
+            XLSONE_SCREENSHOT_MENU=language \
+            "$binary"
+          test -s .build/macos-language-roundtrip.bmp
+
+          installed_app="${HOME}/Applications/xlsOne.app"
+          desktop_shortcut="${HOME}/Desktop/xlsOne.app"
+          mkdir -p "${HOME}/Applications" "${HOME}/Desktop"
+          rm -rf -- "$installed_app"
+          rm -f -- "$desktop_shortcut"
+          ditto "$app" "$installed_app"
+          XLSONE_SCREENSHOT_PATH="${GITHUB_WORKSPACE}/.build/macos-installed-smoke.bmp" \
+            "$installed_app/Contents/MacOS/xlsOne"
+          test -L "$desktop_shortcut"
+          test "$(readlink "$desktop_shortcut")" = "$installed_app"
+          rm -f -- "$desktop_shortcut"
+          rm -rf -- "$installed_app"
           (cd .build && shasum -a 256 "$(basename "$dmg")") \
             > .build/SHA256SUMS-macos.txt
 
@@ -479,7 +550,12 @@ jobs:
           dpkg-deb -x "$deb" "$unpacked"
           binary="$unpacked/usr/bin/xlsOne"
           test -x "$binary"
-          test -f "$unpacked/usr/share/applications/xlsone.desktop"
+          test -x "$unpacked/usr/share/applications/xlsone.desktop"
+          control_dir="$(mktemp -d)"
+          dpkg-deb -e "$deb" "$control_dir"
+          test -x "$control_dir/postinst"
+          test -x "$control_dir/prerm"
+          grep -q 'Desktop/xlsOne.desktop' "$control_dir/postinst"
           grep -q '最终用户许可协议' \
             "$unpacked/usr/licenses/EULA_zh_CN.txt"
           ! find "$unpacked" -type f -iname '*qt*' -print -quit | grep -q .
@@ -510,6 +586,12 @@ jobs:
             XLSONE_UI_LANGUAGE=ja \
             xvfb-run -a "$binary"
           test -s ".build/linux-${PACKAGE_ARCH}-license-smoke.bmp"
+          XLSONE_SCREENSHOT_PATH="${GITHUB_WORKSPACE}/.build/linux-${PACKAGE_ARCH}-language-roundtrip.bmp" \
+            XLSONE_UI_LANGUAGE=ja \
+            XLSONE_SCREENSHOT_LANGUAGE_SEQUENCE=en,zh-Hans \
+            XLSONE_SCREENSHOT_MENU=language \
+            xvfb-run -a "$binary"
+          test -s ".build/linux-${PACKAGE_ARCH}-language-roundtrip.bmp"
           (cd .build && sha256sum "$(basename "$deb")") \
             > ".build/SHA256SUMS-linux-${PACKAGE_ARCH}.txt"
 

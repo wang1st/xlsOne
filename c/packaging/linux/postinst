@@ -1,0 +1,92 @@
+#!/bin/sh
+set -eu
+
+desktop_entry="/usr/share/applications/xlsone.desktop"
+
+desktop_directory_for_user() {
+    user_home="$1"
+    user_config="${user_home}/.config/user-dirs.dirs"
+    configured=""
+    if [ -f "${user_config}" ]; then
+        configured="$(
+            sed -n 's/^XDG_DESKTOP_DIR="\(.*\)"$/\1/p' \
+                "${user_config}" | head -n 1
+        )"
+    fi
+    case "/${configured}/" in
+        */../*) configured="" ;;
+    esac
+    case "${configured}" in
+        '$HOME')
+            printf '%s\n' "${user_home}"
+            ;;
+        '$HOME/'*)
+            printf '%s/%s\n' \
+                "${user_home}" "${configured#\$HOME/}"
+            ;;
+        "${user_home}"/*)
+            printf '%s\n' "${configured}"
+            ;;
+        *)
+            printf '%s/Desktop\n' "${user_home}"
+            ;;
+    esac
+}
+
+install_shortcut_for_user() {
+    account_name="$1"
+    account_group="$2"
+    account_home="$3"
+    desktop_directory="$(
+        desktop_directory_for_user "${account_home}"
+    )"
+    shortcut="${desktop_directory}/xlsOne.desktop"
+    case "${desktop_directory}" in
+        "${account_home}"|"${account_home}"/*) ;;
+        *) return 0 ;;
+    esac
+    install -d -m 0755 -o "${account_name}" \
+        -g "${account_group}" "${desktop_directory}"
+    if [ -e "${shortcut}" ] && [ ! -L "${shortcut}" ]; then
+        return 0
+    fi
+    ln -sfn "${desktop_entry}" "${shortcut}"
+    chown -h "${account_name}:${account_group}" "${shortcut}"
+}
+
+if [ "${1:-configure}" = "configure" ] && [ -f "${desktop_entry}" ]; then
+    while IFS=: read -r account_name _ account_uid account_gid _ \
+        account_home account_shell; do
+        case "${account_uid}" in
+            ''|*[!0-9]*) continue ;;
+        esac
+        if [ "${account_uid}" -lt 1000 ] \
+            || [ "${account_uid}" -ge 65534 ] \
+            || [ ! -d "${account_home}" ]; then
+            continue
+        fi
+        case "${account_shell}" in
+            */false|*/nologin) continue ;;
+        esac
+        account_group="$(
+            getent group "${account_gid}" | cut -d: -f1
+        )"
+        if [ -n "${account_group}" ]; then
+            install_shortcut_for_user \
+                "${account_name}" \
+                "${account_group}" \
+                "${account_home}"
+        fi
+    done < /etc/passwd
+
+    if [ -d /etc/skel ]; then
+        install -d -m 0755 /etc/skel/Desktop
+        if [ ! -e /etc/skel/Desktop/xlsOne.desktop ] \
+            || [ -L /etc/skel/Desktop/xlsOne.desktop ]; then
+            ln -sfn "${desktop_entry}" \
+                /etc/skel/Desktop/xlsOne.desktop
+        fi
+    fi
+fi
+
+exit 0

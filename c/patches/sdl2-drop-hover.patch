@@ -1,0 +1,143 @@
+diff --git a/src/events/SDL_dropevents.c b/src/events/SDL_dropevents.c
+index a7a9a981f..d75642909 100644
+--- a/src/events/SDL_dropevents.c
++++ b/src/events/SDL_dropevents.c
+@@ -30,0 +31,24 @@
++static SDL_bool app_is_dropping = SDL_FALSE;
++
++int SDL_SendDropBegin(SDL_Window *window)
++{
++    SDL_bool *is_dropping = window ? &window->is_dropping : &app_is_dropping;
++    int posted = 1;
++
++    if (*is_dropping) {
++        return 1;
++    }
++
++    if (SDL_GetEventState(SDL_DROPBEGIN) == SDL_ENABLE) {
++        SDL_Event event;
++        SDL_zero(event);
++        event.type = SDL_DROPBEGIN;
++        event.drop.windowID = window ? window->id : 0;
++        posted = (SDL_PushEvent(&event) > 0);
++    }
++    if (posted) {
++        *is_dropping = SDL_TRUE;
++    }
++    return posted;
++}
++
+@@ -33 +57 @@ static int SDL_SendDrop(SDL_Window *window, const SDL_EventType evtype, const ch
+-    static SDL_bool app_is_dropping = SDL_FALSE;
++    SDL_bool *is_dropping = window ? &window->is_dropping : &app_is_dropping;
+@@ -35,0 +60,4 @@ static int SDL_SendDrop(SDL_Window *window, const SDL_EventType evtype, const ch
++    if (evtype == SDL_DROPCOMPLETE && !*is_dropping) {
++        return 0;
++    }
++
+@@ -38 +65,0 @@ static int SDL_SendDrop(SDL_Window *window, const SDL_EventType evtype, const ch
+-        const SDL_bool need_begin = window ? !window->is_dropping : !app_is_dropping;
+@@ -41,17 +68,4 @@ static int SDL_SendDrop(SDL_Window *window, const SDL_EventType evtype, const ch
+-        if (need_begin) {
+-            SDL_zero(event);
+-            event.type = SDL_DROPBEGIN;
+-
+-            if (window) {
+-                event.drop.windowID = window->id;
+-            }
+-
+-            posted = (SDL_PushEvent(&event) > 0);
+-            if (!posted) {
+-                return 0;
+-            }
+-            if (window) {
+-                window->is_dropping = SDL_TRUE;
+-            } else {
+-                app_is_dropping = SDL_TRUE;
+-            }
++        if (evtype != SDL_DROPCOMPLETE
++            && !*is_dropping
++            && !SDL_SendDropBegin(window)) {
++            return 0;
+@@ -66,6 +80,2 @@ static int SDL_SendDrop(SDL_Window *window, const SDL_EventType evtype, const ch
+-        if (posted && (evtype == SDL_DROPCOMPLETE)) {
+-            if (window) {
+-                window->is_dropping = SDL_FALSE;
+-            } else {
+-                app_is_dropping = SDL_FALSE;
+-            }
++        if (evtype == SDL_DROPCOMPLETE) {
++            *is_dropping = SDL_FALSE;
+@@ -72,0 +83,2 @@ static int SDL_SendDrop(SDL_Window *window, const SDL_EventType evtype, const ch
++    } else if (evtype == SDL_DROPCOMPLETE) {
++        *is_dropping = SDL_FALSE;
+diff --git a/src/events/SDL_dropevents_c.h b/src/events/SDL_dropevents_c.h
+index 5bdd32fd7..d097d0bad 100644
+--- a/src/events/SDL_dropevents_c.h
++++ b/src/events/SDL_dropevents_c.h
+@@ -25,0 +26 @@
++extern int SDL_SendDropBegin(SDL_Window *window);
+diff --git a/src/video/cocoa/SDL_cocoawindow.m b/src/video/cocoa/SDL_cocoawindow.m
+index 641df8129..a4084682e 100644
+--- a/src/video/cocoa/SDL_cocoawindow.m
++++ b/src/video/cocoa/SDL_cocoawindow.m
+@@ -86,0 +87 @@ - (NSDragOperation)draggingEntered:(id <NSDraggingInfo>)sender;
++- (void)draggingExited:(id <NSDraggingInfo>)sender;
+@@ -153 +154,10 @@ - (NSDragOperation)draggingEntered:(id <NSDraggingInfo>)sender
+-    if (([sender draggingSourceOperationMask] & NSDragOperationGeneric) == NSDragOperationGeneric) {
++    NSPasteboard *pasteboard = [sender draggingPasteboard];
++    NSArray *types = [NSArray arrayWithObject:NSFilenamesPboardType];
++    NSString *desiredType = [pasteboard availableTypeFromArray:types];
++    const BOOL supportsFiles = desiredType != nil;
++    const BOOL supportsGeneric =
++        ([sender draggingSourceOperationMask] & NSDragOperationGeneric)
++            == NSDragOperationGeneric;
++
++    if (supportsFiles && supportsGeneric) {
++        SDL_SendDropBegin([self findSDLWindow]);
+@@ -159,0 +170,6 @@ - (NSDragOperation)draggingEntered:(id <NSDraggingInfo>)sender
++- (void)draggingExited:(id <NSDraggingInfo>)sender
++{
++    (void)sender;
++    SDL_SendDropComplete([self findSDLWindow]);
++}
++
+diff --git a/src/video/wayland/SDL_waylandevents.c b/src/video/wayland/SDL_waylandevents.c
+index 496bb5e8f..6b465b299 100644
+--- a/src/video/wayland/SDL_waylandevents.c
++++ b/src/video/wayland/SDL_waylandevents.c
+@@ -1708,0 +1709,3 @@ static void data_device_handle_enter(void *data, struct wl_data_device *wl_data_
++        if (has_mime && data_device->dnd_window) {
++            SDL_SendDropBegin(data_device->dnd_window);
++        }
+@@ -1715,0 +1719,3 @@ static void data_device_handle_leave(void *data, struct wl_data_device *wl_data_
++    if (data_device->dnd_window) {
++        SDL_SendDropComplete(data_device->dnd_window);
++    }
+@@ -1908,0 +1915 @@ static void data_device_handle_drop(void *data, struct wl_data_device *wl_data_d
++        SDL_SendDropComplete(data_device->dnd_window);
+diff --git a/src/video/x11/SDL_x11events.c b/src/video/x11/SDL_x11events.c
+index 60c87a288..2c1fe83e3 100644
+--- a/src/video/x11/SDL_x11events.c
++++ b/src/video/x11/SDL_x11events.c
+@@ -1277,0 +1278,6 @@ static void X11_DispatchEvent(_THIS, XEvent *xevent)
++            if (data->xdnd_req != None) {
++                SDL_SendDropBegin(data->window);
++            }
++        } else if (xevent->xclient.message_type == videodata->XdndLeave) {
++            SDL_SendDropComplete(data->window);
++            data->xdnd_req = None;
+@@ -1315,0 +1322 @@ static void X11_DispatchEvent(_THIS, XEvent *xevent)
++                SDL_SendDropComplete(data->window);
+diff --git a/src/video/x11/SDL_x11video.c b/src/video/x11/SDL_x11video.c
+index b43da5116..b3727595b 100644
+--- a/src/video/x11/SDL_x11video.c
++++ b/src/video/x11/SDL_x11video.c
+@@ -448,0 +449 @@ int X11_VideoInit(_THIS)
++    GET_ATOM(XdndLeave);
+diff --git a/src/video/x11/SDL_x11video.h b/src/video/x11/SDL_x11video.h
+index 274233d4d..28ec6dffb 100644
+--- a/src/video/x11/SDL_x11video.h
++++ b/src/video/x11/SDL_x11video.h
+@@ -116,0 +117 @@ typedef struct SDL_VideoData
++    Atom XdndLeave;

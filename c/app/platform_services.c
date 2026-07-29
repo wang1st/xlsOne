@@ -23,6 +23,11 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#if defined(__APPLE__)
+#include <CoreServices/CoreServices.h>
+#include <mach-o/dyld.h>
+#include <pwd.h>
+#endif
 #endif
 
 #define XLSONE_HTTP_RESPONSE_LIMIT (1024u * 1024u)
@@ -664,6 +669,110 @@ int xls_platform_open_url(const char *url)
             && WIFEXITED(wait_status)
             && WEXITSTATUS(wait_status) == 0;
     }
+#endif
+}
+
+int xls_platform_ensure_application_shortcuts(void)
+{
+#if defined(__APPLE__)
+    uint32_t executable_capacity = 0u;
+    char *executable = NULL;
+    char *resolved = NULL;
+    char *bundle_suffix;
+    char *bundle_path = NULL;
+    const struct passwd *account;
+    char desktop_path[4096];
+    CFURLRef bundle_url = NULL;
+    int registered = 0;
+    int shortcut_ready = 0;
+    (void)_NSGetExecutablePath(NULL, &executable_capacity);
+    if (executable_capacity == 0u) {
+        return 0;
+    }
+    executable = (char *)malloc((size_t)executable_capacity);
+    if (executable == NULL
+        || _NSGetExecutablePath(
+            executable, &executable_capacity
+        ) != 0) {
+        free(executable);
+        return 0;
+    }
+    resolved = realpath(executable, NULL);
+    free(executable);
+    if (resolved == NULL) {
+        return 0;
+    }
+    bundle_suffix = strstr(resolved, ".app/Contents/MacOS/");
+    if (bundle_suffix != NULL) {
+        const size_t bundle_length =
+            (size_t)(bundle_suffix - resolved) + 4u;
+        bundle_path = (char *)malloc(bundle_length + 1u);
+        if (bundle_path != NULL) {
+            memcpy(bundle_path, resolved, bundle_length);
+            bundle_path[bundle_length] = '\0';
+        }
+    }
+    free(resolved);
+    if (bundle_path == NULL) {
+        return 0;
+    }
+    account = getpwuid(getuid());
+    if (account == NULL || account->pw_dir == NULL) {
+        free(bundle_path);
+        return 0;
+    }
+    if (strncmp(bundle_path, "/Applications/", 14u) != 0) {
+        char user_applications[4096];
+        const int user_applications_length = snprintf(
+            user_applications,
+            sizeof(user_applications),
+            "%s/Applications/",
+            account->pw_dir
+        );
+        if (user_applications_length <= 0
+            || (size_t)user_applications_length
+                >= sizeof(user_applications)
+            || strncmp(
+                bundle_path,
+                user_applications,
+                (size_t)user_applications_length
+            ) != 0) {
+            free(bundle_path);
+            return 1;
+        }
+    }
+    bundle_url = CFURLCreateFromFileSystemRepresentation(
+        kCFAllocatorDefault,
+        (const UInt8 *)bundle_path,
+        (CFIndex)strlen(bundle_path),
+        true
+    );
+    if (bundle_url != NULL) {
+        registered = LSRegisterURL(bundle_url, true) == noErr;
+        CFRelease(bundle_url);
+    }
+    {
+        const int desktop_path_length = snprintf(
+            desktop_path,
+            sizeof(desktop_path),
+            "%s/Desktop/xlsOne.app",
+            account->pw_dir
+        );
+        if (desktop_path_length > 0
+            && (size_t)desktop_path_length < sizeof(desktop_path)) {
+            struct stat existing;
+            if (lstat(desktop_path, &existing) == 0) {
+                shortcut_ready = 1;
+            } else if (errno == ENOENT
+                && symlink(bundle_path, desktop_path) == 0) {
+                shortcut_ready = 1;
+            }
+        }
+    }
+    free(bundle_path);
+    return registered && shortcut_ready;
+#else
+    return 1;
 #endif
 }
 

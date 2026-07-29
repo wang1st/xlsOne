@@ -45,13 +45,25 @@ static void test_catalog(void)
         xls_i18n_translate("许可证"), "ライセンス"
     ) == 0);
     CHECK(strcmp(
+        xls_i18n_translate("已接收，正在导入..."),
+        "受信しました。インポートしています..."
+    ) == 0);
+    CHECK(strcmp(
         xls_i18n_translate("可拖入或打开多个 Excel 工作簿。"),
         "複数の Excel ブックをドラッグするか、開いてください。"
     ) == 0);
     xls_i18n_set_language(XLS_UI_LANGUAGE_ENGLISH);
     CHECK(strcmp(xls_i18n_translate("文件"), "File") == 0);
+    CHECK(strcmp(
+        xls_i18n_translate("文件格式不受支持"),
+        "Unsupported file format"
+    ) == 0);
     xls_i18n_set_language(XLS_UI_LANGUAGE_ZH_HANT);
     CHECK(strcmp(xls_i18n_translate("文件"), "檔案") == 0);
+    CHECK(strcmp(
+        xls_i18n_translate("正在解析工作簿，请稍候"),
+        "正在解析活頁簿，請稍候"
+    ) == 0);
     xls_i18n_set_language(XLS_UI_LANGUAGE_ZH_HANS);
     CHECK(strcmp(xls_i18n_translate("文件"), "文件") == 0);
 }

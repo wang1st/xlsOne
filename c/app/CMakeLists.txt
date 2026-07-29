@@ -77,6 +77,7 @@ if(TARGET SDL2::SDL2
         license_manager.c
         main.c
         platform_dialog.c
+        platform_drop.c
         platform_services.c
     )
     target_include_directories(
@@ -156,12 +157,22 @@ if(TARGET SDL2::SDL2
             PRIVATE
                 advapi32
                 comdlg32
+                ole32
                 shell32
                 winhttp
         )
         set_target_properties(xlsone_app PROPERTIES WIN32_EXECUTABLE TRUE)
     endif()
     if(APPLE)
+        find_library(
+            XLSONE_CORESERVICES_FRAMEWORK
+            CoreServices
+            REQUIRED
+        )
+        target_link_libraries(
+            xlsone_app
+            PRIVATE "${XLSONE_CORESERVICES_FRAMEWORK}"
+        )
         set(XLSONE_MACOS_ICON
             "${CMAKE_CURRENT_SOURCE_DIR}/../../cpp/app/resources/xlsOne.icns"
         )
@@ -173,8 +184,10 @@ if(TARGET SDL2::SDL2
         set_target_properties(xlsone_app PROPERTIES
             MACOSX_BUNDLE TRUE
             MACOSX_BUNDLE_BUNDLE_NAME "xlsOne"
-            MACOSX_BUNDLE_GUI_IDENTIFIER "cn.z-pulse.xlsone.c"
+            MACOSX_BUNDLE_GUI_IDENTIFIER "cn.z-pulse.xlsone"
             MACOSX_BUNDLE_ICON_FILE "xlsOne.icns"
+            MACOSX_BUNDLE_INFO_PLIST
+                "${CMAKE_CURRENT_SOURCE_DIR}/../packaging/macos/Info.plist.in"
             MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION}"
             MACOSX_BUNDLE_BUNDLE_VERSION "${PROJECT_VERSION}"
         )
@@ -242,7 +255,7 @@ if(TARGET SDL2::SDL2
     endif()
     if(UNIX AND NOT APPLE)
         install(
-            FILES "${CMAKE_CURRENT_SOURCE_DIR}/../packaging/linux/xlsone.desktop"
+            PROGRAMS "${CMAKE_CURRENT_SOURCE_DIR}/../packaging/linux/xlsone.desktop"
             DESTINATION "${CMAKE_INSTALL_DATADIR}/applications"
         )
         install(
