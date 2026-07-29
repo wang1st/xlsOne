@@ -7,6 +7,8 @@ xlsOne 纯 C 版只使用允许商业分发的 C 语言组件。发布安装包�
 | --- | --- | --- |
 | SDL 2 | 桌面窗口、输入与渲染 | zlib License |
 | Nuklear 4.13.3 | 即时模式控件 | MIT License / Public Domain |
+| cJSON 1.7.18 | 授权响应与本地许可证解析 | MIT License |
+| Monocypher 4.0.2 | Ed25519 授权签名验证 | BSD-2-Clause / CC0-1.0 |
 | zlib | ZIP Deflate 解压与压缩 | zlib License |
 | Expat | OOXML 解析 | MIT License |
 
@@ -14,6 +16,8 @@ xlsOne 纯 C 版只使用允许商业分发的 C 语言组件。发布安装包�
 
 - SDL: <https://www.libsdl.org/license.php>
 - Nuklear: <https://github.com/Immediate-Mode-UI/Nuklear/blob/4.13.3/LICENSE>
+- cJSON: <https://github.com/DaveGamble/cJSON/blob/v1.7.18/LICENSE>
+- Monocypher: <https://monocypher.org/licence/>
 - zlib: <https://zlib.net/zlib_license.html>
 - Expat: <https://github.com/libexpat/libexpat/blob/master/COPYING>
 

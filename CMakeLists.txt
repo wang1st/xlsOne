@@ -56,11 +56,11 @@ else()
     set(CPACK_DEBIAN_PACKAGE_PRIORITY "optional")
     if(XLSONE_C_FETCH_SDL2)
         set(CPACK_DEBIAN_PACKAGE_DEPENDS
-            "libexpat1, zlib1g, zenity"
+            "curl, libexpat1, zlib1g, zenity"
         )
     else()
         set(CPACK_DEBIAN_PACKAGE_DEPENDS
-            "libsdl2-2.0-0, libexpat1, zlib1g, zenity"
+            "curl, libsdl2-2.0-0, libexpat1, zlib1g, zenity"
         )
     endif()
 endif()

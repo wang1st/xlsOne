@@ -24,6 +24,12 @@ option(XLSONE_C_BUILD_APP "Build the SDL desktop application" ON)
 option(XLSONE_C_BUILD_TESTS "Build the pure C tests" ON)
 option(XLSONE_C_WARNINGS_AS_ERRORS "Treat compiler warnings as errors" OFF)
 option(XLSONE_C_FETCH_SDL2 "Build a pinned static SDL2 from source" OFF)
+set(
+    XLSONE_LICENSE_PUBLIC_KEY
+    ""
+    CACHE STRING
+    "Ed25519 public key used to verify signed xlsOne licenses (64 hex chars)"
+)
 option(
     XLSONE_C_INSTALL_DEVELOPMENT
     "Install the pure C static library, headers, and developer documentation"
@@ -32,6 +38,19 @@ option(
 
 find_package(ZLIB REQUIRED)
 find_package(EXPAT REQUIRED)
+
+if(NOT XLSONE_LICENSE_PUBLIC_KEY
+    AND DEFINED ENV{XLSONE_LICENSE_PUBLIC_KEY})
+    set(XLSONE_LICENSE_PUBLIC_KEY "$ENV{XLSONE_LICENSE_PUBLIC_KEY}")
+endif()
+if(XLSONE_LICENSE_PUBLIC_KEY)
+    string(LENGTH "${XLSONE_LICENSE_PUBLIC_KEY}" XLSONE_LICENSE_KEY_LENGTH)
+    if(NOT XLSONE_LICENSE_KEY_LENGTH EQUAL 64
+        OR XLSONE_LICENSE_PUBLIC_KEY MATCHES "[^0-9A-Fa-f]")
+        message(FATAL_ERROR
+            "XLSONE_LICENSE_PUBLIC_KEY must contain exactly 64 hexadecimal characters.")
+    endif()
+endif()
 
 if(XLSONE_C_BUILD_APP)
     if(XLSONE_C_FETCH_SDL2)

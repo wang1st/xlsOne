@@ -27,3 +27,50 @@ else()
 endif()
 
 add_test(NAME xlsone_core_tests COMMAND xlsone_core_tests)
+
+if(TARGET xlsone_cjson
+    AND TARGET xlsone_monocypher
+    AND XLSONE_LICENSE_PUBLIC_KEY)
+    add_executable(
+        xlsone_license_tests
+        test_license.c
+        ../app/license_manager.c
+    )
+    target_include_directories(
+        xlsone_license_tests
+        PRIVATE
+            "${CMAKE_CURRENT_SOURCE_DIR}/../app"
+    )
+    target_compile_definitions(
+        xlsone_license_tests
+        PRIVATE
+            XLSONE_LICENSE_PUBLIC_KEY="${XLSONE_LICENSE_PUBLIC_KEY}"
+    )
+    target_link_libraries(
+        xlsone_license_tests
+        PRIVATE
+            xlsone_cjson
+            xlsone_monocypher
+    )
+    if(MSVC)
+        target_compile_options(xlsone_license_tests PRIVATE /W4)
+        if(XLSONE_C_WARNINGS_AS_ERRORS)
+            target_compile_options(xlsone_license_tests PRIVATE /WX)
+        endif()
+    else()
+        target_compile_options(
+            xlsone_license_tests
+            PRIVATE
+                -Wall
+                -Wextra
+                -Wpedantic
+                -Wconversion
+                -Wshadow
+        )
+        target_link_libraries(xlsone_license_tests PRIVATE m)
+        if(XLSONE_C_WARNINGS_AS_ERRORS)
+            target_compile_options(xlsone_license_tests PRIVATE -Werror)
+        endif()
+    endif()
+    add_test(NAME xlsone_license_tests COMMAND xlsone_license_tests)
+endif()

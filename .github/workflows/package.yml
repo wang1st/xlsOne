@@ -79,6 +79,7 @@ jobs:
     env:
       VERSION: ${{ needs.metadata.outputs.version }}
       VCPKG_DEFAULT_TRIPLET: x64-windows-static
+      XLSONE_LICENSE_PUBLIC_KEY: ${{ secrets.ED25519_PUBLIC_KEY }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -119,6 +120,9 @@ jobs:
       - name: Build and test
         shell: pwsh
         run: |
+          if ($env:XLSONE_LICENSE_PUBLIC_KEY -notmatch '^[0-9a-fA-F]{64}$') {
+            throw "ED25519_PUBLIC_KEY is missing or malformed"
+          }
           cmake -S . -B build-windows -G "Visual Studio 17 2022" -A x64 `
             -DCMAKE_TOOLCHAIN_FILE="${{ steps.tools.outputs.toolchain }}" `
             -DVCPKG_TARGET_TRIPLET=x64-windows-static `
@@ -165,6 +169,7 @@ jobs:
             ForEach-Object { $_.FullName }
           $env:XLSONE_SCREENSHOT_PATH = Join-Path $env:GITHUB_WORKSPACE `
             ".build\windows-smoke.bmp"
+          $env:XLSONE_SCREENSHOT_SELECT = "B6"
           $process = Start-Process -FilePath $exe.FullName `
             -ArgumentList $sampleArgs -Wait -PassThru
           if ($process.ExitCode -ne 0) {
@@ -173,6 +178,28 @@ jobs:
           if (-not (Test-Path $env:XLSONE_SCREENSHOT_PATH)) {
             throw "Portable xlsOne did not render a smoke-test frame"
           }
+          Remove-Item Env:XLSONE_SCREENSHOT_SELECT
+
+          $env:XLSONE_SCREENSHOT_PATH = Join-Path $env:GITHUB_WORKSPACE `
+            ".build\windows-menu-smoke.bmp"
+          $env:XLSONE_SCREENSHOT_MENU = "file"
+          $process = Start-Process -FilePath $exe.FullName `
+            -ArgumentList $sampleArgs -Wait -PassThru
+          if ($process.ExitCode -ne 0 -or
+              -not (Test-Path $env:XLSONE_SCREENSHOT_PATH)) {
+            throw "Portable xlsOne menu smoke test failed"
+          }
+          Remove-Item Env:XLSONE_SCREENSHOT_MENU
+
+          $env:XLSONE_SCREENSHOT_PATH = Join-Path $env:GITHUB_WORKSPACE `
+            ".build\windows-license-smoke.bmp"
+          $env:XLSONE_SCREENSHOT_DIALOG = "license"
+          $process = Start-Process -FilePath $exe.FullName -Wait -PassThru
+          if ($process.ExitCode -ne 0 -or
+              -not (Test-Path $env:XLSONE_SCREENSHOT_PATH)) {
+            throw "Portable xlsOne license smoke test failed"
+          }
+          Remove-Item Env:XLSONE_SCREENSHOT_DIALOG
 
           $admin = Join-Path $env:GITHUB_WORKSPACE ".build\msi-admin"
           New-Item -ItemType Directory -Force $admin | Out-Null
@@ -221,6 +248,7 @@ jobs:
     timeout-minutes: 90
     env:
       VERSION: ${{ needs.metadata.outputs.version }}
+      XLSONE_LICENSE_PUBLIC_KEY: ${{ secrets.ED25519_PUBLIC_KEY }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -229,6 +257,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          [[ "${XLSONE_LICENSE_PUBLIC_KEY}" =~ ^[0-9a-fA-F]{64}$ ]] || {
+            echo "ED25519_PUBLIC_KEY is missing or malformed" >&2
+            exit 1
+          }
           cmake -S . -B build-macos -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" \
@@ -267,12 +299,24 @@ jobs:
           test -f "$app/Contents/Resources/licenses/THIRD_PARTY_NOTICES.md"
 
           XLSONE_SCREENSHOT_PATH="${GITHUB_WORKSPACE}/.build/macos-smoke.bmp" \
+            XLSONE_SCREENSHOT_SELECT=B6 \
             "$binary" \
             samples/monthly-report-sample-v1.1/01-operations-team-1-june-2026.xlsx \
             samples/monthly-report-sample-v1.1/02-operations-team-2-june-2026.xlsx \
             samples/monthly-report-sample-v1.1/03-operations-team-3-june-2026.xlsx \
             samples/monthly-report-sample-v1.1/04-operations-team-4-june-2026.xlsx
           test -s .build/macos-smoke.bmp
+          XLSONE_SCREENSHOT_PATH="${GITHUB_WORKSPACE}/.build/macos-menu-smoke.bmp" \
+            XLSONE_SCREENSHOT_MENU=file \
+            "$binary" \
+            samples/monthly-report-sample-v1.1/01-operations-team-1-june-2026.xlsx \
+            samples/monthly-report-sample-v1.1/02-operations-team-2-june-2026.xlsx \
+            samples/monthly-report-sample-v1.1/03-operations-team-3-june-2026.xlsx
+          test -s .build/macos-menu-smoke.bmp
+          XLSONE_SCREENSHOT_PATH="${GITHUB_WORKSPACE}/.build/macos-license-smoke.bmp" \
+            XLSONE_SCREENSHOT_DIALOG=license \
+            "$binary"
+          test -s .build/macos-license-smoke.bmp
           (cd .build && shasum -a 256 "$(basename "$dmg")") \
             > .build/SHA256SUMS-macos.txt
 
@@ -309,6 +353,7 @@ jobs:
     env:
       VERSION: ${{ needs.metadata.outputs.version }}
       PACKAGE_ARCH: ${{ matrix.arch }}
+      XLSONE_LICENSE_PUBLIC_KEY: ${{ secrets.ED25519_PUBLIC_KEY }}
     steps:
       - name: Install Debian 10 compatibility toolchain
         shell: bash
@@ -326,6 +371,7 @@ jobs:
             binutils \
             build-essential \
             ca-certificates \
+            curl \
             dpkg-dev \
             fakeroot \
             file \
@@ -350,6 +396,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          [[ "${XLSONE_LICENSE_PUBLIC_KEY}" =~ ^[0-9a-fA-F]{64}$ ]] || {
+            echo "ED25519_PUBLIC_KEY is missing or malformed" >&2
+            exit 1
+          }
           cmake -S . -B "build-linux-${PACKAGE_ARCH}" -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DXLSONE_PACKAGE_ARCH="${PACKAGE_ARCH}" \
@@ -380,12 +430,24 @@ jobs:
           python3 scripts/ci/check_linux_abi.py "$deb"
 
           XLSONE_SCREENSHOT_PATH="${GITHUB_WORKSPACE}/.build/linux-${PACKAGE_ARCH}-smoke.bmp" \
+            XLSONE_SCREENSHOT_SELECT=B6 \
             xvfb-run -a "$binary" \
             samples/monthly-report-sample-v1.1/01-operations-team-1-june-2026.xlsx \
             samples/monthly-report-sample-v1.1/02-operations-team-2-june-2026.xlsx \
             samples/monthly-report-sample-v1.1/03-operations-team-3-june-2026.xlsx \
             samples/monthly-report-sample-v1.1/04-operations-team-4-june-2026.xlsx
           test -s ".build/linux-${PACKAGE_ARCH}-smoke.bmp"
+          XLSONE_SCREENSHOT_PATH="${GITHUB_WORKSPACE}/.build/linux-${PACKAGE_ARCH}-menu-smoke.bmp" \
+            XLSONE_SCREENSHOT_MENU=file \
+            xvfb-run -a "$binary" \
+            samples/monthly-report-sample-v1.1/01-operations-team-1-june-2026.xlsx \
+            samples/monthly-report-sample-v1.1/02-operations-team-2-june-2026.xlsx \
+            samples/monthly-report-sample-v1.1/03-operations-team-3-june-2026.xlsx
+          test -s ".build/linux-${PACKAGE_ARCH}-menu-smoke.bmp"
+          XLSONE_SCREENSHOT_PATH="${GITHUB_WORKSPACE}/.build/linux-${PACKAGE_ARCH}-license-smoke.bmp" \
+            XLSONE_SCREENSHOT_DIALOG=license \
+            xvfb-run -a "$binary"
+          test -s ".build/linux-${PACKAGE_ARCH}-license-smoke.bmp"
           (cd .build && sha256sum "$(basename "$deb")") \
             > ".build/SHA256SUMS-linux-${PACKAGE_ARCH}.txt"
 

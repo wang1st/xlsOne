@@ -1,10 +1,14 @@
 #include "xlsone/xlsone.h"
+#include "license_manager.h"
 #include "platform_dialog.h"
 
 #include <SDL.h>
+#include "cJSON.h"
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #define NK_INCLUDE_FIXED_TYPES
 #define NK_INCLUDE_STANDARD_IO
@@ -17,6 +21,23 @@
 #define NK_SDL_RENDERER_IMPLEMENTATION
 #include "nuklear.h"
 #include "nuklear_sdl_renderer.h"
+
+typedef enum app_menu {
+    APP_MENU_NONE,
+    APP_MENU_FILE,
+    APP_MENU_EDIT,
+    APP_MENU_RULES,
+    APP_MENU_LICENSE,
+    APP_MENU_LANGUAGE,
+    APP_MENU_HELP
+} app_menu;
+
+typedef enum app_dialog {
+    APP_DIALOG_NONE,
+    APP_DIALOG_LICENSE,
+    APP_DIALOG_RULES,
+    APP_DIALOG_NOTICE
+} app_dialog;
 
 typedef struct app_state {
     xls_workbook *workbooks;
@@ -32,6 +53,21 @@ typedef struct app_state {
     size_t first_visible_column;
     int sources_expanded;
     int drop_targeted;
+    int running;
+    app_menu active_menu;
+    app_dialog dialog;
+    int license_page;
+    char license_key[32];
+    char dialog_title[128];
+    char dialog_message[1024];
+    int dialog_error;
+    int language_index;
+    int has_last_override;
+    size_t last_override_sheet;
+    size_t last_override_row;
+    size_t last_override_column;
+    xls_cell_kind last_override_kind;
+    xls_license_manager license;
     char status[512];
 } app_state;
 
@@ -41,6 +77,13 @@ typedef struct ui_fonts {
     const struct nk_user_font *numeric;
     const struct nk_user_font *source_value;
 } ui_fonts;
+
+#define UI_MENU_HEIGHT 26.0f
+#define UI_TOOLBAR_TOP UI_MENU_HEIGHT
+#define UI_TOOLBAR_BOTTOM (UI_MENU_HEIGHT + 40.0f)
+#define UI_SHEET_BOTTOM (UI_TOOLBAR_BOTTOM + 78.0f)
+
+static int ui_input_blocked = 0;
 
 static void app_set_status(app_state *app, const char *message)
 {
@@ -66,6 +109,161 @@ static void app_free_results(app_state *app)
     app->has_selection = 0;
     app->first_visible_row = 0;
     app->first_visible_column = 0;
+    app->has_last_override = 0;
+}
+
+static void app_rule_signature(
+    const app_state *app,
+    char signature[17]
+)
+{
+    unsigned long long hash = 1469598103934665603ULL;
+    size_t sheet_index;
+    for (sheet_index = 0u;
+         sheet_index < app->merged_sheet_count;
+         ++sheet_index) {
+        const xls_merged_sheet *sheet = &app->merged_sheets[sheet_index];
+        const unsigned char *cursor =
+            (const unsigned char *)(sheet->sheet_name == NULL
+                ? ""
+                : sheet->sheet_name);
+        while (*cursor != '\0') {
+            hash ^= (unsigned long long)*cursor++;
+            hash *= 1099511628211ULL;
+        }
+        hash ^= (unsigned long long)sheet->row_count;
+        hash *= 1099511628211ULL;
+        hash ^= (unsigned long long)sheet->column_count;
+        hash *= 1099511628211ULL;
+    }
+    (void)snprintf(signature, 17u, "%016llx", hash);
+}
+
+static xls_cell_kind app_kind_from_rule(const char *text)
+{
+    if (text != NULL && strcmp(text, "sum") == 0) {
+        return XLS_CELL_SUM;
+    }
+    if (text != NULL && strcmp(text, "mixed") == 0) {
+        return XLS_CELL_MIXED;
+    }
+    if (text != NULL && strcmp(text, "single") == 0) {
+        return XLS_CELL_SINGLE;
+    }
+    return XLS_CELL_LABEL;
+}
+
+static cJSON *app_find_rule_schema(
+    const cJSON *root,
+    const char *signature
+)
+{
+    cJSON *schemas = cJSON_IsObject(root)
+        ? cJSON_GetObjectItemCaseSensitive(root, "schemas")
+        : NULL;
+    cJSON *schema;
+    if (!cJSON_IsArray(schemas)) {
+        return NULL;
+    }
+    cJSON_ArrayForEach(schema, schemas) {
+        cJSON *stored = cJSON_IsObject(schema)
+            ? cJSON_GetObjectItemCaseSensitive(schema, "signature")
+            : NULL;
+        if (cJSON_IsString(stored)
+            && strcmp(stored->valuestring, signature) == 0) {
+            return schema;
+        }
+    }
+    return NULL;
+}
+
+static size_t app_apply_saved_rules(app_state *app)
+{
+    char *json = NULL;
+    char signature[17];
+    const char *parse_end = NULL;
+    cJSON *root;
+    cJSON *schema;
+    cJSON *overrides;
+    cJSON *item;
+    size_t applied = 0u;
+    if (app->merged_sheet_count == 0u
+        || !xls_platform_read_rules(&json)) {
+        return 0u;
+    }
+    root = cJSON_ParseWithLengthOpts(
+        json, strlen(json) + 1u, &parse_end, 1
+    );
+    free(json);
+    if (!cJSON_IsObject(root)) {
+        cJSON_Delete(root);
+        return 0u;
+    }
+    app_rule_signature(app, signature);
+    schema = app_find_rule_schema(root, signature);
+    overrides = schema == NULL
+        ? NULL
+        : cJSON_GetObjectItemCaseSensitive(schema, "overrides");
+    if (!cJSON_IsArray(overrides)) {
+        cJSON_Delete(root);
+        return 0u;
+    }
+    cJSON_ArrayForEach(item, overrides) {
+        cJSON *sheet_name = cJSON_IsObject(item)
+            ? cJSON_GetObjectItemCaseSensitive(item, "sheetName")
+            : NULL;
+        cJSON *row_item = cJSON_IsObject(item)
+            ? cJSON_GetObjectItemCaseSensitive(item, "row")
+            : NULL;
+        cJSON *column_item = cJSON_IsObject(item)
+            ? cJSON_GetObjectItemCaseSensitive(item, "column")
+            : NULL;
+        cJSON *type_item = cJSON_IsObject(item)
+            ? cJSON_GetObjectItemCaseSensitive(item, "type")
+            : NULL;
+        size_t sheet_index;
+        if (!cJSON_IsString(sheet_name)
+            || !cJSON_IsNumber(row_item)
+            || !cJSON_IsNumber(column_item)
+            || !cJSON_IsString(type_item)
+            || row_item->valuedouble < 0.0
+            || column_item->valuedouble < 0.0) {
+            continue;
+        }
+        for (sheet_index = 0u;
+             sheet_index < app->merged_sheet_count;
+             ++sheet_index) {
+            xls_merged_sheet *sheet = &app->merged_sheets[sheet_index];
+            size_t row;
+            size_t column;
+            xls_merged_cell *cell;
+            xls_error error;
+            if (sheet->sheet_name == NULL
+                || strcmp(sheet->sheet_name, sheet_name->valuestring) != 0
+                || row_item->valuedouble >= (double)sheet->row_count
+                || column_item->valuedouble >= (double)sheet->column_count) {
+                continue;
+            }
+            row = (size_t)row_item->valuedouble;
+            column = (size_t)column_item->valuedouble;
+            if ((double)row != row_item->valuedouble
+                || (double)column != column_item->valuedouble) {
+                continue;
+            }
+            cell = xls_merged_sheet_cell_mutable(sheet, row, column);
+            if (cell != NULL
+                && xls_merged_cell_set_kind(
+                    cell,
+                    app_kind_from_rule(type_item->valuestring),
+                    &error
+                )) {
+                ++applied;
+            }
+            break;
+        }
+    }
+    cJSON_Delete(root);
+    return applied;
 }
 
 static void app_clear(app_state *app)
@@ -85,6 +283,7 @@ static int app_recompute(app_state *app)
 {
     xls_error error;
     size_t index;
+    size_t applied_rules;
     app_free_results(app);
     if (app->workbook_count == 0) {
         return 1;
@@ -128,13 +327,25 @@ static int app_recompute(app_state *app)
             return 0;
         }
     }
-    (void)snprintf(
-        app->status,
-        sizeof(app->status),
-        "已导入 %zu 个工作簿，识别 %zu 个可汇总工作表。",
-        app->workbook_count,
-        app->merged_sheet_count
-    );
+    applied_rules = app_apply_saved_rules(app);
+    if (applied_rules > 0u) {
+        (void)snprintf(
+            app->status,
+            sizeof(app->status),
+            "已导入 %zu 个工作簿，识别 %zu 个可汇总工作表，并应用 %zu 条修正规则。",
+            app->workbook_count,
+            app->merged_sheet_count,
+            applied_rules
+        );
+    } else {
+        (void)snprintf(
+            app->status,
+            sizeof(app->status),
+            "已导入 %zu 个工作簿，识别 %zu 个可汇总工作表。",
+            app->workbook_count,
+            app->merged_sheet_count
+        );
+    }
     return 1;
 }
 
@@ -177,7 +388,24 @@ static int app_add_path(app_state *app, const char *path)
     return 1;
 }
 
-static void app_open_files(app_state *app)
+static void app_show_license(app_state *app)
+{
+    app->active_menu = APP_MENU_NONE;
+    app->dialog = APP_DIALOG_LICENSE;
+    app->license_page = 0;
+    app->dialog_message[0] = '\0';
+    app->dialog_error = 0;
+    SDL_StartTextInput();
+}
+
+static void app_close_dialog(app_state *app)
+{
+    app->dialog = APP_DIALOG_NONE;
+    app->dialog_message[0] = '\0';
+    SDL_StopTextInput();
+}
+
+static void app_open_files(app_state *app, int append)
 {
     char **paths = NULL;
     size_t path_count = 0;
@@ -185,6 +413,19 @@ static void app_open_files(app_state *app)
     int changed = 0;
     if (!xls_platform_open_files(&paths, &path_count)) {
         return;
+    }
+    if (path_count + (append ? app->workbook_count : 0u)
+        > (size_t)xls_license_max_import_files(&app->license)) {
+        xls_platform_free_paths(paths, path_count);
+        app_set_status(
+            app,
+            "未授权时每次最多处理 3 个文件；请激活或开始免费试用。"
+        );
+        app_show_license(app);
+        return;
+    }
+    if (!append) {
+        app_clear(app);
     }
     for (index = 0; index < path_count; ++index) {
         if (app_add_path(app, paths[index])) {
@@ -222,7 +463,7 @@ static void app_export(app_state *app)
         ok = xls_export_csv(
             &app->merged_sheets[app->selected_sheet],
             path,
-            "",
+            xls_license_watermark(&app->license),
             &error
         );
     } else {
@@ -231,7 +472,7 @@ static void app_export(app_state *app)
             app->merged_sheets,
             app->merged_sheet_count,
             path,
-            "",
+            xls_license_watermark(&app->license),
             &error
         );
     }
@@ -260,10 +501,20 @@ static void app_set_selected_kind(app_state *app, xls_cell_kind kind)
         app->selected_row,
         app->selected_column
     );
-    if (cell == NULL || !xls_merged_cell_set_kind(cell, kind, &error)) {
+    if (cell == NULL) {
+        app_set_status(app, "没有选中的汇总单元格。");
+        return;
+    }
+    app->last_override_sheet = app->selected_sheet;
+    app->last_override_row = app->selected_row;
+    app->last_override_column = app->selected_column;
+    app->last_override_kind = cell->kind;
+    app->has_last_override = 1;
+    if (!xls_merged_cell_set_kind(cell, kind, &error)) {
+        app->has_last_override = 0;
         app_set_status(
             app,
-            cell == NULL ? "没有选中的汇总单元格。" : error.message
+            error.message
         );
         return;
     }
@@ -282,10 +533,20 @@ static void app_restore_selected_kind(app_state *app)
         app->selected_row,
         app->selected_column
     );
-    if (cell == NULL || !xls_merged_cell_restore_automatic(cell, &error)) {
+    if (cell == NULL) {
+        app_set_status(app, "没有选中的汇总单元格。");
+        return;
+    }
+    app->last_override_sheet = app->selected_sheet;
+    app->last_override_row = app->selected_row;
+    app->last_override_column = app->selected_column;
+    app->last_override_kind = cell->kind;
+    app->has_last_override = 1;
+    if (!xls_merged_cell_restore_automatic(cell, &error)) {
+        app->has_last_override = 0;
         app_set_status(
             app,
-            cell == NULL ? "没有选中的汇总单元格。" : error.message
+            error.message
         );
         return;
     }
@@ -312,7 +573,276 @@ static void app_clear_overrides(app_state *app)
             }
         }
     }
+    app->has_last_override = 0;
     app_set_status(app, "已清除全部手动修正。");
+}
+
+static void app_undo_last_override(app_state *app)
+{
+    xls_merged_cell *cell;
+    xls_error error;
+    if (!app->has_last_override
+        || app->last_override_sheet >= app->merged_sheet_count) {
+        app_set_status(app, "当前没有可撤销的修正。");
+        return;
+    }
+    cell = xls_merged_sheet_cell_mutable(
+        &app->merged_sheets[app->last_override_sheet],
+        app->last_override_row,
+        app->last_override_column
+    );
+    if (cell == NULL
+        || !xls_merged_cell_set_kind(
+            cell, app->last_override_kind, &error
+        )) {
+        app_set_status(
+            app,
+            cell == NULL ? "无法找到上次修正的单元格。" : error.message
+        );
+        return;
+    }
+    app->selected_sheet = app->last_override_sheet;
+    app->selected_row = app->last_override_row;
+    app->selected_column = app->last_override_column;
+    app->has_selection = 1;
+    app->has_last_override = 0;
+    app_set_status(app, "已撤销上一次修正。");
+}
+
+static size_t app_override_count(const app_state *app)
+{
+    size_t sheet_index;
+    size_t cell_index;
+    size_t count = 0u;
+    for (sheet_index = 0u;
+         sheet_index < app->merged_sheet_count;
+         ++sheet_index) {
+        const xls_merged_sheet *sheet = &app->merged_sheets[sheet_index];
+        for (cell_index = 0u;
+             cell_index < sheet->row_count * sheet->column_count;
+             ++cell_index) {
+            if (sheet->cells[cell_index].is_overridden != 0u) {
+                ++count;
+            }
+        }
+    }
+    return count;
+}
+
+static void app_show_notice(
+    app_state *app,
+    const char *title,
+    const char *message,
+    int error
+)
+{
+    app->active_menu = APP_MENU_NONE;
+    app->dialog = APP_DIALOG_NOTICE;
+    app->dialog_error = error;
+    (void)snprintf(
+        app->dialog_title,
+        sizeof(app->dialog_title),
+        "%s",
+        title == NULL ? "" : title
+    );
+    (void)snprintf(
+        app->dialog_message,
+        sizeof(app->dialog_message),
+        "%s",
+        message == NULL ? "" : message
+    );
+}
+
+static void app_show_rules(app_state *app)
+{
+    const size_t count = app_override_count(app);
+    app->active_menu = APP_MENU_NONE;
+    app->dialog = APP_DIALOG_RULES;
+    app->dialog_error = 0;
+    (void)snprintf(
+        app->dialog_message,
+        sizeof(app->dialog_message),
+        count == 0u
+            ? "当前工作区尚未产生手动修正。"
+            : "当前工作区共有 %zu 条修正规则；保存后会自动用于同结构工作簿。",
+        count
+    );
+}
+
+static void app_save_rules(app_state *app)
+{
+    char *existing_json = NULL;
+    const char *parse_end = NULL;
+    cJSON *root = NULL;
+    cJSON *schemas;
+    cJSON *schema;
+    cJSON *overrides;
+    char *json;
+    char signature[17];
+    size_t sheet_index;
+    if (app_override_count(app) == 0u) {
+        app_show_notice(
+            app,
+            "保存当前修正规则",
+            "当前没有可保存的手动修正。",
+            0
+        );
+        return;
+    }
+    if (xls_platform_read_rules(&existing_json)) {
+        root = cJSON_ParseWithLengthOpts(
+            existing_json,
+            strlen(existing_json) + 1u,
+            &parse_end,
+            1
+        );
+        free(existing_json);
+    }
+    if (!cJSON_IsObject(root)) {
+        cJSON_Delete(root);
+        root = cJSON_CreateObject();
+        if (root != NULL) {
+            cJSON_AddNumberToObject(root, "version", 1);
+        }
+    }
+    schemas = root == NULL
+        ? NULL
+        : cJSON_GetObjectItemCaseSensitive(root, "schemas");
+    if (!cJSON_IsArray(schemas) && root != NULL) {
+        cJSON_DeleteItemFromObjectCaseSensitive(root, "schemas");
+        schemas = cJSON_AddArrayToObject(root, "schemas");
+    }
+    app_rule_signature(app, signature);
+    schema = app_find_rule_schema(root, signature);
+    if (schema == NULL && schemas != NULL) {
+        schema = cJSON_CreateObject();
+        if (schema != NULL) {
+            cJSON_AddStringToObject(schema, "signature", signature);
+            cJSON_AddStringToObject(
+                schema,
+                "name",
+                app->merged_sheet_count > 0u
+                    && app->merged_sheets[0].sheet_name != NULL
+                    ? app->merged_sheets[0].sheet_name
+                    : "当前工作区"
+            );
+            cJSON_AddItemToArray(schemas, schema);
+        }
+    }
+    if (root == NULL || schemas == NULL || schema == NULL) {
+        cJSON_Delete(root);
+        app_show_notice(app, "保存失败", "内存不足，无法生成修正规则。", 1);
+        return;
+    }
+    cJSON_DeleteItemFromObjectCaseSensitive(schema, "updated_at");
+    cJSON_AddNumberToObject(schema, "updated_at", (double)time(NULL));
+    cJSON_DeleteItemFromObjectCaseSensitive(schema, "overrides");
+    overrides = cJSON_AddArrayToObject(schema, "overrides");
+    if (overrides == NULL) {
+        cJSON_Delete(root);
+        app_show_notice(app, "保存失败", "内存不足，无法生成修正规则。", 1);
+        return;
+    }
+    for (sheet_index = 0u;
+         sheet_index < app->merged_sheet_count;
+         ++sheet_index) {
+        const xls_merged_sheet *sheet = &app->merged_sheets[sheet_index];
+        size_t row;
+        for (row = 0u; row < sheet->row_count; ++row) {
+            size_t column;
+            for (column = 0u; column < sheet->column_count; ++column) {
+                const xls_merged_cell *cell = xls_merged_sheet_cell(
+                    sheet, row, column
+                );
+                cJSON *item;
+                if (cell == NULL || cell->is_overridden == 0u) {
+                    continue;
+                }
+                item = cJSON_CreateObject();
+                if (item == NULL) {
+                    continue;
+                }
+                cJSON_AddStringToObject(
+                    item,
+                    "sheetName",
+                    sheet->sheet_name == NULL ? "" : sheet->sheet_name
+                );
+                cJSON_AddNumberToObject(item, "row", (double)row);
+                cJSON_AddNumberToObject(item, "column", (double)column);
+                cJSON_AddStringToObject(
+                    item, "type", xls_cell_kind_name(cell->kind)
+                );
+                cJSON_AddItemToArray(overrides, item);
+            }
+        }
+    }
+    json = cJSON_Print(root);
+    cJSON_Delete(root);
+    if (json == NULL
+        || !xls_platform_write_rules(json)) {
+        cJSON_free(json);
+        app_show_notice(app, "保存失败", "无法保存当前修正规则。", 1);
+        return;
+    }
+    cJSON_free(json);
+    app_set_status(
+        app,
+        "当前修正规则已保存；下次导入同结构工作簿时会自动应用。"
+    );
+}
+
+static void app_check_updates(app_state *app)
+{
+    char *response = NULL;
+    long status = 0;
+    cJSON *root;
+    cJSON *version;
+    const char *parse_end = NULL;
+    char message[512];
+    if (!xls_platform_http_request(
+        "GET",
+        "https://z-pulse.cn/api/version",
+        NULL,
+        &response,
+        &status
+    )) {
+        app_show_notice(
+            app,
+            "检查更新",
+            "无法连接更新服务器，请稍后重试。",
+            1
+        );
+        return;
+    }
+    root = cJSON_ParseWithLengthOpts(
+        response, strlen(response) + 1u, &parse_end, 1
+    );
+    version = cJSON_IsObject(root)
+        ? cJSON_GetObjectItemCaseSensitive(root, "latest_version")
+        : NULL;
+    if (status != 200 || !cJSON_IsString(version)) {
+        cJSON_Delete(root);
+        free(response);
+        app_show_notice(app, "检查更新", "更新服务器响应异常。", 1);
+        return;
+    }
+    if (strcmp(version->valuestring, "1.1.1") == 0) {
+        (void)snprintf(
+            message,
+            sizeof(message),
+            "当前版本 1.1.1 已是最新版本。"
+        );
+    } else {
+        (void)snprintf(
+            message,
+            sizeof(message),
+            "发现新版本 %s，可前往 Z-PULSE.CN 下载。",
+            version->valuestring
+        );
+    }
+    cJSON_Delete(root);
+    free(response);
+    app_show_notice(app, "检查更新", message, 0);
 }
 
 #define UI_BG0 nk_rgb(246, 247, 250)
@@ -343,6 +873,36 @@ typedef enum ui_icon {
     UI_ICON_EXPORT,
     UI_ICON_FOLDER
 } ui_icon;
+
+typedef enum app_action {
+    APP_ACTION_NONE,
+    APP_ACTION_IMPORT,
+    APP_ACTION_APPEND,
+    APP_ACTION_RELOAD,
+    APP_ACTION_CLEAR,
+    APP_ACTION_EXPORT,
+    APP_ACTION_QUIT,
+    APP_ACTION_UNDO,
+    APP_ACTION_CLEAR_OVERRIDES,
+    APP_ACTION_VIEW_RULES,
+    APP_ACTION_SAVE_RULES,
+    APP_ACTION_LICENSE,
+    APP_ACTION_LANGUAGE_SYSTEM,
+    APP_ACTION_LANGUAGE_ENGLISH,
+    APP_ACTION_LANGUAGE_ZH_HANS,
+    APP_ACTION_LANGUAGE_ZH_HANT,
+    APP_ACTION_LANGUAGE_JAPANESE,
+    APP_ACTION_CHECK_UPDATE,
+    APP_ACTION_HELP,
+    APP_ACTION_ABOUT
+} app_action;
+
+typedef struct app_menu_item {
+    const char *label;
+    const char *shortcut;
+    app_action action;
+    int separator_before;
+} app_menu_item;
 
 static void apply_theme(struct nk_context *context)
 {
@@ -380,6 +940,20 @@ static float ui_text_width(const struct nk_user_font *font, const char *text)
         length = 2147483647u;
     }
     return font->width(font->userdata, font->height, text, (int)length);
+}
+
+static int ui_text_has_non_ascii(const char *text)
+{
+    size_t index;
+    if (text == NULL) {
+        return 0;
+    }
+    for (index = 0u; text[index] != '\0'; ++index) {
+        if ((unsigned char)text[index] >= 0x80u) {
+            return 1;
+        }
+    }
+    return 0;
 }
 
 static void ui_draw_text(
@@ -462,13 +1036,54 @@ static void ui_draw_text_elided(
     ui_draw_text(canvas, rect, buffer, font, color, alignment);
 }
 
+static void ui_draw_multiline(
+    struct nk_command_buffer *canvas,
+    struct nk_rect rect,
+    const char *text,
+    const struct nk_user_font *font,
+    struct nk_color color,
+    float line_height
+)
+{
+    const char *cursor = text == NULL ? "" : text;
+    float y = rect.y;
+    while (*cursor != '\0' && y + line_height <= rect.y + rect.h) {
+        const char *newline = strchr(cursor, '\n');
+        size_t length = newline == NULL
+            ? strlen(cursor)
+            : (size_t)(newline - cursor);
+        char line[512];
+        if (length >= sizeof(line)) {
+            length = sizeof(line) - 1u;
+        }
+        memcpy(line, cursor, length);
+        line[length] = '\0';
+        ui_draw_text_elided(
+            canvas,
+            nk_rect(rect.x, y, rect.w, line_height),
+            line,
+            font,
+            color,
+            NK_TEXT_LEFT
+        );
+        y += line_height;
+        cursor = newline == NULL ? cursor + strlen(cursor) : newline + 1;
+    }
+}
+
 static int ui_hovered(const struct nk_context *context, struct nk_rect rect)
 {
+    if (ui_input_blocked) {
+        return 0;
+    }
     return nk_input_is_mouse_hovering_rect(&context->input, rect) != 0;
 }
 
 static int ui_clicked(const struct nk_context *context, struct nk_rect rect)
 {
+    if (ui_input_blocked) {
+        return 0;
+    }
     return nk_input_is_mouse_click_in_rect(
         &context->input,
         NK_BUTTON_LEFT,
@@ -603,6 +1218,406 @@ static int ui_draw_utility_button(
     return ui_clicked(context, rect);
 }
 
+static int app_action_enabled(const app_state *app, app_action action)
+{
+    switch (action) {
+    case APP_ACTION_APPEND:
+    case APP_ACTION_RELOAD:
+    case APP_ACTION_CLEAR:
+        return app->workbook_count > 0u;
+    case APP_ACTION_EXPORT:
+        return app->merged_sheet_count > 0u
+            && app->validation.has_template_workbook != 0u;
+    case APP_ACTION_UNDO:
+        return app->has_last_override;
+    case APP_ACTION_CLEAR_OVERRIDES:
+    case APP_ACTION_SAVE_RULES:
+        return app_override_count(app) > 0u;
+    default:
+        return 1;
+    }
+}
+
+static void app_execute_action(app_state *app, app_action action)
+{
+    app->active_menu = APP_MENU_NONE;
+    if (!app_action_enabled(app, action)) {
+        return;
+    }
+    switch (action) {
+    case APP_ACTION_IMPORT:
+        app_open_files(app, 0);
+        break;
+    case APP_ACTION_APPEND:
+        app_open_files(app, 1);
+        break;
+    case APP_ACTION_RELOAD:
+        (void)app_recompute(app);
+        break;
+    case APP_ACTION_CLEAR:
+        app_clear(app);
+        break;
+    case APP_ACTION_EXPORT:
+        app_export(app);
+        break;
+    case APP_ACTION_QUIT:
+        app->running = 0;
+        break;
+    case APP_ACTION_UNDO:
+        app_undo_last_override(app);
+        break;
+    case APP_ACTION_CLEAR_OVERRIDES:
+        app_clear_overrides(app);
+        break;
+    case APP_ACTION_VIEW_RULES:
+        app_show_rules(app);
+        break;
+    case APP_ACTION_SAVE_RULES:
+        app_save_rules(app);
+        break;
+    case APP_ACTION_LICENSE:
+        app_show_license(app);
+        break;
+    case APP_ACTION_LANGUAGE_SYSTEM:
+        app->language_index = 0;
+        app_show_notice(
+            app,
+            "语言已更改",
+            "已选择跟随系统；界面语言将在重启后生效。",
+            0
+        );
+        break;
+    case APP_ACTION_LANGUAGE_ENGLISH:
+        app->language_index = 1;
+        app_show_notice(
+            app,
+            "语言已更改",
+            "已选择 English；界面语言将在重启后生效。",
+            0
+        );
+        break;
+    case APP_ACTION_LANGUAGE_ZH_HANS:
+        app->language_index = 2;
+        app_show_notice(
+            app,
+            "语言已更改",
+            "已选择简体中文；界面语言将在重启后生效。",
+            0
+        );
+        break;
+    case APP_ACTION_LANGUAGE_ZH_HANT:
+        app->language_index = 3;
+        app_show_notice(
+            app,
+            "语言已更改",
+            "已选择繁體中文；界面语言将在重启后生效。",
+            0
+        );
+        break;
+    case APP_ACTION_LANGUAGE_JAPANESE:
+        app->language_index = 4;
+        app_show_notice(
+            app,
+            "语言已更改",
+            "已选择日本語；界面语言将在重启后生效。",
+            0
+        );
+        break;
+    case APP_ACTION_CHECK_UPDATE:
+        app_check_updates(app);
+        break;
+    case APP_ACTION_HELP:
+        if (!xls_platform_open_url("https://z-pulse.cn/xlsone/")) {
+            app_set_status(app, "无法打开快速参考指南。");
+        }
+        break;
+    case APP_ACTION_ABOUT:
+        app_show_notice(
+            app,
+            "关于 表表归一",
+            "表表归一 1.1.1\n"
+            "多张同格式 Excel 报表一键汇总\n\n"
+            "版权所有 © Z-Pulse",
+            0
+        );
+        break;
+    case APP_ACTION_NONE:
+    default:
+        break;
+    }
+}
+
+static float app_menu_x(app_menu menu)
+{
+    switch (menu) {
+    case APP_MENU_FILE: return 8.0f;
+    case APP_MENU_EDIT: return 50.0f;
+    case APP_MENU_RULES: return 92.0f;
+    case APP_MENU_LICENSE: return 158.0f;
+    case APP_MENU_LANGUAGE: return 200.0f;
+    case APP_MENU_HELP: return 242.0f;
+    case APP_MENU_NONE:
+    default:
+        return 0.0f;
+    }
+}
+
+static float app_menu_width(app_menu menu)
+{
+    return menu == APP_MENU_RULES ? 66.0f : 42.0f;
+}
+
+static const char *app_menu_label(app_menu menu)
+{
+    switch (menu) {
+    case APP_MENU_FILE: return "文件";
+    case APP_MENU_EDIT: return "编辑";
+    case APP_MENU_RULES: return "修正规则";
+    case APP_MENU_LICENSE: return "许可";
+    case APP_MENU_LANGUAGE: return "语言";
+    case APP_MENU_HELP: return "帮助";
+    case APP_MENU_NONE:
+    default:
+        return "";
+    }
+}
+
+static const app_menu_item *app_menu_items(
+    app_menu menu,
+    size_t *count
+)
+{
+    static const app_menu_item file_items[] = {
+        {"导入文件...", "Ctrl+O", APP_ACTION_IMPORT, 0},
+        {"追加文件...", "Ctrl+Shift+O", APP_ACTION_APPEND, 0},
+        {"刷新", "Ctrl+R", APP_ACTION_RELOAD, 0},
+        {"清空工作区", "Ctrl+N", APP_ACTION_CLEAR, 0},
+        {"导出 XLSX...", "Ctrl+S", APP_ACTION_EXPORT, 1},
+        {"退出", "Ctrl+Q", APP_ACTION_QUIT, 1}
+    };
+    static const app_menu_item edit_items[] = {
+        {"撤销修正", "Ctrl+Z", APP_ACTION_UNDO, 0},
+        {"清除所有修正", "", APP_ACTION_CLEAR_OVERRIDES, 0}
+    };
+    static const app_menu_item rule_items[] = {
+        {"查看当前修正规则", "Ctrl+,", APP_ACTION_VIEW_RULES, 0},
+        {"保存当前修正规则", "", APP_ACTION_SAVE_RULES, 0}
+    };
+    static const app_menu_item license_items[] = {
+        {"激活/导入许可证...", "", APP_ACTION_LICENSE, 0}
+    };
+    static const app_menu_item language_items[] = {
+        {"跟随系统", "", APP_ACTION_LANGUAGE_SYSTEM, 0},
+        {"English", "", APP_ACTION_LANGUAGE_ENGLISH, 0},
+        {"简体中文", "", APP_ACTION_LANGUAGE_ZH_HANS, 0},
+        {"繁體中文", "", APP_ACTION_LANGUAGE_ZH_HANT, 0},
+        {"日本語", "", APP_ACTION_LANGUAGE_JAPANESE, 0}
+    };
+    static const app_menu_item help_items[] = {
+        {"检查更新", "", APP_ACTION_CHECK_UPDATE, 0},
+        {"快速参考指南", "F1", APP_ACTION_HELP, 1},
+        {"关于 表表归一", "", APP_ACTION_ABOUT, 1}
+    };
+    switch (menu) {
+    case APP_MENU_FILE:
+        *count = sizeof(file_items) / sizeof(file_items[0]);
+        return file_items;
+    case APP_MENU_EDIT:
+        *count = sizeof(edit_items) / sizeof(edit_items[0]);
+        return edit_items;
+    case APP_MENU_RULES:
+        *count = sizeof(rule_items) / sizeof(rule_items[0]);
+        return rule_items;
+    case APP_MENU_LICENSE:
+        *count = sizeof(license_items) / sizeof(license_items[0]);
+        return license_items;
+    case APP_MENU_LANGUAGE:
+        *count = sizeof(language_items) / sizeof(language_items[0]);
+        return language_items;
+    case APP_MENU_HELP:
+        *count = sizeof(help_items) / sizeof(help_items[0]);
+        return help_items;
+    case APP_MENU_NONE:
+    default:
+        *count = 0u;
+        return NULL;
+    }
+}
+
+static int app_language_action_index(app_action action)
+{
+    switch (action) {
+    case APP_ACTION_LANGUAGE_SYSTEM: return 0;
+    case APP_ACTION_LANGUAGE_ENGLISH: return 1;
+    case APP_ACTION_LANGUAGE_ZH_HANS: return 2;
+    case APP_ACTION_LANGUAGE_ZH_HANT: return 3;
+    case APP_ACTION_LANGUAGE_JAPANESE: return 4;
+    default: return -1;
+    }
+}
+
+static void render_menu_bar(
+    struct nk_context *context,
+    struct nk_command_buffer *canvas,
+    app_state *app,
+    const ui_fonts *fonts,
+    float width
+)
+{
+    app_menu menu;
+    nk_fill_rect(
+        canvas,
+        nk_rect(0.0f, 0.0f, width, UI_MENU_HEIGHT),
+        0.0f,
+        UI_BG0
+    );
+    nk_stroke_line(
+        canvas,
+        0.0f,
+        UI_MENU_HEIGHT - 0.5f,
+        width,
+        UI_MENU_HEIGHT - 0.5f,
+        1.0f,
+        UI_BORDER
+    );
+    for (menu = APP_MENU_FILE; menu <= APP_MENU_HELP;
+         menu = (app_menu)((int)menu + 1)) {
+        const struct nk_rect item = nk_rect(
+            app_menu_x(menu),
+            2.0f,
+            app_menu_width(menu),
+            UI_MENU_HEIGHT - 4.0f
+        );
+        if (app->active_menu == menu || ui_hovered(context, item)) {
+            nk_fill_rect(canvas, item, 5.0f, UI_BORDER_SOFT);
+        }
+        ui_draw_text(
+            canvas,
+            item,
+            app_menu_label(menu),
+            fonts->body,
+            UI_TEXT,
+            NK_TEXT_CENTERED
+        );
+        if (app->dialog == APP_DIALOG_NONE && ui_clicked(context, item)) {
+            app->active_menu = app->active_menu == menu
+                ? APP_MENU_NONE
+                : menu;
+        }
+    }
+}
+
+static void render_active_menu(
+    struct nk_context *context,
+    struct nk_command_buffer *canvas,
+    app_state *app,
+    const ui_fonts *fonts
+)
+{
+    const app_menu active = app->active_menu;
+    const app_menu_item *items;
+    size_t count;
+    size_t index;
+    float height = 10.0f;
+    float y;
+    struct nk_rect popup;
+    int handled_click = 0;
+    if (active == APP_MENU_NONE || app->dialog != APP_DIALOG_NONE) {
+        return;
+    }
+    items = app_menu_items(active, &count);
+    for (index = 0u; index < count; ++index) {
+        height += 27.0f + (items[index].separator_before ? 8.0f : 0.0f);
+    }
+    popup = nk_rect(
+        app_menu_x(active),
+        UI_MENU_HEIGHT - 1.0f,
+        244.0f,
+        height
+    );
+    nk_fill_rect(
+        canvas,
+        nk_rect(popup.x + 2.0f, popup.y + 4.0f, popup.w, popup.h),
+        7.0f,
+        nk_rgba(0, 0, 0, 28)
+    );
+    nk_fill_rect(canvas, popup, 7.0f, UI_BG1);
+    nk_stroke_rect(
+        canvas,
+        nk_rect(
+            popup.x + 0.5f,
+            popup.y + 0.5f,
+            popup.w - 1.0f,
+            popup.h - 1.0f
+        ),
+        7.0f,
+        1.0f,
+        UI_BORDER
+    );
+    y = popup.y + 5.0f;
+    for (index = 0u; index < count; ++index) {
+        const app_menu_item *item = &items[index];
+        const int enabled = app_action_enabled(app, item->action);
+        struct nk_rect row;
+        int language_index;
+        if (item->separator_before) {
+            nk_stroke_line(
+                canvas,
+                popup.x + 9.0f,
+                y + 3.5f,
+                popup.x + popup.w - 9.0f,
+                y + 3.5f,
+                1.0f,
+                UI_BORDER_SOFT
+            );
+            y += 8.0f;
+        }
+        row = nk_rect(popup.x + 5.0f, y, popup.w - 10.0f, 27.0f);
+        if (enabled && ui_hovered(context, row)) {
+            nk_fill_rect(canvas, row, 5.0f, UI_ACCENT_SOFT);
+        }
+        language_index = app_language_action_index(item->action);
+        if (language_index >= 0 && app->language_index == language_index) {
+            nk_fill_circle(
+                canvas,
+                nk_rect(row.x + 9.0f, row.y + 10.0f, 7.0f, 7.0f),
+                UI_ACCENT
+            );
+        }
+        ui_draw_text(
+            canvas,
+            nk_rect(row.x + 22.0f, row.y, row.w - 92.0f, row.h),
+            item->label,
+            fonts->body,
+            enabled ? UI_TEXT : UI_DISABLED,
+            NK_TEXT_LEFT
+        );
+        if (item->shortcut[0] != '\0') {
+            ui_draw_text(
+                canvas,
+                nk_rect(row.x + row.w - 92.0f, row.y, 82.0f, row.h),
+                item->shortcut,
+                fonts->body,
+                enabled ? UI_MUTED : UI_DISABLED,
+                NK_TEXT_RIGHT
+            );
+        }
+        if (enabled && ui_clicked(context, row)) {
+            handled_click = 1;
+            app_execute_action(app, item->action);
+        }
+        y += 27.0f;
+    }
+    if (!handled_click
+        && nk_input_is_mouse_pressed(
+            &context->input, NK_BUTTON_LEFT
+        ) != 0
+        && !ui_hovered(context, popup)
+        && context->input.mouse.pos.y >= UI_MENU_HEIGHT) {
+        app->active_menu = APP_MENU_NONE;
+    }
+}
+
 static void ui_column_letters(size_t column, char *buffer, size_t capacity)
 {
     char reversed[16];
@@ -667,12 +1682,24 @@ static void render_toolbar(
     int has_workspace
 )
 {
-    const struct nk_rect toolbar = nk_rect(0.0f, 0.0f, width, 40.0f);
+    const struct nk_rect toolbar = nk_rect(
+        0.0f, UI_TOOLBAR_TOP, width, 40.0f
+    );
     nk_fill_rect(canvas, toolbar, 0.0f, UI_CHROME);
-    nk_stroke_line(canvas, 0.0f, 39.5f, width, 39.5f, 1.0f, UI_BORDER);
+    nk_stroke_line(
+        canvas,
+        0.0f,
+        UI_TOOLBAR_BOTTOM - 0.5f,
+        width,
+        UI_TOOLBAR_BOTTOM - 0.5f,
+        1.0f,
+        UI_BORDER
+    );
 
     if (has_workspace) {
-        const struct nk_rect group = nk_rect(12.0f, 7.0f, 167.0f, 32.0f);
+        const struct nk_rect group = nk_rect(
+            12.0f, UI_TOOLBAR_TOP + 7.0f, 167.0f, 32.0f
+        );
         nk_fill_rect(canvas, group, 11.0f, UI_BG1);
         nk_stroke_rect(
             canvas,
@@ -682,19 +1709,22 @@ static void render_toolbar(
             UI_BORDER
         );
         if (ui_draw_utility_button(
-            context, canvas, nk_rect(16.0f, 10.0f, 51.0f, 26.0f),
+            context, canvas,
+            nk_rect(16.0f, UI_TOOLBAR_TOP + 10.0f, 51.0f, 26.0f),
             "追加", fonts->body, UI_ICON_PLUS
         )) {
-            app_open_files(app);
+            app_open_files(app, 1);
         }
         if (ui_draw_utility_button(
-            context, canvas, nk_rect(68.0f, 10.0f, 54.0f, 26.0f),
+            context, canvas,
+            nk_rect(68.0f, UI_TOOLBAR_TOP + 10.0f, 54.0f, 26.0f),
             "刷新", fonts->body, UI_ICON_REFRESH
         )) {
             (void)app_recompute(app);
         }
         if (ui_draw_utility_button(
-            context, canvas, nk_rect(123.0f, 10.0f, 52.0f, 26.0f),
+            context, canvas,
+            nk_rect(123.0f, UI_TOOLBAR_TOP + 10.0f, 52.0f, 26.0f),
             "清空", fonts->body, UI_ICON_CLOSE
         )) {
             app_clear(app);
@@ -702,31 +1732,64 @@ static void render_toolbar(
     }
 
     {
-        const float license_x = has_workspace ? width - 208.0f : width - 105.0f;
-        const struct nk_rect license = nk_rect(license_x, 11.0f, 94.0f, 23.0f);
+        char license_text[96];
+        const char *state_text = xls_license_state_text(
+            &app->license, license_text, sizeof(license_text)
+        );
+        float license_width = ui_text_width(fonts->body, state_text) + 22.0f;
+        struct nk_color license_color = UI_WARNING;
+        float license_x;
+        struct nk_rect license;
+        if (license_width < 64.0f) {
+            license_width = 64.0f;
+        }
+        if (app->license.state == XLS_LICENSE_ACTIVATED) {
+            license_color = UI_LABEL_FG;
+        } else if (app->license.state == XLS_LICENSE_TRIAL) {
+            license_color = UI_ACCENT;
+        } else if (app->license.state == XLS_LICENSE_EXPIRED) {
+            license_color = nk_rgb(204, 53, 53);
+        }
+        license_x = has_workspace
+            ? width - 113.0f - license_width
+            : width - 11.0f - license_width;
+        license = nk_rect(
+            license_x,
+            UI_TOOLBAR_TOP + 11.0f,
+            license_width,
+            23.0f
+        );
         nk_fill_rect(canvas, license, 11.0f, nk_rgba(255, 255, 255, 110));
         nk_stroke_rect(
             canvas,
             nk_rect(license.x + 0.5f, license.y + 0.5f, license.w - 1.0f, license.h - 1.0f),
             11.0f,
             1.0f,
-            UI_ACCENT
+            license_color
         );
         ui_draw_text(
             canvas,
             license,
-            "纯 C 版 · 1.1.1",
+            state_text,
             fonts->body,
-            UI_ACCENT,
+            license_color,
             NK_TEXT_CENTERED
         );
+        if (ui_clicked(context, license)) {
+            app_show_license(app);
+        }
     }
 
     if (has_workspace) {
         if (ui_draw_button(
             context,
             canvas,
-            nk_rect(width - 102.0f, 7.0f, 91.0f, 32.0f),
+            nk_rect(
+                width - 102.0f,
+                UI_TOOLBAR_TOP + 7.0f,
+                91.0f,
+                32.0f
+            ),
             "导出 XLSX",
             fonts->body,
             UI_ICON_EXPORT,
@@ -747,13 +1810,28 @@ static void render_sheet_strip(
 {
     float x = 9.0f;
     size_t index;
-    nk_fill_rect(canvas, nk_rect(0.0f, 40.0f, width, 78.0f), 0.0f, UI_CHROME);
-    nk_stroke_line(canvas, 0.0f, 117.5f, width, 117.5f, 1.0f, UI_BORDER);
+    nk_fill_rect(
+        canvas,
+        nk_rect(0.0f, UI_TOOLBAR_BOTTOM, width, 78.0f),
+        0.0f,
+        UI_CHROME
+    );
+    nk_stroke_line(
+        canvas,
+        0.0f,
+        UI_SHEET_BOTTOM - 0.5f,
+        width,
+        UI_SHEET_BOTTOM - 0.5f,
+        1.0f,
+        UI_BORDER
+    );
     for (index = 0; index < app->merged_sheet_count; ++index) {
         const char *name = app->merged_sheets[index].sheet_name;
         const int selected = index == app->selected_sheet;
         const float button_width = ui_text_width(fonts->body, name) + 16.0f;
-        const struct nk_rect button = nk_rect(x, 70.0f, button_width, 26.0f);
+        const struct nk_rect button = nk_rect(
+            x, UI_TOOLBAR_BOTTOM + 30.0f, button_width, 26.0f
+        );
         nk_fill_rect(
             canvas,
             button,
@@ -843,7 +1921,7 @@ static void render_empty_state(
     float status_y
 )
 {
-    const float body_top = 40.0f;
+    const float body_top = UI_TOOLBAR_BOTTOM;
     const float body_height = status_y - body_top;
     float card_width = width - 64.0f;
     float card_height = body_height - 64.0f;
@@ -929,7 +2007,7 @@ static void render_empty_state(
         UI_ICON_FOLDER,
         1
     )) {
-        app_open_files(app);
+        app_open_files(app, 0);
     }
     ui_draw_text(
         canvas,
@@ -1237,7 +2315,9 @@ static void render_inspector(
             cell->display_value == NULL || cell->display_value[0] == '\0'
                 ? "空值"
                 : cell->display_value,
-            fonts->numeric,
+            ui_text_has_non_ascii(cell->display_value)
+                ? fonts->body
+                : fonts->numeric,
             UI_TEXT,
             NK_TEXT_CENTERED
         );
@@ -1448,7 +2528,9 @@ static void render_inspector(
                     canvas,
                     nk_rect(source_card.x + 10.0f, row_y + 25.0f, source_card.w - 20.0f, 20.0f),
                     value == NULL ? "" : value,
-                    fonts->source_value,
+                    ui_text_has_non_ascii(value)
+                        ? fonts->body
+                        : fonts->source_value,
                     outlier ? UI_WARNING : UI_TEXT,
                     NK_TEXT_RIGHT
                 );
@@ -1528,6 +2610,835 @@ static void render_correction_bar(
     }
 }
 
+static void render_dialog_backdrop(
+    struct nk_command_buffer *canvas,
+    float width,
+    float height
+)
+{
+    nk_fill_rect(
+        canvas,
+        nk_rect(0.0f, 0.0f, width, height),
+        0.0f,
+        nk_rgba(22, 29, 40, 90)
+    );
+}
+
+static int render_dialog_close(
+    struct nk_context *context,
+    struct nk_command_buffer *canvas,
+    struct nk_rect card
+)
+{
+    const struct nk_rect close = nk_rect(
+        card.x + card.w - 36.0f, card.y + 12.0f, 24.0f, 24.0f
+    );
+    if (ui_hovered(context, close)) {
+        nk_fill_circle(canvas, close, UI_BORDER_SOFT);
+    }
+    ui_draw_icon(
+        canvas,
+        UI_ICON_CLOSE,
+        close.x + 5.0f,
+        close.y + 5.0f,
+        UI_MUTED
+    );
+    return ui_clicked(context, close);
+}
+
+static void render_notice_dialog(
+    struct nk_context *context,
+    struct nk_command_buffer *canvas,
+    app_state *app,
+    const ui_fonts *fonts,
+    float width,
+    float height
+)
+{
+    const float card_width = 500.0f;
+    const float card_height = 248.0f;
+    const struct nk_rect card = nk_rect(
+        (width - card_width) * 0.5f,
+        (height - card_height) * 0.5f,
+        card_width,
+        card_height
+    );
+    render_dialog_backdrop(canvas, width, height);
+    nk_fill_rect(
+        canvas,
+        nk_rect(card.x + 3.0f, card.y + 7.0f, card.w, card.h),
+        13.0f,
+        nk_rgba(0, 0, 0, 24)
+    );
+    nk_fill_rect(canvas, card, 13.0f, UI_BG1);
+    nk_stroke_rect(canvas, card, 13.0f, 1.0f, UI_BORDER);
+    ui_draw_text(
+        canvas,
+        nk_rect(card.x + 24.0f, card.y + 18.0f, card.w - 72.0f, 28.0f),
+        app->dialog_title,
+        fonts->body,
+        UI_TEXT,
+        NK_TEXT_LEFT
+    );
+    ui_draw_multiline(
+        canvas,
+        nk_rect(card.x + 24.0f, card.y + 64.0f, card.w - 48.0f, 110.0f),
+        app->dialog_message,
+        fonts->body,
+        app->dialog_error ? nk_rgb(204, 53, 53) : UI_MUTED,
+        23.0f
+    );
+    if (render_dialog_close(context, canvas, card)
+        || ui_draw_button(
+            context,
+            canvas,
+            nk_rect(card.x + card.w - 104.0f, card.y + card.h - 52.0f, 80.0f, 32.0f),
+            "确定",
+            fonts->body,
+            UI_ICON_NONE,
+            1
+        )) {
+        app_close_dialog(app);
+    }
+}
+
+static void render_rules_dialog(
+    struct nk_context *context,
+    struct nk_command_buffer *canvas,
+    app_state *app,
+    const ui_fonts *fonts,
+    float width,
+    float height
+)
+{
+    const struct nk_rect card = nk_rect(
+        (width - 560.0f) * 0.5f,
+        (height - 420.0f) * 0.5f,
+        560.0f,
+        420.0f
+    );
+    float y = card.y + 100.0f;
+    size_t displayed = 0u;
+    size_t sheet_index;
+    render_dialog_backdrop(canvas, width, height);
+    nk_fill_rect(canvas, card, 13.0f, UI_BG1);
+    nk_stroke_rect(canvas, card, 13.0f, 1.0f, UI_BORDER);
+    ui_draw_text(
+        canvas,
+        nk_rect(card.x + 24.0f, card.y + 18.0f, card.w - 72.0f, 28.0f),
+        "当前修正规则",
+        fonts->body,
+        UI_TEXT,
+        NK_TEXT_LEFT
+    );
+    ui_draw_text(
+        canvas,
+        nk_rect(card.x + 24.0f, card.y + 55.0f, card.w - 48.0f, 24.0f),
+        app->dialog_message,
+        fonts->body,
+        UI_MUTED,
+        NK_TEXT_LEFT
+    );
+    for (sheet_index = 0u;
+         sheet_index < app->merged_sheet_count && displayed < 9u;
+         ++sheet_index) {
+        const xls_merged_sheet *sheet = &app->merged_sheets[sheet_index];
+        size_t row;
+        for (row = 0u; row < sheet->row_count && displayed < 9u; ++row) {
+            size_t column;
+            for (column = 0u;
+                 column < sheet->column_count && displayed < 9u;
+                 ++column) {
+                const xls_merged_cell *cell = xls_merged_sheet_cell(
+                    sheet, row, column
+                );
+                char letters[16];
+                char line[256];
+                if (cell == NULL || cell->is_overridden == 0u) {
+                    continue;
+                }
+                ui_column_letters(column, letters, sizeof(letters));
+                (void)snprintf(
+                    line,
+                    sizeof(line),
+                    "%s · %s%zu    →    %s",
+                    sheet->sheet_name,
+                    letters,
+                    row + 1u,
+                    ui_kind_text(cell->kind)
+                );
+                nk_fill_rect(
+                    canvas,
+                    nk_rect(card.x + 24.0f, y, card.w - 48.0f, 27.0f),
+                    5.0f,
+                    displayed % 2u == 0u ? UI_BG2 : UI_BG1
+                );
+                ui_draw_text_elided(
+                    canvas,
+                    nk_rect(card.x + 34.0f, y, card.w - 68.0f, 27.0f),
+                    line,
+                    fonts->body,
+                    UI_TEXT,
+                    NK_TEXT_LEFT
+                );
+                y += 29.0f;
+                ++displayed;
+            }
+        }
+    }
+    if (render_dialog_close(context, canvas, card)
+        || ui_draw_button(
+            context,
+            canvas,
+            nk_rect(card.x + card.w - 104.0f, card.y + card.h - 52.0f, 80.0f, 32.0f),
+            "关闭",
+            fonts->body,
+            UI_ICON_NONE,
+            0
+        )) {
+        app_close_dialog(app);
+    }
+    if (app_override_count(app) > 0u
+        && ui_draw_button(
+            context,
+            canvas,
+            nk_rect(card.x + card.w - 246.0f, card.y + card.h - 52.0f, 132.0f, 32.0f),
+            "保存规则...",
+            fonts->body,
+            UI_ICON_NONE,
+            1
+        )) {
+        app_close_dialog(app);
+        app_save_rules(app);
+    }
+}
+
+static void license_set_result(
+    app_state *app,
+    int success,
+    const char *message
+)
+{
+    app->dialog_error = !success;
+    (void)snprintf(
+        app->dialog_message,
+        sizeof(app->dialog_message),
+        "%s",
+        message == NULL ? "" : message
+    );
+}
+
+static void render_license_online_page(
+    struct nk_context *context,
+    struct nk_command_buffer *canvas,
+    app_state *app,
+    const ui_fonts *fonts,
+    struct nk_rect panel
+)
+{
+    char subtitle[256];
+    float y = panel.y + 112.0f;
+    if (app->license.state == XLS_LICENSE_ACTIVATED) {
+        const int remaining = xls_license_remaining_days(&app->license);
+        if (remaining > 0) {
+            (void)snprintf(
+                subtitle,
+                sizeof(subtitle),
+                "您的软件已激活，许可证剩余 %d 天。",
+                remaining
+            );
+        } else {
+            (void)snprintf(
+                subtitle,
+                sizeof(subtitle),
+                "您的软件已激活，可正常使用全部功能。"
+            );
+        }
+    } else if (app->license.state == XLS_LICENSE_TRIAL) {
+        (void)snprintf(
+            subtitle,
+            sizeof(subtitle),
+            "试用期剩余 %d 天，期间所有功能开放。",
+            xls_license_remaining_days(&app->license)
+        );
+    } else if (app->license.state == XLS_LICENSE_EXPIRED) {
+        (void)snprintf(
+            subtitle,
+            sizeof(subtitle),
+            "许可证或试用期已过期，请输入激活码继续使用完整功能。"
+        );
+    } else {
+        (void)snprintf(
+            subtitle,
+            sizeof(subtitle),
+            "输入激活码，或先开始 14 天免费试用。"
+        );
+    }
+    ui_draw_text_elided(
+        canvas,
+        nk_rect(panel.x + 30.0f, y, panel.w - 60.0f, 24.0f),
+        subtitle,
+        fonts->body,
+        UI_MUTED,
+        NK_TEXT_LEFT
+    );
+    y += 42.0f;
+    if (app->license.state == XLS_LICENSE_ACTIVATED) {
+        char valid_until[96];
+        nk_fill_rect(
+            canvas,
+            nk_rect(panel.x + 30.0f, y, panel.w - 60.0f, 150.0f),
+            9.0f,
+            UI_BG2
+        );
+        nk_stroke_rect(
+            canvas,
+            nk_rect(panel.x + 30.0f, y, panel.w - 60.0f, 150.0f),
+            9.0f,
+            1.0f,
+            UI_BORDER
+        );
+        ui_draw_text(
+            canvas,
+            nk_rect(panel.x + 44.0f, y + 16.0f, 92.0f, 24.0f),
+            "套餐类型",
+            fonts->body,
+            UI_MUTED,
+            NK_TEXT_LEFT
+        );
+        ui_draw_text(
+            canvas,
+            nk_rect(panel.x + 140.0f, y + 16.0f, panel.w - 186.0f, 24.0f),
+            xls_license_plan_text(app->license.info.plan),
+            fonts->body,
+            UI_LABEL_FG,
+            NK_TEXT_RIGHT
+        );
+        ui_draw_text(
+            canvas,
+            nk_rect(panel.x + 44.0f, y + 57.0f, 80.0f, 24.0f),
+            "激活码",
+            fonts->body,
+            UI_MUTED,
+            NK_TEXT_LEFT
+        );
+        ui_draw_text_elided(
+            canvas,
+            nk_rect(panel.x + 120.0f, y + 57.0f, panel.w - 226.0f, 24.0f),
+            app->license.info.key_id,
+            fonts->source_value,
+            UI_TEXT,
+            NK_TEXT_RIGHT
+        );
+        if (ui_draw_button(
+            context,
+            canvas,
+            nk_rect(panel.x + panel.w - 96.0f, y + 54.0f, 52.0f, 30.0f),
+            "复制",
+            fonts->body,
+            UI_ICON_NONE,
+            0
+        )) {
+            (void)SDL_SetClipboardText(app->license.info.key_id);
+            license_set_result(app, 1, "激活码已复制");
+        }
+        if (app->license.info.expires_at > 0) {
+            const time_t expiry = (time_t)app->license.info.expires_at;
+            struct tm calendar;
+#if defined(_WIN32)
+            (void)localtime_s(&calendar, &expiry);
+#else
+            (void)localtime_r(&expiry, &calendar);
+#endif
+            (void)snprintf(
+                valid_until,
+                sizeof(valid_until),
+                "%04d-%02d-%02d",
+                calendar.tm_year + 1900,
+                calendar.tm_mon + 1,
+                calendar.tm_mday
+            );
+        } else {
+            (void)snprintf(valid_until, sizeof(valid_until), "永久授权");
+        }
+        ui_draw_text(
+            canvas,
+            nk_rect(panel.x + 44.0f, y + 98.0f, 80.0f, 24.0f),
+            "有效期",
+            fonts->body,
+            UI_MUTED,
+            NK_TEXT_LEFT
+        );
+        ui_draw_text(
+            canvas,
+            nk_rect(panel.x + 120.0f, y + 98.0f, panel.w - 166.0f, 24.0f),
+            valid_until,
+            fonts->body,
+            UI_TEXT,
+            NK_TEXT_RIGHT
+        );
+        return;
+    }
+    ui_draw_text(
+        canvas,
+        nk_rect(panel.x + 30.0f, y, panel.w - 60.0f, 22.0f),
+        "激活码",
+        fonts->body,
+        UI_TEXT,
+        NK_TEXT_LEFT
+    );
+    y += 30.0f;
+    {
+        char compact[17];
+        size_t compact_length = 0u;
+        size_t input_index;
+        const unsigned char *cursor =
+            (const unsigned char *)app->license_key;
+        while (*cursor != '\0' && compact_length < 16u) {
+            if (isalnum(*cursor) != 0) {
+                compact[compact_length++] = (char)*cursor;
+            }
+            ++cursor;
+        }
+        compact[compact_length] = '\0';
+        for (input_index = 0u; input_index < 4u; ++input_index) {
+            const float x = panel.x + 36.0f
+                + (float)input_index * 96.0f;
+            const struct nk_rect input = nk_rect(x, y, 72.0f, 38.0f);
+            char part[5];
+            size_t part_length = compact_length > input_index * 4u
+                ? compact_length - input_index * 4u
+                : 0u;
+            if (part_length > 4u) {
+                part_length = 4u;
+            }
+            memset(part, 0, sizeof(part));
+            if (part_length > 0u) {
+                memcpy(
+                    part,
+                    compact + input_index * 4u,
+                    part_length
+                );
+            }
+            nk_fill_rect(canvas, input, 8.0f, UI_BG1);
+            nk_stroke_rect(
+                canvas,
+                input,
+                8.0f,
+                1.0f,
+                compact_length < 16u
+                    && input_index == compact_length / 4u
+                    ? UI_ACCENT
+                    : UI_BORDER
+            );
+            ui_draw_text(
+                canvas,
+                input,
+                part,
+                fonts->source_value,
+                UI_TEXT,
+                NK_TEXT_CENTERED
+            );
+            if (input_index < 3u) {
+                ui_draw_text(
+                    canvas,
+                    nk_rect(x + 80.0f, y, 8.0f, 38.0f),
+                    "-",
+                    fonts->source_value,
+                    UI_MUTED,
+                    NK_TEXT_CENTERED
+                );
+            }
+        }
+    }
+    y += 46.0f;
+    {
+        const struct nk_rect activate = nk_rect(
+            panel.x + 36.0f, y, panel.w - 72.0f, 40.0f
+        );
+        const int complete = strlen(app->license_key) == 19u;
+        int clicked = 0;
+        if (complete) {
+            clicked = ui_draw_button(
+                context,
+                canvas,
+                activate,
+                "激活",
+                fonts->body,
+                UI_ICON_NONE,
+                1
+            );
+        } else {
+            nk_fill_rect(canvas, activate, 8.0f, nk_rgb(191, 211, 247));
+            ui_draw_text(
+                canvas,
+                activate,
+                "激活",
+                fonts->body,
+                nk_rgb(255, 255, 255),
+                NK_TEXT_CENTERED
+            );
+        }
+        if (clicked) {
+        char message[256];
+        const int success = xls_license_activate(
+            &app->license,
+            app->license_key,
+            message,
+            sizeof(message)
+        );
+        license_set_result(app, success, message);
+        }
+    }
+    y += 52.0f;
+    if (app->license.state == XLS_LICENSE_UNACTIVATED
+        && ui_clicked(
+            context,
+            nk_rect(panel.x + 36.0f, y, 142.0f, 32.0f)
+        )) {
+        char message[256];
+        const int success = xls_license_request_trial(
+            &app->license, message, sizeof(message)
+        );
+        license_set_result(app, success, message);
+    }
+    if (app->license.state == XLS_LICENSE_UNACTIVATED) {
+        ui_draw_text(
+            canvas,
+            nk_rect(panel.x + 36.0f, y, 142.0f, 32.0f),
+            "开始免费试用 14 天",
+            fonts->body,
+            UI_ACCENT,
+            NK_TEXT_LEFT
+        );
+    }
+    if (ui_draw_button(
+        context,
+        canvas,
+        nk_rect(panel.x + 193.0f, y, 108.0f, 34.0f),
+        "获取激活码",
+        fonts->body,
+        UI_ICON_NONE,
+        0
+    )) {
+        (void)xls_platform_open_url("https://z-pulse.cn/xlsone/buy.html");
+    }
+}
+
+static void render_license_offline_page(
+    struct nk_context *context,
+    struct nk_command_buffer *canvas,
+    app_state *app,
+    const ui_fonts *fonts,
+    struct nk_rect panel
+)
+{
+    float y = panel.y + 112.0f;
+    const char *steps[] = {
+        "1   打开离线激活页面，粘贴设备码并提交",
+        "2   下载生成的授权文件（.license）",
+        "3   回到这里导入授权文件完成激活"
+    };
+    size_t index;
+    nk_fill_rect(
+        canvas,
+        nk_rect(panel.x + 30.0f, y, panel.w - 60.0f, 250.0f),
+        9.0f,
+        UI_BG2
+    );
+    nk_stroke_rect(
+        canvas,
+        nk_rect(panel.x + 30.0f, y, panel.w - 60.0f, 250.0f),
+        9.0f,
+        1.0f,
+        UI_BORDER
+    );
+    for (index = 0u; index < sizeof(steps) / sizeof(steps[0]); ++index) {
+        ui_draw_text(
+            canvas,
+            nk_rect(panel.x + 45.0f, y + 14.0f + (float)index * 34.0f, panel.w - 90.0f, 26.0f),
+            steps[index],
+            fonts->body,
+            UI_TEXT,
+            NK_TEXT_LEFT
+        );
+    }
+    ui_draw_text(
+        canvas,
+        nk_rect(panel.x + 45.0f, y + 121.0f, 100.0f, 22.0f),
+        "本机设备码",
+        fonts->body,
+        UI_MUTED,
+        NK_TEXT_LEFT
+    );
+    ui_draw_text_elided(
+        canvas,
+        nk_rect(panel.x + 45.0f, y + 146.0f, panel.w - 180.0f, 28.0f),
+        app->license.device_fingerprint,
+        fonts->source_value,
+        UI_TEXT,
+        NK_TEXT_LEFT
+    );
+    if (ui_draw_button(
+        context,
+        canvas,
+        nk_rect(panel.x + panel.w - 116.0f, y + 143.0f, 71.0f, 30.0f),
+        "复制",
+        fonts->body,
+        UI_ICON_NONE,
+        0
+    )) {
+        (void)SDL_SetClipboardText(app->license.device_fingerprint);
+        license_set_result(app, 1, "设备码已复制");
+    }
+    if (ui_draw_button(
+        context,
+        canvas,
+        nk_rect(panel.x + 45.0f, y + 190.0f, 168.0f, 36.0f),
+        "打开离线激活页面",
+        fonts->body,
+        UI_ICON_NONE,
+        1
+    )) {
+        (void)xls_platform_open_url("https://z-pulse.cn/xlsone/offline");
+    }
+    if (ui_draw_button(
+        context,
+        canvas,
+        nk_rect(panel.x + panel.w - 213.0f, y + 190.0f, 168.0f, 36.0f),
+        "导入授权文件...",
+        fonts->body,
+        UI_ICON_NONE,
+        0
+    )) {
+        char *path = NULL;
+        if (xls_platform_open_license_file(&path)) {
+            char message[256];
+            const int success = xls_license_import_file(
+                &app->license, path, message, sizeof(message)
+            );
+            license_set_result(app, success, message);
+            free(path);
+        }
+    }
+}
+
+static void render_license_dialog(
+    struct nk_context *context,
+    struct nk_command_buffer *canvas,
+    app_state *app,
+    const ui_fonts *fonts,
+    float width,
+    float height
+)
+{
+    const float card_width = width < 820.0f ? width - 60.0f : 720.0f;
+    const float card_height = height < 634.0f ? height - 54.0f : 580.0f;
+    const struct nk_rect card = nk_rect(
+        (width - card_width) * 0.5f,
+        (height - card_height) * 0.5f,
+        card_width,
+        card_height
+    );
+    const float brand_width = 280.0f;
+    const struct nk_rect panel = nk_rect(
+        card.x + brand_width,
+        card.y,
+        card.w - brand_width,
+        card.h
+    );
+    render_dialog_backdrop(canvas, width, height);
+    nk_fill_rect(canvas, card, 13.0f, UI_BG1);
+    nk_stroke_rect(canvas, card, 13.0f, 1.0f, UI_BORDER);
+    nk_fill_rect(
+        canvas,
+        nk_rect(card.x, card.y, brand_width, card.h),
+        13.0f,
+        UI_ACCENT_SOFT
+    );
+    nk_fill_rect(
+        canvas,
+        nk_rect(card.x + brand_width - 13.0f, card.y, 13.0f, card.h),
+        0.0f,
+        UI_ACCENT_SOFT
+    );
+    nk_fill_rect(
+        canvas,
+        nk_rect(card.x + brand_width * 0.5f - 28.0f, card.y + 112.0f, 56.0f, 56.0f),
+        14.0f,
+        UI_ACCENT
+    );
+    nk_fill_rect(
+        canvas,
+        nk_rect(
+            card.x + brand_width * 0.5f - 14.0f,
+            card.y + 122.0f,
+            28.0f,
+            36.0f
+        ),
+        4.0f,
+        nk_rgb(255, 255, 255)
+    );
+    nk_stroke_line(
+        canvas,
+        card.x + brand_width * 0.5f - 8.0f,
+        card.y + 133.0f,
+        card.x + brand_width * 0.5f + 8.0f,
+        card.y + 133.0f,
+        2.0f,
+        UI_SUM_BORDER
+    );
+    nk_stroke_line(
+        canvas,
+        card.x + brand_width * 0.5f - 8.0f,
+        card.y + 141.0f,
+        card.x + brand_width * 0.5f + 8.0f,
+        card.y + 141.0f,
+        2.0f,
+        UI_SUM_BORDER
+    );
+    ui_draw_text(
+        canvas,
+        nk_rect(card.x + 24.0f, card.y + 187.0f, brand_width - 48.0f, 30.0f),
+        "表表归一",
+        fonts->title,
+        UI_TEXT,
+        NK_TEXT_CENTERED
+    );
+    ui_draw_text(
+        canvas,
+        nk_rect(card.x + 24.0f, card.y + 223.0f, brand_width - 48.0f, 48.0f),
+        "多张同格式 Excel 报表一键汇总",
+        fonts->body,
+        UI_MUTED,
+        NK_TEXT_CENTERED
+    );
+    {
+        static const char *const pills[] = {"快速", "安全", "原生"};
+        size_t pill_index;
+        for (pill_index = 0u; pill_index < 3u; ++pill_index) {
+            const struct nk_rect pill = nk_rect(
+                card.x + 32.0f + (float)pill_index * 68.0f,
+                card.y + card.h - 55.0f,
+                56.0f,
+                24.0f
+            );
+            nk_fill_rect(canvas, pill, 12.0f, UI_BG1);
+            ui_draw_text(
+                canvas,
+                pill,
+                pills[pill_index],
+                fonts->body,
+                UI_MUTED,
+                NK_TEXT_CENTERED
+            );
+        }
+    }
+    ui_draw_text(
+        canvas,
+        nk_rect(panel.x + 36.0f, panel.y + 24.0f, panel.w - 82.0f, 28.0f),
+        "许可证",
+        fonts->title,
+        UI_TEXT,
+        NK_TEXT_LEFT
+    );
+    if (app->license.state != XLS_LICENSE_ACTIVATED) {
+        const struct nk_rect online = nk_rect(
+            panel.x + 30.0f, panel.y + 63.0f, 82.0f, 30.0f
+        );
+        const struct nk_rect offline = nk_rect(
+            panel.x + 114.0f, panel.y + 63.0f, 82.0f, 30.0f
+        );
+        ui_draw_text(
+            canvas,
+            online,
+            "在线激活",
+            fonts->body,
+            app->license_page == 0 ? UI_TEXT : UI_MUTED,
+            NK_TEXT_CENTERED
+        );
+        ui_draw_text(
+            canvas,
+            offline,
+            "离线激活",
+            fonts->body,
+            app->license_page == 1 ? UI_TEXT : UI_MUTED,
+            NK_TEXT_CENTERED
+        );
+        nk_fill_rect(
+            canvas,
+            nk_rect(
+                app->license_page == 0 ? online.x : offline.x,
+                panel.y + 91.0f,
+                82.0f,
+                2.0f
+            ),
+            0.0f,
+            UI_ACCENT
+        );
+        if (ui_clicked(context, online)) {
+            app->license_page = 0;
+        }
+        if (ui_clicked(context, offline)) {
+            app->license_page = 1;
+        }
+    }
+    if (app->dialog_message[0] != '\0') {
+        ui_draw_text_elided(
+            canvas,
+            nk_rect(panel.x + 30.0f, panel.y + panel.h - 48.0f, panel.w - 60.0f, 24.0f),
+            app->dialog_message,
+            fonts->body,
+            app->dialog_error ? nk_rgb(204, 53, 53) : UI_LABEL_FG,
+            NK_TEXT_LEFT
+        );
+    }
+    if (app->license_page == 0
+        || app->license.state == XLS_LICENSE_ACTIVATED) {
+        render_license_online_page(
+            context, canvas, app, fonts, panel
+        );
+    } else {
+        render_license_offline_page(
+            context, canvas, app, fonts, panel
+        );
+    }
+    if (render_dialog_close(context, canvas, card)) {
+        app_close_dialog(app);
+    }
+}
+
+static void render_dialog(
+    struct nk_context *context,
+    struct nk_command_buffer *canvas,
+    app_state *app,
+    const ui_fonts *fonts,
+    float width,
+    float height
+)
+{
+    switch (app->dialog) {
+    case APP_DIALOG_LICENSE:
+        render_license_dialog(
+            context, canvas, app, fonts, width, height
+        );
+        break;
+    case APP_DIALOG_RULES:
+        render_rules_dialog(
+            context, canvas, app, fonts, width, height
+        );
+        break;
+    case APP_DIALOG_NOTICE:
+        render_notice_dialog(
+            context, canvas, app, fonts, width, height
+        );
+        break;
+    case APP_DIALOG_NONE:
+    default:
+        break;
+    }
+}
+
 static void render_workspace(
     struct nk_context *context,
     app_state *app,
@@ -1555,6 +3466,8 @@ static void render_workspace(
             0.0f,
             UI_BG0
         );
+        ui_input_blocked = app->active_menu != APP_MENU_NONE
+            || app->dialog != APP_DIALOG_NONE;
         render_toolbar(context, canvas, app, fonts, (float)width, has_workspace);
         if (!has_workspace) {
             render_empty_state(
@@ -1575,26 +3488,46 @@ static void render_workspace(
                 canvas,
                 app,
                 fonts,
-                nk_rect(0.0f, 118.0f, table_width, content_bottom - 118.0f)
+                nk_rect(
+                    0.0f,
+                    UI_SHEET_BOTTOM,
+                    table_width,
+                    content_bottom - UI_SHEET_BOTTOM
+                )
             );
             render_inspector(
                 context,
                 canvas,
                 app,
                 fonts,
-                nk_rect(table_width, 118.0f, inspector_width, content_bottom - 118.0f)
+                nk_rect(
+                    table_width,
+                    UI_SHEET_BOTTOM,
+                    inspector_width,
+                    content_bottom - UI_SHEET_BOTTOM
+                )
             );
         } else {
             size_t index;
             nk_fill_rect(
                 canvas,
-                nk_rect(0.0f, 40.0f, (float)width, content_bottom - 40.0f),
+                nk_rect(
+                    0.0f,
+                    UI_TOOLBAR_BOTTOM,
+                    (float)width,
+                    content_bottom - UI_TOOLBAR_BOTTOM
+                ),
                 0.0f,
                 UI_BG0
             );
             ui_draw_text(
                 canvas,
-                nk_rect(36.0f, 100.0f, (float)width - 72.0f, 32.0f),
+                nk_rect(
+                    36.0f,
+                    UI_TOOLBAR_BOTTOM + 60.0f,
+                    (float)width - 72.0f,
+                    32.0f
+                ),
                 "模板结构不一致，当前没有可汇总工作表。",
                 fonts->title,
                 UI_TEXT,
@@ -1603,7 +3536,13 @@ static void render_workspace(
             for (index = 0; index < app->validation.issue_count && index < 8; ++index) {
                 ui_draw_text_elided(
                     canvas,
-                    nk_rect(80.0f, 145.0f + (float)index * 25.0f, (float)width - 160.0f, 22.0f),
+                    nk_rect(
+                        80.0f,
+                        UI_TOOLBAR_BOTTOM + 105.0f
+                            + (float)index * 25.0f,
+                        (float)width - 160.0f,
+                        22.0f
+                    ),
                     app->validation.issues[index].message,
                     fonts->body,
                     UI_MUTED,
@@ -1622,6 +3561,22 @@ static void render_workspace(
             );
         }
         render_status_bar(canvas, app, fonts, (float)width, status_y);
+        ui_input_blocked = app->dialog != APP_DIALOG_NONE;
+        render_menu_bar(
+            context, canvas, app, fonts, (float)width
+        );
+        ui_input_blocked = app->dialog != APP_DIALOG_NONE;
+        render_active_menu(context, canvas, app, fonts);
+        ui_input_blocked = 0;
+        render_dialog(
+            context,
+            canvas,
+            app,
+            fonts,
+            (float)width,
+            (float)height
+        );
+        ui_input_blocked = 0;
     }
     nk_end(context);
 }
@@ -1683,6 +3638,7 @@ static const nk_rune *title_glyph_ranges(void)
         0x7ed3, 0x7ed3,
         0x81f4, 0x81f4,
         0x8868, 0x8868,
+        0x8bb8, 0x8bc1,
         0xff0c, 0xff0c,
         0
     };
@@ -1781,6 +3737,85 @@ static void app_select_reference(app_state *app, const char *reference)
     }
 }
 
+static void app_set_license_key_input(
+    app_state *app,
+    const char *current,
+    const char *additional
+)
+{
+    char raw[17];
+    size_t raw_length = 0u;
+    const char *parts[2];
+    size_t part_index;
+    size_t output_index = 0u;
+    parts[0] = current == NULL ? "" : current;
+    parts[1] = additional == NULL ? "" : additional;
+    for (part_index = 0u; part_index < 2u; ++part_index) {
+        const unsigned char *cursor =
+            (const unsigned char *)parts[part_index];
+        while (*cursor != '\0' && raw_length < sizeof(raw) - 1u) {
+            if (isalnum(*cursor) != 0) {
+                raw[raw_length++] = (char)toupper(*cursor);
+            }
+            ++cursor;
+        }
+    }
+    raw[raw_length] = '\0';
+    for (part_index = 0u; part_index < raw_length; ++part_index) {
+        if (part_index > 0u && part_index % 4u == 0u) {
+            app->license_key[output_index++] = '-';
+        }
+        app->license_key[output_index++] = raw[part_index];
+    }
+    app->license_key[output_index] = '\0';
+}
+
+static void app_backspace_license_key(app_state *app)
+{
+    char raw[17];
+    size_t raw_length = 0u;
+    const unsigned char *cursor =
+        (const unsigned char *)app->license_key;
+    while (*cursor != '\0' && raw_length < sizeof(raw) - 1u) {
+        if (isalnum(*cursor) != 0) {
+            raw[raw_length++] = (char)*cursor;
+        }
+        ++cursor;
+    }
+    if (raw_length > 0u) {
+        --raw_length;
+    }
+    raw[raw_length] = '\0';
+    app->license_key[0] = '\0';
+    app_set_license_key_input(app, "", raw);
+}
+
+static app_menu app_menu_from_name(const char *name)
+{
+    if (name == NULL) {
+        return APP_MENU_NONE;
+    }
+    if (strcmp(name, "file") == 0) {
+        return APP_MENU_FILE;
+    }
+    if (strcmp(name, "edit") == 0) {
+        return APP_MENU_EDIT;
+    }
+    if (strcmp(name, "rules") == 0) {
+        return APP_MENU_RULES;
+    }
+    if (strcmp(name, "license") == 0) {
+        return APP_MENU_LICENSE;
+    }
+    if (strcmp(name, "language") == 0) {
+        return APP_MENU_LANGUAGE;
+    }
+    if (strcmp(name, "help") == 0) {
+        return APP_MENU_HELP;
+    }
+    return APP_MENU_NONE;
+}
+
 static int save_renderer_bmp(
     SDL_Renderer *renderer,
     const char *path
@@ -1838,13 +3873,16 @@ int main(int argc, char **argv)
     const char *monospace_font_path;
     const char *screenshot_path;
     const char *screenshot_selection;
+    const char *screenshot_menu;
+    const char *screenshot_dialog;
     app_state app;
-    int running = 1;
     int screenshot_saved = 0;
     int index;
     memset(&app, 0, sizeof(app));
     memset(&fonts, 0, sizeof(fonts));
+    app.running = 1;
     app.sources_expanded = 1;
+    xls_license_manager_init(&app.license);
     app_set_status(&app, "可拖入或打开多个 Excel 工作簿。");
 
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS) != 0) {
@@ -1954,6 +3992,8 @@ int main(int argc, char **argv)
     apply_theme(context);
     screenshot_path = getenv("XLSONE_SCREENSHOT_PATH");
     screenshot_selection = getenv("XLSONE_SCREENSHOT_SELECT");
+    screenshot_menu = getenv("XLSONE_SCREENSHOT_MENU");
+    screenshot_dialog = getenv("XLSONE_SCREENSHOT_DIALOG");
 
     for (index = 1; index < argc; ++index) {
         (void)app_add_path(&app, argv[index]);
@@ -1962,17 +4002,29 @@ int main(int argc, char **argv)
         (void)app_recompute(&app);
         app_select_reference(&app, screenshot_selection);
     }
+    app.active_menu = app_menu_from_name(screenshot_menu);
+    if (screenshot_dialog != NULL
+        && strcmp(screenshot_dialog, "license") == 0) {
+        app_show_license(&app);
+    }
 
-    while (running) {
+    while (app.running) {
         SDL_Event event;
         int width;
         int height;
         nk_input_begin(context);
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) {
-                running = 0;
+                app.running = 0;
             } else if (event.type == SDL_DROPFILE) {
-                if (app_add_path(&app, event.drop.file)) {
+                if (app.workbook_count + 1u
+                    > (size_t)xls_license_max_import_files(&app.license)) {
+                    app_set_status(
+                        &app,
+                        "未授权时最多处理 3 个文件；请激活或开始免费试用。"
+                    );
+                    app_show_license(&app);
+                } else if (app_add_path(&app, event.drop.file)) {
                     (void)app_recompute(&app);
                 }
                 SDL_free(event.drop.file);
@@ -1983,6 +4035,8 @@ int main(int argc, char **argv)
                 app.drop_targeted = 0;
 #endif
             } else if (event.type == SDL_MOUSEWHEEL
+                && app.dialog == APP_DIALOG_NONE
+                && app.active_menu == APP_MENU_NONE
                 && app.selected_sheet < app.merged_sheet_count) {
                 if ((SDL_GetModState() & KMOD_SHIFT) != 0
                     || event.wheel.x != 0) {
@@ -2005,14 +4059,63 @@ int main(int argc, char **argv)
                 } else if (event.wheel.y < 0) {
                     app.first_visible_row += (size_t)(-event.wheel.y) * 3u;
                 }
-            } else if (event.type == SDL_KEYDOWN
-                && (event.key.keysym.mod & (KMOD_CTRL | KMOD_GUI)) != 0) {
-                if (event.key.keysym.sym == SDLK_o) {
-                    app_open_files(&app);
-                } else if (event.key.keysym.sym == SDLK_s) {
-                    app_export(&app);
-                } else if (event.key.keysym.sym == SDLK_n) {
-                    app_clear(&app);
+            } else if (event.type == SDL_TEXTINPUT
+                && app.dialog == APP_DIALOG_LICENSE
+                && app.license_page == 0
+                && app.license.state != XLS_LICENSE_ACTIVATED) {
+                app_set_license_key_input(
+                    &app, app.license_key, event.text.text
+                );
+            } else if (event.type == SDL_KEYDOWN) {
+                const SDL_Keycode key = event.key.keysym.sym;
+                const SDL_Keymod modifiers =
+                    (SDL_Keymod)event.key.keysym.mod;
+                const int command = (modifiers & (KMOD_CTRL | KMOD_GUI)) != 0;
+                if (key == SDLK_ESCAPE) {
+                    if (app.dialog != APP_DIALOG_NONE) {
+                        app_close_dialog(&app);
+                    } else {
+                        app.active_menu = APP_MENU_NONE;
+                    }
+                } else if (app.dialog == APP_DIALOG_LICENSE
+                    && app.license_page == 0
+                    && app.license.state != XLS_LICENSE_ACTIVATED
+                    && key == SDLK_BACKSPACE) {
+                    app_backspace_license_key(&app);
+                } else if (app.dialog == APP_DIALOG_LICENSE
+                    && app.license_page == 0
+                    && app.license.state != XLS_LICENSE_ACTIVATED
+                    && command
+                    && key == SDLK_v) {
+                    char *clipboard = SDL_GetClipboardText();
+                    if (clipboard != NULL) {
+                        app_set_license_key_input(
+                            &app, app.license_key, clipboard
+                        );
+                        SDL_free(clipboard);
+                    }
+                } else if (app.dialog == APP_DIALOG_NONE
+                    && key == SDLK_F1) {
+                    app_execute_action(&app, APP_ACTION_HELP);
+                } else if (app.dialog == APP_DIALOG_NONE && command) {
+                    if (key == SDLK_o) {
+                        app_open_files(
+                            &app,
+                            (modifiers & KMOD_SHIFT) != 0
+                        );
+                    } else if (key == SDLK_s) {
+                        app_export(&app);
+                    } else if (key == SDLK_n) {
+                        app_clear(&app);
+                    } else if (key == SDLK_r) {
+                        (void)app_recompute(&app);
+                    } else if (key == SDLK_z) {
+                        app_undo_last_override(&app);
+                    } else if (key == SDLK_COMMA) {
+                        app_show_rules(&app);
+                    } else if (key == SDLK_q) {
+                        app.running = 0;
+                    }
                 }
             }
             (void)nk_sdl_handle_event(&event);
@@ -2028,7 +4131,7 @@ int main(int argc, char **argv)
             && screenshot_path != NULL
             && screenshot_path[0] != '\0') {
             screenshot_saved = save_renderer_bmp(renderer, screenshot_path);
-            running = 0;
+            app.running = 0;
         }
         SDL_RenderPresent(renderer);
     }

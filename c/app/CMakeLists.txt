@@ -1,6 +1,36 @@
 if(TARGET SDL2::SDL2
     OR TARGET SDL2::SDL2-static
     OR TARGET PkgConfig::SDL2)
+    include(FetchContent)
+    if(POLICY CMP0169)
+        cmake_policy(SET CMP0169 OLD)
+    endif()
+    FetchContent_Declare(
+        cjson
+        GIT_REPOSITORY https://github.com/DaveGamble/cJSON.git
+        GIT_TAG acc76239bee01d8e9c858ae2cab296704e52d916
+        GIT_SHALLOW FALSE
+    )
+    FetchContent_GetProperties(cjson)
+    if(NOT cjson_POPULATED)
+        FetchContent_Populate(cjson)
+    endif()
+    add_library(xlsone_cjson STATIC "${cjson_SOURCE_DIR}/cJSON.c")
+    target_include_directories(
+        xlsone_cjson SYSTEM PUBLIC "${cjson_SOURCE_DIR}"
+    )
+    add_library(
+        xlsone_monocypher
+        STATIC
+            ../../cpp/core/src/ed25519/monocypher.c
+            ../../cpp/core/src/ed25519/monocypher-ed25519.c
+    )
+    target_include_directories(
+        xlsone_monocypher
+        SYSTEM PUBLIC
+            "${CMAKE_CURRENT_SOURCE_DIR}/../../cpp/core/src/ed25519"
+    )
+
     set(XLSONE_NUKLEAR_DIR "${CMAKE_BINARY_DIR}/_deps/nuklear-v4.13.3")
     file(MAKE_DIRECTORY "${XLSONE_NUKLEAR_DIR}")
     if(NOT EXISTS "${XLSONE_NUKLEAR_DIR}/nuklear.h")
@@ -43,13 +73,35 @@ if(TARGET SDL2::SDL2
     endif()
 
     add_executable(xlsone_app
+        license_manager.c
         main.c
         platform_dialog.c
+        platform_services.c
     )
     target_include_directories(
-        xlsone_app SYSTEM PRIVATE "${XLSONE_NUKLEAR_DIR}"
+        xlsone_app
+        SYSTEM PRIVATE
+            "${XLSONE_NUKLEAR_DIR}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/../../cpp/core/src/ed25519"
     )
-    target_link_libraries(xlsone_app PRIVATE xlsone_core)
+    target_link_libraries(
+        xlsone_app
+        PRIVATE
+            xlsone_core
+            xlsone_cjson
+            xlsone_monocypher
+    )
+    if(XLSONE_LICENSE_PUBLIC_KEY)
+        target_compile_definitions(
+            xlsone_app
+            PRIVATE
+                XLSONE_LICENSE_PUBLIC_KEY="${XLSONE_LICENSE_PUBLIC_KEY}"
+        )
+    else()
+        message(WARNING
+            "Building without XLSONE_LICENSE_PUBLIC_KEY; online and offline "
+            "license signatures will be rejected.")
+    endif()
     if(MSVC)
         target_compile_options(
             xlsone_app
@@ -92,7 +144,14 @@ if(TARGET SDL2::SDL2
     endif()
     set_target_properties(xlsone_app PROPERTIES OUTPUT_NAME xlsOne)
     if(WIN32)
-        target_link_libraries(xlsone_app PRIVATE comdlg32 shell32)
+        target_link_libraries(
+            xlsone_app
+            PRIVATE
+                advapi32
+                comdlg32
+                shell32
+                winhttp
+        )
         set_target_properties(xlsone_app PROPERTIES WIN32_EXECUTABLE TRUE)
     endif()
     if(APPLE)
@@ -125,9 +184,13 @@ if(TARGET SDL2::SDL2
         install(FILES "${XLSONE_NUKLEAR_DIR}/LICENSE"
             DESTINATION licenses
             RENAME Nuklear-LICENSE.txt)
+        install(FILES "${cjson_SOURCE_DIR}/LICENSE"
+            DESTINATION licenses
+            RENAME cJSON-LICENSE.txt)
         install(
             FILES
                 "${CMAKE_CURRENT_SOURCE_DIR}/../licenses/EXPAT-LICENSE.txt"
+                "${CMAKE_CURRENT_SOURCE_DIR}/../licenses/MONOCYPHER-LICENSE.txt"
                 "${CMAKE_CURRENT_SOURCE_DIR}/../licenses/ZLIB-LICENSE.txt"
                 "${CMAKE_CURRENT_SOURCE_DIR}/../THIRD_PARTY_NOTICES.md"
             DESTINATION licenses
@@ -142,11 +205,15 @@ if(TARGET SDL2::SDL2
         install(FILES "${XLSONE_NUKLEAR_DIR}/LICENSE"
             DESTINATION "xlsOne.app/Contents/Resources/licenses"
             RENAME Nuklear-LICENSE.txt)
+        install(FILES "${cjson_SOURCE_DIR}/LICENSE"
+            DESTINATION "xlsOne.app/Contents/Resources/licenses"
+            RENAME cJSON-LICENSE.txt)
         install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/../THIRD_PARTY_NOTICES.md"
             DESTINATION "xlsOne.app/Contents/Resources/licenses")
         install(
             FILES
                 "${CMAKE_CURRENT_SOURCE_DIR}/../licenses/EXPAT-LICENSE.txt"
+                "${CMAKE_CURRENT_SOURCE_DIR}/../licenses/MONOCYPHER-LICENSE.txt"
                 "${CMAKE_CURRENT_SOURCE_DIR}/../licenses/ZLIB-LICENSE.txt"
             DESTINATION "xlsOne.app/Contents/Resources/licenses"
         )
