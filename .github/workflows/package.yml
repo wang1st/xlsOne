@@ -143,7 +143,16 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "CPack ZIP failed" }
           cpack --config build-windows\CPackConfig.cmake `
             -C Release -B .build -G WIX
-          if ($LASTEXITCODE -ne 0) { throw "CPack WIX failed" }
+          if ($LASTEXITCODE -ne 0) {
+            $wixLog = Get-ChildItem .build\_CPack_Packages `
+              -Recurse -Filter wix.log -ErrorAction SilentlyContinue |
+              Select-Object -First 1
+            if ($wixLog) {
+              Write-Host "WiX diagnostic log: $($wixLog.FullName)"
+              Get-Content $wixLog.FullName
+            }
+            throw "CPack WIX failed"
+          }
 
       - name: Verify Windows packages
         shell: pwsh
