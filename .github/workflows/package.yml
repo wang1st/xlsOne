@@ -280,11 +280,18 @@ jobs:
           }
 
           $installRoot = Join-Path $env:GITHUB_WORKSPACE ".build\msi-installed"
-          $commonDesktop = [Environment]::GetFolderPath("CommonDesktopDirectory")
-          $desktopShortcut = Join-Path $commonDesktop "xlsOne.lnk"
+          $installLog = Join-Path $env:GITHUB_WORKSPACE ".build\msi-install.log"
+          $commonDesktop = [Environment]::GetFolderPath(
+            [Environment+SpecialFolder]::CommonDesktopDirectory
+          )
+          $shortcutCandidates = @(
+            (Join-Path $commonDesktop "xlsOne.lnk"),
+            (Join-Path $env:PUBLIC "Desktop\xlsOne.lnk")
+          ) | Select-Object -Unique
           $installArguments = @(
             "/i", "`"$($msi.FullName)`"",
-            "/qn", "/norestart", "INSTALL_ROOT=`"$installRoot`""
+            "/qn", "/norestart", "/l*v", "`"$installLog`"",
+            "INSTALL_ROOT=`"$installRoot`""
           )
           try {
             $installResult = Start-Process msiexec.exe `
@@ -292,7 +299,13 @@ jobs:
             if ($installResult.ExitCode -ne 0) {
               throw "MSI installation failed: $($installResult.ExitCode)"
             }
-            if (-not (Test-Path $desktopShortcut)) {
+            $desktopShortcut = $shortcutCandidates |
+              Where-Object { Test-Path $_ } |
+              Select-Object -First 1
+            if (-not $desktopShortcut) {
+              Select-String -Path $installLog `
+                -Pattern "CommonDesktopFolder|XlsOneDesktopShortcut" `
+                -Context 2,2 | ForEach-Object { Write-Host $_ }
               throw "MSI did not create the common desktop shortcut"
             }
           } finally {
