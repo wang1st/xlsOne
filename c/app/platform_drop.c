@@ -12,6 +12,10 @@
 #include <shellapi.h>
 #include <windows.h>
 
+#ifdef interface
+#undef interface
+#endif
+
 typedef struct xls_windows_drop_target {
     IDropTarget interface;
     LONG reference_count;

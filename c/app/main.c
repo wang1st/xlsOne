@@ -4541,6 +4541,9 @@ static void render_workspace(
 
 static const char *find_font_path(xls_ui_language language)
 {
+#if !defined(_WIN32) && !defined(__APPLE__)
+    (void)language;
+#endif
 #if defined(_WIN32) || defined(__APPLE__)
     static const char *const japanese_candidates[] = {
 #if defined(_WIN32)
