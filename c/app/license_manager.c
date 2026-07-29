@@ -219,13 +219,6 @@ static int64_t current_time_seconds(void)
     return (int64_t)time(NULL);
 }
 
-static int compare_text_pointers(const void *left, const void *right)
-{
-    const char *const *left_text = (const char *const *)left;
-    const char *const *right_text = (const char *const *)right;
-    return strcmp(*left_text, *right_text);
-}
-
 static int is_placeholder(const char *text)
 {
     static const char *const placeholders[] = {
@@ -273,7 +266,7 @@ static void collect_fingerprint(xls_license_manager *manager)
 {
     char components[4][256];
     char fallback[256];
-    const char *ordered[4];
+    char *ordered[4];
     char joined[1024];
     size_t raw_count;
     size_t valid_count = 0u;
@@ -303,7 +296,16 @@ static void collect_fingerprint(xls_license_manager *manager)
             valid_count = 1u;
         }
     }
-    qsort(ordered, valid_count, sizeof(ordered[0]), compare_text_pointers);
+    for (index = 0u; index < valid_count; ++index) {
+        size_t other;
+        for (other = index + 1u; other < valid_count; ++other) {
+            if (strcmp(ordered[index], ordered[other]) > 0) {
+                char *swap = ordered[index];
+                ordered[index] = ordered[other];
+                ordered[other] = swap;
+            }
+        }
+    }
     joined[0] = '\0';
     for (index = 0u; index < valid_count; ++index) {
         const int written = snprintf(
