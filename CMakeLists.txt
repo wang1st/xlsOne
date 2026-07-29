@@ -22,9 +22,6 @@ set(CPACK_PACKAGE_CONTACT "support@z-pulse.cn")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY
     "Pure C Excel workbook consolidation desktop application"
 )
-set(CPACK_RESOURCE_FILE_LICENSE
-    "${CMAKE_CURRENT_SOURCE_DIR}/cpp/packaging/windows/licenses/EULA_zh_CN.txt"
-)
 set(CPACK_WIX_UPGRADE_GUID
     "3D6CF1D8-4A9C-4E7B-B1D2-85162F0C7A11"
 )
@@ -39,6 +36,9 @@ elseif(WIN32)
     set(CPACK_GENERATOR "ZIP")
     set(CPACK_PACKAGE_FILE_NAME
         "xlsone-${PROJECT_VERSION}-windows-amd64"
+    )
+    set(CPACK_RESOURCE_FILE_LICENSE
+        "${CMAKE_CURRENT_SOURCE_DIR}/cpp/packaging/windows/licenses/EULA_zh_CN.txt"
     )
     set(CPACK_WIX_INSTALL_SCOPE "perMachine")
     set(CPACK_WIX_CULTURES "zh-CN")
