@@ -2948,7 +2948,14 @@ static void render_license_online_page(
 #if defined(_WIN32)
             (void)localtime_s(&calendar, &expiry);
 #else
-            (void)localtime_r(&expiry, &calendar);
+            {
+                const struct tm *local_calendar = localtime(&expiry);
+                if (local_calendar != NULL) {
+                    calendar = *local_calendar;
+                } else {
+                    memset(&calendar, 0, sizeof(calendar));
+                }
+            }
 #endif
             (void)snprintf(
                 valid_until,
