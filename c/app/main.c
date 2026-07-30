@@ -154,7 +154,7 @@ static int ui_input_blocked = 0;
 static float app_body_font_size(void)
 {
 #if defined(__linux__)
-    return 16.0f;
+    return 18.0f;
 #elif defined(_WIN32)
     return 14.0f;
 #else
@@ -165,7 +165,7 @@ static float app_body_font_size(void)
 static float app_title_font_size(void)
 {
 #if defined(__linux__)
-    return 24.0f;
+    return 27.0f;
 #elif defined(_WIN32)
     return 22.0f;
 #else
@@ -176,7 +176,7 @@ static float app_title_font_size(void)
 static float app_numeric_font_size(void)
 {
 #if defined(__linux__)
-    return 24.0f;
+    return 26.0f;
 #elif defined(_WIN32)
     return 22.0f;
 #else
@@ -187,7 +187,7 @@ static float app_numeric_font_size(void)
 static float app_source_font_size(void)
 {
 #if defined(__linux__)
-    return 17.0f;
+    return 19.0f;
 #elif defined(_WIN32)
     return 15.0f;
 #else
