@@ -5147,6 +5147,7 @@ int main(int argc, char **argv)
     const char *screenshot_menu;
     const char *screenshot_dialog;
     const char *screenshot_drop_path;
+    const char *screenshot_drop_argument;
     const char *screenshot_drop_target;
     const char *screenshot_language_sequence;
     const char *screenshot_sheet_number;
@@ -5422,6 +5423,9 @@ int main(int argc, char **argv)
     screenshot_menu = getenv("XLSONE_SCREENSHOT_MENU");
     screenshot_dialog = getenv("XLSONE_SCREENSHOT_DIALOG");
     screenshot_drop_path = getenv("XLSONE_SCREENSHOT_DROP_PATH");
+    screenshot_drop_argument = getenv(
+        "XLSONE_SCREENSHOT_DROP_ARGUMENT"
+    );
     screenshot_drop_target = getenv("XLSONE_SCREENSHOT_DROP_TARGET");
     screenshot_sheet_number = getenv(
         "XLSONE_SCREENSHOT_SHEET_NUMBER"
@@ -5430,10 +5434,18 @@ int main(int argc, char **argv)
         "XLSONE_SCREENSHOT_REQUIRE_WORKBOOKS"
     );
 
-    for (index = 1; index < argc; ++index) {
-        (void)app_add_path(&app, argv[index]);
+    if (screenshot_drop_argument != NULL
+        && screenshot_drop_argument[0] != '\0'
+        && argc > 1) {
+        screenshot_drop_path = argv[1];
+    } else {
+        for (index = 1; index < argc; ++index) {
+            (void)app_add_path(&app, argv[index]);
+        }
     }
-    if (argc > 1) {
+    if (argc > 1
+        && (screenshot_drop_argument == NULL
+            || screenshot_drop_argument[0] == '\0')) {
         (void)app_recompute(&app);
         app_select_reference(&app, screenshot_selection);
     }

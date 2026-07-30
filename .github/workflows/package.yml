@@ -218,13 +218,14 @@ jobs:
 
           $env:XLSONE_SCREENSHOT_PATH = Join-Path $env:GITHUB_WORKSPACE `
             ".build\windows-unicode-drop-smoke.bmp"
-          $env:XLSONE_SCREENSHOT_DROP_PATH = $unicodeArgs[0]
-          $process = Start-Process -FilePath $exe.FullName -Wait -PassThru
+          $env:XLSONE_SCREENSHOT_DROP_ARGUMENT = "1"
+          $process = Start-Process -FilePath $exe.FullName `
+            -ArgumentList @($unicodeArgs[0]) -Wait -PassThru
           if ($process.ExitCode -ne 0 -or
               -not (Test-Path $env:XLSONE_SCREENSHOT_PATH)) {
             throw "Portable xlsOne could not drop a UTF-8 workbook path"
           }
-          Remove-Item Env:XLSONE_SCREENSHOT_DROP_PATH
+          Remove-Item Env:XLSONE_SCREENSHOT_DROP_ARGUMENT
           Remove-Item Env:XLSONE_SCREENSHOT_REQUIRE_WORKBOOKS
 
           $embeddedManifest = Join-Path $env:GITHUB_WORKSPACE `
