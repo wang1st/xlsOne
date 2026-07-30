@@ -409,6 +409,77 @@ static void test_parse_generated_xls_when_present(void)
     xls_workbook_free(&workbook);
 }
 
+static void test_xianju_dataset_when_requested(void)
+{
+    static const char *const filenames[] = {
+        "仙居县官路镇人民政府2025乡镇报表主体信息表.xlsx",
+        "仙居县安岭乡人民政府2025乡镇报表主体信息表.xlsx",
+        "仙居县朱溪镇人民政府2025乡镇报表主体信息表.xls",
+        "仙居县埠头镇人民政府2025乡镇报表主体信息表.xlsx",
+        "仙居县朱溪镇人民政府2025乡镇报表主体信息表.xlsx",
+        "仙居县田市镇人民政府2025乡镇报表主体信息表.xlsx",
+        "仙居县湫山乡人民政府2025乡镇报表主体信息表.xlsx",
+        "仙居县白塔镇人民政府2025乡镇报表主体信息表.xlsx",
+        "仙居县人民政府南峰街道办事处2025乡镇报表主体信息表.xlsx",
+        "仙居县横溪镇人民政府2025乡镇报表主体信息表.xlsx",
+        "仙居县下各镇人民政府2025乡镇报表主体信息表.xlsx",
+        "仙居县人民政府福应街道办事处2025乡镇报表主体信息表.xlsx",
+        "仙居县溪港乡人民政府2025乡镇报表主体信息表.xlsx",
+        "仙居县人民政府安洲街道办事处2025乡镇报表主体信息表.xlsx"
+    };
+    const char *directory = getenv("XLSONE_TEST_XIANJU_DIR");
+    size_t index;
+    if (directory == NULL || directory[0] == '\0') {
+        return;
+    }
+    for (index = 0; index < sizeof(filenames) / sizeof(filenames[0]); ++index) {
+        char path[2048];
+        xls_workbook workbook;
+        xls_error error;
+        const xls_sheet *sheet;
+        const xls_cell *top_left;
+        const xls_cell *continuation;
+        (void)snprintf(
+            path, sizeof(path), "%s/%s", directory, filenames[index]
+        );
+        memset(&workbook, 0, sizeof(workbook));
+        if (!xls_parse_file(path, &workbook, &error)) {
+            fprintf(stderr, "仙居县测试文件解析失败: %s\n", error.message);
+            ++failures;
+            xls_workbook_free(&workbook);
+            continue;
+        }
+        CHECK(workbook.sheet_count > 0);
+        if (workbook.sheet_count == 0) {
+            xls_workbook_free(&workbook);
+            continue;
+        }
+        sheet = &workbook.sheets[0];
+        top_left = xls_sheet_cell_const(sheet, 1u, 1u);
+        CHECK(top_left != NULL);
+        CHECK(
+            top_left != NULL
+            && top_left->value != NULL
+            && top_left->value[0] != '\0'
+        );
+        continuation = xls_sheet_cell_const(sheet, 1u, 2u);
+        CHECK(continuation != NULL);
+        CHECK(
+            continuation != NULL
+            && (continuation->value == NULL
+                || continuation->value[0] == '\0')
+        );
+        continuation = xls_sheet_cell_const(sheet, 1u, 4u);
+        CHECK(continuation != NULL);
+        CHECK(
+            continuation != NULL
+            && (continuation->value == NULL
+                || continuation->value[0] == '\0')
+        );
+        xls_workbook_free(&workbook);
+    }
+}
+
 static void test_real_sample_merge(void)
 {
     static const char *const filenames[] = {
@@ -634,6 +705,7 @@ int main(void)
     test_source_analysis();
     test_parse_real_xlsx();
     test_parse_generated_xls_when_present();
+    test_xianju_dataset_when_requested();
     test_real_sample_merge();
     test_validation_rejects_dimension_mismatch();
     if (failures != 0) {

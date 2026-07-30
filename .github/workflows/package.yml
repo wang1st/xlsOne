@@ -189,6 +189,42 @@ jobs:
             "samples\monthly-report-sample-v1.1\0[1-4]-*.xlsx" |
             Sort-Object Name |
             ForEach-Object { $_.FullName }
+          $unicodeDirectory = Join-Path $env:GITHUB_WORKSPACE `
+            ".build\仙居县"
+          New-Item -ItemType Directory -Force $unicodeDirectory | Out-Null
+          $unicodeNames = @(
+            "仙居县官路镇人民政府2025乡镇报表主体信息表.xlsx",
+            "仙居县安岭乡人民政府2025乡镇报表主体信息表.xlsx",
+            "仙居县埠头镇人民政府2025乡镇报表主体信息表.xlsx",
+            "仙居县白塔镇人民政府2025乡镇报表主体信息表.xlsx"
+          )
+          $unicodeArgs = for ($index = 0; $index -lt $sampleArgs.Count; $index++) {
+            $destination = Join-Path $unicodeDirectory $unicodeNames[$index]
+            Copy-Item -LiteralPath $sampleArgs[$index] `
+              -Destination $destination -Force
+            $destination
+          }
+          $env:XLSONE_SCREENSHOT_PATH = Join-Path $env:GITHUB_WORKSPACE `
+            ".build\windows-unicode-path-smoke.bmp"
+          $env:XLSONE_SCREENSHOT_SELECT = "B6"
+          $process = Start-Process -FilePath $exe.FullName `
+            -ArgumentList $unicodeArgs -Wait -PassThru
+          if ($process.ExitCode -ne 0 -or
+              -not (Test-Path $env:XLSONE_SCREENSHOT_PATH)) {
+            throw "Portable xlsOne could not open UTF-8 workbook paths"
+          }
+          Remove-Item Env:XLSONE_SCREENSHOT_SELECT
+
+          $env:XLSONE_SCREENSHOT_PATH = Join-Path $env:GITHUB_WORKSPACE `
+            ".build\windows-unicode-drop-smoke.bmp"
+          $env:XLSONE_SCREENSHOT_DROP_PATH = $unicodeArgs[0]
+          $process = Start-Process -FilePath $exe.FullName -Wait -PassThru
+          if ($process.ExitCode -ne 0 -or
+              -not (Test-Path $env:XLSONE_SCREENSHOT_PATH)) {
+            throw "Portable xlsOne could not drop a UTF-8 workbook path"
+          }
+          Remove-Item Env:XLSONE_SCREENSHOT_DROP_PATH
+
           $env:XLSONE_SCREENSHOT_PATH = Join-Path $env:GITHUB_WORKSPACE `
             ".build\windows-smoke.bmp"
           $env:XLSONE_SCREENSHOT_SELECT = "B6"
@@ -406,6 +442,11 @@ jobs:
           binary="$app/Contents/MacOS/xlsOne"
           test -L "$mount_dir/Applications"
           test "$(readlink "$mount_dir/Applications")" = "/Applications"
+          test -f "$mount_dir/安装前必看.txt"
+          grep -q '隐私与安全性' "$mount_dir/安装前必看.txt"
+          grep -q '仍要打开' "$mount_dir/安装前必看.txt"
+          grep -q '/Applications/xlsOne.app' "$mount_dir/安装前必看.txt"
+          ! grep -q 'xlsOneQt' "$mount_dir/安装前必看.txt"
           test -x "$binary"
           archs="$(lipo -archs "$binary")"
           [[ " $archs " == *" arm64 "* && " $archs " == *" x86_64 "* ]]

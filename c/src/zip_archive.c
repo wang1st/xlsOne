@@ -41,7 +41,7 @@ static int file_read_all(
     }
     *data = NULL;
     *size = 0;
-    file = fopen(path, "rb");
+    file = xls_fopen_utf8(path, "rb");
     if (file == NULL) {
         xls_set_error(error, XLS_ERROR_IO, "无法打开文件: %s", path);
         return 0;

@@ -229,6 +229,11 @@ if(TARGET SDL2::SDL2
     if(APPLE)
         install(
             FILES
+                "${CMAKE_CURRENT_SOURCE_DIR}/../packaging/macos/安装前必看.txt"
+            DESTINATION "."
+        )
+        install(
+            FILES
                 "${CMAKE_CURRENT_SOURCE_DIR}/../../cpp/packaging/windows/licenses/EULA_zh_CN.txt"
             DESTINATION "xlsOne.app/Contents/Resources/licenses"
         )

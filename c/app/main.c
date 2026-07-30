@@ -2957,18 +2957,27 @@ static void render_inspector(
                 NK_TEXT_CENTERED
             );
         }
-        ui_draw_text_elided(
-            canvas,
-            nk_rect(detail.x + 12.0f, detail.y + 35.0f, detail.w - 24.0f, 31.0f),
-            cell->display_value == NULL || cell->display_value[0] == '\0'
-                ? app_tr("空值")
-                : cell->display_value,
-            ui_text_has_non_ascii(cell->display_value)
-                ? fonts->body
-                : fonts->numeric,
-            UI_TEXT,
-            NK_TEXT_CENTERED
-        );
+        {
+            const char *display_text =
+                cell->display_value == NULL || cell->display_value[0] == '\0'
+                    ? app_tr("空值")
+                    : cell->display_value;
+            ui_draw_text_elided(
+                canvas,
+                nk_rect(
+                    detail.x + 12.0f,
+                    detail.y + 35.0f,
+                    detail.w - 24.0f,
+                    31.0f
+                ),
+                display_text,
+                ui_text_has_non_ascii(display_text)
+                    ? fonts->body
+                    : fonts->numeric,
+                UI_TEXT,
+                NK_TEXT_CENTERED
+            );
+        }
         ui_draw_text_elided(
             canvas,
             nk_rect(detail.x + 12.0f, detail.y + 70.0f, detail.w - 24.0f, 20.0f),

@@ -87,7 +87,7 @@ static int read_file(
     xls_error *error
 )
 {
-    FILE *file = fopen(path, "rb");
+    FILE *file = xls_fopen_utf8(path, "rb");
     long length;
     if (file == NULL) {
         xls_set_error(error, XLS_ERROR_IO, "无法打开 .xls 文件: %s", path);

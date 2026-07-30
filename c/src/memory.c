@@ -7,6 +7,62 @@
 #include <stdlib.h>
 #include <string.h>
 
+#if defined(_WIN32)
+#include <windows.h>
+#endif
+
+FILE *xls_fopen_utf8(const char *path, const char *mode)
+{
+#if defined(_WIN32)
+    int path_length;
+    int mode_length;
+    wchar_t *wide_path;
+    wchar_t *wide_mode;
+    FILE *file;
+    if (path == NULL || mode == NULL) {
+        return NULL;
+    }
+    path_length = MultiByteToWideChar(
+        CP_UTF8, MB_ERR_INVALID_CHARS, path, -1, NULL, 0
+    );
+    mode_length = MultiByteToWideChar(
+        CP_UTF8, MB_ERR_INVALID_CHARS, mode, -1, NULL, 0
+    );
+    if (path_length <= 0 || mode_length <= 0) {
+        return NULL;
+    }
+    wide_path = (wchar_t *)malloc(
+        (size_t)path_length * sizeof(*wide_path)
+    );
+    wide_mode = (wchar_t *)malloc(
+        (size_t)mode_length * sizeof(*wide_mode)
+    );
+    if (wide_path == NULL || wide_mode == NULL) {
+        free(wide_path);
+        free(wide_mode);
+        return NULL;
+    }
+    if (MultiByteToWideChar(
+            CP_UTF8, MB_ERR_INVALID_CHARS,
+            path, -1, wide_path, path_length
+        ) <= 0
+        || MultiByteToWideChar(
+            CP_UTF8, MB_ERR_INVALID_CHARS,
+            mode, -1, wide_mode, mode_length
+        ) <= 0) {
+        free(wide_path);
+        free(wide_mode);
+        return NULL;
+    }
+    file = _wfopen(wide_path, wide_mode);
+    free(wide_path);
+    free(wide_mode);
+    return file;
+#else
+    return fopen(path, mode);
+#endif
+}
+
 char *xls_strndup(const char *text, size_t length)
 {
     char *copy;

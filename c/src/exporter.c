@@ -931,7 +931,7 @@ static int write_zip(
         || !buffer_append_u16(&file_data, 0, error)) {
         goto failure;
     }
-    file = fopen(output_path, "wb");
+    file = xls_fopen_utf8(output_path, "wb");
     if (file == NULL) {
         xls_set_error(error, XLS_ERROR_IO, "无法写入导出文件: %s", output_path);
         goto failure;
@@ -982,7 +982,7 @@ int xls_export_csv(
         xls_set_error(error, XLS_ERROR_ARGUMENT, "invalid CSV export arguments");
         return 0;
     }
-    file = fopen(output_path, "wb");
+    file = xls_fopen_utf8(output_path, "wb");
     if (file == NULL) {
         xls_set_error(error, XLS_ERROR_IO, "无法写入导出文件: %s", output_path);
         return 0;

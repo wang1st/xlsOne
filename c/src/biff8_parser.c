@@ -1010,50 +1010,10 @@ static int parse_biff_sheet(
         size_t range_index;
         for (range_index = 0; range_index < range_count; ++range_index) {
             biff_range *range = &ranges[range_index];
-            const xls_cell *source;
-            size_t row;
-            size_t column;
             if (!reserve_cell(
                 sheet, range->last_row, range->last_column, error
             )) {
                 goto failure;
-            }
-            source = xls_sheet_cell_const(
-                sheet, range->first_row, range->first_column
-            );
-            if (source == NULL) {
-                continue;
-            }
-            for (row = range->first_row; row <= range->last_row; ++row) {
-                for (column = range->first_column;
-                     column <= range->last_column;
-                     ++column) {
-                    xls_cell *target = xls_sheet_cell(sheet, row, column);
-                    if (target != source
-                        && target != NULL
-                        && xls_string_empty(target->value)
-                        && target->flags == 0u) {
-                        const double *numeric
-                            = (source->flags & XLS_CELL_HAS_NUMERIC_VALUE) != 0u
-                                ? &source->numeric_value
-                                : NULL;
-                        if (!xls_cell_set(
-                            target,
-                            source->value,
-                            (source->flags & XLS_CELL_HAS_RAW_VALUE) != 0u
-                                ? source->raw_value
-                                : NULL,
-                            numeric,
-                            (source->flags & XLS_CELL_HAS_FORMAT_CODE) != 0u
-                                ? source->format_code
-                                : NULL,
-                            (source->flags & XLS_CELL_IS_DATE) != 0u,
-                            error
-                        )) {
-                            goto failure;
-                        }
-                    }
-                }
             }
         }
     }

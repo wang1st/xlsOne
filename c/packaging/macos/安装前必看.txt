@@ -1,0 +1,23 @@
+xlsOne 安装前必看
+
+本安装包尚未经过 Apple 公证。请仅从 Z-PULSE.CN 官方网站下载安装包。
+
+安装步骤
+
+1. 打开 DMG，把 xlsOne.app 拖到 Applications（应用程序）文件夹。
+2. 安装完成后，从 Finder 的“应用程序”文件夹启动 xlsOne；不要直接在 DMG 中运行。
+3. 第一次打开时，建议在 Finder 中按住 Control 键点击 xlsOne.app，选择“打开”，再点击“打开”确认。
+4. 如果 macOS 提示“无法验证开发者”并阻止打开：
+   - 打开“系统设置”；
+   - 进入“隐私与安全性”；
+   - 向下找到关于 xlsOne 被阻止的安全提示；
+   - 点击“仍要打开”，完成系统身份验证后再次确认。
+
+如果系统仍提示“已损坏，无法打开”
+
+请先确认 DMG 来自 https://z-pulse.cn。确认来源可信后，打开“终端”执行：
+
+xattr -dr com.apple.quarantine "/Applications/xlsOne.app"
+open "/Applications/xlsOne.app"
+
+安装成功后，可以推出并删除 DMG 文件。
