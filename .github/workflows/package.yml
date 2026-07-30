@@ -230,7 +230,16 @@ jobs:
 
           $embeddedManifest = Join-Path $env:GITHUB_WORKSPACE `
             ".build\windows-embedded.manifest"
-          mt.exe "-inputresource:$($exe.FullName);#1" `
+          $manifestTool = Get-ChildItem `
+            "${env:ProgramFiles(x86)}\Windows Kits\10\bin" `
+            -Recurse -Filter mt.exe -ErrorAction SilentlyContinue |
+            Where-Object { $_.FullName -match '\\x64\\mt\.exe$' } |
+            Sort-Object FullName -Descending |
+            Select-Object -First 1
+          if (-not $manifestTool) {
+            throw "Windows SDK manifest tool was not found"
+          }
+          & $manifestTool.FullName "-inputresource:$($exe.FullName);#1" `
             "-out:$embeddedManifest"
           if ($LASTEXITCODE -ne 0) {
             throw "Could not extract the Windows application manifest"
