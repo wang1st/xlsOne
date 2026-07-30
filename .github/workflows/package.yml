@@ -207,6 +207,7 @@ jobs:
           $env:XLSONE_SCREENSHOT_PATH = Join-Path $env:GITHUB_WORKSPACE `
             ".build\windows-unicode-path-smoke.bmp"
           $env:XLSONE_SCREENSHOT_SELECT = "B6"
+          $env:XLSONE_SCREENSHOT_REQUIRE_WORKBOOKS = "1"
           $process = Start-Process -FilePath $exe.FullName `
             -ArgumentList $unicodeArgs -Wait -PassThru
           if ($process.ExitCode -ne 0 -or
@@ -224,6 +225,21 @@ jobs:
             throw "Portable xlsOne could not drop a UTF-8 workbook path"
           }
           Remove-Item Env:XLSONE_SCREENSHOT_DROP_PATH
+          Remove-Item Env:XLSONE_SCREENSHOT_REQUIRE_WORKBOOKS
+
+          $embeddedManifest = Join-Path $env:GITHUB_WORKSPACE `
+            ".build\windows-embedded.manifest"
+          mt.exe "-inputresource:$($exe.FullName);#1" `
+            "-out:$embeddedManifest"
+          if ($LASTEXITCODE -ne 0) {
+            throw "Could not extract the Windows application manifest"
+          }
+          $manifestText = Get-Content $embeddedManifest -Raw
+          foreach ($marker in @("longPathAware", "activeCodePage", "UTF-8")) {
+            if ($manifestText -notmatch [regex]::Escape($marker)) {
+              throw "Windows manifest is missing $marker"
+            }
+          }
 
           $env:XLSONE_SCREENSHOT_PATH = Join-Path $env:GITHUB_WORKSPACE `
             ".build\windows-smoke.bmp"

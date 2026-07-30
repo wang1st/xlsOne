@@ -58,6 +58,20 @@ static void test_catalog(void)
         xls_i18n_translate("文件格式不受支持"),
         "Unsupported file format"
     ) == 0);
+    CHECK(strcmp(
+        xls_i18n_translate("当前版本 %s 已是最新版本。"),
+        "Version %s is up to date."
+    ) == 0);
+    CHECK(strcmp(
+        xls_i18n_translate(
+            "表表归一 %s\n"
+            "多张同格式 Excel 报表一键汇总\n\n"
+            "版权所有 © Z-Pulse"
+        ),
+        "xlsOne %s\n"
+        "One-click summary of matching Excel reports\n\n"
+        "Copyright © Z-Pulse"
+    ) == 0);
     xls_i18n_set_language(XLS_UI_LANGUAGE_ZH_HANT);
     CHECK(strcmp(xls_i18n_translate("文件"), "檔案") == 0);
     CHECK(strcmp(

@@ -1,4 +1,5 @@
 #include "xlsone/xlsone.h"
+#include "internal.h"
 
 #include <math.h>
 #include <stdio.h>
@@ -375,6 +376,69 @@ static void test_parse_real_xlsx(void)
     xls_workbook_free(&workbook);
 }
 
+#if defined(_WIN32)
+static void test_windows_long_unicode_path(void)
+{
+    static const char unicode_character[] = "\xe4\xbb\x99";
+    const char *source_path = XLSONE_REPOSITORY_ROOT
+        "/samples/monthly-report-sample-v1.1/01-operations-team-1-june-2026.xlsx";
+    char output_path[2048];
+    unsigned char buffer[8192];
+    size_t output_length = 0u;
+    size_t index;
+    FILE *source;
+    FILE *output;
+    xls_workbook workbook;
+    xls_error error;
+    memcpy(output_path, "xlsone-", 7u);
+    output_length = 7u;
+    for (index = 0u; index < 210u; ++index) {
+        memcpy(
+            output_path + output_length,
+            unicode_character,
+            sizeof(unicode_character) - 1u
+        );
+        output_length += sizeof(unicode_character) - 1u;
+    }
+    memcpy(
+        output_path + output_length,
+        ".xlsx",
+        sizeof(".xlsx")
+    );
+    source = xls_fopen_utf8(source_path, "rb");
+    output = xls_fopen_utf8(output_path, "wb");
+    CHECK(source != NULL);
+    CHECK(output != NULL);
+    if (source == NULL || output == NULL) {
+        if (source != NULL) {
+            fclose(source);
+        }
+        if (output != NULL) {
+            fclose(output);
+        }
+        return;
+    }
+    while (!feof(source)) {
+        const size_t count = fread(
+            buffer, 1u, sizeof(buffer), source
+        );
+        if (count > 0u) {
+            CHECK(fwrite(buffer, 1u, count, output) == count);
+        }
+        if (ferror(source)) {
+            CHECK(!ferror(source));
+            break;
+        }
+    }
+    CHECK(fclose(source) == 0);
+    CHECK(fclose(output) == 0);
+    memset(&workbook, 0, sizeof(workbook));
+    CHECK(xls_parse_file(output_path, &workbook, &error));
+    CHECK(workbook.sheet_count > 0u);
+    xls_workbook_free(&workbook);
+}
+#endif
+
 static void test_parse_generated_xls_when_present(void)
 {
     const char *path = XLSONE_TEST_OUTPUT_DIR
@@ -704,6 +768,9 @@ int main(void)
     test_multilingual_neighbor_semantics();
     test_source_analysis();
     test_parse_real_xlsx();
+#if defined(_WIN32)
+    test_windows_long_unicode_path();
+#endif
     test_parse_generated_xls_when_present();
     test_xianju_dataset_when_requested();
     test_real_sample_merge();

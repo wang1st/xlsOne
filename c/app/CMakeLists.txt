@@ -79,6 +79,7 @@ if(TARGET SDL2::SDL2
         platform_dialog.c
         platform_drop.c
         platform_services.c
+        sheet_tabs.c
     )
     target_include_directories(
         xlsone_app
@@ -93,6 +94,11 @@ if(TARGET SDL2::SDL2
             xlsone_i18n
             xlsone_cjson
             xlsone_monocypher
+    )
+    target_compile_definitions(
+        xlsone_app
+        PRIVATE
+            XLSONE_VERSION="${PROJECT_VERSION}"
     )
     if(XLSONE_LICENSE_PUBLIC_KEY)
         target_compile_definitions(
@@ -147,10 +153,19 @@ if(TARGET SDL2::SDL2
     endif()
     set_target_properties(xlsone_app PROPERTIES OUTPUT_NAME xlsOne)
     if(WIN32)
+        set(XLSONE_WINDOWS_MANIFEST
+            "${CMAKE_CURRENT_SOURCE_DIR}/../packaging/windows/xlsone.manifest"
+        )
+        configure_file(
+            "${CMAKE_CURRENT_SOURCE_DIR}/../packaging/windows/app-manifest.rc.in"
+            "${CMAKE_CURRENT_BINARY_DIR}/xlsone-manifest.rc"
+            @ONLY
+        )
         target_sources(
             xlsone_app
             PRIVATE
                 ../../cpp/app/resources/xlsone.rc
+                "${CMAKE_CURRENT_BINARY_DIR}/xlsone-manifest.rc"
         )
         target_link_libraries(
             xlsone_app

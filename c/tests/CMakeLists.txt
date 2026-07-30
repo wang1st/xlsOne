@@ -3,6 +3,11 @@ add_executable(xlsone_core_tests
 )
 
 target_link_libraries(xlsone_core_tests PRIVATE xlsone_core)
+target_include_directories(
+    xlsone_core_tests
+    PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/../src"
+)
 target_compile_definitions(xlsone_core_tests PRIVATE
     XLSONE_REPOSITORY_ROOT="${CMAKE_CURRENT_SOURCE_DIR}/../.."
     XLSONE_TEST_OUTPUT_DIR="${CMAKE_CURRENT_BINARY_DIR}"
@@ -79,6 +84,35 @@ else()
     endif()
 endif()
 add_test(NAME xlsone_drop_paths_tests COMMAND xlsone_drop_paths_tests)
+
+add_executable(
+    xlsone_sheet_tabs_tests
+    test_sheet_tabs.c
+    ../app/sheet_tabs.c
+)
+target_include_directories(
+    xlsone_sheet_tabs_tests
+    PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/../app"
+)
+if(MSVC)
+    target_compile_options(xlsone_sheet_tabs_tests PRIVATE /W4)
+    if(XLSONE_C_WARNINGS_AS_ERRORS)
+        target_compile_options(xlsone_sheet_tabs_tests PRIVATE /WX)
+    endif()
+else()
+    target_compile_options(xlsone_sheet_tabs_tests PRIVATE
+        -Wall
+        -Wextra
+        -Wpedantic
+        -Wconversion
+        -Wshadow
+    )
+    if(XLSONE_C_WARNINGS_AS_ERRORS)
+        target_compile_options(xlsone_sheet_tabs_tests PRIVATE -Werror)
+    endif()
+endif()
+add_test(NAME xlsone_sheet_tabs_tests COMMAND xlsone_sheet_tabs_tests)
 
 if(TARGET xlsone_cjson
     AND TARGET xlsone_monocypher

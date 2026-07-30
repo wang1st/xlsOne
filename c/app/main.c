@@ -4,6 +4,7 @@
 #include "license_manager.h"
 #include "platform_dialog.h"
 #include "platform_drop.h"
+#include "sheet_tabs.h"
 
 #include <SDL.h>
 #include "cJSON.h"
@@ -24,6 +25,10 @@
 #define NK_SDL_RENDERER_IMPLEMENTATION
 #include "nuklear.h"
 #include "nuklear_sdl_renderer.h"
+
+#if !defined(XLSONE_VERSION)
+#define XLSONE_VERSION "development"
+#endif
 
 typedef enum app_menu {
     APP_MENU_NONE,
@@ -57,6 +62,7 @@ typedef struct app_state {
     xls_merged_sheet *merged_sheets;
     size_t merged_sheet_count;
     size_t selected_sheet;
+    size_t first_visible_sheet;
     size_t selected_row;
     size_t selected_column;
     int has_selection;
@@ -311,6 +317,7 @@ static void app_free_results(app_state *app)
     app->merged_sheet_count = 0;
     xls_validation_report_free(&app->validation);
     app->selected_sheet = 0;
+    app->first_visible_sheet = 0;
     app->has_selection = 0;
     app->first_visible_row = 0;
     app->first_visible_column = 0;
@@ -578,6 +585,12 @@ static int app_add_path(app_state *app, const char *path)
     }
     memset(&parsed, 0, sizeof(parsed));
     if (!xls_parse_file(path, &parsed, &error)) {
+        fprintf(
+            stderr,
+            "could not open workbook \"%s\": %s\n",
+            path,
+            error.message
+        );
         app_set_status(app, error.message);
         return 0;
     }
@@ -931,6 +944,7 @@ static void app_undo_last_override(app_state *app)
         return;
     }
     app->selected_sheet = app->last_override_sheet;
+    app->first_visible_sheet = app->selected_sheet;
     app->selected_row = app->last_override_row;
     app->selected_column = app->last_override_column;
     app->has_selection = 1;
@@ -1158,11 +1172,12 @@ static void app_check_updates(app_state *app)
         app_show_notice(app, "检查更新", "更新服务器响应异常。", 1);
         return;
     }
-    if (strcmp(version->valuestring, "1.1.1") == 0) {
+    if (strcmp(version->valuestring, XLSONE_VERSION) == 0) {
         (void)snprintf(
             message,
             sizeof(message),
-            "当前版本 1.1.1 已是最新版本。"
+            app_tr("当前版本 %s 已是最新版本。"),
+            XLSONE_VERSION
         );
     } else {
         (void)snprintf(
@@ -1704,14 +1719,25 @@ static void app_execute_action(app_state *app, app_action action)
         }
         break;
     case APP_ACTION_ABOUT:
-        app_show_notice(
-            app,
-            "关于 表表归一",
-            "表表归一 1.1.1\n"
-            "多张同格式 Excel 报表一键汇总\n\n"
-            "版权所有 © Z-Pulse",
-            0
-        );
+        {
+            char about[512];
+            (void)snprintf(
+                about,
+                sizeof(about),
+                app_tr(
+                    "表表归一 %s\n"
+                    "多张同格式 Excel 报表一键汇总\n\n"
+                    "版权所有 © Z-Pulse"
+                ),
+                XLSONE_VERSION
+            );
+            app_show_notice(
+                app,
+                "关于 表表归一",
+                about,
+                0
+            );
+        }
         break;
     case APP_ACTION_NONE:
     default:
@@ -2393,6 +2419,86 @@ static void render_toolbar(
     }
 }
 
+typedef struct sheet_tab_width_context {
+    const app_state *app;
+    const ui_fonts *fonts;
+} sheet_tab_width_context;
+
+static float sheet_tab_width(size_t tab_index, void *user_data)
+{
+    const sheet_tab_width_context *tab_context =
+        (const sheet_tab_width_context *)user_data;
+    const char *name =
+        tab_context->app->merged_sheets[tab_index].sheet_name;
+    float tab_width = ui_text_width(
+        tab_context->fonts->body, name
+    ) + 16.0f;
+    if (tab_width < 72.0f) {
+        tab_width = 72.0f;
+    }
+    if (tab_width > 220.0f) {
+        tab_width = 220.0f;
+    }
+    return tab_width;
+}
+
+static int draw_sheet_navigation_button(
+    struct nk_context *context,
+    struct nk_command_buffer *canvas,
+    struct nk_rect button,
+    int direction,
+    int enabled
+)
+{
+    const int hovered = enabled && ui_hovered(context, button);
+    const struct nk_color foreground =
+        enabled ? UI_MUTED : UI_DISABLED;
+    const float center_x = button.x + button.w * 0.5f;
+    const float center_y = button.y + button.h * 0.5f;
+    nk_fill_rect(
+        canvas,
+        button,
+        9.0f,
+        hovered ? UI_BG2 : UI_BG1
+    );
+    nk_stroke_rect(
+        canvas,
+        nk_rect(
+            button.x + 0.5f,
+            button.y + 0.5f,
+            button.w - 1.0f,
+            button.h - 1.0f
+        ),
+        9.0f,
+        1.0f,
+        UI_BORDER
+    );
+    if (direction < 0) {
+        nk_fill_triangle(
+            canvas,
+            center_x + 3.0f,
+            center_y - 5.0f,
+            center_x + 3.0f,
+            center_y + 5.0f,
+            center_x - 3.0f,
+            center_y,
+            foreground
+        );
+    } else {
+        nk_fill_triangle(
+            canvas,
+            center_x - 3.0f,
+            center_y - 5.0f,
+            center_x - 3.0f,
+            center_y + 5.0f,
+            center_x + 3.0f,
+            center_y,
+            foreground
+        );
+    }
+    return enabled && ui_clicked(context, button);
+}
+
 static void render_sheet_strip(
     struct nk_context *context,
     struct nk_command_buffer *canvas,
@@ -2401,8 +2507,38 @@ static void render_sheet_strip(
     float width
 )
 {
-    float x = 9.0f;
+    const float navigation_width = 30.0f;
+    const float navigation_gap = 8.0f;
+    const float tab_gap = 8.0f;
+    const struct nk_rect previous_button = nk_rect(
+        9.0f,
+        UI_TOOLBAR_BOTTOM + 30.0f,
+        navigation_width,
+        26.0f
+    );
+    const struct nk_rect next_button = nk_rect(
+        width - 9.0f - navigation_width,
+        UI_TOOLBAR_BOTTOM + 30.0f,
+        navigation_width,
+        26.0f
+    );
+    const struct nk_rect viewport = nk_rect(
+        previous_button.x + previous_button.w + navigation_gap,
+        UI_TOOLBAR_BOTTOM + 30.0f,
+        next_button.x
+            - navigation_gap
+            - (previous_button.x + previous_button.w + navigation_gap),
+        26.0f
+    );
+    sheet_tab_width_context tab_width_context;
+    size_t page_end;
     size_t index;
+    char page_text[64];
+    int can_go_previous;
+    int can_go_next;
+    int page_changed = 0;
+    float x;
+
     nk_fill_rect(
         canvas,
         nk_rect(0.0f, UI_TOOLBAR_BOTTOM, width, 78.0f),
@@ -2418,35 +2554,121 @@ static void render_sheet_strip(
         1.0f,
         UI_BORDER
     );
-    for (index = 0; index < app->merged_sheet_count; ++index) {
+    if (app->merged_sheet_count == 0u || viewport.w <= 0.0f) {
+        return;
+    }
+    if (app->first_visible_sheet >= app->merged_sheet_count) {
+        app->first_visible_sheet = app->merged_sheet_count - 1u;
+    }
+    tab_width_context.app = app;
+    tab_width_context.fonts = fonts;
+    page_end = xls_sheet_tab_page_end(
+        app->first_visible_sheet,
+        app->merged_sheet_count,
+        viewport.w,
+        tab_gap,
+        sheet_tab_width,
+        &tab_width_context
+    );
+    can_go_previous = app->first_visible_sheet > 0u;
+    can_go_next = page_end < app->merged_sheet_count;
+    if (draw_sheet_navigation_button(
+        context,
+        canvas,
+        previous_button,
+        -1,
+        can_go_previous
+    )) {
+        app->first_visible_sheet = xls_sheet_tab_previous_page(
+            app->first_visible_sheet,
+            viewport.w,
+            tab_gap,
+            sheet_tab_width,
+            &tab_width_context
+        );
+        page_changed = 1;
+    }
+    if (draw_sheet_navigation_button(
+        context,
+        canvas,
+        next_button,
+        1,
+        can_go_next
+    )) {
+        app->first_visible_sheet = page_end;
+        page_changed = 1;
+    }
+    if (page_changed) {
+        page_end = xls_sheet_tab_page_end(
+            app->first_visible_sheet,
+            app->merged_sheet_count,
+            viewport.w,
+            tab_gap,
+            sheet_tab_width,
+            &tab_width_context
+        );
+    }
+    (void)snprintf(
+        page_text,
+        sizeof(page_text),
+        "%zu-%zu / %zu",
+        app->first_visible_sheet + 1u,
+        page_end,
+        app->merged_sheet_count
+    );
+    ui_draw_text(
+        canvas,
+        nk_rect(9.0f, UI_TOOLBAR_BOTTOM + 3.0f, width - 18.0f, 22.0f),
+        page_text,
+        fonts->body,
+        UI_MUTED,
+        NK_TEXT_CENTERED
+    );
+    x = viewport.x;
+    nk_push_scissor(canvas, viewport);
+    for (index = app->first_visible_sheet; index < page_end; ++index) {
         const char *name = app->merged_sheets[index].sheet_name;
         const int selected = index == app->selected_sheet;
-        const float button_width = ui_text_width(fonts->body, name) + 16.0f;
-        const struct nk_rect button = nk_rect(
+        float button_width = sheet_tab_width(
+            index, &tab_width_context
+        );
+        struct nk_rect button;
+        if (button_width > viewport.w) {
+            button_width = viewport.w;
+        }
+        button = nk_rect(
             x, UI_TOOLBAR_BOTTOM + 30.0f, button_width, 26.0f
         );
         nk_fill_rect(
             canvas,
-            button,
+            nk_rect(button.x, button.y, button_width, button.h),
             13.0f,
             selected ? UI_ACCENT_SOFT : UI_BG2
         );
         nk_stroke_rect(
             canvas,
-            nk_rect(button.x + 0.5f, button.y + 0.5f, button.w - 1.0f, button.h - 1.0f),
+            nk_rect(
+                button.x + 0.5f,
+                button.y + 0.5f,
+                button_width - 1.0f,
+                button.h - 1.0f
+            ),
             13.0f,
             1.0f,
             selected ? UI_SUM_BORDER : UI_BORDER
         );
-        ui_draw_text(
+        ui_draw_text_elided(
             canvas,
-            button,
+            nk_rect(button.x + 8.0f, button.y, button_width - 16.0f, button.h),
             name,
             fonts->body,
             selected ? UI_TEXT : UI_MUTED,
             NK_TEXT_CENTERED
         );
-        if (ui_clicked(context, button)) {
+        if (ui_clicked(
+            context,
+            nk_rect(button.x, button.y, button_width, button.h)
+        )) {
             app->selected_sheet = index;
             app->has_selection = 0;
             app->first_visible_row = 0;
@@ -2454,6 +2676,10 @@ static void render_sheet_strip(
         }
         x += button_width + 8.0f;
     }
+    nk_push_scissor(
+        canvas,
+        nk_rect(0.0f, 0.0f, 32768.0f, 32768.0f)
+    );
 }
 
 static void render_empty_artwork(
@@ -4923,9 +5149,12 @@ int main(int argc, char **argv)
     const char *screenshot_drop_path;
     const char *screenshot_drop_target;
     const char *screenshot_language_sequence;
+    const char *screenshot_sheet_number;
+    const char *screenshot_require_workbooks;
     xls_platform_drop_target native_drop_target;
     app_state app;
     int screenshot_saved = 0;
+    int screenshot_failed = 0;
     int index;
     memset(&app, 0, sizeof(app));
     memset(&fonts, 0, sizeof(fonts));
@@ -5194,6 +5423,12 @@ int main(int argc, char **argv)
     screenshot_dialog = getenv("XLSONE_SCREENSHOT_DIALOG");
     screenshot_drop_path = getenv("XLSONE_SCREENSHOT_DROP_PATH");
     screenshot_drop_target = getenv("XLSONE_SCREENSHOT_DROP_TARGET");
+    screenshot_sheet_number = getenv(
+        "XLSONE_SCREENSHOT_SHEET_NUMBER"
+    );
+    screenshot_require_workbooks = getenv(
+        "XLSONE_SCREENSHOT_REQUIRE_WORKBOOKS"
+    );
 
     for (index = 1; index < argc; ++index) {
         (void)app_add_path(&app, argv[index]);
@@ -5201,6 +5436,21 @@ int main(int argc, char **argv)
     if (argc > 1) {
         (void)app_recompute(&app);
         app_select_reference(&app, screenshot_selection);
+    }
+    if (screenshot_sheet_number != NULL
+        && screenshot_sheet_number[0] != '\0') {
+        char *end = NULL;
+        const unsigned long number = strtoul(
+            screenshot_sheet_number, &end, 10
+        );
+        if (end != screenshot_sheet_number
+            && *end == '\0'
+            && number > 0u
+            && number <= app.merged_sheet_count) {
+            app.selected_sheet = (size_t)(number - 1u);
+            app.first_visible_sheet = app.selected_sheet;
+            app.has_selection = 0;
+        }
     }
     app.active_menu = app_menu_from_name(screenshot_menu);
     if (screenshot_dialog != NULL
@@ -5356,7 +5606,24 @@ int main(int argc, char **argv)
                     && key == SDLK_F1) {
                     app_execute_action(&app, APP_ACTION_HELP);
                 } else if (app.dialog == APP_DIALOG_NONE && command) {
-                    if (key == SDLK_o) {
+                    if (key == SDLK_PAGEUP
+                        && app.selected_sheet > 0u) {
+                        --app.selected_sheet;
+                        app.first_visible_sheet =
+                            app.selected_sheet;
+                        app.has_selection = 0;
+                        app.first_visible_row = 0u;
+                        app.first_visible_column = 0u;
+                    } else if (key == SDLK_PAGEDOWN
+                        && app.selected_sheet + 1u
+                            < app.merged_sheet_count) {
+                        ++app.selected_sheet;
+                        app.first_visible_sheet =
+                            app.selected_sheet;
+                        app.has_selection = 0;
+                        app.first_visible_row = 0u;
+                        app.first_visible_column = 0u;
+                    } else if (key == SDLK_o) {
                         app_open_files(
                             &app,
                             (modifiers & KMOD_SHIFT) != 0
@@ -5401,8 +5668,23 @@ int main(int argc, char **argv)
         nk_sdl_render(NK_ANTI_ALIASING_ON);
         if (!screenshot_saved
             && screenshot_path != NULL
-            && screenshot_path[0] != '\0') {
-            screenshot_saved = save_renderer_bmp(renderer, screenshot_path);
+            && screenshot_path[0] != '\0'
+            && (screenshot_drop_path == NULL
+                || app.pending_drop_count == 0u)) {
+            if (screenshot_require_workbooks != NULL
+                && screenshot_require_workbooks[0] != '\0'
+                && app.workbook_count == 0u) {
+                fprintf(
+                    stderr,
+                    "screenshot smoke test did not import any workbooks: %s\n",
+                    app.status
+                );
+                screenshot_failed = 1;
+            } else {
+                screenshot_saved = save_renderer_bmp(
+                    renderer, screenshot_path
+                );
+            }
             app.running = 0;
         }
         SDL_RenderPresent(renderer);
@@ -5416,5 +5698,5 @@ int main(int argc, char **argv)
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
     SDL_Quit();
-    return 0;
+    return screenshot_failed ? 2 : 0;
 }

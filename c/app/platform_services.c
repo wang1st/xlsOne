@@ -32,6 +32,13 @@
 
 #define XLSONE_HTTP_RESPONSE_LIMIT (1024u * 1024u)
 
+#if !defined(XLSONE_VERSION)
+#define XLSONE_VERSION "development"
+#endif
+
+#define XLSONE_WIDE_TEXT_IMPL(value) L##value
+#define XLSONE_WIDE_TEXT(value) XLSONE_WIDE_TEXT_IMPL(value)
+
 static char *duplicate_text(const char *text)
 {
     const size_t length = text == NULL ? 0u : strlen(text);
@@ -819,7 +826,7 @@ int xls_platform_http_request(
         goto cleanup;
     }
     session = WinHttpOpen(
-        L"xlsOne/1.1.1",
+        L"xlsOne/" XLSONE_WIDE_TEXT(XLSONE_VERSION),
         WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY,
         WINHTTP_NO_PROXY_NAME,
         WINHTTP_NO_PROXY_BYPASS,

@@ -9,6 +9,101 @@
 
 #if defined(_WIN32)
 #include <windows.h>
+#include <wchar.h>
+
+static wchar_t *xls_windows_wide_copy(const wchar_t *text)
+{
+    const size_t length = wcslen(text);
+    wchar_t *copy = (wchar_t *)malloc(
+        (length + 1u) * sizeof(*copy)
+    );
+    if (copy != NULL) {
+        memcpy(copy, text, (length + 1u) * sizeof(*copy));
+    }
+    return copy;
+}
+
+static wchar_t *xls_windows_extended_path(const wchar_t *path)
+{
+    static const wchar_t device_prefix[] = L"\\\\?\\";
+    static const wchar_t unc_prefix[] = L"\\\\?\\UNC\\";
+    DWORD required;
+    DWORD written;
+    wchar_t *full;
+    wchar_t *extended;
+    size_t full_length;
+    size_t index;
+    if (wcsncmp(path, L"\\\\?\\", 4u) == 0
+        || wcsncmp(path, L"\\\\.\\", 4u) == 0) {
+        return xls_windows_wide_copy(path);
+    }
+    required = GetFullPathNameW(path, 0u, NULL, NULL);
+    if (required == 0u) {
+        return xls_windows_wide_copy(path);
+    }
+    full = (wchar_t *)malloc((size_t)required * sizeof(*full));
+    if (full == NULL) {
+        return NULL;
+    }
+    written = GetFullPathNameW(path, required, full, NULL);
+    if (written == 0u || written >= required) {
+        free(full);
+        return xls_windows_wide_copy(path);
+    }
+    for (index = 0u; full[index] != L'\0'; ++index) {
+        if (full[index] == L'/') {
+            full[index] = L'\\';
+        }
+    }
+    full_length = wcslen(full);
+    if (full_length >= 2u
+        && full[0] == L'\\'
+        && full[1] == L'\\') {
+        const size_t prefix_length =
+            (sizeof(unc_prefix) / sizeof(unc_prefix[0])) - 1u;
+        extended = (wchar_t *)malloc(
+            (prefix_length + full_length - 2u + 1u)
+                * sizeof(*extended)
+        );
+        if (extended != NULL) {
+            memcpy(
+                extended,
+                unc_prefix,
+                prefix_length * sizeof(*extended)
+            );
+            memcpy(
+                extended + prefix_length,
+                full + 2u,
+                (full_length - 2u + 1u) * sizeof(*extended)
+            );
+        }
+    } else if (full_length >= 3u
+        && full[1] == L':'
+        && full[2] == L'\\') {
+        const size_t prefix_length =
+            (sizeof(device_prefix) / sizeof(device_prefix[0])) - 1u;
+        extended = (wchar_t *)malloc(
+            (prefix_length + full_length + 1u)
+                * sizeof(*extended)
+        );
+        if (extended != NULL) {
+            memcpy(
+                extended,
+                device_prefix,
+                prefix_length * sizeof(*extended)
+            );
+            memcpy(
+                extended + prefix_length,
+                full,
+                (full_length + 1u) * sizeof(*extended)
+            );
+        }
+    } else {
+        extended = xls_windows_wide_copy(full);
+    }
+    free(full);
+    return extended;
+}
 #endif
 
 FILE *xls_fopen_utf8(const char *path, const char *mode)
@@ -18,6 +113,7 @@ FILE *xls_fopen_utf8(const char *path, const char *mode)
     int mode_length;
     wchar_t *wide_path;
     wchar_t *wide_mode;
+    wchar_t *extended_path;
     FILE *file;
     if (path == NULL || mode == NULL) {
         return NULL;
@@ -54,7 +150,12 @@ FILE *xls_fopen_utf8(const char *path, const char *mode)
         free(wide_mode);
         return NULL;
     }
-    file = _wfopen(wide_path, wide_mode);
+    extended_path = xls_windows_extended_path(wide_path);
+    file = _wfopen(
+        extended_path == NULL ? wide_path : extended_path,
+        wide_mode
+    );
+    free(extended_path);
     free(wide_path);
     free(wide_mode);
     return file;
