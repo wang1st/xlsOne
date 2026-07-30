@@ -144,6 +144,50 @@ else()
 endif()
 add_test(NAME xlsone_source_list_tests COMMAND xlsone_source_list_tests)
 
+if(TARGET xlsone_cjson)
+    add_executable(
+        xlsone_update_checker_tests
+        test_update_checker.c
+        ../app/update_checker.c
+    )
+    target_include_directories(
+        xlsone_update_checker_tests
+        PRIVATE
+            "${CMAKE_CURRENT_SOURCE_DIR}/../app"
+    )
+    target_link_libraries(
+        xlsone_update_checker_tests
+        PRIVATE xlsone_cjson
+    )
+    if(MSVC)
+        target_compile_options(xlsone_update_checker_tests PRIVATE /W4)
+        if(XLSONE_C_WARNINGS_AS_ERRORS)
+            target_compile_options(
+                xlsone_update_checker_tests PRIVATE /WX
+            )
+        endif()
+    else()
+        target_compile_options(
+            xlsone_update_checker_tests
+            PRIVATE
+                -Wall
+                -Wextra
+                -Wpedantic
+                -Wconversion
+                -Wshadow
+        )
+        if(XLSONE_C_WARNINGS_AS_ERRORS)
+            target_compile_options(
+                xlsone_update_checker_tests PRIVATE -Werror
+            )
+        endif()
+    endif()
+    add_test(
+        NAME xlsone_update_checker_tests
+        COMMAND xlsone_update_checker_tests
+    )
+endif()
+
 if(TARGET xlsone_cjson
     AND TARGET xlsone_monocypher
     AND XLSONE_LICENSE_PUBLIC_KEY)

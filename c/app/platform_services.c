@@ -1,6 +1,8 @@
 #if !defined(_WIN32)
 #define _POSIX_C_SOURCE 200809L
 #define _XOPEN_SOURCE 700
+#elif !defined(COBJMACROS)
+#define COBJMACROS
 #endif
 
 #include "platform_dialog.h"
@@ -15,8 +17,11 @@
 #if defined(_WIN32)
 #include <windows.h>
 #include <commdlg.h>
+#include <exdisp.h>
 #include <shlobj.h>
+#include <shldisp.h>
 #include <shellapi.h>
+#include <shlwapi.h>
 #include <winhttp.h>
 #else
 #include <fcntl.h>
@@ -25,6 +30,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #if defined(__APPLE__)
+#include <ApplicationServices/ApplicationServices.h>
 #include <CoreServices/CoreServices.h>
 #include <mach-o/dyld.h>
 #include <pwd.h>
@@ -135,6 +141,190 @@ static wchar_t *windows_extended_path(const wchar_t *absolute_path)
         (suffix_length + 1u) * sizeof(*extended)
     );
     return extended;
+}
+
+static int windows_same_directory(
+    const wchar_t *left,
+    const wchar_t *right
+)
+{
+    size_t left_length;
+    size_t right_length;
+    if (left == NULL || right == NULL) {
+        return 0;
+    }
+    left_length = wcslen(left);
+    right_length = wcslen(right);
+    while (left_length > 3u
+        && (left[left_length - 1u] == L'\\'
+            || left[left_length - 1u] == L'/')) {
+        --left_length;
+    }
+    while (right_length > 3u
+        && (right[right_length - 1u] == L'\\'
+            || right[right_length - 1u] == L'/')) {
+        --right_length;
+    }
+    return left_length == right_length
+        && _wcsnicmp(left, right, left_length) == 0;
+}
+
+static int windows_select_browser_item(
+    IWebBrowser2 *browser,
+    const wchar_t *file_name
+)
+{
+    IDispatch *document = NULL;
+    IShellFolderViewDual *view = NULL;
+    Folder *folder = NULL;
+    FolderItem *item = NULL;
+    BSTR item_name = NULL;
+    VARIANT item_variant;
+    SHANDLE_PTR window_handle = 0;
+    HRESULT status;
+    int selected = 0;
+    status = IWebBrowser2_get_Document(browser, &document);
+    if (FAILED(status) || document == NULL) {
+        goto cleanup;
+    }
+    status = IDispatch_QueryInterface(
+        document,
+        &IID_IShellFolderViewDual,
+        (void **)&view
+    );
+    if (FAILED(status) || view == NULL) {
+        goto cleanup;
+    }
+    status = IShellFolderViewDual_get_Folder(view, &folder);
+    if (FAILED(status) || folder == NULL) {
+        goto cleanup;
+    }
+    item_name = SysAllocString(file_name);
+    if (item_name == NULL) {
+        goto cleanup;
+    }
+    status = Folder_ParseName(folder, item_name, &item);
+    if (FAILED(status) || item == NULL) {
+        goto cleanup;
+    }
+    VariantInit(&item_variant);
+    V_VT(&item_variant) = VT_DISPATCH;
+    V_DISPATCH(&item_variant) = (IDispatch *)item;
+    status = IShellFolderViewDual_SelectItem(
+        view,
+        &item_variant,
+        0x1d
+    );
+    V_VT(&item_variant) = VT_EMPTY;
+    if (FAILED(status)) {
+        goto cleanup;
+    }
+    if (SUCCEEDED(IWebBrowser2_get_HWND(
+        browser, &window_handle
+    ))) {
+        HWND window = (HWND)(INT_PTR)window_handle;
+        if (IsIconic(window)) {
+            (void)ShowWindow(window, SW_RESTORE);
+        }
+        (void)SetForegroundWindow(window);
+    }
+    selected = 1;
+
+cleanup:
+    if (item != NULL) {
+        FolderItem_Release(item);
+    }
+    if (item_name != NULL) {
+        SysFreeString(item_name);
+    }
+    if (folder != NULL) {
+        Folder_Release(folder);
+    }
+    if (view != NULL) {
+        IShellFolderViewDual_Release(view);
+    }
+    if (document != NULL) {
+        IDispatch_Release(document);
+    }
+    return selected;
+}
+
+static int windows_select_in_open_directory(
+    const wchar_t *directory,
+    const wchar_t *file_name
+)
+{
+    IShellWindows *shell_windows = NULL;
+    long window_count = 0;
+    long index;
+    HRESULT status;
+    int selected = 0;
+    status = CoCreateInstance(
+        &CLSID_ShellWindows,
+        NULL,
+        CLSCTX_LOCAL_SERVER,
+        &IID_IShellWindows,
+        (void **)&shell_windows
+    );
+    if (FAILED(status) || shell_windows == NULL) {
+        return 0;
+    }
+    if (FAILED(IShellWindows_get_Count(
+        shell_windows, &window_count
+    ))) {
+        IShellWindows_Release(shell_windows);
+        return 0;
+    }
+    for (index = 0; index < window_count && !selected; ++index) {
+        VARIANT item_index;
+        IDispatch *window_dispatch = NULL;
+        IWebBrowser2 *browser = NULL;
+        BSTR location = NULL;
+        wchar_t location_path[32768];
+        DWORD location_capacity = (DWORD)(
+            sizeof(location_path) / sizeof(location_path[0])
+        );
+        VariantInit(&item_index);
+        V_VT(&item_index) = VT_I4;
+        V_I4(&item_index) = index;
+        status = IShellWindows_Item(
+            shell_windows, item_index, &window_dispatch
+        );
+        if (FAILED(status) || window_dispatch == NULL) {
+            continue;
+        }
+        status = IDispatch_QueryInterface(
+            window_dispatch,
+            &IID_IWebBrowser2,
+            (void **)&browser
+        );
+        IDispatch_Release(window_dispatch);
+        if (FAILED(status) || browser == NULL) {
+            continue;
+        }
+        status = IWebBrowser2_get_LocationURL(browser, &location);
+        if (SUCCEEDED(status)
+            && location != NULL
+            && SUCCEEDED(PathCreateFromUrlW(
+                location,
+                location_path,
+                &location_capacity,
+                0u
+            ))
+            && windows_same_directory(
+                location_path, directory
+            )) {
+            selected = windows_select_browser_item(
+                browser, file_name
+            );
+        }
+        if (location != NULL) {
+            SysFreeString(location);
+        }
+        IWebBrowser2_Release(browser);
+    }
+    IShellWindows_Release(shell_windows);
+    return selected;
 }
 
 static int windows_choose_file(
@@ -401,6 +591,173 @@ static char *read_command_output_service(const char *command)
     result[length] = '\0';
     return result;
 }
+
+static int run_child_process(char *const arguments[])
+{
+    pid_t child = fork();
+    int wait_status = 0;
+    if (child == 0) {
+        int null_fd = open("/dev/null", O_WRONLY);
+        if (null_fd >= 0) {
+            (void)dup2(null_fd, STDOUT_FILENO);
+            (void)dup2(null_fd, STDERR_FILENO);
+            close(null_fd);
+        }
+        execvp(arguments[0], arguments);
+        _exit(127);
+    }
+    return child > 0
+        && waitpid(child, &wait_status, 0) == child
+        && WIFEXITED(wait_status)
+        && WEXITSTATUS(wait_status) == 0;
+}
+
+#if defined(__APPLE__)
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
+static int macos_bring_finder_front_window(void)
+{
+    ProcessSerialNumber process = {0u, 0u};
+    while (GetNextProcess(&process) == noErr) {
+        CFDictionaryRef information =
+            ProcessInformationCopyDictionary(
+                &process,
+                (UInt32)kProcessDictionaryIncludeAllInformationMask
+            );
+        if (information != NULL) {
+            CFTypeRef identifier = CFDictionaryGetValue(
+                information, kCFBundleIdentifierKey
+            );
+            const int is_finder = identifier != NULL
+                && CFGetTypeID(identifier) == CFStringGetTypeID()
+                && CFStringCompare(
+                    (CFStringRef)identifier,
+                    CFSTR("com.apple.finder"),
+                    0u
+                ) == kCFCompareEqualTo;
+            CFRelease(information);
+            if (is_finder) {
+                const OptionBits options =
+                    kSetFrontProcessFrontWindowOnly
+                    | kSetFrontProcessCausedByUser;
+                return SetFrontProcessWithOptions(
+                    &process, options
+                ) == noErr;
+            }
+        }
+    }
+    return 0;
+}
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif
+#else
+static char *linux_file_uri(const char *absolute_path)
+{
+    static const char hexadecimal[] = "0123456789ABCDEF";
+    const unsigned char *cursor =
+        (const unsigned char *)absolute_path;
+    const size_t input_length = strlen(absolute_path);
+    char *uri = (char *)malloc(input_length * 3u + 8u);
+    size_t output = 0u;
+    if (uri == NULL) {
+        return NULL;
+    }
+    memcpy(uri, "file://", 7u);
+    output = 7u;
+    while (*cursor != '\0') {
+        const unsigned char character = *cursor++;
+        if ((character >= (unsigned char)'a'
+                && character <= (unsigned char)'z')
+            || (character >= (unsigned char)'A'
+                && character <= (unsigned char)'Z')
+            || (character >= (unsigned char)'0'
+                && character <= (unsigned char)'9')
+            || character == (unsigned char)'/'
+            || character == (unsigned char)'-'
+            || character == (unsigned char)'_'
+            || character == (unsigned char)'.'
+            || character == (unsigned char)'~') {
+            uri[output++] = (char)character;
+        } else {
+            uri[output++] = '%';
+            uri[output++] = hexadecimal[character >> 4u];
+            uri[output++] = hexadecimal[character & 0x0fu];
+        }
+    }
+    uri[output] = '\0';
+    return uri;
+}
+
+static int linux_show_item_with_file_manager(
+    const char *absolute_path
+)
+{
+    char *uri = linux_file_uri(absolute_path);
+    char *gdbus_items = NULL;
+    char *dbus_items = NULL;
+    int shown = 0;
+    if (uri == NULL) {
+        return 0;
+    }
+    gdbus_items = (char *)malloc(strlen(uri) + 5u);
+    dbus_items = (char *)malloc(strlen(uri) + 14u);
+    if (gdbus_items != NULL) {
+        (void)snprintf(
+            gdbus_items,
+            strlen(uri) + 5u,
+            "['%s']",
+            uri
+        );
+        {
+            char *const arguments[] = {
+                "gdbus",
+                "call",
+                "--session",
+                "--dest",
+                "org.freedesktop.FileManager1",
+                "--object-path",
+                "/org/freedesktop/FileManager1",
+                "--method",
+                "org.freedesktop.FileManager1.ShowItems",
+                gdbus_items,
+                "",
+                NULL
+            };
+            shown = run_child_process(arguments);
+        }
+    }
+    if (!shown && dbus_items != NULL) {
+        (void)snprintf(
+            dbus_items,
+            strlen(uri) + 14u,
+            "array:string:%s",
+            uri
+        );
+        {
+            char *const arguments[] = {
+                "dbus-send",
+                "--session",
+                "--type=method_call",
+                "--print-reply",
+                "--dest=org.freedesktop.FileManager1",
+                "/org/freedesktop/FileManager1",
+                "org.freedesktop.FileManager1.ShowItems",
+                dbus_items,
+                "string:",
+                NULL
+            };
+            shown = run_child_process(arguments);
+        }
+    }
+    free(dbus_items);
+    free(gdbus_items);
+    free(uri);
+    return shown;
+}
+#endif
 
 static int ensure_directory(const char *path)
 {
@@ -771,12 +1128,15 @@ int xls_platform_reveal_file(const char *path)
         wchar_t *wide = wide_from_utf8(path);
         wchar_t *absolute_wide = NULL;
         wchar_t *attributes_path = NULL;
-        wchar_t *parameters = NULL;
+        wchar_t *directory = NULL;
+        wchar_t *separator;
+        const wchar_t *file_name;
+        PIDLIST_ABSOLUTE item_identifier = NULL;
         DWORD required;
         DWORD written;
         DWORD attributes;
-        HINSTANCE launched;
-        size_t parameter_capacity;
+        HRESULT com_status;
+        int uninitialize_com = 0;
         int success = 0;
         if (wide == NULL) {
             return 0;
@@ -811,49 +1171,119 @@ int xls_platform_reveal_file(const char *path)
             free(absolute_wide);
             return 0;
         }
-        parameter_capacity = wcslen(absolute_wide) + 12u;
-        parameters = (wchar_t *)malloc(
-            parameter_capacity * sizeof(*parameters)
-        );
-        if (parameters != NULL
-            && _snwprintf_s(
-                parameters,
-                parameter_capacity,
-                _TRUNCATE,
-                L"/select,\"%ls\"",
-                absolute_wide
-            ) >= 0) {
-            launched = ShellExecuteW(
-                NULL,
-                L"open",
-                L"explorer.exe",
-                parameters,
-                NULL,
-                SW_SHOWNORMAL
-            );
-            success = (INT_PTR)launched > 32;
+        directory = _wcsdup(absolute_wide);
+        separator = directory == NULL
+            ? NULL
+            : wcsrchr(directory, L'\\');
+        if (separator == NULL && directory != NULL) {
+            separator = wcsrchr(directory, L'/');
         }
-        free(parameters);
+        if (separator == NULL || separator[1] == L'\0') {
+            free(directory);
+            free(absolute_wide);
+            return 0;
+        }
+        file_name = absolute_wide + (separator - directory) + 1;
+        if (separator == directory + 2
+            && directory[1] == L':') {
+            separator[1] = L'\0';
+        } else {
+            *separator = L'\0';
+        }
+        com_status = CoInitializeEx(
+            NULL,
+            COINIT_APARTMENTTHREADED
+        );
+        uninitialize_com = SUCCEEDED(com_status);
+        if (SUCCEEDED(com_status)
+            || com_status == RPC_E_CHANGED_MODE) {
+            success = windows_select_in_open_directory(
+                directory, file_name
+            );
+            if (!success
+                && SUCCEEDED(SHParseDisplayName(
+                    absolute_wide,
+                    NULL,
+                    &item_identifier,
+                    0u,
+                    NULL
+                ))) {
+                success = SUCCEEDED(
+                    SHOpenFolderAndSelectItems(
+                        item_identifier, 0u, NULL, 0u
+                    )
+                );
+            }
+        }
+        if (item_identifier != NULL) {
+            CoTaskMemFree(item_identifier);
+        }
+        if (uninitialize_com) {
+            CoUninitialize();
+        }
+        free(directory);
         free(absolute_wide);
         return success;
     }
 #else
     {
         struct stat info;
-        pid_t child;
-        int wait_status = 0;
-        if (stat(path, &info) != 0 || !S_ISREG(info.st_mode)) {
+        char *absolute_path = realpath(path, NULL);
+        int success = 0;
+        if (absolute_path == NULL
+            || stat(absolute_path, &info) != 0
+            || !S_ISREG(info.st_mode)) {
+            free(absolute_path);
             return 0;
         }
-        child = fork();
-        if (child == 0) {
 #if defined(__APPLE__)
-            execlp("open", "open", "-R", path, (char *)NULL);
+        {
+            char *const arguments[] = {
+                "open",
+                "-g",
+                "-R",
+                absolute_path,
+                NULL
+            };
+            success = run_child_process(arguments);
+            if (success) {
+                const struct timespec delay = {0, 120000000L};
+                (void)nanosleep(&delay, NULL);
+                (void)macos_bring_finder_front_window();
+            }
+        }
 #else
-            char *directory = duplicate_text(path);
+        success = linux_show_item_with_file_manager(absolute_path);
+        if (!success) {
+            char *const nautilus_arguments[] = {
+                "nautilus", "--select", absolute_path, NULL
+            };
+            success = run_child_process(nautilus_arguments);
+        }
+        if (!success) {
+            char *const dolphin_arguments[] = {
+                "dolphin", "--select", absolute_path, NULL
+            };
+            success = run_child_process(dolphin_arguments);
+        }
+        if (!success) {
+            char *const caja_arguments[] = {
+                "caja", "--select", absolute_path, NULL
+            };
+            success = run_child_process(caja_arguments);
+        }
+        if (!success) {
+            char *const nemo_arguments[] = {
+                "nemo", absolute_path, NULL
+            };
+            success = run_child_process(nemo_arguments);
+        }
+        if (!success) {
+            char *directory = duplicate_text(absolute_path);
             char *separator;
             if (directory == NULL) {
-                _exit(127);
+                free(absolute_path);
+                return 0;
             }
             separator = strrchr(directory, '/');
             if (separator == NULL) {
@@ -864,19 +1294,17 @@ int xls_platform_reveal_file(const char *path)
             } else {
                 *separator = '\0';
             }
-            execlp(
-                "xdg-open",
-                "xdg-open",
-                directory,
-                (char *)NULL
-            );
-#endif
-            _exit(127);
+            {
+                char *const arguments[] = {
+                    "xdg-open", directory, NULL
+                };
+                success = run_child_process(arguments);
+            }
+            free(directory);
         }
-        return child > 0
-            && waitpid(child, &wait_status, 0) == child
-            && WIFEXITED(wait_status)
-            && WEXITSTATUS(wait_status) == 0;
+#endif
+        free(absolute_path);
+        return success;
     }
 #endif
 }

@@ -81,6 +81,7 @@ if(TARGET SDL2::SDL2
         platform_services.c
         sheet_tabs.c
         source_list.c
+        update_checker.c
     )
     target_include_directories(
         xlsone_app
@@ -175,7 +176,10 @@ if(TARGET SDL2::SDL2
                 advapi32
                 comdlg32
                 ole32
+                oleaut32
                 shell32
+                shlwapi
+                uuid
                 winhttp
         )
         set_target_properties(xlsone_app PROPERTIES WIN32_EXECUTABLE TRUE)
@@ -186,9 +190,16 @@ if(TARGET SDL2::SDL2
             CoreServices
             REQUIRED
         )
+        find_library(
+            XLSONE_APPLICATIONSERVICES_FRAMEWORK
+            ApplicationServices
+            REQUIRED
+        )
         target_link_libraries(
             xlsone_app
-            PRIVATE "${XLSONE_CORESERVICES_FRAMEWORK}"
+            PRIVATE
+                "${XLSONE_CORESERVICES_FRAMEWORK}"
+                "${XLSONE_APPLICATIONSERVICES_FRAMEWORK}"
         )
         set(XLSONE_MACOS_ICON
             "${CMAKE_CURRENT_SOURCE_DIR}/../../cpp/app/resources/xlsOne.icns"

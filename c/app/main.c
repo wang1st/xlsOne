@@ -6,6 +6,7 @@
 #include "platform_drop.h"
 #include "sheet_tabs.h"
 #include "source_list.h"
+#include "update_checker.h"
 
 #include <SDL.h>
 #include "cJSON.h"
@@ -45,7 +46,8 @@ typedef enum app_dialog {
     APP_DIALOG_NONE,
     APP_DIALOG_LICENSE,
     APP_DIALOG_RULES,
-    APP_DIALOG_NOTICE
+    APP_DIALOG_NOTICE,
+    APP_DIALOG_UPDATE
 } app_dialog;
 
 typedef enum app_drop_feedback {
@@ -55,6 +57,22 @@ typedef enum app_drop_feedback {
     APP_DROP_SUCCESS,
     APP_DROP_REJECTED
 } app_drop_feedback;
+
+typedef enum app_update_status {
+    APP_UPDATE_AVAILABLE,
+    APP_UPDATE_CURRENT,
+    APP_UPDATE_FAILED
+} app_update_status;
+
+typedef struct app_update_result {
+    app_update_status status;
+    xls_update_info info;
+} app_update_result;
+
+typedef struct app_update_thread_context {
+    Uint32 event_type;
+    app_update_result *result;
+} app_update_thread_context;
 
 typedef struct app_state {
     xls_workbook *workbooks;
@@ -97,6 +115,14 @@ typedef struct app_state {
     char dialog_title[128];
     char dialog_message[1024];
     int dialog_error;
+    char update_version[64];
+    char update_changelog[1024];
+    char update_download_url[1024];
+    SDL_Thread *update_thread;
+    Uint32 update_event_type;
+    int update_check_silent;
+    int automatic_update_pending;
+    Uint64 automatic_update_at;
     int language_index;
     int language_layout_dirty;
     int language_minimum_width;
@@ -127,7 +153,9 @@ static int ui_input_blocked = 0;
 
 static float app_body_font_size(void)
 {
-#if defined(_WIN32) || defined(__linux__)
+#if defined(__linux__)
+    return 16.0f;
+#elif defined(_WIN32)
     return 14.0f;
 #else
     return 12.0f;
@@ -136,7 +164,9 @@ static float app_body_font_size(void)
 
 static float app_title_font_size(void)
 {
-#if defined(_WIN32) || defined(__linux__)
+#if defined(__linux__)
+    return 24.0f;
+#elif defined(_WIN32)
     return 22.0f;
 #else
     return 20.0f;
@@ -145,7 +175,9 @@ static float app_title_font_size(void)
 
 static float app_numeric_font_size(void)
 {
-#if defined(_WIN32) || defined(__linux__)
+#if defined(__linux__)
+    return 24.0f;
+#elif defined(_WIN32)
     return 22.0f;
 #else
     return 20.0f;
@@ -154,7 +186,9 @@ static float app_numeric_font_size(void)
 
 static float app_source_font_size(void)
 {
-#if defined(_WIN32) || defined(__linux__)
+#if defined(__linux__)
+    return 17.0f;
+#elif defined(_WIN32)
     return 15.0f;
 #else
     return 14.0f;
@@ -1170,62 +1204,179 @@ static void app_save_rules(app_state *app)
     );
 }
 
-static void app_check_updates(app_state *app)
+static int app_update_worker(void *opaque)
 {
+    app_update_thread_context *thread_context =
+        (app_update_thread_context *)opaque;
+    app_update_result *result = thread_context->result;
     char *response = NULL;
-    long status = 0;
-    cJSON *root;
-    cJSON *version;
-    const char *parse_end = NULL;
-    char message[512];
-    if (!xls_platform_http_request(
+    long http_status = 0;
+    SDL_Event event;
+    const Uint32 event_type = thread_context->event_type;
+    free(thread_context);
+    result->status = APP_UPDATE_FAILED;
+    if (xls_platform_http_request(
         "GET",
         "https://z-pulse.cn/api/version",
         NULL,
         &response,
-        &status
-    )) {
+        &http_status
+    )
+        && http_status == 200
+        && xls_update_parse_response(
+            response,
+            xls_update_platform_key(),
+            &result->info
+        )) {
+        result->status = xls_update_compare_versions(
+            result->info.latest_version, XLSONE_VERSION
+        ) > 0
+            ? APP_UPDATE_AVAILABLE
+            : APP_UPDATE_CURRENT;
+    }
+    free(response);
+    memset(&event, 0, sizeof(event));
+    event.type = event_type;
+    event.user.data1 = result;
+    if (SDL_PushEvent(&event) <= 0) {
+        free(result);
+        return 1;
+    }
+    return 0;
+}
+
+static void app_show_update(app_state *app, const xls_update_info *info)
+{
+    app->active_menu = APP_MENU_NONE;
+    app->dialog = APP_DIALOG_UPDATE;
+    app->dialog_error = 0;
+    (void)snprintf(
+        app->update_version,
+        sizeof(app->update_version),
+        "%s",
+        info->latest_version
+    );
+    (void)snprintf(
+        app->update_changelog,
+        sizeof(app->update_changelog),
+        "%s",
+        info->changelog
+    );
+    (void)snprintf(
+        app->update_download_url,
+        sizeof(app->update_download_url),
+        "%s",
+        info->download_url
+    );
+}
+
+static void app_start_update_check(app_state *app, int silent)
+{
+    app_update_thread_context *thread_context;
+    app_update_result *result;
+    if (app->update_thread != NULL) {
+        if (!silent) {
+            app->update_check_silent = 0;
+            app_show_notice(
+                app,
+                "检查更新",
+                "正在检查更新...",
+                0
+            );
+        }
+        return;
+    }
+    if (app->update_event_type == (Uint32)-1) {
+        if (!silent) {
+            app_show_notice(
+                app,
+                "检查更新失败",
+                "无法连接更新服务器，请稍后重试。",
+                1
+            );
+        }
+        return;
+    }
+    thread_context = (app_update_thread_context *)malloc(
+        sizeof(*thread_context)
+    );
+    result = (app_update_result *)calloc(1u, sizeof(*result));
+    if (thread_context == NULL || result == NULL) {
+        free(thread_context);
+        free(result);
+        if (!silent) {
+            app_show_notice(
+                app,
+                "检查更新失败",
+                "无法连接更新服务器，请稍后重试。",
+                1
+            );
+        }
+        return;
+    }
+    thread_context->event_type = app->update_event_type;
+    thread_context->result = result;
+    app->update_check_silent = silent;
+    if (!silent) {
         app_show_notice(
             app,
             "检查更新",
-            "无法连接更新服务器，请稍后重试。",
-            1
+            "正在检查更新...",
+            0
         );
-        return;
     }
-    root = cJSON_ParseWithLengthOpts(
-        response, strlen(response) + 1u, &parse_end, 1
+    app->update_thread = SDL_CreateThread(
+        app_update_worker,
+        "xlsOne update check",
+        thread_context
     );
-    version = cJSON_IsObject(root)
-        ? cJSON_GetObjectItemCaseSensitive(root, "latest_version")
-        : NULL;
-    if (status != 200
-        || version == NULL
-        || !cJSON_IsString(version)
-        || version->valuestring == NULL) {
-        cJSON_Delete(root);
-        free(response);
-        app_show_notice(app, "检查更新", "更新服务器响应异常。", 1);
+    if (app->update_thread == NULL) {
+        free(result);
+        free(thread_context);
+        if (!silent) {
+            app_show_notice(
+                app,
+                "检查更新失败",
+                "无法连接更新服务器，请稍后重试。",
+                1
+            );
+        }
+    }
+}
+
+static void app_handle_update_result(
+    app_state *app,
+    app_update_result *result
+)
+{
+    char message[512];
+    const int silent = app->update_check_silent;
+    if (app->update_thread != NULL) {
+        SDL_WaitThread(app->update_thread, NULL);
+        app->update_thread = NULL;
+    }
+    if (result == NULL) {
         return;
     }
-    if (strcmp(version->valuestring, XLSONE_VERSION) == 0) {
+    if (result->status == APP_UPDATE_AVAILABLE) {
+        app_show_update(app, &result->info);
+    } else if (!silent && result->status == APP_UPDATE_CURRENT) {
         (void)snprintf(
             message,
             sizeof(message),
             app_tr("当前版本 %s 已是最新版本。"),
             XLSONE_VERSION
         );
-    } else {
-        (void)snprintf(
-            message,
-            sizeof(message),
-            app_tr("发现新版本 %s，可前往 Z-PULSE.CN 下载。"),
-            version->valuestring
+        app_show_notice(app, "检查更新", message, 0);
+    } else if (!silent) {
+        app_show_notice(
+            app,
+            "检查更新失败",
+            "无法连接更新服务器，请稍后重试。",
+            1
         );
     }
-    cJSON_Delete(root);
-    free(response);
-    app_show_notice(app, "检查更新", message, 0);
+    free(result);
 }
 
 #define UI_BG0 nk_rgb(246, 247, 250)
@@ -1504,6 +1655,116 @@ static void ui_draw_multiline(
     }
 }
 
+static size_t ui_utf8_character_size(unsigned char first)
+{
+    if ((first & 0x80u) == 0u) {
+        return 1u;
+    }
+    if ((first & 0xe0u) == 0xc0u) {
+        return 2u;
+    }
+    if ((first & 0xf0u) == 0xe0u) {
+        return 3u;
+    }
+    if ((first & 0xf8u) == 0xf0u) {
+        return 4u;
+    }
+    return 1u;
+}
+
+static void ui_draw_wrapped_text(
+    struct nk_command_buffer *canvas,
+    struct nk_rect rect,
+    const char *text,
+    const struct nk_user_font *font,
+    struct nk_color color,
+    float line_height
+)
+{
+    const size_t text_length = text == NULL ? 0u : strlen(text);
+    size_t offset = 0u;
+    float y = rect.y;
+    while (offset < text_length
+        && y + line_height <= rect.y + rect.h) {
+        size_t line_end = offset;
+        size_t last_space = (size_t)-1;
+        char line[512];
+        while (line_end < text_length
+            && text[line_end] != '\n') {
+            size_t character_size = ui_utf8_character_size(
+                (unsigned char)text[line_end]
+            );
+            size_t candidate_end;
+            size_t candidate_length;
+            if (character_size > text_length - line_end) {
+                character_size = 1u;
+            }
+            candidate_end = line_end + character_size;
+            candidate_length = candidate_end - offset;
+            if (candidate_length >= sizeof(line)) {
+                break;
+            }
+            memcpy(line, text + offset, candidate_length);
+            line[candidate_length] = '\0';
+            if (ui_text_width(font, line) > rect.w
+                && line_end > offset) {
+                break;
+            }
+            line_end = candidate_end;
+            if (character_size == 1u
+                && (text[line_end - 1u] == ' '
+                    || text[line_end - 1u] == '\t')) {
+                last_space = line_end;
+            }
+        }
+        if (line_end < text_length
+            && text[line_end] != '\n'
+            && last_space != (size_t)-1
+            && last_space > offset) {
+            line_end = last_space;
+        }
+        if (line_end == offset
+            && text[line_end] != '\n') {
+            line_end += ui_utf8_character_size(
+                (unsigned char)text[line_end]
+            );
+            if (line_end > text_length) {
+                line_end = text_length;
+            }
+        }
+        {
+            size_t line_length = line_end - offset;
+            while (line_length > 0u
+                && (text[offset + line_length - 1u] == ' '
+                    || text[offset + line_length - 1u] == '\t')) {
+                --line_length;
+            }
+            if (line_length >= sizeof(line)) {
+                line_length = sizeof(line) - 1u;
+            }
+            memcpy(line, text + offset, line_length);
+            line[line_length] = '\0';
+            ui_draw_text(
+                canvas,
+                nk_rect(rect.x, y, rect.w, line_height),
+                line,
+                font,
+                color,
+                NK_TEXT_LEFT
+            );
+        }
+        y += line_height;
+        offset = line_end;
+        if (offset < text_length && text[offset] == '\n') {
+            ++offset;
+        }
+        while (offset < text_length
+            && (text[offset] == ' ' || text[offset] == '\t')) {
+            ++offset;
+        }
+    }
+}
+
 static int ui_hovered(const struct nk_context *context, struct nk_rect rect)
 {
     if (ui_input_blocked) {
@@ -1747,7 +2008,7 @@ static void app_execute_action(app_state *app, app_action action)
         app_change_language(app, XLS_UI_LANGUAGE_JAPANESE);
         break;
     case APP_ACTION_CHECK_UPDATE:
-        app_check_updates(app);
+        app_start_update_check(app, 0);
         break;
     case APP_ACTION_HELP:
         if (!xls_platform_open_url("https://z-pulse.cn/xlsone/")) {
@@ -4001,6 +4262,166 @@ static void render_notice_dialog(
     }
 }
 
+static void render_update_dialog(
+    struct nk_context *context,
+    struct nk_command_buffer *canvas,
+    app_state *app,
+    const ui_fonts *fonts,
+    float width,
+    float height
+)
+{
+    const char *later_text = app_tr("稍后提醒");
+    const char *download_text = app_tr("立即下载");
+    const float later_width = ui_required_button_width(
+        fonts->body, later_text, 96.0f, 28.0f, 0
+    );
+    const float download_width = ui_required_button_width(
+        fonts->body, download_text, 104.0f, 28.0f, 0
+    );
+    float card_width = 540.0f;
+    const float card_height = 360.0f;
+    char version_message[256];
+    struct nk_rect card;
+    if (card_width > width - 60.0f) {
+        card_width = width - 60.0f;
+    }
+    card = nk_rect(
+        (width - card_width) * 0.5f,
+        (height - card_height) * 0.5f,
+        card_width,
+        card_height
+    );
+    (void)snprintf(
+        version_message,
+        sizeof(version_message),
+        app_tr("发现新版本 %s，可前往 Z-PULSE.CN 下载。"),
+        app->update_version
+    );
+    render_dialog_backdrop(canvas, width, height);
+    nk_fill_rect(
+        canvas,
+        nk_rect(card.x + 3.0f, card.y + 7.0f, card.w, card.h),
+        13.0f,
+        nk_rgba(0, 0, 0, 24)
+    );
+    nk_fill_rect(canvas, card, 13.0f, UI_BG1);
+    nk_stroke_rect(canvas, card, 13.0f, 1.0f, UI_BORDER);
+    ui_draw_text(
+        canvas,
+        nk_rect(
+            card.x + 24.0f,
+            card.y + 18.0f,
+            card.w - 72.0f,
+            28.0f
+        ),
+        app_tr("发现新版本"),
+        fonts->body,
+        UI_TEXT,
+        NK_TEXT_LEFT
+    );
+    ui_draw_text(
+        canvas,
+        nk_rect(
+            card.x + 24.0f,
+            card.y + 60.0f,
+            card.w - 48.0f,
+            24.0f
+        ),
+        version_message,
+        fonts->body,
+        UI_TEXT,
+        NK_TEXT_LEFT
+    );
+    ui_draw_text(
+        canvas,
+        nk_rect(
+            card.x + 24.0f,
+            card.y + 88.0f,
+            card.w - 48.0f,
+            22.0f
+        ),
+        app_tr("新版本已发布，建议您更新以获得更好的体验。"),
+        fonts->body,
+        UI_MUTED,
+        NK_TEXT_LEFT
+    );
+    nk_fill_rect(
+        canvas,
+        nk_rect(
+            card.x + 24.0f,
+            card.y + 122.0f,
+            card.w - 48.0f,
+            154.0f
+        ),
+        8.0f,
+        UI_BG2
+    );
+    nk_stroke_rect(
+        canvas,
+        nk_rect(
+            card.x + 24.0f,
+            card.y + 122.0f,
+            card.w - 48.0f,
+            154.0f
+        ),
+        8.0f,
+        1.0f,
+        UI_BORDER_SOFT
+    );
+    ui_draw_wrapped_text(
+        canvas,
+        nk_rect(
+            card.x + 38.0f,
+            card.y + 134.0f,
+            card.w - 76.0f,
+            130.0f
+        ),
+        app->update_changelog[0] == '\0'
+            ? app_tr("新版本已发布，建议您更新以获得更好的体验。")
+            : app->update_changelog,
+        fonts->body,
+        UI_MUTED,
+        23.0f
+    );
+    if (render_dialog_close(context, canvas, card)
+        || ui_draw_button(
+            context,
+            canvas,
+            nk_rect(
+                card.x + card.w - download_width
+                    - later_width - 34.0f,
+                card.y + card.h - 56.0f,
+                later_width,
+                34.0f
+            ),
+            later_text,
+            fonts->body,
+            UI_ICON_NONE,
+            0
+        )) {
+        app_close_dialog(app);
+        return;
+    }
+    if (ui_draw_button(
+        context,
+        canvas,
+        nk_rect(
+            card.x + card.w - download_width - 24.0f,
+            card.y + card.h - 56.0f,
+            download_width,
+            34.0f
+        ),
+        download_text,
+        fonts->body,
+        UI_ICON_NONE,
+        1
+    )) {
+        (void)xls_platform_open_url(app->update_download_url);
+        app_close_dialog(app);
+    }
+}
+
 static void render_rules_dialog(
     struct nk_context *context,
     struct nk_command_buffer *canvas,
@@ -4911,6 +5332,11 @@ static void render_dialog(
             context, canvas, app, fonts, width, height
         );
         break;
+    case APP_DIALOG_UPDATE:
+        render_update_dialog(
+            context, canvas, app, fonts, width, height
+        );
+        break;
     case APP_DIALOG_NONE:
     default:
         break;
@@ -5535,6 +5961,7 @@ int main(int argc, char **argv)
         fprintf(stderr, "SDL initialization failed: %s\n", SDL_GetError());
         return 1;
     }
+    app.update_event_type = SDL_RegisterEvents(1);
     app_load_language(&app);
     app_set_status(&app, "可拖入或打开多个 Excel 工作簿。");
     (void)SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
@@ -5796,6 +6223,19 @@ int main(int argc, char **argv)
     screenshot_require_workbooks = getenv(
         "XLSONE_SCREENSHOT_REQUIRE_WORKBOOKS"
     );
+    {
+        const char *disable_auto_update = getenv(
+            "XLSONE_DISABLE_AUTO_UPDATE"
+        );
+        if (app.update_event_type != (Uint32)-1
+            && (screenshot_path == NULL
+                || screenshot_path[0] == '\0')
+            && (disable_auto_update == NULL
+                || strcmp(disable_auto_update, "1") != 0)) {
+            app.automatic_update_pending = 1;
+            app.automatic_update_at = SDL_GetTicks64() + 800u;
+        }
+    }
 
     if (screenshot_drop_argument != NULL
         && screenshot_drop_argument[0] != '\0'
@@ -5941,6 +6381,30 @@ int main(int argc, char **argv)
     if (screenshot_dialog != NULL
         && strcmp(screenshot_dialog, "license") == 0) {
         app_show_license(&app);
+    } else if (screenshot_dialog != NULL
+        && strcmp(screenshot_dialog, "update") == 0) {
+        xls_update_info preview;
+        memset(&preview, 0, sizeof(preview));
+        (void)snprintf(
+            preview.latest_version,
+            sizeof(preview.latest_version),
+            "%s",
+            "9.9.9"
+        );
+        (void)snprintf(
+            preview.changelog,
+            sizeof(preview.changelog),
+            "%s",
+            "文件定位会复用已打开的目录窗口并高亮目标文件；"
+            "启动后会自动检查新版本。"
+        );
+        (void)snprintf(
+            preview.download_url,
+            sizeof(preview.download_url),
+            "%s",
+            "https://z-pulse.cn/products/xlsone/download.html"
+        );
+        app_show_update(&app, &preview);
     }
     if (screenshot_drop_target != NULL
         && screenshot_drop_target[0] != '\0') {
@@ -5970,7 +6434,12 @@ int main(int argc, char **argv)
         int height;
         nk_input_begin(context);
         while (SDL_PollEvent(&event)) {
-            if (event.type == SDL_QUIT) {
+            if (event.type == app.update_event_type) {
+                app_handle_update_result(
+                    &app,
+                    (app_update_result *)event.user.data1
+                );
+            } else if (event.type == SDL_QUIT) {
                 app.running = 0;
             } else if (event.type == SDL_DROPFILE) {
                 if (xls_drop_path_is_workbook(event.drop.file)) {
@@ -6175,6 +6644,11 @@ int main(int argc, char **argv)
             }
             (void)nk_sdl_handle_event(&event);
         }
+        if (app.automatic_update_pending
+            && SDL_GetTicks64() >= app.automatic_update_at) {
+            app.automatic_update_pending = 0;
+            app_start_update_check(&app, 1);
+        }
         nk_sdl_handle_grab();
         nk_input_end(context);
         if (app.language_layout_dirty) {
@@ -6251,6 +6725,20 @@ int main(int argc, char **argv)
 
     app_clear_pending_drop(&app);
     app_clear(&app);
+    if (app.update_thread != NULL) {
+        SDL_Event update_event;
+        SDL_WaitThread(app.update_thread, NULL);
+        app.update_thread = NULL;
+        while (SDL_PeepEvents(
+            &update_event,
+            1,
+            SDL_GETEVENT,
+            app.update_event_type,
+            app.update_event_type
+        ) > 0) {
+            free(update_event.user.data1);
+        }
+    }
     nk_sdl_shutdown();
     xls_platform_drop_target_shutdown(&native_drop_target);
     SDL_DestroyRenderer(renderer);

@@ -703,6 +703,10 @@ jobs:
             XLSONE_UI_LANGUAGE=ja \
             xvfb-run -a "$binary"
           test -s ".build/linux-${PACKAGE_ARCH}-license-smoke.bmp"
+          XLSONE_SCREENSHOT_PATH="${GITHUB_WORKSPACE}/.build/linux-${PACKAGE_ARCH}-update-smoke.bmp" \
+            XLSONE_SCREENSHOT_DIALOG=update \
+            xvfb-run -a "$binary"
+          test -s ".build/linux-${PACKAGE_ARCH}-update-smoke.bmp"
           XLSONE_SCREENSHOT_PATH="${GITHUB_WORKSPACE}/.build/linux-${PACKAGE_ARCH}-language-roundtrip.bmp" \
             XLSONE_UI_LANGUAGE=ja \
             XLSONE_SCREENSHOT_LANGUAGE_SEQUENCE=en,zh-Hans \
@@ -719,6 +723,8 @@ jobs:
           path: |
             .build/xlsOne-*-linux-${{ matrix.arch }}.deb
             .build/SHA256SUMS-linux-${{ matrix.arch }}.txt
+            .build/linux-${{ matrix.arch }}-smoke.bmp
+            .build/linux-${{ matrix.arch }}-update-smoke.bmp
           include-hidden-files: true
           if-no-files-found: error
           overwrite: true
