@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.22)
 
 project(xlsOne
-    VERSION 1.1.4
+    VERSION 1.1.5
     DESCRIPTION "Commercial-friendly pure C Excel consolidation desktop app"
     LANGUAGES C
 )
@@ -10,7 +10,7 @@ enable_testing()
 add_subdirectory(c)
 if(NOT APPLE)
     install(
-        FILES "${CMAKE_CURRENT_SOURCE_DIR}/docs/releases/v1.1.4.md"
+        FILES "${CMAKE_CURRENT_SOURCE_DIR}/docs/releases/v1.1.5.md"
         DESTINATION "share/doc/xlsOne"
     )
 endif()

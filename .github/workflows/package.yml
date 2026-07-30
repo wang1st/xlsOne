@@ -707,6 +707,29 @@ jobs:
             XLSONE_SCREENSHOT_DIALOG=update \
             xvfb-run -a "$binary"
           test -s ".build/linux-${PACKAGE_ARCH}-update-smoke.bmp"
+          XLSONE_SCREENSHOT_PATH="${GITHUB_WORKSPACE}/.build/linux-${PACKAGE_ARCH}-about-smoke.bmp" \
+            XLSONE_SCREENSHOT_DIALOG=about \
+            xvfb-run -a "$binary"
+          test -s ".build/linux-${PACKAGE_ARCH}-about-smoke.bmp"
+          mock_file_manager="${GITHUB_WORKSPACE}/.build/mock-file-manager-${PACKAGE_ARCH}"
+          mkdir -p "$mock_file_manager"
+          install -m 755 scripts/ci/mock_linux_file_manager.sh \
+            "$mock_file_manager/xdg-mime"
+          ln -s xdg-mime "$mock_file_manager/nautilus"
+          reveal_log="${GITHUB_WORKSPACE}/.build/linux-${PACKAGE_ARCH}-reveal.log"
+          PATH="${mock_file_manager}:${PATH}" \
+            XLSONE_TEST_FILE_MANAGER_LOG="$reveal_log" \
+            XLSONE_SCREENSHOT_PATH="${GITHUB_WORKSPACE}/.build/linux-${PACKAGE_ARCH}-reveal-smoke.bmp" \
+            XLSONE_SCREENSHOT_SELECT=B6 \
+            XLSONE_SCREENSHOT_SOURCE_INDEX=1 \
+            XLSONE_SCREENSHOT_SOURCE_ACTION=reveal \
+            xvfb-run -a "$binary" \
+            samples/monthly-report-sample-v1.1/01-operations-team-1-june-2026.xlsx \
+            samples/monthly-report-sample-v1.1/02-operations-team-2-june-2026.xlsx
+          test -s ".build/linux-${PACKAGE_ARCH}-reveal-smoke.bmp"
+          test "$(sed -n '1p' "$reveal_log")" = "--select"
+          test "$(sed -n '2p' "$reveal_log")" = \
+            "${GITHUB_WORKSPACE}/samples/monthly-report-sample-v1.1/01-operations-team-1-june-2026.xlsx"
           XLSONE_SCREENSHOT_PATH="${GITHUB_WORKSPACE}/.build/linux-${PACKAGE_ARCH}-language-roundtrip.bmp" \
             XLSONE_UI_LANGUAGE=ja \
             XLSONE_SCREENSHOT_LANGUAGE_SEQUENCE=en,zh-Hans \
@@ -725,6 +748,7 @@ jobs:
             .build/SHA256SUMS-linux-${{ matrix.arch }}.txt
             .build/linux-${{ matrix.arch }}-smoke.bmp
             .build/linux-${{ matrix.arch }}-update-smoke.bmp
+            .build/linux-${{ matrix.arch }}-about-smoke.bmp
           include-hidden-files: true
           if-no-files-found: error
           overwrite: true

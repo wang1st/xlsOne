@@ -59,6 +59,10 @@ static void test_catalog(void)
         "Unsupported file format"
     ) == 0);
     CHECK(strcmp(
+        xls_i18n_translate("无法打开官方网站。"),
+        "Could not open the official website."
+    ) == 0);
+    CHECK(strcmp(
         xls_i18n_translate("当前版本 %s 已是最新版本。"),
         "Version %s is up to date."
     ) == 0);

@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.22)
 
 project(xlsOneC
-    VERSION 1.1.4
+    VERSION 1.1.5
     DESCRIPTION "Pure C desktop edition of xlsOne"
     LANGUAGES C
 )

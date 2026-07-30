@@ -115,6 +115,7 @@ typedef struct app_state {
     char dialog_title[128];
     char dialog_message[1024];
     int dialog_error;
+    int notice_website_link;
     char update_version[64];
     char update_changelog[1024];
     char update_download_url[1024];
@@ -814,6 +815,7 @@ static void app_close_dialog(app_state *app)
 {
     app->dialog = APP_DIALOG_NONE;
     app->dialog_message[0] = '\0';
+    app->notice_website_link = 0;
     SDL_StopTextInput();
 }
 
@@ -1052,6 +1054,7 @@ static void app_show_notice(
     app->active_menu = APP_MENU_NONE;
     app->dialog = APP_DIALOG_NOTICE;
     app->dialog_error = error;
+    app->notice_website_link = 0;
     (void)snprintf(
         app->dialog_title,
         sizeof(app->dialog_title),
@@ -2034,6 +2037,7 @@ static void app_execute_action(app_state *app, app_action action)
                 about,
                 0
             );
+            app->notice_website_link = 1;
         }
         break;
     case APP_ACTION_NONE:
@@ -4194,7 +4198,9 @@ static void render_notice_dialog(
         0
     );
     float card_width = 500.0f;
-    const float card_height = 248.0f;
+    const char *website = "https://z-pulse.cn/xlsone/";
+    const float card_height =
+        app->notice_website_link ? 276.0f : 248.0f;
     card_width = ui_max_float(
         card_width,
         ui_text_width(fonts->body, app->dialog_title)
@@ -4209,6 +4215,12 @@ static void render_notice_dialog(
     card_width = ui_max_float(
         card_width, button_width + 48.0f
     );
+    if (app->notice_website_link) {
+        card_width = ui_max_float(
+            card_width,
+            ui_text_width(fonts->body, website) + 48.0f
+        );
+    }
     if (card_width > width - 60.0f) {
         card_width = width - 60.0f;
     }
@@ -4243,6 +4255,46 @@ static void render_notice_dialog(
         app->dialog_error ? nk_rgb(204, 53, 53) : UI_MUTED,
         23.0f
     );
+    if (app->notice_website_link) {
+        const float link_width =
+            ui_text_width(fonts->body, website);
+        const struct nk_rect link = nk_rect(
+            card.x + 24.0f,
+            card.y + 178.0f,
+            link_width + 10.0f,
+            28.0f
+        );
+        const int hovered = ui_hovered(context, link);
+        if (hovered) {
+            nk_fill_rect(canvas, link, 5.0f, UI_ACCENT_SOFT);
+        }
+        ui_draw_text(
+            canvas,
+            nk_rect(
+                link.x + 5.0f,
+                link.y,
+                link_width + 2.0f,
+                link.h
+            ),
+            website,
+            fonts->body,
+            hovered ? UI_ACCENT_HOVER : UI_ACCENT,
+            NK_TEXT_LEFT
+        );
+        nk_stroke_line(
+            canvas,
+            link.x + 5.0f,
+            link.y + link.h - 4.0f,
+            link.x + 5.0f + link_width,
+            link.y + link.h - 4.0f,
+            1.0f,
+            hovered ? UI_ACCENT_HOVER : UI_ACCENT
+        );
+        if (ui_clicked(context, link)
+            && !xls_platform_open_url(website)) {
+            app_set_status(app, "无法打开官方网站。");
+        }
+    }
     if (render_dialog_close(context, canvas, card)
         || ui_draw_button(
             context,
@@ -6381,6 +6433,9 @@ int main(int argc, char **argv)
     if (screenshot_dialog != NULL
         && strcmp(screenshot_dialog, "license") == 0) {
         app_show_license(&app);
+    } else if (screenshot_dialog != NULL
+        && strcmp(screenshot_dialog, "about") == 0) {
+        app_execute_action(&app, APP_ACTION_ABOUT);
     } else if (screenshot_dialog != NULL
         && strcmp(screenshot_dialog, "update") == 0) {
         xls_update_info preview;

@@ -757,6 +757,102 @@ static int linux_show_item_with_file_manager(
     free(uri);
     return shown;
 }
+
+static int ascii_contains_case_insensitive(
+    const char *text,
+    const char *needle
+)
+{
+    const size_t needle_length =
+        needle == NULL ? 0u : strlen(needle);
+    const char *cursor;
+    if (text == NULL || needle_length == 0u) {
+        return 0;
+    }
+    for (cursor = text; *cursor != '\0'; ++cursor) {
+        size_t index;
+        for (index = 0u; index < needle_length; ++index) {
+            unsigned char left =
+                (unsigned char)cursor[index];
+            unsigned char right =
+                (unsigned char)needle[index];
+            if (left == '\0') {
+                break;
+            }
+            if (left >= (unsigned char)'A'
+                && left <= (unsigned char)'Z') {
+                left = (unsigned char)(
+                    left - (unsigned char)'A'
+                    + (unsigned char)'a'
+                );
+            }
+            if (right >= (unsigned char)'A'
+                && right <= (unsigned char)'Z') {
+                right = (unsigned char)(
+                    right - (unsigned char)'A'
+                    + (unsigned char)'a'
+                );
+            }
+            if (left != right) {
+                break;
+            }
+        }
+        if (index == needle_length) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+static int linux_show_item_with_default_file_manager(
+    const char *absolute_path
+)
+{
+    char *desktop = read_command_output_service(
+        "xdg-mime query default inode/directory 2>/dev/null"
+    );
+    int shown = 0;
+    if (desktop == NULL || desktop[0] == '\0') {
+        free(desktop);
+        return 0;
+    }
+    if (ascii_contains_case_insensitive(desktop, "nemo")) {
+        char *const arguments[] = {
+            "nemo", "--select", (char *)absolute_path, NULL
+        };
+        shown = run_child_process(arguments);
+    } else if (ascii_contains_case_insensitive(
+        desktop, "nautilus"
+    )) {
+        char *const arguments[] = {
+            "nautilus", "--select", (char *)absolute_path, NULL
+        };
+        shown = run_child_process(arguments);
+    } else if (ascii_contains_case_insensitive(
+        desktop, "dolphin"
+    )) {
+        char *const arguments[] = {
+            "dolphin", "--select", (char *)absolute_path, NULL
+        };
+        shown = run_child_process(arguments);
+    } else if (ascii_contains_case_insensitive(
+        desktop, "caja"
+    )) {
+        char *const arguments[] = {
+            "caja", "--select", (char *)absolute_path, NULL
+        };
+        shown = run_child_process(arguments);
+    } else if (ascii_contains_case_insensitive(
+        desktop, "thunar"
+    )) {
+        char *const arguments[] = {
+            "thunar", (char *)absolute_path, NULL
+        };
+        shown = run_child_process(arguments);
+    }
+    free(desktop);
+    return shown;
+}
 #endif
 
 static int ensure_directory(const char *path)
@@ -1253,7 +1349,19 @@ int xls_platform_reveal_file(const char *path)
             }
         }
 #else
-        success = linux_show_item_with_file_manager(absolute_path);
+        /*
+         * Address the selected desktop's file manager directly first.
+         * A different process can own org.freedesktop.FileManager1 and
+         * forward ShowItems in a way that always creates a new window.
+         * The native command reaches the running single-instance manager,
+         * which can reuse an existing view of the parent directory.
+         */
+        success = linux_show_item_with_default_file_manager(
+            absolute_path
+        );
+        if (!success) {
+            success = linux_show_item_with_file_manager(absolute_path);
+        }
         if (!success) {
             char *const nautilus_arguments[] = {
                 "nautilus", "--select", absolute_path, NULL
@@ -1274,7 +1382,7 @@ int xls_platform_reveal_file(const char *path)
         }
         if (!success) {
             char *const nemo_arguments[] = {
-                "nemo", absolute_path, NULL
+                "nemo", "--select", absolute_path, NULL
             };
             success = run_child_process(nemo_arguments);
         }
