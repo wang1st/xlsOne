@@ -214,6 +214,29 @@ jobs:
               -not (Test-Path $env:XLSONE_SCREENSHOT_PATH)) {
             throw "Portable xlsOne could not open UTF-8 workbook paths"
           }
+
+          $env:XLSONE_SCREENSHOT_SOURCE_INDEX = "1"
+          $env:XLSONE_SCREENSHOT_SOURCE_ACTION = "path"
+          $env:XLSONE_SCREENSHOT_PATH = Join-Path $env:GITHUB_WORKSPACE `
+            ".build\windows-source-path-copy-smoke.bmp"
+          $process = Start-Process -FilePath $exe.FullName `
+            -ArgumentList $unicodeArgs -Wait -PassThru
+          if ($process.ExitCode -ne 0 -or
+              -not (Test-Path $env:XLSONE_SCREENSHOT_PATH)) {
+            throw "Source filename did not copy its full UTF-8 path"
+          }
+
+          $env:XLSONE_SCREENSHOT_SOURCE_ACTION = "value"
+          $env:XLSONE_SCREENSHOT_PATH = Join-Path $env:GITHUB_WORKSPACE `
+            ".build\windows-source-value-copy-smoke.bmp"
+          $process = Start-Process -FilePath $exe.FullName `
+            -ArgumentList $unicodeArgs -Wait -PassThru
+          if ($process.ExitCode -ne 0 -or
+              -not (Test-Path $env:XLSONE_SCREENSHOT_PATH)) {
+            throw "Source value click did not copy the displayed value"
+          }
+          Remove-Item Env:XLSONE_SCREENSHOT_SOURCE_ACTION
+          Remove-Item Env:XLSONE_SCREENSHOT_SOURCE_INDEX
           Remove-Item Env:XLSONE_SCREENSHOT_SELECT
 
           $env:XLSONE_SCREENSHOT_PATH = Join-Path $env:GITHUB_WORKSPACE `

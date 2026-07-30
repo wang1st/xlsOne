@@ -80,6 +80,7 @@ if(TARGET SDL2::SDL2
         platform_drop.c
         platform_services.c
         sheet_tabs.c
+        source_list.c
     )
     target_include_directories(
         xlsone_app

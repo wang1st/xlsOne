@@ -9,6 +9,8 @@ int xls_platform_save_file(char **path);
 int xls_platform_open_license_file(char **path);
 int xls_platform_save_rules_file(char **path);
 int xls_platform_open_url(const char *url);
+int xls_platform_absolute_path(const char *path, char **absolute_path);
+int xls_platform_reveal_file(const char *path);
 int xls_platform_ensure_application_shortcuts(void);
 int xls_platform_http_request(
     const char *method,

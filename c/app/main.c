@@ -5,6 +5,7 @@
 #include "platform_dialog.h"
 #include "platform_drop.h"
 #include "sheet_tabs.h"
+#include "source_list.h"
 
 #include <SDL.h>
 #include "cJSON.h"
@@ -69,6 +70,18 @@ typedef struct app_state {
     size_t first_visible_row;
     size_t first_visible_column;
     int sources_expanded;
+    double source_scroll_offset;
+    double source_scroll_maximum;
+    double source_scroll_viewport_height;
+    int source_scroll_selection_valid;
+    int source_scroll_dragging;
+    double source_scroll_drag_anchor;
+    size_t source_scroll_sheet;
+    size_t source_scroll_row;
+    size_t source_scroll_column;
+    Uint64 interaction_feedback_until;
+    unsigned int source_reveal_attempt_count;
+    unsigned int source_reveal_failure_count;
     app_drop_feedback drop_feedback;
     Uint64 drop_feedback_until;
     char **pending_drop_paths;
@@ -108,6 +121,7 @@ typedef struct ui_fonts {
 #define UI_TOOLBAR_TOP UI_MENU_HEIGHT
 #define UI_TOOLBAR_BOTTOM (UI_MENU_HEIGHT + 40.0f)
 #define UI_SHEET_BOTTOM (UI_TOOLBAR_BOTTOM + 78.0f)
+#define UI_SOURCE_ROW_HEIGHT 56.0
 
 static int ui_input_blocked = 0;
 
@@ -160,6 +174,15 @@ static void app_set_status(app_state *app, const char *message)
         "%s",
         app_tr(message == NULL ? "" : message)
     );
+}
+
+static void app_set_interaction_feedback(
+    app_state *app,
+    const char *message
+)
+{
+    app_set_status(app, message);
+    app->interaction_feedback_until = SDL_GetTicks64() + 1600u;
 }
 
 static const char *app_license_watermark(
@@ -321,6 +344,11 @@ static void app_free_results(app_state *app)
     app->has_selection = 0;
     app->first_visible_row = 0;
     app->first_visible_column = 0;
+    app->source_scroll_offset = 0.0;
+    app->source_scroll_maximum = 0.0;
+    app->source_scroll_viewport_height = 0.0;
+    app->source_scroll_selection_valid = 0;
+    app->source_scroll_dragging = 0;
     app->has_last_override = 0;
 }
 
@@ -580,20 +608,28 @@ static int app_add_path(app_state *app, const char *path)
     xls_workbook parsed;
     xls_workbook *replacement;
     xls_error error;
-    if (app_has_path(app, path)) {
+    char *absolute_path = NULL;
+    const char *import_path = path;
+    if (xls_platform_absolute_path(path, &absolute_path)) {
+        import_path = absolute_path;
+    }
+    if (app_has_path(app, import_path)) {
+        free(absolute_path);
         return 1;
     }
     memset(&parsed, 0, sizeof(parsed));
-    if (!xls_parse_file(path, &parsed, &error)) {
+    if (!xls_parse_file(import_path, &parsed, &error)) {
         fprintf(
             stderr,
             "could not open workbook \"%s\": %s\n",
-            path,
+            import_path,
             error.message
         );
         app_set_status(app, error.message);
+        free(absolute_path);
         return 0;
     }
+    free(absolute_path);
     replacement = (xls_workbook *)realloc(
         app->workbooks,
         (app->workbook_count + 1) * sizeof(*app->workbooks)
@@ -3103,6 +3139,11 @@ static void render_inspector(
     nk_stroke_line(canvas, bounds.x + 0.5f, bounds.y, bounds.x + 0.5f, bounds.y + bounds.h, 1.0f, UI_BORDER);
 
     if (!app->has_selection || app->selected_sheet >= app->merged_sheet_count) {
+        app->source_scroll_selection_valid = 0;
+        app->source_scroll_dragging = 0;
+        app->source_scroll_offset = 0.0;
+        app->source_scroll_maximum = 0.0;
+        app->source_scroll_viewport_height = 0.0;
         nk_fill_rect(canvas, placeholder, 9.0f, UI_BG1);
         nk_stroke_rect(canvas, placeholder, 9.0f, 1.0f, UI_BORDER_SOFT);
         ui_draw_text(
@@ -3137,6 +3178,19 @@ static void render_inspector(
         float source_card_height;
         if (cell == NULL) {
             return;
+        }
+        if (!app->source_scroll_selection_valid
+            || app->source_scroll_sheet != app->selected_sheet
+            || app->source_scroll_row != app->selected_row
+            || app->source_scroll_column != app->selected_column) {
+            app->source_scroll_offset = 0.0;
+            app->source_scroll_maximum = 0.0;
+            app->source_scroll_viewport_height = 0.0;
+            app->source_scroll_dragging = 0;
+            app->source_scroll_selection_valid = 1;
+            app->source_scroll_sheet = app->selected_sheet;
+            app->source_scroll_row = app->selected_row;
+            app->source_scroll_column = app->selected_column;
         }
         ui_column_letters(app->selected_column, letters, sizeof(letters));
         (void)snprintf(reference, sizeof(reference), "%s%zu", letters, app->selected_row + 1);
@@ -3292,7 +3346,10 @@ static void render_inspector(
             &error
         );
         source_card_height = 58.0f
-            + (app->sources_expanded ? (float)cell->source_count * 56.0f : 0.0f);
+            + (app->sources_expanded
+                ? (float)cell->source_count
+                    * (float)UI_SOURCE_ROW_HEIGHT
+                : 0.0f);
         source_card = nk_rect(
             bounds.x + margin,
             detail.y + detail.h + 12.0f,
@@ -3388,13 +3445,42 @@ static void render_inspector(
             );
         }
         if (app->sources_expanded) {
-            nk_push_scissor(
-                canvas,
-                nk_rect(source_card.x + 1.0f, source_card.y + 57.0f, source_card.w - 2.0f, source_card.h - 58.0f)
+            const struct nk_rect viewport = nk_rect(
+                source_card.x + 1.0f,
+                source_card.y + 57.0f,
+                source_card.w - 2.0f,
+                source_card.h - 58.0f
             );
+            const double viewport_height = viewport.h > 0.0f
+                ? (double)viewport.h
+                : 0.0;
+            const int pointer_in_viewport = ui_hovered(
+                context, viewport
+            );
+            double content_width;
+            app->source_scroll_maximum = xls_source_list_max_offset(
+                cell->source_count,
+                UI_SOURCE_ROW_HEIGHT,
+                viewport_height
+            );
+            app->source_scroll_viewport_height = viewport_height;
+            content_width = app->source_scroll_maximum > 0.0
+                ? (double)viewport.w - 9.0
+                : (double)viewport.w;
+            app->source_scroll_offset = xls_source_list_clamp_offset(
+                app->source_scroll_offset,
+                cell->source_count,
+                UI_SOURCE_ROW_HEIGHT,
+                viewport_height
+            );
+            nk_push_scissor(canvas, viewport);
             for (source_index = 0; source_index < cell->source_count; ++source_index) {
                 const xls_source_entry *source = &cell->sources[source_index];
-                const float row_y = source_card.y + 58.0f + (float)source_index * 56.0f;
+                const float row_y = viewport.y
+                    + (float)(
+                        (double)source_index * UI_SOURCE_ROW_HEIGHT
+                        - app->source_scroll_offset
+                    );
                 const char *value = source->state == XLS_SOURCE_MISSING
                     ? app_tr("缺失")
                     : source->state == XLS_SOURCE_EMPTY
@@ -3402,40 +3488,305 @@ static void render_inspector(
                         : source->value;
                 const int outlier = overview_ok
                     && ui_source_is_outlier(&overview, source_index);
-                if (row_y >= source_card.y + source_card.h) {
+                const struct nk_rect row = nk_rect(
+                    viewport.x,
+                    row_y,
+                    (float)content_width,
+                    (float)UI_SOURCE_ROW_HEIGHT
+                );
+                const struct nk_rect heading = nk_rect(
+                    row.x + 9.0f,
+                    row.y + 4.0f,
+                    row.w - 18.0f,
+                    18.0f
+                );
+                const int row_hovered = pointer_in_viewport
+                    && ui_hovered(context, row);
+                const int heading_hovered = pointer_in_viewport
+                    && ui_hovered(context, heading);
+                const char *filename =
+                    source->filename == NULL
+                        || source->filename[0] == '\0'
+                    ? app_tr("未知文件")
+                    : source->filename;
+                const char *copy_path =
+                    source->filepath == NULL
+                        || source->filepath[0] == '\0'
+                    ? source->filename
+                    : source->filepath;
+                const int has_path =
+                    copy_path != NULL && copy_path[0] != '\0';
+                const int show_reveal = heading_hovered
+                    && source->filepath != NULL
+                    && source->filepath[0] != '\0';
+                const char *reveal_text = app_tr("定位");
+                const float reveal_width = ui_max_float(
+                    42.0f,
+                    ui_text_width(fonts->body, reveal_text) + 14.0f
+                );
+                const struct nk_rect reveal_button = nk_rect(
+                    heading.x + heading.w - reveal_width,
+                    heading.y - 1.0f,
+                    reveal_width,
+                    20.0f
+                );
+                const struct nk_rect filename_target = nk_rect(
+                    heading.x,
+                    heading.y,
+                    heading.w - (show_reveal
+                        ? reveal_width + 5.0f
+                        : 0.0f),
+                    heading.h
+                );
+                const struct nk_user_font *value_font =
+                    ui_text_has_non_ascii(value)
+                        ? fonts->body
+                        : fonts->source_value;
+                float value_width = ui_text_width(
+                    value_font, value == NULL ? "" : value
+                ) + 10.0f;
+                struct nk_rect value_target;
+                int filename_hovered;
+                int value_hovered;
+                if (row_y >= viewport.y + viewport.h) {
                     break;
+                }
+                if (row_y + (float)UI_SOURCE_ROW_HEIGHT
+                    <= viewport.y) {
+                    continue;
+                }
+                if (row_hovered) {
+                    nk_fill_rect(canvas, row, 7.0f, UI_BG2);
                 }
                 if (source_index > 0) {
                     nk_stroke_line(
                         canvas,
-                        source_card.x + 10.0f,
+                        row.x + 9.0f,
                         row_y,
-                        source_card.x + source_card.w - 10.0f,
+                        row.x + row.w - 9.0f,
                         row_y,
                         1.0f,
                         UI_BORDER_SOFT
                     );
                 }
+                filename_hovered = pointer_in_viewport
+                    && has_path
+                    && ui_hovered(context, filename_target);
+                if (filename_hovered) {
+                    nk_fill_rect(
+                        canvas,
+                        filename_target,
+                        5.0f,
+                        UI_ACCENT_SOFT
+                    );
+                }
                 ui_draw_text_elided(
                     canvas,
-                    nk_rect(source_card.x + 10.0f, row_y + 4.0f, source_card.w - 20.0f, 17.0f),
-                    source->filename,
+                    nk_rect(
+                        filename_target.x + 3.0f,
+                        filename_target.y,
+                        filename_target.w - 6.0f,
+                        filename_target.h
+                    ),
+                    filename,
                     fonts->body,
-                    UI_MUTED,
+                    filename_hovered ? UI_ACCENT : UI_MUTED,
                     NK_TEXT_LEFT
                 );
+                if (show_reveal) {
+                    const int reveal_hovered = ui_hovered(
+                        context, reveal_button
+                    );
+                    if (reveal_hovered) {
+                        nk_fill_rect(
+                            canvas,
+                            reveal_button,
+                            6.0f,
+                            UI_ACCENT_SOFT
+                        );
+                    }
+                    ui_draw_text(
+                        canvas,
+                        reveal_button,
+                        reveal_text,
+                        fonts->body,
+                        reveal_hovered ? UI_ACCENT : UI_MUTED,
+                        NK_TEXT_CENTERED
+                    );
+                    if (pointer_in_viewport
+                        && ui_clicked(context, reveal_button)) {
+                        ++app->source_reveal_attempt_count;
+                        if (!xls_platform_reveal_file(
+                            source->filepath
+                        )) {
+                            ++app->source_reveal_failure_count;
+                            app_set_interaction_feedback(
+                                app, "找不到来源文件"
+                            );
+                        }
+                    }
+                }
+                if (filename_hovered
+                    && ui_clicked(context, filename_target)
+                    && SDL_SetClipboardText(copy_path) == 0) {
+                    app_set_interaction_feedback(
+                        app, "已复制文件路径"
+                    );
+                }
+                if (value_width > row.w - 18.0f) {
+                    value_width = row.w - 18.0f;
+                }
+                value_target = nk_rect(
+                    row.x + row.w - 9.0f - value_width,
+                    row_y + 26.0f,
+                    value_width,
+                    21.0f
+                );
+                value_hovered = pointer_in_viewport
+                    && source->state == XLS_SOURCE_VALUE
+                    && value != NULL
+                    && ui_hovered(context, value_target);
+                if (value_hovered) {
+                    nk_fill_rect(
+                        canvas,
+                        value_target,
+                        5.0f,
+                        UI_ACCENT_SOFT
+                    );
+                }
                 ui_draw_text_elided(
                     canvas,
-                    nk_rect(source_card.x + 10.0f, row_y + 25.0f, source_card.w - 20.0f, 20.0f),
+                    nk_rect(
+                        value_target.x + 3.0f,
+                        value_target.y,
+                        value_target.w - 6.0f,
+                        value_target.h
+                    ),
                     value == NULL ? "" : value,
-                    ui_text_has_non_ascii(value)
-                        ? fonts->body
-                        : fonts->source_value,
-                    outlier ? UI_WARNING : UI_TEXT,
+                    value_font,
+                    value_hovered
+                        ? UI_ACCENT
+                        : outlier ? UI_WARNING : UI_TEXT,
                     NK_TEXT_RIGHT
                 );
+                if (value_hovered
+                    && ui_clicked(context, value_target)
+                    && SDL_SetClipboardText(value) == 0) {
+                    app_set_interaction_feedback(
+                        app, "已复制来源值"
+                    );
+                }
+            }
+            if (app->source_scroll_maximum > 0.0
+                && viewport.h > 16.0f) {
+                const struct nk_rect track = nk_rect(
+                    viewport.x + viewport.w - 7.0f,
+                    viewport.y + 4.0f,
+                    4.0f,
+                    viewport.h - 8.0f
+                );
+                const struct nk_rect track_target = nk_rect(
+                    track.x - 3.0f,
+                    track.y,
+                    10.0f,
+                    track.h
+                );
+                const double content_height =
+                    (double)cell->source_count
+                        * UI_SOURCE_ROW_HEIGHT;
+                float thumb_height = (float)(
+                    (double)track.h * viewport_height
+                    / content_height
+                );
+                float thumb_y;
+                struct nk_rect thumb;
+                struct nk_rect thumb_target;
+                if (thumb_height < 24.0f) {
+                    thumb_height = 24.0f;
+                }
+                if (thumb_height > track.h) {
+                    thumb_height = track.h;
+                }
+                thumb_y = track.y + (float)(
+                    ((double)track.h - (double)thumb_height)
+                    * app->source_scroll_offset
+                    / app->source_scroll_maximum
+                );
+                thumb = nk_rect(
+                    track.x, thumb_y, track.w, thumb_height
+                );
+                thumb_target = nk_rect(
+                    track_target.x,
+                    thumb.y,
+                    track_target.w,
+                    thumb.h
+                );
+                nk_fill_rect(
+                    canvas, track, 2.0f, UI_BORDER_SOFT
+                );
+                nk_fill_rect(
+                    canvas,
+                    thumb,
+                    2.0f,
+                    ui_hovered(context, thumb_target)
+                        || app->source_scroll_dragging
+                        ? UI_MUTED
+                        : UI_DISABLED
+                );
+                if (pointer_in_viewport
+                    && ui_clicked(context, thumb_target)) {
+                    app->source_scroll_dragging = 1;
+                    app->source_scroll_drag_anchor =
+                        (double)context->input.mouse.pos.y
+                            - (double)thumb.y;
+                } else if (pointer_in_viewport
+                    && ui_clicked(context, track_target)) {
+                    const double direction =
+                        (double)context->input.mouse.pos.y
+                            < (double)thumb.y
+                        ? -1.0
+                        : 1.0;
+                    app->source_scroll_offset =
+                        xls_source_list_clamp_offset(
+                            app->source_scroll_offset
+                                + direction * viewport_height,
+                            cell->source_count,
+                            UI_SOURCE_ROW_HEIGHT,
+                            viewport_height
+                        );
+                }
+                if (app->source_scroll_dragging) {
+                    if (nk_input_is_mouse_down(
+                        &context->input, NK_BUTTON_LEFT
+                    )) {
+                        const double travel =
+                            (double)track.h
+                                - (double)thumb_height;
+                        const double position =
+                            (double)context->input.mouse.pos.y
+                                - (double)track.y
+                                - app->source_scroll_drag_anchor;
+                        app->source_scroll_offset =
+                            travel <= 0.0
+                            ? 0.0
+                            : xls_source_list_clamp_offset(
+                                position / travel
+                                    * app->source_scroll_maximum,
+                                cell->source_count,
+                                UI_SOURCE_ROW_HEIGHT,
+                                viewport_height
+                            );
+                    } else {
+                        app->source_scroll_dragging = 0;
+                    }
+                }
             }
             nk_push_scissor(canvas, nk_rect(0.0f, 0.0f, 32768.0f, 32768.0f));
+        } else {
+            app->source_scroll_offset = 0.0;
+            app->source_scroll_maximum = 0.0;
+            app->source_scroll_viewport_height = 0.0;
+            app->source_scroll_dragging = 0;
         }
         if (overview_ok) {
             xls_source_overview_free(&overview);
@@ -3453,7 +3804,9 @@ static void render_status_bar(
 {
     char viewing[512];
     const char *text = app->status;
-    if (app->merged_sheet_count > 0
+    if (app->interaction_feedback_until > SDL_GetTicks64()) {
+        text = app->status;
+    } else if (app->merged_sheet_count > 0
         && app->selected_sheet < app->merged_sheet_count) {
         const xls_merged_sheet *sheet = &app->merged_sheets[app->selected_sheet];
         (void)snprintf(
@@ -5151,6 +5504,10 @@ int main(int argc, char **argv)
     const char *screenshot_drop_target;
     const char *screenshot_language_sequence;
     const char *screenshot_sheet_number;
+    const char *screenshot_source_index;
+    const char *screenshot_source_action;
+    const char *screenshot_expected_clipboard = NULL;
+    int screenshot_perform_source_click = 0;
     const char *screenshot_require_workbooks;
     xls_platform_drop_target native_drop_target;
     app_state app;
@@ -5430,6 +5787,12 @@ int main(int argc, char **argv)
     screenshot_sheet_number = getenv(
         "XLSONE_SCREENSHOT_SHEET_NUMBER"
     );
+    screenshot_source_index = getenv(
+        "XLSONE_SCREENSHOT_SOURCE_INDEX"
+    );
+    screenshot_source_action = getenv(
+        "XLSONE_SCREENSHOT_SOURCE_ACTION"
+    );
     screenshot_require_workbooks = getenv(
         "XLSONE_SCREENSHOT_REQUIRE_WORKBOOKS"
     );
@@ -5462,6 +5825,116 @@ int main(int argc, char **argv)
             app.selected_sheet = (size_t)(number - 1u);
             app.first_visible_sheet = app.selected_sheet;
             app.has_selection = 0;
+        }
+    }
+    if (screenshot_source_index != NULL
+        && screenshot_source_index[0] != '\0'
+        && app.has_selection
+        && app.selected_sheet < app.merged_sheet_count) {
+        char *end = NULL;
+        const unsigned long number = strtoul(
+            screenshot_source_index, &end, 10
+        );
+        xls_merged_cell *selected_cell =
+            xls_merged_sheet_cell_mutable(
+                &app.merged_sheets[app.selected_sheet],
+                app.selected_row,
+                app.selected_column
+            );
+        if (end != screenshot_source_index
+            && *end == '\0'
+            && number > 0u
+            && selected_cell != NULL
+            && number <= selected_cell->source_count) {
+            int screenshot_width;
+            int screenshot_height;
+            float inspector_width;
+            const float detail_height =
+                selected_cell->is_overridden != 0u
+                    ? 157.0f
+                    : 137.0f;
+            const float source_viewport_y =
+                UI_SHEET_BOTTOM + 12.0f
+                    + detail_height + 12.0f + 57.0f;
+            int target_x;
+            int target_y;
+            app.source_scroll_offset =
+                (double)(number - 1u) * UI_SOURCE_ROW_HEIGHT;
+            app.source_scroll_selection_valid = 1;
+            app.source_scroll_sheet = app.selected_sheet;
+            app.source_scroll_row = app.selected_row;
+            app.source_scroll_column = app.selected_column;
+            SDL_GetWindowSize(
+                window, &screenshot_width, &screenshot_height
+            );
+            (void)screenshot_height;
+            inspector_width = screenshot_width >= 1120
+                ? 288.0f
+                : 280.0f;
+            target_x = (int)((float)screenshot_width
+                - inspector_width + 28.0f);
+            target_y = (int)(source_viewport_y + 12.0f);
+            if (screenshot_source_action != NULL
+                && strcmp(
+                    screenshot_source_action, "value"
+                ) == 0) {
+                screenshot_perform_source_click = 1;
+                target_x = screenshot_width - 34;
+                target_y = (int)(source_viewport_y + 36.0f);
+                if (selected_cell->sources[number - 1u].state
+                        == XLS_SOURCE_VALUE
+                    && selected_cell->sources[number - 1u].value
+                        != NULL) {
+                    screenshot_expected_clipboard =
+                        selected_cell->sources[number - 1u].value;
+                }
+            } else if (screenshot_source_action != NULL
+                && strcmp(
+                    screenshot_source_action, "path"
+                ) == 0) {
+                screenshot_perform_source_click = 1;
+                screenshot_expected_clipboard =
+                    selected_cell->sources[number - 1u].filepath;
+            } else if (screenshot_source_action != NULL
+                && strcmp(
+                    screenshot_source_action, "reveal"
+                ) == 0) {
+                screenshot_perform_source_click = 1;
+                target_x = screenshot_width - 34;
+            }
+            SDL_WarpMouseInWindow(
+                window,
+                target_x,
+                target_y
+            );
+            if (screenshot_perform_source_click) {
+                SDL_Event source_event;
+                memset(&source_event, 0, sizeof(source_event));
+                source_event.type = SDL_MOUSEMOTION;
+                source_event.motion.windowID =
+                    SDL_GetWindowID(window);
+                source_event.motion.x = target_x;
+                source_event.motion.y = target_y;
+                (void)SDL_PushEvent(&source_event);
+                memset(&source_event, 0, sizeof(source_event));
+                source_event.type = SDL_MOUSEBUTTONDOWN;
+                source_event.button.windowID =
+                    SDL_GetWindowID(window);
+                source_event.button.button = SDL_BUTTON_LEFT;
+                source_event.button.state = SDL_PRESSED;
+                source_event.button.x = target_x;
+                source_event.button.y = target_y;
+                (void)SDL_PushEvent(&source_event);
+                memset(&source_event, 0, sizeof(source_event));
+                source_event.type = SDL_MOUSEBUTTONUP;
+                source_event.button.windowID =
+                    SDL_GetWindowID(window);
+                source_event.button.button = SDL_BUTTON_LEFT;
+                source_event.button.state = SDL_RELEASED;
+                source_event.button.x = target_x;
+                source_event.button.y = target_y;
+                (void)SDL_PushEvent(&source_event);
+            }
         }
     }
     app.active_menu = app_menu_from_name(screenshot_menu);
@@ -5558,7 +6031,52 @@ int main(int argc, char **argv)
                 && app.dialog == APP_DIALOG_NONE
                 && app.active_menu == APP_MENU_NONE
                 && app.selected_sheet < app.merged_sheet_count) {
-                if ((SDL_GetModState() & KMOD_SHIFT) != 0
+                int event_width;
+                int event_height;
+                int mouse_x;
+                int mouse_y;
+                float inspector_width;
+                int pointer_in_inspector;
+                SDL_GetWindowSize(
+                    window, &event_width, &event_height
+                );
+                (void)SDL_GetMouseState(&mouse_x, &mouse_y);
+                inspector_width = event_width >= 1120
+                    ? 288.0f
+                    : 280.0f;
+                pointer_in_inspector =
+                    (float)mouse_x
+                        >= (float)event_width - inspector_width
+                    && (float)mouse_y >= UI_SHEET_BOTTOM
+                    && mouse_y < event_height - 17;
+                if (pointer_in_inspector) {
+                    double wheel_delta = (double)event.wheel.y;
+                    const xls_merged_cell *selected_cell =
+                        xls_merged_sheet_cell(
+                            &app.merged_sheets[
+                                app.selected_sheet
+                            ],
+                            app.selected_row,
+                            app.selected_column
+                        );
+#if SDL_VERSION_ATLEAST(2, 0, 4)
+                    if (event.wheel.direction
+                        == SDL_MOUSEWHEEL_FLIPPED) {
+                        wheel_delta = -wheel_delta;
+                    }
+#endif
+                    if (selected_cell != NULL
+                        && app.sources_expanded) {
+                        app.source_scroll_offset =
+                            xls_source_list_scroll_wheel(
+                                app.source_scroll_offset,
+                                wheel_delta,
+                                selected_cell->source_count,
+                                UI_SOURCE_ROW_HEIGHT,
+                                app.source_scroll_viewport_height
+                            );
+                    }
+                } else if ((SDL_GetModState() & KMOD_SHIFT) != 0
                     || event.wheel.x != 0) {
                     const int delta = event.wheel.x != 0
                         ? event.wheel.x
@@ -5693,6 +6211,34 @@ int main(int argc, char **argv)
                 );
                 screenshot_failed = 1;
             } else {
+                if (screenshot_expected_clipboard != NULL) {
+                    char *clipboard = SDL_GetClipboardText();
+                    if (clipboard == NULL
+                        || strcmp(
+                            clipboard,
+                            screenshot_expected_clipboard
+                        ) != 0) {
+                        fprintf(
+                            stderr,
+                            "source click did not copy expected text\n"
+                        );
+                        screenshot_failed = 1;
+                    }
+                    SDL_free(clipboard);
+                }
+                if (screenshot_source_action != NULL
+                    && strcmp(
+                        screenshot_source_action, "reveal"
+                    ) == 0
+                    && (app.source_reveal_attempt_count != 1u
+                        || app.source_reveal_failure_count
+                            != 0u)) {
+                    fprintf(
+                        stderr,
+                        "source reveal action did not locate the file\n"
+                    );
+                    screenshot_failed = 1;
+                }
                 screenshot_saved = save_renderer_bmp(
                     renderer, screenshot_path
                 );

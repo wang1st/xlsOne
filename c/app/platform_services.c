@@ -103,6 +103,39 @@ static char *utf8_from_wide_service(const wchar_t *wide)
     return utf8;
 }
 
+static wchar_t *windows_extended_path(const wchar_t *absolute_path)
+{
+    const size_t length = wcslen(absolute_path);
+    const int is_unc = length >= 2u
+        && absolute_path[0] == L'\\'
+        && absolute_path[1] == L'\\';
+    const wchar_t *prefix = is_unc ? L"\\\\?\\UNC\\" : L"\\\\?\\";
+    const size_t prefix_length = wcslen(prefix);
+    const wchar_t *suffix = is_unc ? absolute_path + 2 : absolute_path;
+    const size_t suffix_length = wcslen(suffix);
+    wchar_t *extended;
+    if (wcsncmp(absolute_path, L"\\\\?\\", 4u) == 0) {
+        return _wcsdup(absolute_path);
+    }
+    extended = (wchar_t *)malloc(
+        (prefix_length + suffix_length + 1u) * sizeof(*extended)
+    );
+    if (extended == NULL) {
+        return NULL;
+    }
+    memcpy(
+        extended,
+        prefix,
+        prefix_length * sizeof(*extended)
+    );
+    memcpy(
+        extended + prefix_length,
+        suffix,
+        (suffix_length + 1u) * sizeof(*extended)
+    );
+    return extended;
+}
+
 static int windows_choose_file(
     char **path,
     const wchar_t *title,
@@ -673,6 +706,174 @@ int xls_platform_open_url(const char *url)
     {
         int wait_status = 0;
         return waitpid(child, &wait_status, 0) == child
+            && WIFEXITED(wait_status)
+            && WEXITSTATUS(wait_status) == 0;
+    }
+#endif
+}
+
+int xls_platform_absolute_path(
+    const char *path,
+    char **absolute_path
+)
+{
+    *absolute_path = NULL;
+    if (path == NULL || path[0] == '\0') {
+        return 0;
+    }
+#if defined(_WIN32)
+    {
+        wchar_t *wide = wide_from_utf8(path);
+        wchar_t *absolute_wide;
+        DWORD required;
+        DWORD written;
+        if (wide == NULL) {
+            return 0;
+        }
+        required = GetFullPathNameW(wide, 0u, NULL, NULL);
+        if (required == 0u) {
+            free(wide);
+            return 0;
+        }
+        absolute_wide = (wchar_t *)malloc(
+            (size_t)required * sizeof(*absolute_wide)
+        );
+        if (absolute_wide == NULL) {
+            free(wide);
+            return 0;
+        }
+        written = GetFullPathNameW(
+            wide, required, absolute_wide, NULL
+        );
+        free(wide);
+        if (written == 0u || written >= required) {
+            free(absolute_wide);
+            return 0;
+        }
+        *absolute_path = utf8_from_wide_service(absolute_wide);
+        free(absolute_wide);
+        return *absolute_path != NULL;
+    }
+#else
+    *absolute_path = realpath(path, NULL);
+    return *absolute_path != NULL;
+#endif
+}
+
+int xls_platform_reveal_file(const char *path)
+{
+    if (path == NULL || path[0] == '\0') {
+        return 0;
+    }
+#if defined(_WIN32)
+    {
+        wchar_t *wide = wide_from_utf8(path);
+        wchar_t *absolute_wide = NULL;
+        wchar_t *attributes_path = NULL;
+        wchar_t *parameters = NULL;
+        DWORD required;
+        DWORD written;
+        DWORD attributes;
+        HINSTANCE launched;
+        size_t parameter_capacity;
+        int success = 0;
+        if (wide == NULL) {
+            return 0;
+        }
+        required = GetFullPathNameW(wide, 0u, NULL, NULL);
+        if (required == 0u) {
+            free(wide);
+            return 0;
+        }
+        absolute_wide = (wchar_t *)malloc(
+            (size_t)required * sizeof(*absolute_wide)
+        );
+        if (absolute_wide == NULL) {
+            free(wide);
+            return 0;
+        }
+        written = GetFullPathNameW(
+            wide, required, absolute_wide, NULL
+        );
+        free(wide);
+        if (written == 0u || written >= required) {
+            free(absolute_wide);
+            return 0;
+        }
+        attributes_path = windows_extended_path(absolute_wide);
+        attributes = attributes_path == NULL
+            ? INVALID_FILE_ATTRIBUTES
+            : GetFileAttributesW(attributes_path);
+        free(attributes_path);
+        if (attributes == INVALID_FILE_ATTRIBUTES
+            || (attributes & FILE_ATTRIBUTE_DIRECTORY) != 0u) {
+            free(absolute_wide);
+            return 0;
+        }
+        parameter_capacity = wcslen(absolute_wide) + 12u;
+        parameters = (wchar_t *)malloc(
+            parameter_capacity * sizeof(*parameters)
+        );
+        if (parameters != NULL
+            && _snwprintf_s(
+                parameters,
+                parameter_capacity,
+                _TRUNCATE,
+                L"/select,\"%ls\"",
+                absolute_wide
+            ) >= 0) {
+            launched = ShellExecuteW(
+                NULL,
+                L"open",
+                L"explorer.exe",
+                parameters,
+                NULL,
+                SW_SHOWNORMAL
+            );
+            success = (INT_PTR)launched > 32;
+        }
+        free(parameters);
+        free(absolute_wide);
+        return success;
+    }
+#else
+    {
+        struct stat info;
+        pid_t child;
+        int wait_status = 0;
+        if (stat(path, &info) != 0 || !S_ISREG(info.st_mode)) {
+            return 0;
+        }
+        child = fork();
+        if (child == 0) {
+#if defined(__APPLE__)
+            execlp("open", "open", "-R", path, (char *)NULL);
+#else
+            char *directory = duplicate_text(path);
+            char *separator;
+            if (directory == NULL) {
+                _exit(127);
+            }
+            separator = strrchr(directory, '/');
+            if (separator == NULL) {
+                directory[0] = '.';
+                directory[1] = '\0';
+            } else if (separator == directory) {
+                directory[1] = '\0';
+            } else {
+                *separator = '\0';
+            }
+            execlp(
+                "xdg-open",
+                "xdg-open",
+                directory,
+                (char *)NULL
+            );
+#endif
+            _exit(127);
+        }
+        return child > 0
+            && waitpid(child, &wait_status, 0) == child
             && WIFEXITED(wait_status)
             && WEXITSTATUS(wait_status) == 0;
     }

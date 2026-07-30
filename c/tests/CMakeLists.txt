@@ -114,6 +114,36 @@ else()
 endif()
 add_test(NAME xlsone_sheet_tabs_tests COMMAND xlsone_sheet_tabs_tests)
 
+add_executable(
+    xlsone_source_list_tests
+    test_source_list.c
+    ../app/source_list.c
+)
+target_include_directories(
+    xlsone_source_list_tests
+    PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/../app"
+)
+if(MSVC)
+    target_compile_options(xlsone_source_list_tests PRIVATE /W4)
+    if(XLSONE_C_WARNINGS_AS_ERRORS)
+        target_compile_options(xlsone_source_list_tests PRIVATE /WX)
+    endif()
+else()
+    target_compile_options(xlsone_source_list_tests PRIVATE
+        -Wall
+        -Wextra
+        -Wpedantic
+        -Wconversion
+        -Wshadow
+    )
+    target_link_libraries(xlsone_source_list_tests PRIVATE m)
+    if(XLSONE_C_WARNINGS_AS_ERRORS)
+        target_compile_options(xlsone_source_list_tests PRIVATE -Werror)
+    endif()
+endif()
+add_test(NAME xlsone_source_list_tests COMMAND xlsone_source_list_tests)
+
 if(TARGET xlsone_cjson
     AND TARGET xlsone_monocypher
     AND XLSONE_LICENSE_PUBLIC_KEY)
