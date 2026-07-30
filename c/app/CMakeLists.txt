@@ -156,17 +156,18 @@ if(TARGET SDL2::SDL2
         set(XLSONE_WINDOWS_MANIFEST
             "${CMAKE_CURRENT_SOURCE_DIR}/../packaging/windows/xlsone.manifest"
         )
-        configure_file(
-            "${CMAKE_CURRENT_SOURCE_DIR}/../packaging/windows/app-manifest.rc.in"
-            "${CMAKE_CURRENT_BINARY_DIR}/xlsone-manifest.rc"
-            @ONLY
-        )
         target_sources(
             xlsone_app
             PRIVATE
                 ../../cpp/app/resources/xlsone.rc
-                "${CMAKE_CURRENT_BINARY_DIR}/xlsone-manifest.rc"
         )
+        if(MSVC)
+            target_link_options(
+                xlsone_app
+                PRIVATE
+                    "/MANIFESTINPUT:${XLSONE_WINDOWS_MANIFEST}"
+            )
+        endif()
         target_link_libraries(
             xlsone_app
             PRIVATE
