@@ -296,3 +296,111 @@ if (byId('checkout-status')) {
     } catch { byId('copy-key').textContent = 'Select and copy the key above'; }
   });
 }
+
+async function boundedResponseText(response, limit = 16384) {
+  const advertisedLength = response.headers.get('Content-Length');
+  if (advertisedLength !== null && (!/^\d+$/.test(advertisedLength) || Number(advertisedLength) > limit)) {
+    await response.body?.cancel();
+    throw new Error('Response too large');
+  }
+  if (!response.body) return '';
+  const reader = response.body.getReader();
+  const chunks = [];
+  let length = 0;
+  try {
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      length += value.byteLength;
+      if (length > limit) {
+        await reader.cancel();
+        throw new Error('Response too large');
+      }
+      chunks.push(value);
+    }
+  } finally { reader.releaseLock(); }
+  const bytes = new Uint8Array(length);
+  let offset = 0;
+  for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
+  return new TextDecoder().decode(bytes);
+}
+
+const offlineForm = byId('offline-form');
+if (offlineForm) {
+  const button = byId('offline-submit');
+  const status = byId('offline-status');
+  let busy = false;
+  const report = (message, kind = '') => {
+    status.textContent = message;
+    status.className = `status ${kind}`.trim();
+  };
+  button.disabled = false;
+  offlineForm.addEventListener('submit', async event => {
+    event.preventDefault();
+    if (busy) return;
+    const key = byId('offline-key').value.trim().toUpperCase();
+    const deviceHash = byId('offline-device').value.trim().toLowerCase();
+    const deviceName = byId('offline-name').value.trim();
+    if (!/^[A-Z0-9]{4}(?:-[A-Z0-9]{4}){3}$/.test(key)) {
+      report('Enter an activation key in XXXX-XXXX-XXXX-XXXX format.', 'error');
+      return;
+    }
+    if (!/^[a-f0-9]{64}$/.test(deviceHash)) {
+      report('Copy the full 64-character device fingerprint from the app’s license dialog.', 'error');
+      return;
+    }
+    if (deviceName.length > 100) {
+      report('Use a device name of 100 characters or fewer.', 'error');
+      return;
+    }
+    busy = true;
+    button.disabled = true;
+    offlineForm.setAttribute('aria-busy', 'true');
+    report('Creating your signed license file…');
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 20000);
+    try {
+      // Credentials travel only in this POST body, never in URLs or browser storage.
+      const response = await fetch('https://api.xlsone.com/api/license/download', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        credentials: 'omit', cache: 'no-store', referrerPolicy: 'no-referrer',
+        signal: controller.signal,
+        body: JSON.stringify({ key, device_hash: deviceHash, device_name: deviceName })
+      });
+      const text = await boundedResponseText(response);
+      const data = JSON.parse(text);
+      if (!response.ok) {
+        const messages = {
+          KEY_NOT_FOUND: 'This activation key could not be found. Check the key or contact support.',
+          KEY_REVOKED: 'This activation key is no longer active. Contact support for help.',
+          SUBSCRIPTION_EXPIRED: 'This license period has expired. Check your subscription in the customer portal or contact support.',
+          EXHAUSTED: 'This activation key has reached its device limit. Contact support for help.',
+          RATE_LIMITED: 'Too many requests. Wait a moment, then try again.',
+          INVALID_KEY: 'Check your activation key and try again.',
+          INVALID_DEVICE: 'Check the device fingerprint copied from the app and try again.'
+        };
+        report(messages[data?.error] || 'The activation service could not create a license. Please try again or contact support.', 'error');
+        return;
+      }
+      if (data?.key_id !== key || data?.device_hash !== deviceHash
+        || typeof data.plan !== 'string' || !Number.isFinite(data.issued_at) || !Number.isFinite(data.expires_at)
+        || !/^[A-Za-z0-9_-]{80,128}$/.test(data.signature || '')) throw new Error('Invalid license response');
+      const downloadUrl = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = 'xlsone.license';
+      document.body.append(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
+      report('Your xlsone.license file is ready. Save it, transfer it to the matching computer, and import it through the app’s offline activation option.', 'success');
+    } catch {
+      report('We could not create a valid license file. Check your connection and try again, or contact support. No activation key has been saved in this browser.', 'error');
+    } finally {
+      clearTimeout(timeout);
+      busy = false;
+      button.disabled = false;
+      offlineForm.setAttribute('aria-busy', 'false');
+    }
+  });
+}
