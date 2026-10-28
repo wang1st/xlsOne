@@ -1,0 +1,16 @@
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+  X-Frame-Options: DENY
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://cdn.paddle.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://*.paddle.com https://*.paddle.io; font-src 'self'; connect-src 'self' https://api.xlsone.com https://*.paddle.com https://*.paddle.io; frame-src https://*.paddle.com https://*.paddle.io; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests
+
+/config.js
+  Cache-Control: no-store
+
+/checkout/*
+  Cache-Control: no-store
+  X-Robots-Tag: noindex, nofollow
+
+/checks/*
+  X-Robots-Tag: noindex, nofollow

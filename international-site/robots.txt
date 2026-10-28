@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /checkout/
+Disallow: /checks/
+Sitemap: https://xlsone.com/sitemap.xml

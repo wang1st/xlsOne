@@ -3,6 +3,14 @@ name: Multi-platform pure C packages
 on:
   workflow_dispatch:
     inputs:
+      distribution:
+        description: Distribution service and purchase links
+        required: true
+        default: domestic
+        type: choice
+        options:
+          - domestic
+          - international
       deploy_to_zpulse:
         description: Deploy packages to z-pulse.cn after all builds pass
         required: true
@@ -24,6 +32,9 @@ on:
 
 permissions:
   contents: read
+
+env:
+  XLSONE_DISTRIBUTION: ${{ inputs.distribution || 'domestic' }}
 
 concurrency:
   group: pure-c-packages-${{ github.ref }}
@@ -178,10 +189,11 @@ jobs:
             throw "Portable ZIP unexpectedly contains Qt"
           }
           $portableEula = Get-ChildItem $portable -Recurse `
-            -Filter EULA_zh_CN.txt | Select-Object -First 1
+            -Filter $(if ($env:XLSONE_DISTRIBUTION -eq 'international') { 'EULA_en.txt' } else { 'EULA_zh_CN.txt' }) | Select-Object -First 1
+          $eulaMarker = if ($env:XLSONE_DISTRIBUTION -eq 'international') { 'End User License Agreement' } else { '最终用户许可协议' }
           if (-not $portableEula -or
               (Get-Content $portableEula.FullName -Raw) -notmatch
-                '最终用户许可协议') {
+                $eulaMarker) {
             throw "Portable ZIP does not contain the original EULA"
           }
 
@@ -350,10 +362,10 @@ jobs:
             throw "MSI does not contain xlsOne.exe"
           }
           $installedEula = Get-ChildItem $admin -Recurse `
-            -Filter EULA_zh_CN.txt | Select-Object -First 1
+            -Filter $(if ($env:XLSONE_DISTRIBUTION -eq 'international') { 'EULA_en.txt' } else { 'EULA_zh_CN.txt' }) | Select-Object -First 1
           if (-not $installedEula -or
               (Get-Content $installedEula.FullName -Raw) -notmatch
-                '最终用户许可协议') {
+                $eulaMarker) {
             throw "MSI does not contain the original EULA"
           }
 
@@ -513,8 +525,11 @@ jobs:
           test -s "$app/Contents/Resources/xlsOne.icns"
           ! otool -L "$binary" | grep -Eiq '(^|[/[:space:]])Qt[0-9A-Za-z]'
           test -f "$app/Contents/Resources/licenses/THIRD_PARTY_NOTICES.md"
-          grep -q '最终用户许可协议' \
-            "$app/Contents/Resources/licenses/EULA_zh_CN.txt"
+          if [[ "${XLSONE_DISTRIBUTION}" == "international" ]]; then
+            grep -q 'End User License Agreement' "$app/Contents/Resources/licenses/EULA_en.txt"
+          else
+            grep -q '最终用户许可协议' "$app/Contents/Resources/licenses/EULA_zh_CN.txt"
+          fi
 
           XLSONE_SCREENSHOT_PATH="${GITHUB_WORKSPACE}/.build/macos-smoke.bmp" \
             XLSONE_SCREENSHOT_SELECT=B6 \
@@ -673,8 +688,11 @@ jobs:
           test -x "$control_dir/postinst"
           test -x "$control_dir/prerm"
           grep -q 'Desktop/xlsOne.desktop' "$control_dir/postinst"
-          grep -q '最终用户许可协议' \
-            "$unpacked/usr/licenses/EULA_zh_CN.txt"
+          if [[ "${XLSONE_DISTRIBUTION}" == "international" ]]; then
+            grep -q 'End User License Agreement' "$unpacked/usr/licenses/EULA_en.txt"
+          else
+            grep -q '最终用户许可协议' "$unpacked/usr/licenses/EULA_zh_CN.txt"
+          fi
           ! find "$unpacked" -type f -iname '*qt*' -print -quit | grep -q .
           ! ldd "$binary" | grep -Eiq '(^|[/[:space:]])Qt[0-9A-Za-z]'
           python3 scripts/ci/check_linux_abi.py "$deb"
@@ -830,7 +848,7 @@ jobs:
     name: Deploy packages to z-pulse.cn
     if: >-
       (github.event_name == 'push' && github.ref_type == 'tag' && needs.metadata.outputs.stable == 'true') ||
-      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.deploy_to_zpulse)
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.deploy_to_zpulse && inputs.distribution != 'international')
     needs:
       - metadata
       - windows

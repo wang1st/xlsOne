@@ -228,10 +228,15 @@ if(TARGET SDL2::SDL2
             BUNDLE DESTINATION .
         )
     endif()
+    if(XLSONE_INTERNATIONAL)
+        set(XLSONE_EULA_TEXT_FILE "${CMAKE_CURRENT_SOURCE_DIR}/../packaging/international/EULA_en.txt")
+    else()
+        set(XLSONE_EULA_TEXT_FILE "${CMAKE_CURRENT_SOURCE_DIR}/../../cpp/packaging/windows/licenses/EULA_zh_CN.txt")
+    endif()
     if(NOT APPLE)
         install(
             FILES
-                "${CMAKE_CURRENT_SOURCE_DIR}/../../cpp/packaging/windows/licenses/EULA_zh_CN.txt"
+                "${XLSONE_EULA_TEXT_FILE}"
             DESTINATION licenses
         )
         install(FILES "${XLSONE_NUKLEAR_DIR}/LICENSE"
@@ -255,14 +260,19 @@ if(TARGET SDL2::SDL2
         endif()
     endif()
     if(APPLE)
+        if(XLSONE_INTERNATIONAL)
+            set(XLSONE_INSTALL_README "${CMAKE_CURRENT_SOURCE_DIR}/../packaging/international/Before-installing.txt")
+        else()
+            set(XLSONE_INSTALL_README "${CMAKE_CURRENT_SOURCE_DIR}/../packaging/macos/安装前必看.txt")
+        endif()
         install(
             FILES
-                "${CMAKE_CURRENT_SOURCE_DIR}/../packaging/macos/安装前必看.txt"
+                "${XLSONE_INSTALL_README}"
             DESTINATION "."
         )
         install(
             FILES
-                "${CMAKE_CURRENT_SOURCE_DIR}/../../cpp/packaging/windows/licenses/EULA_zh_CN.txt"
+                "${XLSONE_EULA_TEXT_FILE}"
             DESTINATION "xlsOne.app/Contents/Resources/licenses"
         )
         install(FILES "${XLSONE_NUKLEAR_DIR}/LICENSE"

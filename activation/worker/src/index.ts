@@ -18,10 +18,11 @@ import { cors } from 'hono/cors'
 import { ed25519 } from '@noble/curves/ed25519'
 import { createHmac, timingSafeEqual } from './crypto'
 import { md5 } from 'js-md5'
+import { registerPaddleRoutes, type PaddleEnv } from './paddle'
 
 // ========== Types ==========
 
-interface Env {
+interface Env extends PaddleEnv {
   DB: D1Database
   ACTIVATION_SECRET: string
   LEMON_SQUEEZY_SIGNING_SECRET: string
@@ -309,16 +310,18 @@ async function issueWindowsLicense(
   if (status === 'revoked') {
     return { ok: false, status: 403, body: { error: 'KEY_REVOKED', message: '激活码已被吊销' } }
   }
-  if (status === 'exhausted') {
-    return { ok: false, status: 403, body: { error: 'EXHAUSTED', message: '该激活码已达到设备数上限（最多 3 台设备）' } }
-  }
-
   // 兼容旧数据
   const maxActivations = keyRow.max_activations ?? DEFAULT_MAX_ACTIVATIONS
   const activationCount = keyRow.activation_count ?? 0
   const durationDays = keyRow.duration_days ?? (keyRow.plan === 'personal_yearly' ? DEFAULT_DURATION_DAYS : 0)
 
-  const isSameDevice = keyRow.device_hash && keyRow.device_hash === deviceHash
+  const registeredDevice = await env.DB.prepare(
+    'SELECT revoked FROM windows_devices WHERE key_id = ? AND device_id = ?'
+  ).bind(keyId, deviceHash).first<{ revoked: number }>()
+  if (registeredDevice?.revoked) {
+    return { ok: false, status: 403, body: { error: 'DEVICE_REVOKED', message: '该设备的授权已被撤销' } }
+  }
+  const isSameDevice = registeredDevice !== null || keyRow.device_hash === deviceHash
   const isFirstActivation = !keyRow.device_hash
 
   // 检查过期（已有 expires_at 的情况）
@@ -566,6 +569,8 @@ app.use('*', cors({
   allowHeaders: ['Content-Type', 'Authorization'],
   maxAge: 86400,
 }))
+
+registerPaddleRoutes(app)
 
 // ========== POST /api/activate ==========
 
