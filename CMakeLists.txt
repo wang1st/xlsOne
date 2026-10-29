@@ -51,6 +51,7 @@ elseif(WIN32)
         "${CMAKE_CURRENT_SOURCE_DIR}/cpp/app/resources/xlsOne.ico"
     )
     set(XLSONE_WIX_LAUNCH_CHECKBOX_TEXT "启动 xlsOne")
+    set(XLSONE_WIX_SHORTCUT_DESCRIPTION "表表归一")
     if(XLSONE_INTERNATIONAL)
         set(CPACK_PACKAGE_CONTACT "support@xlsone.com")
         set(CPACK_WIX_CULTURES "en-US")
@@ -59,6 +60,7 @@ elseif(WIN32)
         set(CPACK_WIX_LICENSE_RTF
             "${CMAKE_CURRENT_SOURCE_DIR}/c/packaging/international/EULA_en.rtf")
         set(XLSONE_WIX_LAUNCH_CHECKBOX_TEXT "Launch xlsOne")
+        set(XLSONE_WIX_SHORTCUT_DESCRIPTION "Excel workbook consolidation")
     endif()
     file(MAKE_DIRECTORY
         "${CMAKE_CURRENT_BINARY_DIR}/packaging/windows"

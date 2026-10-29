@@ -17,6 +17,8 @@ database_name = "xlsone-license"
 database_id = "70f9b469-9c4e-470e-b6dd-27cba2c782f5"
 
 [env.production.vars]
+PADDLE_MONTHLY_PRICE_ID = "pri_01m62za09xh2ky5chjggyy9h2n"
+PADDLE_YEARLY_PRICE_ID = "pri_01m62zc4eksrh6b09h6d4z2px7"
 # ⚠️ 切勿在此写入任何真实密钥。本文件(wrangler.toml)受 git 版本控制，
 # 历史上的 ACTIVATION_SECRET 明文曾因提交入仓而泄露并已于 2026-07-17 轮换作废。
 # 所有密钥一律通过 `wrangler secret put <NAME> --env production` 设置。

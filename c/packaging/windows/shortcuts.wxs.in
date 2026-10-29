@@ -7,7 +7,7 @@
                            Guid="{F89F8EC6-351C-4F2E-B85F-4E4D87ECA8D6}">
                     <Shortcut Id="XlsOneDesktopShortcutLink"
                               Name="xlsOne"
-                              Description="表表归一"
+                              Description="@XLSONE_WIX_SHORTCUT_DESCRIPTION@"
                               Target="[INSTALL_ROOT]xlsOne.exe"
                               WorkingDirectory="INSTALL_ROOT"
                               Icon="ProductIcon.ico"

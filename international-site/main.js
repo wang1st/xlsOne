@@ -22,9 +22,12 @@ for (const link of document.querySelectorAll('[data-purchase]')) {
 }
 
 for (const price of document.querySelectorAll('[data-price]')) {
-  if (ready) {
-    const plan = selectedPlan(price.dataset.price);
-    price.textContent = config.billing[plan].displayPrice;
+  const plan = selectedPlan(price.dataset.price);
+  const publishedPrice = config.billing?.[plan];
+  // Pricing can be published before the payment-domain and fulfillment checks are complete.
+  if (/^pri_[a-zA-Z0-9]+$/.test(publishedPrice?.priceId || '')
+    && typeof publishedPrice?.displayPrice === 'string' && publishedPrice.displayPrice.trim()) {
+    price.textContent = publishedPrice.displayPrice;
     const period = document.createElement('small');
     period.textContent = plan === 'yearly' ? ' / year' : ' / month';
     price.append(period);
@@ -35,6 +38,8 @@ for (const price of document.querySelectorAll('[data-price]')) {
 const availability = byId('availability');
 if (availability && ready) {
   availability.textContent = 'Subscriptions renew automatically at the selected interval. Cancel future renewal at any time in the customer portal. Applicable taxes are shown before you pay.';
+} else if (availability && config.billing?.monthly?.displayPrice && config.billing?.yearly?.displayPrice) {
+  availability.textContent = 'Checkout is being prepared. The subscription prices shown above are confirmed. We are completing international release and payment setup. No payment can be taken through this page yet.';
 }
 
 const downloadList = byId('download-list');
