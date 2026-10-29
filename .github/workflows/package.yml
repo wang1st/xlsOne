@@ -503,11 +503,16 @@ jobs:
           binary="$app/Contents/MacOS/xlsOne"
           test -L "$mount_dir/Applications"
           test "$(readlink "$mount_dir/Applications")" = "/Applications"
-          test -f "$mount_dir/安装前必看.txt"
-          grep -q '隐私与安全性' "$mount_dir/安装前必看.txt"
-          grep -q '仍要打开' "$mount_dir/安装前必看.txt"
-          grep -q '/Applications/xlsOne.app' "$mount_dir/安装前必看.txt"
-          ! grep -q 'xlsOneQt' "$mount_dir/安装前必看.txt"
+          if [[ "${XLSONE_DISTRIBUTION}" == "international" ]]; then
+            test -f "$mount_dir/Before-installing.txt"
+            grep -q 'https://xlsone.com/download/' "$mount_dir/Before-installing.txt"
+          else
+            test -f "$mount_dir/安装前必看.txt"
+            grep -q '隐私与安全性' "$mount_dir/安装前必看.txt"
+            grep -q '仍要打开' "$mount_dir/安装前必看.txt"
+            grep -q '/Applications/xlsOne.app' "$mount_dir/安装前必看.txt"
+            ! grep -q 'xlsOneQt' "$mount_dir/安装前必看.txt"
+          fi
           test -x "$binary"
           archs="$(lipo -archs "$binary")"
           [[ " $archs " == *" arm64 "* && " $archs " == *" x86_64 "* ]]

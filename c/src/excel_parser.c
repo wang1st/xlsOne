@@ -4,6 +4,7 @@
 
 #include <ctype.h>
 #include <expat.h>
+#include <inttypes.h>
 #include <limits.h>
 #include <math.h>
 #include <stdio.h>
@@ -156,12 +157,17 @@ static int parse_xml(
     XML_SetCharacterDataHandler(parser, characters);
     status = XML_Parse(parser, (const char *)data, (int)size, XML_TRUE);
     if (status != XML_STATUS_OK) {
+#if XML_MAJOR_VERSION > 2 || (XML_MAJOR_VERSION == 2 && XML_MINOR_VERSION >= 9)
+        const uint64_t line_number = XML_GetCurrentLineNumber64(parser);
+#else
+        const uint64_t line_number = (uint64_t)XML_GetCurrentLineNumber(parser);
+#endif
         xls_set_error(
             error,
             XLS_ERROR_FORMAT,
-            "%s 解析失败（第 %lu 行）：%s",
+            "%s 解析失败（第 %" PRIu64 " 行）：%s",
             description,
-            XML_GetCurrentLineNumber(parser),
+            line_number,
             XML_ErrorString(XML_GetErrorCode(parser))
         );
         XML_ParserFree(parser);
