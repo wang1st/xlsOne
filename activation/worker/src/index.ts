@@ -27,6 +27,7 @@ interface Env extends PaddleEnv {
   ACTIVATION_SECRET: string
   LEMON_SQUEEZY_SIGNING_SECRET: string
   ED25519_PRIVATE_KEY?: string
+  ED25519_PADDLE_PRIVATE_KEY?: string
   ADMIN_API_KEY?: string
 }
 
@@ -185,9 +186,13 @@ function checkAdminAuth(c: Context<{ Bindings: Env }>): Response | null {
 
 // ========== Ed25519 license helpers ==========
 
-function getEd25519PrivateKey(env: Env): Uint8Array | null {
-  if (!env.ED25519_PRIVATE_KEY) return null
-  const hex = env.ED25519_PRIVATE_KEY.replace(/[^0-9a-fA-F]/g, '')
+function getEd25519PrivateKey(env: Env, usePaddleKey = false): Uint8Array | null {
+  // Existing clients retain their original signing key. Paddle licenses must
+  // never fall back to that key because current international clients trust a
+  // different public key.
+  const configuredKey = usePaddleKey ? env.ED25519_PADDLE_PRIVATE_KEY : env.ED25519_PRIVATE_KEY
+  if (!configuredKey) return null
+  const hex = configuredKey.replace(/[^0-9a-fA-F]/g, '')
   if (hex.length !== 64) return null
   return hexToBytes(hex)
 }
@@ -296,6 +301,7 @@ async function issueWindowsLicense(
     max_activations: number | null
     activation_count: number | null
     duration_days: number | null
+    order_id: string | null
   }>()
 
   if (!keyRow) {
@@ -343,7 +349,7 @@ async function issueWindowsLicense(
     }
   }
 
-  const privateKey = getEd25519PrivateKey(env)
+  const privateKey = getEd25519PrivateKey(env, keyRow.order_id?.startsWith('paddle:') ?? false)
   if (!privateKey) {
     return { ok: false, status: 500, body: { error: 'SERVER_ERROR', message: '签名密钥未配置' } }
   }
@@ -449,7 +455,7 @@ async function issueWindowsTrial(
     return { ok: false, status: 400, body: { error: 'INVALID_DEVICE', message: '设备指纹无效' } }
   }
 
-  const privateKey = getEd25519PrivateKey(env)
+  const privateKey = getEd25519PrivateKey(env, env.ED25519_PADDLE_PRIVATE_KEY !== undefined)
   if (!privateKey) {
     return { ok: false, status: 500, body: { error: 'TRIAL_UNAVAILABLE', message: '签名密钥未配置' } }
   }
