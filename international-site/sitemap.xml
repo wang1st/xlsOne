@@ -2,10 +2,12 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://xlsone.com/</loc><lastmod>2026-10-29</lastmod></url>
   <url><loc>https://xlsone.com/download/</loc><lastmod>2026-10-29</lastmod></url>
+  <url><loc>https://xlsone.com/guides/</loc><lastmod>2026-10-29</lastmod></url>
+  <url><loc>https://xlsone.com/guides/combine-excel-files/</loc><lastmod>2026-10-29</lastmod></url>
+  <url><loc>https://xlsone.com/guides/sum-matching-cells/</loc><lastmod>2026-10-29</lastmod></url>
   <url><loc>https://xlsone.com/pricing/</loc><lastmod>2026-10-29</lastmod></url>
-  <url><loc>https://xlsone.com/account/</loc><lastmod>2026-10-29</lastmod></url>
-  <url><loc>https://xlsone.com/support/</loc><lastmod>2026-10-29</lastmod></url>
   <url><loc>https://xlsone.com/privacy/</loc><lastmod>2026-10-29</lastmod></url>
-  <url><loc>https://xlsone.com/terms/</loc><lastmod>2026-10-29</lastmod></url>
   <url><loc>https://xlsone.com/refund/</loc><lastmod>2026-10-29</lastmod></url>
+  <url><loc>https://xlsone.com/support/</loc><lastmod>2026-10-29</lastmod></url>
+  <url><loc>https://xlsone.com/terms/</loc><lastmod>2026-10-29</lastmod></url>
 </urlset>

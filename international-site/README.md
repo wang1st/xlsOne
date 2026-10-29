@@ -56,3 +56,11 @@ Current direct desktop licenses are signed locally verifiable files. After a ren
 ## Policies
 
 The support address was taken from existing project deployment documentation. Verify it can still receive mail before public release. The policy text documents actual local file processing, online licensing and Paddle billing. Review the seller identity, policy wording and actual release behavior before enabling sales.
+
+## Search metadata and editorial pages
+
+Public landing pages and `/guides/` are present in `sitemap.xml`. Checkout, subscription-account utilities and the error page use `noindex`; robots.txt permits fetching checkout so crawlers can see that directive. Published prices and five download links are in the initial HTML, with JavaScript used for enhancement. Keep those facts synchronized with `config.js` when releasing updates; the SEO checks detect drift.
+
+JSON-LD describes the actual software, subscription intervals, site, breadcrumbs and guide articles. No ratings or customer reviews are invented. SoftwareApplication markup without genuine reviews is not a promise of a Google app rich result. Each inline JSON-LD block has an exact SHA-256 in `_headers`; update its hash whenever its text changes.
+
+`social-preview.png` is the shared 1200×630 social card. Preserve the Google verification HTML file on future deployments. Run `node --test international-site/checks/*.test.mjs` before publishing.

@@ -45,6 +45,7 @@ if (availability && ready) {
 const downloadList = byId('download-list');
 if (downloadList && downloads.length) {
   byId('download-pending').hidden = true;
+  downloadList.replaceChildren();
   for (const item of downloads) {
     const card = document.createElement('article');
     card.className = 'download-card';
