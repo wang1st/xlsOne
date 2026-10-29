@@ -1,12 +1,18 @@
 {
   "latest_version": "1.1.5",
-  "changelog": "International edition: English interface, local Excel consolidation, and xlsone.com licensing and subscription links. Visit the download page for the available verified installers.",
+  "changelog": "International edition: English interface, local Excel consolidation, xlsone.com licensing and subscription links. Downloads are the public international-v1.1.5 release. Windows installers are unsigned; the macOS application is not Apple-notarized.",
   "downloads": {
-    "windows_amd64": "https://xlsone.com/download/",
-    "windows_amd64_zip": "https://xlsone.com/download/",
-    "macos": "https://xlsone.com/download/",
-    "linux_amd64": "https://xlsone.com/download/",
-    "linux_arm64": "https://xlsone.com/download/"
+    "windows_amd64": "https://github.com/wang1st/xlsOne/releases/download/international-v1.1.5/xlsone-1.1.5-windows-amd64.msi",
+    "windows_amd64_zip": "https://github.com/wang1st/xlsOne/releases/download/international-v1.1.5/xlsone-1.1.5-windows-amd64.zip",
+    "macos": "https://github.com/wang1st/xlsOne/releases/download/international-v1.1.5/xlsOne-1.1.5-macos-universal.dmg",
+    "linux_amd64": "https://github.com/wang1st/xlsOne/releases/download/international-v1.1.5/xlsOne-1.1.5-linux-amd64.deb",
+    "linux_arm64": "https://github.com/wang1st/xlsOne/releases/download/international-v1.1.5/xlsOne-1.1.5-linux-arm64.deb"
   },
-  "checksums": {}
+  "checksums": {
+    "xlsone-1.1.5-windows-amd64.msi": "098b84542a2cf88f7d244084b5c5ec63f6259dbe66121f273de21ceff1464c92",
+    "xlsone-1.1.5-windows-amd64.zip": "68126a5be724821f39167b35dcb08970ff8332603d9b181f47885ae1c094b806",
+    "xlsOne-1.1.5-macos-universal.dmg": "ae3ac929d2664839bcd70a98488bfa01bf70661dc4fc13f56808811e248407d6",
+    "xlsOne-1.1.5-linux-amd64.deb": "e6a6bc18517e032da5676fecac49e524f6f4f9095ac990680720603c4b2d9b53",
+    "xlsOne-1.1.5-linux-arm64.deb": "c64355921798f06e35dfd2256f9d825b6d62e0b92728892abc11d4d783da6d08"
+  }
 }

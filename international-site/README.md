@@ -14,7 +14,7 @@ node --test international-site/checks/*.test.mjs
 
 Publish the static contents of this directory to the **existing** xlsone.com Cloudflare Pages project. Preserve its domain, DNS, mail routes and any other attached services. Exclude `README.md` and `checks/` from the upload. `_headers` and `_redirects` are Cloudflare Pages configuration and must be included. This website does not replace the separate international activation Worker at `api.xlsone.com`.
 
-The current configuration deliberately keeps paid checkout closed and downloads empty until verified. Do not represent the site as ready for purchase until all gates below have passed.
+The current configuration offers five public downloads from the GitHub release `international-v1.1.5`; their SHA-256 checksums and byte sizes match the verified CI artifact record. `config.js` and `api/version.json` use the same direct release URLs. Windows downloads are unsigned; the macOS universal application targets macOS 12+ on Apple Silicon and Intel and is not Apple-notarized. The owner-confirmed Paddle prices are US$4.99/month and US$39.99/year. Paid checkout remains disabled pending domain approval and the remaining payment/fulfillment checks. Do not represent the site as ready for purchase until those gates have passed.
 
 ## Release gates
 
