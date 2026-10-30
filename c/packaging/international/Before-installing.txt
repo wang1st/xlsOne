@@ -1,0 +1,10 @@
+xlsOne international desktop edition
+
+Download the release that matches your operating system from https://xlsone.com/download/.
+The installation package includes the software licenses and third-party notices.
+On macOS, drag xlsOne.app to Applications and open it from there.
+Open the application and choose Language > English if your system uses another language.
+For a trial or paid activation, open the License dialog. After renewal, re-enter your existing key to refresh the local license.
+
+Website: https://xlsone.com/
+Support: support@xlsone.com

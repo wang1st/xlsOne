@@ -18,14 +18,16 @@ import { cors } from 'hono/cors'
 import { ed25519 } from '@noble/curves/ed25519'
 import { createHmac, timingSafeEqual } from './crypto'
 import { md5 } from 'js-md5'
+import { registerPaddleRoutes, type PaddleEnv } from './paddle'
 
 // ========== Types ==========
 
-interface Env {
+interface Env extends PaddleEnv {
   DB: D1Database
   ACTIVATION_SECRET: string
   LEMON_SQUEEZY_SIGNING_SECRET: string
   ED25519_PRIVATE_KEY?: string
+  ED25519_PADDLE_PRIVATE_KEY?: string
   ADMIN_API_KEY?: string
 }
 
@@ -184,9 +186,13 @@ function checkAdminAuth(c: Context<{ Bindings: Env }>): Response | null {
 
 // ========== Ed25519 license helpers ==========
 
-function getEd25519PrivateKey(env: Env): Uint8Array | null {
-  if (!env.ED25519_PRIVATE_KEY) return null
-  const hex = env.ED25519_PRIVATE_KEY.replace(/[^0-9a-fA-F]/g, '')
+function getEd25519PrivateKey(env: Env, usePaddleKey = false): Uint8Array | null {
+  // Existing clients retain their original signing key. Paddle licenses must
+  // never fall back to that key because current international clients trust a
+  // different public key.
+  const configuredKey = usePaddleKey ? env.ED25519_PADDLE_PRIVATE_KEY : env.ED25519_PRIVATE_KEY
+  if (!configuredKey) return null
+  const hex = configuredKey.replace(/[^0-9a-fA-F]/g, '')
   if (hex.length !== 64) return null
   return hexToBytes(hex)
 }
@@ -295,6 +301,7 @@ async function issueWindowsLicense(
     max_activations: number | null
     activation_count: number | null
     duration_days: number | null
+    order_id: string | null
   }>()
 
   if (!keyRow) {
@@ -309,16 +316,18 @@ async function issueWindowsLicense(
   if (status === 'revoked') {
     return { ok: false, status: 403, body: { error: 'KEY_REVOKED', message: '激活码已被吊销' } }
   }
-  if (status === 'exhausted') {
-    return { ok: false, status: 403, body: { error: 'EXHAUSTED', message: '该激活码已达到设备数上限（最多 3 台设备）' } }
-  }
-
   // 兼容旧数据
   const maxActivations = keyRow.max_activations ?? DEFAULT_MAX_ACTIVATIONS
   const activationCount = keyRow.activation_count ?? 0
   const durationDays = keyRow.duration_days ?? (keyRow.plan === 'personal_yearly' ? DEFAULT_DURATION_DAYS : 0)
 
-  const isSameDevice = keyRow.device_hash && keyRow.device_hash === deviceHash
+  const registeredDevice = await env.DB.prepare(
+    'SELECT revoked FROM windows_devices WHERE key_id = ? AND device_id = ?'
+  ).bind(keyId, deviceHash).first<{ revoked: number }>()
+  if (registeredDevice?.revoked) {
+    return { ok: false, status: 403, body: { error: 'DEVICE_REVOKED', message: '该设备的授权已被撤销' } }
+  }
+  const isSameDevice = registeredDevice !== null || keyRow.device_hash === deviceHash
   const isFirstActivation = !keyRow.device_hash
 
   // 检查过期（已有 expires_at 的情况）
@@ -340,7 +349,7 @@ async function issueWindowsLicense(
     }
   }
 
-  const privateKey = getEd25519PrivateKey(env)
+  const privateKey = getEd25519PrivateKey(env, keyRow.order_id?.startsWith('paddle:') ?? false)
   if (!privateKey) {
     return { ok: false, status: 500, body: { error: 'SERVER_ERROR', message: '签名密钥未配置' } }
   }
@@ -446,7 +455,7 @@ async function issueWindowsTrial(
     return { ok: false, status: 400, body: { error: 'INVALID_DEVICE', message: '设备指纹无效' } }
   }
 
-  const privateKey = getEd25519PrivateKey(env)
+  const privateKey = getEd25519PrivateKey(env, env.ED25519_PADDLE_PRIVATE_KEY !== undefined)
   if (!privateKey) {
     return { ok: false, status: 500, body: { error: 'TRIAL_UNAVAILABLE', message: '签名密钥未配置' } }
   }
@@ -566,6 +575,8 @@ app.use('*', cors({
   allowHeaders: ['Content-Type', 'Authorization'],
   maxAge: 86400,
 }))
+
+registerPaddleRoutes(app)
 
 // ========== POST /api/activate ==========
 

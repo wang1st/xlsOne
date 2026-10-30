@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
+    "test": "esbuild src/index.ts --bundle --platform=node --format=esm --outfile=.wrangler/test/worker.mjs && node --test tests/paddle.test.ts tests/activation.test.mjs",
     "deploy": "wrangler deploy",
     "dev": "wrangler dev",
     "db:init": "wrangler d1 execute xlsone-license --file=./schema.sql",
@@ -12,6 +13,7 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
+    "esbuild": "^0.17.19",
     "@cloudflare/workers-types": "^4.20250408.0",
     "@typescript-eslint/eslint-plugin": "^7.18.0",
     "@typescript-eslint/parser": "^7.18.0",

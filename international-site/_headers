@@ -1,0 +1,22 @@
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+  X-Frame-Options: DENY
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://cdn.paddle.com 'sha256-k1QCL89UdHgt28/+iiBrr1RPKYD2hj2pQK9Zvmu2JZ8=' 'sha256-NSCGfcpL7RYKSVFL88J8rwou4cBAplCKqWF4M66yKWQ=' 'sha256-z+GPc7ML99aZMssMp1cf9Z+BbZZLAJ38e4jydC/EQLg=' 'sha256-FIRY71leU0IfTUD0mr1XsgTypf3z2MdEnyMe/jLuFFU=' 'sha256-EzZ9DhsZ9Rf1Hqb+rTrpXvAhNiQb//eFWhpl4apiwdg=' 'sha256-3p+ZO2/posM1z+mlCNm2kWik13hsyfpoIyzb9Clt10M=' 'sha256-4+WjBO1TE3rf70lfLiafUFkXcJo5WzeDgcfFk+4GiRo=' 'sha256-/E7CE9hcJrA92KpaJhnrHN75memX0hPTMRLD/WLwyIk=' 'sha256-AlGnJvH4Hhna6yjqyH22CqGpqxx5N8riOfpi/qnkPaY=' 'sha256-8OSTAwUPMwRRVRh4nCXh267WYVZcNu9OSxylf+lEVL0='; style-src 'self' 'unsafe-inline' https://cdn.paddle.com; img-src 'self' data: https://*.paddle.com https://*.paddle.io; font-src 'self'; connect-src 'self' https://api.xlsone.com https://*.paddle.com https://*.paddle.io; frame-src https://*.paddle.com https://*.paddle.io; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests
+
+/config.js
+  Cache-Control: no-store
+
+/checkout/*
+  Cache-Control: no-store
+  X-Robots-Tag: noindex, nofollow
+
+/checks/*
+  X-Robots-Tag: noindex, nofollow
+
+/account/*
+  X-Robots-Tag: noindex, follow
+
+/404.html
+  X-Robots-Tag: noindex, follow

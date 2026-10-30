@@ -24,6 +24,15 @@ option(XLSONE_C_BUILD_APP "Build the SDL desktop application" ON)
 option(XLSONE_C_BUILD_TESTS "Build the pure C tests" ON)
 option(XLSONE_C_WARNINGS_AS_ERRORS "Treat compiler warnings as errors" OFF)
 option(XLSONE_C_FETCH_SDL2 "Build a pinned static SDL2 from source" OFF)
+set(XLSONE_INTERNATIONAL_DEFAULT OFF)
+if("$ENV{XLSONE_DISTRIBUTION}" STREQUAL "international")
+    set(XLSONE_INTERNATIONAL_DEFAULT ON)
+endif()
+option(XLSONE_INTERNATIONAL "Use xlsone.com licensing, purchases and updates"
+    ${XLSONE_INTERNATIONAL_DEFAULT})
+if(XLSONE_INTERNATIONAL)
+    add_compile_definitions(XLSONE_INTERNATIONAL=1)
+endif()
 set(
     XLSONE_LICENSE_PUBLIC_KEY
     ""

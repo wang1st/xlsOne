@@ -1,4 +1,5 @@
 #include "xlsone/xlsone.h"
+#include "distribution.h"
 #include "drop_paths.h"
 #include "i18n.h"
 #include "license_manager.h"
@@ -1220,7 +1221,7 @@ static int app_update_worker(void *opaque)
     result->status = APP_UPDATE_FAILED;
     if (xls_platform_http_request(
         "GET",
-        "https://z-pulse.cn/api/version",
+        XLSONE_UPDATE_URL,
         NULL,
         &response,
         &http_status
@@ -2014,7 +2015,7 @@ static void app_execute_action(app_state *app, app_action action)
         app_start_update_check(app, 0);
         break;
     case APP_ACTION_HELP:
-        if (!xls_platform_open_url("https://z-pulse.cn/xlsone/")) {
+        if (!xls_platform_open_url(XLSONE_SUPPORT_URL)) {
             app_set_status(app, "无法打开快速参考指南。");
         }
         break;
@@ -4198,7 +4199,7 @@ static void render_notice_dialog(
         0
     );
     float card_width = 500.0f;
-    const char *website = "https://z-pulse.cn/xlsone/";
+    const char *website = XLSONE_WEBSITE_URL;
     const float card_height =
         app->notice_website_link ? 276.0f : 248.0f;
     card_width = ui_max_float(
@@ -4991,7 +4992,7 @@ static void render_license_online_page(
         UI_ICON_NONE,
         0
     )) {
-        (void)xls_platform_open_url("https://z-pulse.cn/xlsone/buy.html");
+        (void)xls_platform_open_url(XLSONE_PURCHASE_URL);
     }
 }
 
@@ -5102,7 +5103,7 @@ static void render_license_offline_page(
         UI_ICON_NONE,
         1
     )) {
-        (void)xls_platform_open_url("https://z-pulse.cn/xlsone/offline");
+        (void)xls_platform_open_url(XLSONE_OFFLINE_URL);
     }
     if (ui_draw_button(
         context,
@@ -6457,7 +6458,7 @@ int main(int argc, char **argv)
             preview.download_url,
             sizeof(preview.download_url),
             "%s",
-            "https://z-pulse.cn/products/xlsone/download.html"
+            XLSONE_DOWNLOAD_URL
         );
         app_show_update(&app, &preview);
     }

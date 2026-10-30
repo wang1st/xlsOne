@@ -1,4 +1,5 @@
 #include "license_manager.h"
+#include "distribution.h"
 
 #include "platform_dialog.h"
 
@@ -17,7 +18,6 @@
     "0000000000000000000000000000000000000000000000000000000000000000"
 #endif
 
-#define XLSONE_ACTIVATION_BASE_URL "https://z-pulse.cn"
 #define XLSONE_RESTRICTED_FILE_COUNT 3
 #define XLSONE_GRACE_SECONDS (3LL * 24LL * 60LL * 60LL)
 #define XLSONE_CLOCK_TOLERANCE_SECONDS (60LL * 60LL)
@@ -1024,7 +1024,11 @@ const char *xls_license_plan_text(xls_license_plan plan)
     case XLS_LICENSE_PLAN_TRIAL:
         return "试用版";
     case XLS_LICENSE_PLAN_PERSONAL_YEARLY:
+#ifdef XLSONE_INTERNATIONAL
+        return "Subscription";
+#else
         return "个人年度版";
+#endif
     case XLS_LICENSE_PLAN_ENTERPRISE:
         return "企业版";
     case XLS_LICENSE_PLAN_PERSONAL_LIFETIME:
